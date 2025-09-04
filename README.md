@@ -1,0 +1,109 @@
+# Cycling Routes Website
+
+A modern web application for discovering and viewing cycling routes stored as GPX files. Built with Vue.js frontend, FastAPI backend, and Elasticsearch for search functionality.
+
+## Features
+
+- **Interactive Map Search**: Search for cycling routes using an interactive map with OpenStreetMap and cycling-specific layers
+- **Route Cards**: Browse routes with mini-map previews and key statistics (distance, elevation gain)
+- **Detailed Route Viewer**: View complete routes with synchronized map and elevation profile
+- **Playback Mode**: Animate through routes with synchronized map and elevation chart
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Frontend**: Vue.js 3, Leaflet, Chart.js
+- **Backend**: FastAPI, Python
+- **Search**: Elasticsearch
+- **Environment**: Pixi (conda-based environment management)
+
+## Prerequisites
+
+- Pixi (for environment management)
+- Elasticsearch (running on localhost:9200)
+
+## Setup Instructions
+
+1. **Install Pixi** (if not already installed):
+   ```bash
+   curl -fsSL https://pixi.sh/install.sh | bash
+   ```
+
+2. **Start Elasticsearch**:
+   ```bash
+   # Using Docker
+   docker run -d --name elasticsearch -p 9200:9200 -e "discovery.type=single-node" elasticsearch:8.11.0
+   
+   # Or install locally and start the service
+   ```
+
+3. **Install dependencies and setup**:
+   ```bash
+   # Install backend dependencies
+   pixi run install-frontend
+   
+   # Setup Elasticsearch index and load mock data
+   pixi run setup-elasticsearch
+   ```
+
+4. **Start the application**:
+   ```bash
+   # Terminal 1: Start backend
+   pixi run start-backend
+   
+   # Terminal 2: Start frontend
+   pixi run start-frontend
+   ```
+
+5. **Access the application**:
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:8000
+   - API Documentation: http://localhost:8000/docs
+
+## Project Structure
+
+```
+website_cycling/
+├── backend/                 # FastAPI backend
+│   └── main.py             # Main API server
+├── frontend/               # Vue.js frontend
+│   ├── src/
+│   │   ├── components/     # Vue components
+│   │   │   ├── Home.vue    # Landing page with search
+│   │   │   └── RideViewer.vue # Route detail viewer
+│   │   ├── App.vue         # Main app component
+│   │   └── main.js         # App entry point
+│   ├── package.json        # Frontend dependencies
+│   └── vite.config.js      # Vite configuration
+├── mock_gpx/               # Sample GPX files for testing
+├── scripts/                # Setup and utility scripts
+│   └── setup_elasticsearch.py
+├── pixi.toml              # Pixi environment configuration
+└── README.md
+```
+
+## API Endpoints
+
+- `GET /api/rides` - Search for rides with optional filters
+- `GET /api/rides/{ride_id}` - Get detailed information about a specific ride
+
+## Development
+
+The application uses Pixi for environment management, which provides:
+- Isolated Python environments for backend
+- Node.js environment for frontend
+- Easy dependency management
+- Consistent development environment
+
+## Mock Data
+
+The application includes sample GPX files in the `mock_gpx/` directory for testing. These are automatically loaded into Elasticsearch when you run the setup script.
+
+## Future Enhancements
+
+- S3 integration for GPX file storage
+- User authentication and personal ride collections
+- Social features (sharing, comments, ratings)
+- Advanced filtering and sorting options
+- GPX file upload functionality
+- Real-time route tracking

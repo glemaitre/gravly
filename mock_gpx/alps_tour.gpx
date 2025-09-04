@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Garmin Connect" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <trk>
+    <name>Alps Mountain Tour</name>
+    <trkseg>
+      <trkpt lat="46.5197" lon="6.6323">
+        <ele>372</ele>
+        <time>2024-01-01T08:00:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5250" lon="6.6400">
+        <ele>420</ele>
+        <time>2024-01-01T08:05:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5300" lon="6.6500">
+        <ele>580</ele>
+        <time>2024-01-01T08:10:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5350" lon="6.6600">
+        <ele>750</ele>
+        <time>2024-01-01T08:15:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5400" lon="6.6700">
+        <ele>920</ele>
+        <time>2024-01-01T08:20:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5450" lon="6.6800">
+        <ele>1100</ele>
+        <time>2024-01-01T08:25:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5500" lon="6.6900">
+        <ele>1250</ele>
+        <time>2024-01-01T08:30:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5550" lon="6.7000">
+        <ele>1380</ele>
+        <time>2024-01-01T08:35:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5600" lon="6.7100">
+        <ele>1500</ele>
+        <time>2024-01-01T08:40:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5650" lon="6.7200">
+        <ele>1600</ele>
+        <time>2024-01-01T08:45:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5700" lon="6.7300">
+        <ele>1680</ele>
+        <time>2024-01-01T08:50:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5750" lon="6.7400">
+        <ele>1750</ele>
+        <time>2024-01-01T08:55:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5800" lon="6.7500">
+        <ele>1800</ele>
+        <time>2024-01-01T09:00:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5850" lon="6.7600">
+        <ele>1820</ele>
+        <time>2024-01-01T09:05:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5900" lon="6.7700">
+        <ele>1830</ele>
+        <time>2024-01-01T09:10:00Z</time>
+      </trkpt>
+      <trkpt lat="46.5950" lon="6.7800">
+        <ele>1820</ele>
+        <time>2024-01-01T09:15:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6000" lon="6.7900">
+        <ele>1800</ele>
+        <time>2024-01-01T09:20:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6050" lon="6.8000">
+        <ele>1750</ele>
+        <time>2024-01-01T09:25:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6100" lon="6.8100">
+        <ele>1680</ele>
+        <time>2024-01-01T09:30:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6150" lon="6.8200">
+        <ele>1600</ele>
+        <time>2024-01-01T09:35:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6200" lon="6.8300">
+        <ele>1500</ele>
+        <time>2024-01-01T09:40:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6250" lon="6.8400">
+        <ele>1380</ele>
+        <time>2024-01-01T09:45:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6300" lon="6.8500">
+        <ele>1250</ele>
+        <time>2024-01-01T09:50:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6350" lon="6.8600">
+        <ele>1100</ele>
+        <time>2024-01-01T09:55:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6400" lon="6.8700">
+        <ele>920</ele>
+        <time>2024-01-01T10:00:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6450" lon="6.8800">
+        <ele>750</ele>
+        <time>2024-01-01T10:05:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6500" lon="6.8900">
+        <ele>580</ele>
+        <time>2024-01-01T10:10:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6550" lon="6.9000">
+        <ele>420</ele>
+        <time>2024-01-01T10:15:00Z</time>
+      </trkpt>
+      <trkpt lat="46.6600" lon="6.9100">
+        <ele>372</ele>
+        <time>2024-01-01T10:20:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

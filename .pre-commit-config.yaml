@@ -1,0 +1,134 @@
+repos:
+  # Python hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+        description: Remove trailing whitespace from files
+        types: [text]
+        exclude: '\.(md)$'
+      - id: end-of-file-fixer
+        name: Fix end of files
+        description: Ensure files end with a newline
+        types: [text]
+      - id: check-yaml
+        name: Check YAML syntax
+        description: Check YAML files for syntax errors
+        types: [yaml]
+      - id: check-json
+        name: Check JSON syntax
+        description: Check JSON files for syntax errors
+        types: [json]
+      - id: check-toml
+        name: Check TOML syntax
+        description: Check TOML files for syntax errors
+        types: [toml]
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Check for merge conflict markers
+        types: [text]
+      - id: mixed-line-ending
+        name: Fix mixed line endings
+        description: Ensure consistent line endings
+        types: [text]
+        args: ['--fix=lf']
+
+  # Ruff for Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.11
+    hooks:
+      - id: ruff
+        name: Ruff linter
+        description: Run ruff linter
+        args: [--fix, --exit-non-zero-on-fix]
+        types: [python]
+      - id: ruff-format
+        name: Ruff formatter
+        description: Run ruff formatter
+        types: [python]
+
+  # Black for Python formatting (backup)
+  - repo: https://github.com/psf/black
+    rev: 25.1.0
+    hooks:
+      - id: black
+        name: Black formatter
+        description: Run black formatter
+        language_version: python3
+        types: [python]
+
+  # isort for import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: isort import sorter
+        description: Sort imports with isort
+        args: [--profile=black, --line-length=100]
+        types: [python]
+
+  # Frontend hooks
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        description: Run ESLint on frontend files
+        entry: bash -c 'cd frontend && npm run lint:check'
+        language: system
+        types: [javascript, vue]
+        files: '^frontend/.*\.(js|vue|ts)$'
+        pass_filenames: false
+
+      - id: prettier
+        name: Prettier
+        description: Run Prettier on frontend files
+        entry: bash -c 'cd frontend && npm run format'
+        language: system
+        types: [javascript, vue, css, html, json]
+        files: '^frontend/.*\.(js|vue|ts|css|html|json)$'
+        pass_filenames: false
+
+  # Additional text file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-case-conflict
+        name: Check for case conflicts
+        description: Check for files that would conflict in case-insensitive filesystems
+      - id: check-docstring-first
+        name: Check docstring is first
+        description: Ensure docstrings appear before other code
+        types: [python]
+      - id: debug-statements
+        name: Check for debug statements
+        description: Check for debugger imports and breakpoints
+        types: [python]
+      - id: requirements-txt-fixer
+        name: Fix requirements.txt
+        description: Sort entries in requirements.txt
+        files: '^requirements.*\.txt$'
+
+# Global configuration
+default_stages: [pre-commit]
+fail_fast: false
+minimum_pre_commit_version: '3.0.0'
+
+# Exclude certain files from all hooks
+exclude: |
+  (?x)^(
+    \.git/.*|
+    \.pixi/.*|
+    node_modules/.*|
+    \.venv/.*|
+    venv/.*|
+    __pycache__/.*|
+    \.mypy_cache/.*|
+    \.pytest_cache/.*|
+    build/.*|
+    dist/.*|
+    \.coverage.*|
+    coverage/.*|
+    \.nyc_output/.*|
+    elasticsearch-data/.*
+  )$
