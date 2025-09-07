@@ -318,17 +318,22 @@ def test_get_ride_ping_unavailable(monkeypatch):
 
 
 def test_main_guard_invokes_uvicorn(monkeypatch):
-    # Ensure running module as __main__ calls uvicorn.run
+    # Ensure running module as __main__ calls uvicorn.run without warnings
     called = {"value": False}
 
     def fake_run(app, host: str, port: int):  # noqa: D401
         called["value"] = True
 
     import runpy
+    import sys
+    import types
 
-    from backend import main as backend_main
+    # Remove cached module to avoid RuntimeWarning from runpy
+    sys.modules.pop("backend.main", None)
 
-    monkeypatch.setattr(backend_main.uvicorn, "run", fake_run, raising=True)
+    # Provide a fake uvicorn before executing module
+    fake_uvicorn = types.SimpleNamespace(run=fake_run)
+    monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
 
     # Execute module as if run directly
     runpy.run_module("backend.main", run_name="__main__")
