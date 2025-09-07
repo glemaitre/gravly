@@ -1,4 +1,4 @@
-name: Backend Tests
+name: Frontend Tests
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  backend-test:
+  frontend-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,11 +25,11 @@ jobs:
       - name: Show pixi version
         run: pixi --version
 
-      - name: Run backend tests with coverage
-        run: pixi run -e default -- test-backend
+      - name: Run frontend unit tests with coverage
+        run: pixi run -e default -- test-frontend
 
       - name: Upload coverage summary
         if: always()
         run: |
-          echo "Coverage summary:" >> $GITHUB_STEP_SUMMARY
-          pixi run -e default -- test-backend | sed -n '/^=============================== tests coverage/,/^[0-9].*passed/p' >> $GITHUB_STEP_SUMMARY
+          echo "Frontend Coverage summary:" >> $GITHUB_STEP_SUMMARY
+          cd frontend && npx vitest --coverage --reporter=default || true

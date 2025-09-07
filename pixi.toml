@@ -24,40 +24,21 @@ pytest = "*"
 pytest-cov = "*"
 
 [tasks]
-[tasks.start-backend]
-cmd = "cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
-
-[tasks.start-frontend]
-cmd = "cd frontend && npm run dev"
-depends-on = ["frontend-install"]
-
-[tasks.frontend-install]
-cmd = "cd frontend && npm install"
-
-[tasks.frontend-build]
-cmd = "cd frontend && npm run build"
-depends-on = ["frontend-install"]
-
-[tasks.setup-elasticsearch]
-cmd = "python scripts/setup_elasticsearch.py"
-
-[tasks.lint-all]
-cmd = "ruff check backend/ scripts/ --fix && cd frontend && npm run lint"
-
-[tasks.format-all]
-cmd = "ruff format backend/ scripts/ && cd frontend && npm run format"
-
-[tasks.type-check]
-cmd = "cd frontend && npm run type-check"
-
-[tasks.install-pre-commit]
-cmd = "pre-commit install"
-
-[tasks.pre-commit]
-cmd = "pre-commit run --all-files"
-
-[tasks.pre-commit-update]
-cmd = "pre-commit autoupdate"
-
-[tasks.test]
-cmd = "pytest -q --cov=backend --cov-report=term-missing"
+start-backend = { cmd = "uvicorn main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
+start-frontend = { cmd = "npm run dev", cwd = "frontend", depends-on = ["frontend-install"] }
+frontend-install = { cmd = "npm install", cwd = "frontend" }
+frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
+setup-elasticsearch = { cmd = "python scripts/setup_elasticsearch.py" }
+lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
+format-all = { depends-on = ["format-backend", "format-frontend"] }
+type-check = { depends-on = ["type-check-frontend"] }
+type-check-frontend = { cmd = "npm run type-check", cwd = "frontend" }
+install-pre-commit = { cmd = "pre-commit install" }
+pre-commit = { cmd = "pre-commit run --all-files" }
+pre-commit-update = { cmd = "pre-commit autoupdate" }
+lint-backend = { cmd = "ruff check backend/ scripts/ --fix" }
+lint-frontend = { cmd = "npm run lint", cwd = "frontend" }
+format-backend = { cmd = "ruff format backend/ scripts/" }
+format-frontend = { cmd = "npm run format", cwd = "frontend" }
+test-backend = { cmd = "pytest -q --cov=backend --cov-report=term-missing" }
+test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
