@@ -39,8 +39,8 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 3. **Install dependencies and setup**:
    ```bash
-   # Install backend dependencies
-   pixi run install-frontend
+   # Install frontend dependencies
+   pixi run frontend-install
    
    # Setup Elasticsearch index and load mock data
    pixi run setup-elasticsearch
@@ -72,7 +72,7 @@ website_cycling/
 │   │   │   ├── Home.vue    # Landing page with search
 │   │   │   └── RideViewer.vue # Route detail viewer
 │   │   ├── App.vue         # Main app component
-│   │   └── main.js         # App entry point
+│   │   └── main.ts         # App entry point
 │   ├── package.json        # Frontend dependencies
 │   └── vite.config.js      # Vite configuration
 ├── mock_gpx/               # Sample GPX files for testing
@@ -95,9 +95,45 @@ The application uses Pixi for environment management, which provides:
 - Easy dependency management
 - Consistent development environment
 
+### Common tasks (Pixi)
+
+```bash
+# Lint & format
+pixi run lint-all
+pixi run format-all
+
+# Type-check frontend
+pixi run type-check
+
+# Run tests with coverage
+pixi run test-backend
+pixi run test-frontend
+```
+
+Task definitions use Pixi's cwd and depends-on fields for clarity.
+
 ## Mock Data
 
 The application includes sample GPX files in the `mock_gpx/` directory for testing. These are automatically loaded into Elasticsearch when you run the setup script.
+
+For S3-based loading at startup, configure env vars `S3_BUCKET` and optional `S3_PREFIX`. Elasticsearch persists indexed data; consider loading mock data only if the index is empty.
+
+## Testing
+
+- Backend: pytest with 100% coverage for `backend/main.py`
+  - Run: `pixi run test-backend`
+- Frontend: Vitest + Vue Test Utils + Testing Library with jsdom
+  - Run: `pixi run test-frontend`
+
+Coverage is printed in the terminal for both back and front.
+
+## Continuous Integration
+
+GitHub Actions run tests on push/PR to `main` using `prefix-dev/setup-pixi`:
+- Backend: `.github/workflows/backend-tests.yml`
+- Frontend: `.github/workflows/frontend-tests.yml`
+
+Workflows activate the Pixi environment and run the Pixi tasks, posting coverage summaries.
 
 ## Future Enhancements
 
