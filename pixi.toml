@@ -19,9 +19,9 @@ passlib = "*"
 python-dotenv = "*"
 requests = "*"
 ruff = "*" # Python linter and formatter
-black = "*" # Python code formatter
-isort = "*" # Import sorter
 pre-commit = "*" # Git hooks framework
+pytest = "*"
+pytest-cov = "*"
 
 [tasks]
 [tasks.start-backend]
@@ -36,24 +36,16 @@ cmd = "cd frontend && npm install"
 
 [tasks.frontend-build]
 cmd = "cd frontend && npm run build"
+depends-on = ["frontend-install"]
 
 [tasks.setup-elasticsearch]
 cmd = "python scripts/setup_elasticsearch.py"
-
-[tasks.lint-python]
-cmd = "ruff check backend/ scripts/ --fix"
-
-[tasks.format-python]
-cmd = "ruff format backend/ scripts/"
 
 [tasks.lint-all]
 cmd = "ruff check backend/ scripts/ --fix && cd frontend && npm run lint"
 
 [tasks.format-all]
 cmd = "ruff format backend/ scripts/ && cd frontend && npm run format"
-
-[tasks.type-check-frontend]
-cmd = "cd frontend && npm run type-check"
 
 [tasks.type-check]
 cmd = "cd frontend && npm run type-check"
@@ -64,8 +56,8 @@ cmd = "pre-commit install"
 [tasks.pre-commit]
 cmd = "pre-commit run --all-files"
 
-[tasks.pre-commit-hooks]
-cmd = "pre-commit run --all-files --hook-stage pre-commit"
-
 [tasks.pre-commit-update]
 cmd = "pre-commit autoupdate"
+
+[tasks.test]
+cmd = "pytest -q --cov=backend --cov-report=term-missing"

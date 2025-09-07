@@ -1,5 +1,6 @@
 import json
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 
 import gpxpy
@@ -9,7 +10,59 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-app = FastAPI(title="Cycling GPX API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize resources on startup and clean up on shutdown."""
+    try:
+        # Test connection first
+        await es.ping()
+        print("Connected to Elasticsearch successfully")
+
+        # Create index if it doesn't exist
+        if not await es.indices.exists(index="gpx_tracks"):
+            await es.indices.create(
+                index="gpx_tracks",
+                body={
+                    "mappings": {
+                        "properties": {
+                            "name": {"type": "text"},
+                            "distance": {"type": "float"},
+                            "elevation_gain": {"type": "float"},
+                            "elevation_loss": {"type": "float"},
+                            "bounds": {"type": "object"},
+                            "points": {"type": "nested"},
+                            "created_at": {"type": "date"},
+                        }
+                    }
+                },
+            )
+            print("Created gpx_tracks index")
+
+        # Load mock GPX files
+        mock_dir = "mock_gpx"
+        if os.path.exists(mock_dir):
+            for filename in os.listdir(mock_dir):
+                if filename.endswith(".gpx"):
+                    file_path = os.path.join(mock_dir, filename)
+                    file_id = filename.replace(".gpx", "")
+                    await index_gpx_file(file_path, file_id)
+            print("Loaded mock GPX files")
+    except Exception as e:
+        print(f"Warning: Could not connect to Elasticsearch: {e}")
+        print("Backend will start but search functionality will be limited")
+
+    # Yield control to the application
+    yield
+
+    # Shutdown: close Elasticsearch
+    try:
+        await es.close()
+    except Exception:
+        pass
+
+
+app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
 
 # CORS middleware
 app.add_middleware(
@@ -159,48 +212,6 @@ async def index_gpx_file(file_path: str, file_id: str):
     except Exception as e:
         print(f"Error indexing {file_path}: {e}")
         return None
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize Elasticsearch index and load mock data"""
-    try:
-        # Test connection first
-        await es.ping()
-        print("Connected to Elasticsearch successfully")
-
-        # Create index if it doesn't exist
-        if not await es.indices.exists(index="gpx_tracks"):
-            await es.indices.create(
-                index="gpx_tracks",
-                body={
-                    "mappings": {
-                        "properties": {
-                            "name": {"type": "text"},
-                            "distance": {"type": "float"},
-                            "elevation_gain": {"type": "float"},
-                            "elevation_loss": {"type": "float"},
-                            "bounds": {"type": "object"},
-                            "points": {"type": "nested"},
-                            "created_at": {"type": "date"},
-                        }
-                    }
-                },
-            )
-            print("Created gpx_tracks index")
-
-        # Load mock GPX files
-        mock_dir = "mock_gpx"
-        if os.path.exists(mock_dir):
-            for filename in os.listdir(mock_dir):
-                if filename.endswith(".gpx"):
-                    file_path = os.path.join(mock_dir, filename)
-                    file_id = filename.replace(".gpx", "")
-                    await index_gpx_file(file_path, file_id)
-            print("Loaded mock GPX files")
-    except Exception as e:
-        print(f"Warning: Could not connect to Elasticsearch: {e}")
-        print("Backend will start but search functionality will be limited")
 
 
 @app.get("/")
