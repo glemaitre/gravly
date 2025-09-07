@@ -1,0 +1,35 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.0
+        with:
+          activate-environment: true
+          locked: true
+
+      - name: Show pixi version
+        run: pixi --version
+
+      - name: Run backend tests with coverage
+        run: pixi run -e default -- test
+
+      - name: Upload coverage summary
+        if: always()
+        run: |
+          echo "Coverage summary:" >> $GITHUB_STEP_SUMMARY
+          pixi run -e default -- test | sed -n '/^=============================== tests coverage/,/^[0-9].*passed/p' >> $GITHUB_STEP_SUMMARY
