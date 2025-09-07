@@ -56,19 +56,20 @@
   </div>
 </template>
 
-<script>
-import L from 'leaflet'
+<script lang="ts">
+import L, { Map as LeafletMap, LayerGroup } from 'leaflet'
 import axios from 'axios'
+import type { RideCard as RideCardType, Bounds as BoundsType } from '../types'
 
 export default {
   name: 'Home',
   data() {
     return {
-      map: null,
-      rides: [],
-      loading: false,
-      searchBounds: null,
-      rideLayers: null
+      map: null as LeafletMap | null,
+      rides: [] as RideCardType[],
+      loading: false as boolean,
+      searchBounds: null as L.LatLngBounds | null,
+      rideLayers: null as LayerGroup | null
     }
   },
   mounted() {
@@ -98,11 +99,11 @@ export default {
       })
     },
 
-    async loadAllRides() {
+    async loadAllRides(): Promise<void> {
       try {
         this.loading = true
-        const response = await axios.get('/api/rides')
-        this.rides = response.data
+        const response = await axios.get<RideCardType[]>('/api/rides')
+        this.rides = response.data as RideCardType[]
         this.$nextTick(() => {
           this.createMiniMaps()
           this.drawRidePathsOnSearchMap()
@@ -114,22 +115,22 @@ export default {
       }
     },
 
-    async searchRides() {
+    async searchRides(): Promise<void> {
       if (!this.searchBounds) return
 
       try {
         this.loading = true
-        const bounds = {
+        const bounds: BoundsType = {
           north: this.searchBounds.getNorth(),
           south: this.searchBounds.getSouth(),
           east: this.searchBounds.getEast(),
           west: this.searchBounds.getWest()
         }
 
-        const response = await axios.get('/api/rides', {
+        const response = await axios.get<RideCardType[]>('/api/rides', {
           params: { bounds: JSON.stringify(bounds) }
         })
-        this.rides = response.data
+        this.rides = response.data as RideCardType[]
         this.$nextTick(() => {
           this.createMiniMaps()
           this.drawRidePathsOnSearchMap()
@@ -141,7 +142,7 @@ export default {
       }
     },
 
-    createMiniMaps() {
+    createMiniMaps(): void {
       this.rides.forEach(ride => {
         const mapElement = document.getElementById(`mini-map-${ride.id}`)
         if (mapElement && !mapElement.hasChildNodes()) {
@@ -209,7 +210,7 @@ export default {
       })
     },
 
-    drawRidePathsOnSearchMap() {
+    drawRidePathsOnSearchMap(): void {
       // Clear existing paths
       if (this.rideLayers) {
         this.rideLayers.clearLayers()
@@ -261,23 +262,23 @@ export default {
       })
     },
 
-    getRouteColor(index) {
+    getRouteColor(index: number): string {
       const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316']
       return colors[index % colors.length]
     },
 
-    viewRide(rideId) {
+    viewRide(rideId: string): void {
       this.$router.push(`/ride/${rideId}`)
     },
 
-    formatDistance(distance) {
+    formatDistance(distance: number): string {
       if (distance < 1) {
         return `${Math.round(distance * 1000)}m`
       }
       return `${distance.toFixed(1)}km`
     },
 
-    formatElevation(elevation) {
+    formatElevation(elevation: number): string {
       return `${Math.round(elevation)}m`
     }
   }

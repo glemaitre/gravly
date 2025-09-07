@@ -64,10 +64,11 @@
   </div>
 </template>
 
-<script>
-import L from 'leaflet'
+<script lang="ts">
+import L, { Map as LeafletMap, LayerGroup } from 'leaflet'
 import axios from 'axios'
 import { Chart, registerables } from 'chart.js'
+import type { GPXTrack } from '../types'
 
 Chart.register(...registerables)
 
@@ -78,15 +79,15 @@ export default {
   },
   data() {
     return {
-      ride: null,
-      loading: true,
-      map: null,
-      routeLayer: null,
-      markerLayer: null,
-      elevationChart: null,
-      maxElevation: 0,
-      minElevation: 0,
-      currentPositionMarker: null
+      ride: null as GPXTrack | null,
+      loading: true as boolean,
+      map: null as LeafletMap | null,
+      routeLayer: null as LayerGroup | null,
+      markerLayer: null as LayerGroup | null,
+      elevationChart: null as Chart | null,
+      maxElevation: 0 as number,
+      minElevation: 0 as number,
+      currentPositionMarker: null as L.Marker | null
     }
   },
   async mounted() {
@@ -97,10 +98,10 @@ export default {
     }
   },
   methods: {
-    async loadRide() {
+    async loadRide(): Promise<void> {
       try {
-        const response = await axios.get(`/api/rides/${this.id}`)
-        this.ride = response.data
+        const response = await axios.get<GPXTrack>(`/api/rides/${this.id}`)
+        this.ride = response.data as GPXTrack
 
         // Calculate elevation stats
         const elevations = this.ride.points.map(p => p.elevation)
@@ -114,7 +115,7 @@ export default {
       }
     },
 
-    initMap() {
+    initMap(): void {
       if (!this.ride) return
 
       // Calculate center and bounds
@@ -149,7 +150,7 @@ export default {
       this.map.fitBounds(bounds, { padding: [20, 20] })
     },
 
-    drawRoute() {
+    drawRoute(): void {
       if (!this.ride || !this.routeLayer) return
 
       // Clear existing route
@@ -190,10 +191,11 @@ export default {
       this.markerLayer.addLayer(endMarker)
     },
 
-    initElevationChart() {
+    initElevationChart(): void {
       if (!this.ride) return
 
-      const ctx = this.$refs.elevationChart.getContext('2d')
+      const canvas = this.$refs.elevationChart as HTMLCanvasElement
+      const ctx = canvas.getContext('2d') as CanvasRenderingContext2D
 
       // Calculate cumulative distance
       let cumulativeDistance = 0
@@ -233,19 +235,21 @@ export default {
             intersect: false,
             mode: 'index'
           },
-          onHover: (event, elements) => {
+          onHover: (_event: unknown, elements: any[]) => {
             if (elements.length > 0) {
               const index = elements[0].index
               this.updateMapPosition(index)
             }
           },
-          onClick: (event, elements) => {
+          onClick: (_event: unknown, elements: any[]) => {
             if (elements.length > 0) {
               const index = elements[0].index
               this.updateMapPosition(index)
               // Highlight the clicked point
-              this.elevationChart.setActiveElements([{ datasetIndex: 0, index }])
-              this.elevationChart.update('none')
+              if (this.elevationChart) {
+                this.elevationChart.setActiveElements([{ datasetIndex: 0, index }])
+                this.elevationChart.update('none')
+              }
             }
           },
           scales: {
@@ -268,13 +272,13 @@ export default {
             },
             tooltip: {
               callbacks: {
-                title: (context) => {
-                  const index = context[0].dataIndex
+                title: (context: any) => {
+                  const index = context[0].dataIndex as number
                   const point = this.ride.points[index]
                   return `Distance: ${context[0].label} | Elevation: ${point.elevation}m`
                 },
-                label: (context) => {
-                  const index = context.dataIndex
+                label: (context: any) => {
+                  const index = context.dataIndex as number
                   const point = this.ride.points[index]
                   return `Lat: ${point.lat.toFixed(6)}, Lon: ${point.lon.toFixed(6)}`
                 }
@@ -285,7 +289,7 @@ export default {
       })
     },
 
-    updateMapPosition(index) {
+    updateMapPosition(index: number): void {
       if (!this.ride || !this.map || index >= this.ride.points.length) return
 
       const point = this.ride.points[index]
@@ -311,7 +315,7 @@ export default {
     },
 
 
-    calculateDistance(lat1, lon1, lat2, lon2) {
+    calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
       const R = 6371 // Earth's radius in km
       const dLat = (lat2 - lat1) * Math.PI / 180
       const dLon = (lon2 - lon1) * Math.PI / 180
@@ -322,14 +326,14 @@ export default {
       return R * c
     },
 
-    formatDistance(distance) {
+    formatDistance(distance: number): string {
       if (distance < 1) {
         return `${Math.round(distance * 1000)}m`
       }
       return `${distance.toFixed(1)}km`
     },
 
-    formatElevation(elevation) {
+    formatElevation(elevation: number): string {
       return `${Math.round(elevation)}m`
     }
   }

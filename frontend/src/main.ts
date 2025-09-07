@@ -1,10 +1,10 @@
 import { createApp } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import App from './App.vue'
 import Home from './components/Home.vue'
 import RideViewer from './components/RideViewer.vue'
 
-const routes = [
+const routes: RouteRecordRaw[] = [
   { path: '/', component: Home },
   { path: '/ride/:id', component: RideViewer, props: true }
 ]

@@ -9,6 +9,21 @@ module.exports = {
     'eslint:recommended',
     'plugin:vue/vue3-essential'
   ],
+  overrides: [
+    {
+      files: ['*.ts', '*.tsx', '*.vue'],
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        extraFileExtensions: ['.vue']
+      },
+      plugins: ['@typescript-eslint'],
+      rules: {
+        '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+      }
+    }
+  ],
   parserOptions: {
     ecmaVersion: 2022,
     sourceType: 'module'

@@ -29,6 +29,13 @@ cmd = "cd backend && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 
 [tasks.start-frontend]
 cmd = "cd frontend && npm run dev"
+depends-on = ["frontend-install"]
+
+[tasks.frontend-install]
+cmd = "cd frontend && npm install"
+
+[tasks.frontend-build]
+cmd = "cd frontend && npm run build"
 
 [tasks.setup-elasticsearch]
 cmd = "python scripts/setup_elasticsearch.py"
@@ -44,6 +51,12 @@ cmd = "ruff check backend/ scripts/ --fix && cd frontend && npm run lint"
 
 [tasks.format-all]
 cmd = "ruff format backend/ scripts/ && cd frontend && npm run format"
+
+[tasks.type-check-frontend]
+cmd = "cd frontend && npm run type-check"
+
+[tasks.type-check]
+cmd = "cd frontend && npm run type-check"
 
 [tasks.install-pre-commit]
 cmd = "pre-commit install"
