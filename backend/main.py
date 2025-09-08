@@ -6,9 +6,13 @@ from datetime import datetime
 import gpxpy
 import uvicorn
 from elasticsearch import AsyncElasticsearch
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 @asynccontextmanager
@@ -38,6 +42,14 @@ async def lifespan(app: FastAPI):
                 },
             )
             print("Created gpx_tracks index")
+
+        # Initialize database (create tables if not exist)
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            print("Database tables ensured")
+        except Exception as db_e:
+            print(f"Warning: Could not initialize database: {db_e}")
 
         # Load mock GPX files
         mock_dir = "mock_gpx"
@@ -79,6 +91,44 @@ es = AsyncElasticsearch(
     headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"},
 )
 
+# Database setup (PostgreSQL via SQLAlchemy async)
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    # Fallback to local development URL. Example: postgresql+asyncpg://user:pass@localhost/db
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/cycling",
+)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TireType(str):
+    SLICK = "slick"
+    SEMI_SLICK = "semi-slick"
+    KNOBS = "knobs"
+
+
+class Segment(Base):
+    __tablename__ = "segments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    tire_dry: Mapped[str] = mapped_column(
+        SAEnum(TireType.SLICK, TireType.SEMI_SLICK, TireType.KNOBS, name="tire_type"),
+        nullable=False,
+    )
+    tire_wet: Mapped[str] = mapped_column(
+        SAEnum(TireType.SLICK, TireType.SEMI_SLICK, TireType.KNOBS, name="tire_type"),
+        nullable=False,
+    )
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
 
 # Pydantic models
 class GPXPoint(BaseModel):
@@ -115,6 +165,14 @@ class RideSearchRequest(BaseModel):
     max_distance: float | None = None
     min_elevation: float | None = None
     max_elevation: float | None = None
+
+
+class SegmentCreateResponse(BaseModel):
+    id: int
+    name: str
+    tire_dry: str
+    tire_wet: str
+    file_path: str
 
 
 def parse_gpx_file(file_path: str) -> GPXTrack:
@@ -326,6 +384,56 @@ async def get_ride(ride_id: str):
         )
     except Exception:
         raise HTTPException(status_code=404, detail="Ride not found")
+
+
+@app.post("/api/segments", response_model=SegmentCreateResponse)
+async def create_segment(
+    name: str = Form(...),
+    tire_dry: str = Form(...),
+    tire_wet: str = Form(...),
+    file: UploadFile = File(...),
+):
+    """Create a new segment: store file locally and metadata in DB.
+
+    Note: Files are saved under `mock_gpx/` for now; later this should target S3.
+    """
+    allowed = {"slick", "semi-slick", "knobs"}
+    if tire_dry not in allowed or tire_wet not in allowed:
+        raise HTTPException(status_code=422, detail="Invalid tire types")
+
+    # Ensure destination directory exists
+    dest_dir = "mock_gpx"
+    os.makedirs(dest_dir, exist_ok=True)
+
+    # Persist file
+    raw_bytes = await file.read()
+    safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in name.lower())
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    # Save as .gpx if user provided a valid GPX file
+    filename = f"segment-{timestamp}-{safe_name}.gpx"
+    file_path = os.path.join(dest_dir, filename)
+    try:
+        with open(file_path, "wb") as f:
+            f.write(raw_bytes)
+    except Exception as write_e:
+        raise HTTPException(status_code=500, detail=f"Failed to store file: {write_e}")
+
+    # Store metadata in DB
+    async with SessionLocal() as session:
+        seg = Segment(name=name, tire_dry=tire_dry, tire_wet=tire_wet, file_path=file_path)
+        session.add(seg)
+        await session.commit()
+        await session.refresh(seg)
+
+    # Index in Elasticsearch for search/viewing
+    try:
+        await index_gpx_file(file_path, f"segment-{seg.id}")
+    except Exception:
+        pass
+
+    return SegmentCreateResponse(
+        id=seg.id, name=seg.name, tire_dry=seg.tire_dry, tire_wet=seg.tire_wet, file_path=file_path
+    )
 
 
 if __name__ == "__main__":

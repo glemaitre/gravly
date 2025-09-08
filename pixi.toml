@@ -18,6 +18,8 @@ python-jose = "*"
 passlib = "*"
 python-dotenv = "*"
 requests = "*"
+sqlalchemy = "*"
+asyncpg = "*"
 ruff = "*" # Python linter and formatter
 pre-commit = "*" # Git hooks framework
 pytest = "*"
@@ -42,3 +44,9 @@ format-backend = { cmd = "ruff format backend/ scripts/" }
 format-frontend = { cmd = "npm run format", cwd = "frontend" }
 test-backend = { cmd = "pytest -q --cov=backend --cov-report=term-missing" }
 test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
+
+# Local Postgres via Docker
+pg-up = { cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cycling -p 5432:5432 -d postgres:16" }
+pg-down = { cmd = "docker rm -f cycling-pg" }
+# Export DATABASE_URL for backend tasks (example for local Docker)
+env-dev = { cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling" }

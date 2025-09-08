@@ -11,5 +11,13 @@ export default defineConfig({
         changeOrigin: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      input: {
+        app: 'index.html',
+        editor: 'editor.html'
+      }
+    }
   }
 })
