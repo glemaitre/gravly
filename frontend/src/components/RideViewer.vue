@@ -8,7 +8,7 @@
     <div v-else-if="ride" class="ride-content">
       <div class="ride-header">
         <button @click="$router.push('/')" class="back-btn">
-          ← Back to Search
+          <i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Back to Search
         </button>
         <h1 class="ride-title">{{ ride.name }}</h1>
         <div class="ride-summary">
@@ -159,10 +159,11 @@ export default {
 
       // Create polyline for the route
       const routePoints = this.ride.points.map(p => [p.lat, p.lon])
+      const brand = getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600'
       const route = L.polyline(routePoints, {
-        color: '#3b82f6',
+        color: brand,
         weight: 4,
-        opacity: 0.8
+        opacity: 0.85
       })
 
       this.routeLayer.addLayer(route)
@@ -174,7 +175,7 @@ export default {
       const startMarker = L.marker([startPoint.lat, startPoint.lon], {
         icon: L.divIcon({
           className: 'start-marker',
-          html: '🏁',
+          html: '<i class="fa-solid fa-flag-checkered"></i>',
           iconSize: [30, 30]
         })
       })
@@ -182,7 +183,7 @@ export default {
       const endMarker = L.marker([endPoint.lat, endPoint.lon], {
         icon: L.divIcon({
           className: 'end-marker',
-          html: '🏆',
+          html: '<i class="fa-solid fa-trophy"></i>',
           iconSize: [30, 30]
         })
       })
@@ -220,8 +221,8 @@ export default {
           datasets: [{
             label: 'Elevation',
             data: elevations,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
+            backgroundColor: 'rgba(255, 102, 0, 0.12)',
             fill: true,
             tension: 0.1,
             pointRadius: 0,
@@ -303,7 +304,7 @@ export default {
       this.currentPositionMarker = L.marker([point.lat, point.lon], {
         icon: L.divIcon({
           className: 'position-marker',
-          html: '📍',
+          html: '<i class="fa-solid fa-location-dot"></i>',
           iconSize: [25, 25]
         })
       })
@@ -343,7 +344,7 @@ export default {
 <style scoped>
 .ride-viewer {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--brand-bg);
 }
 
 .loading {
@@ -383,7 +384,7 @@ export default {
 }
 
 .back-btn {
-  background: #e2e8f0;
+  background: rgba(255, 102, 0, 0.12);
   color: #4a5568;
   border: none;
   padding: 0.5rem 1rem;
@@ -395,7 +396,7 @@ export default {
 }
 
 .back-btn:hover {
-  background: #cbd5e0;
+  background: rgba(255, 102, 0, 0.2);
 }
 
 .ride-title {

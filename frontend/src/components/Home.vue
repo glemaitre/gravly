@@ -36,11 +36,11 @@
               <h3 class="ride-name">{{ ride.name }}</h3>
               <div class="ride-stats">
                 <div class="stat">
-                  <span class="stat-icon">📏</span>
+                  <span class="stat-icon"><i class="fa-solid fa-ruler"></i></span>
                   <span class="stat-value">{{ formatDistance(ride.distance) }}</span>
                 </div>
                 <div class="stat">
-                  <span class="stat-icon">⛰️</span>
+                  <span class="stat-icon"><i class="fa-solid fa-mountain"></i></span>
                   <span class="stat-value">{{ formatElevation(ride.elevation_gain) }}</span>
                 </div>
               </div>
@@ -175,7 +175,7 @@ export default {
               L.marker(startPoint, {
                 icon: L.divIcon({
                   className: 'start-marker',
-                  html: '🏁',
+                  html: '<i class="fa-solid fa-flag-checkered"></i>',
                   iconSize: [20, 20]
                 })
               }).addTo(miniMap)
@@ -183,7 +183,7 @@ export default {
               L.marker(endPoint, {
                 icon: L.divIcon({
                   className: 'end-marker',
-                  html: '🏆',
+                  html: '<i class="fa-solid fa-trophy"></i>',
                   iconSize: [20, 20]
                 })
               }).addTo(miniMap)
@@ -243,7 +243,7 @@ export default {
           const startMarker = L.marker(startPoint, {
             icon: L.divIcon({
               className: 'start-marker',
-              html: '🏁',
+              html: '<i class="fa-solid fa-flag-checkered"></i>',
               iconSize: [25, 25]
             })
           }).bindPopup(`<strong>${ride.name}</strong><br/>Start`)
@@ -251,7 +251,7 @@ export default {
           const endMarker = L.marker(endPoint, {
             icon: L.divIcon({
               className: 'end-marker',
-              html: '🏆',
+              html: '<i class="fa-solid fa-trophy"></i>',
               iconSize: [25, 25]
             })
           }).bindPopup(`<strong>${ride.name}</strong><br/>Finish`)
@@ -263,7 +263,13 @@ export default {
     },
 
     getRouteColor(index: number): string {
-      const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316']
+      const colors = [
+        getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
+        getComputedStyle(document.documentElement).getPropertyValue('--brand-400').trim() || '#ff7f2a',
+        getComputedStyle(document.documentElement).getPropertyValue('--brand-300').trim() || '#ff9955',
+        getComputedStyle(document.documentElement).getPropertyValue('--brand-200').trim() || '#ffb380',
+        getComputedStyle(document.documentElement).getPropertyValue('--brand-100').trim() || '#ffccaa',
+      ]
       return colors[index % colors.length]
     },
 
@@ -294,6 +300,7 @@ export default {
   text-align: center;
   padding: 4rem 2rem;
   color: white;
+  background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.15));
 }
 
 .hero-title {
@@ -339,7 +346,7 @@ export default {
 }
 
 .search-btn {
-  background: #3b82f6;
+  background: var(--brand-primary);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -347,11 +354,11 @@ export default {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.25);
 }
 
 .search-btn:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--brand-primary-hover);
   transform: translateY(-1px);
 }
 
@@ -417,6 +424,8 @@ export default {
   font-weight: 600;
   margin: 0 0 1rem 0;
   color: #2d3748;
+  border-left: 4px solid var(--brand-accent);
+  padding-left: 8px;
 }
 
 .ride-stats {

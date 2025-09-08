@@ -2,7 +2,7 @@
   <div id="app">
     <nav class="navbar">
       <div class="nav-container">
-        <h1 class="nav-title">🚴 Cycling Routes</h1>
+        <h1 class="nav-title"><i class="fa-solid fa-person-biking" aria-hidden="true"></i> Cycling Routes</h1>
         <router-link to="/" class="nav-link">Home</router-link>
       </div>
     </nav>
@@ -19,10 +19,35 @@ export default {
 </script>
 
 <style>
+:root {
+  /* Brand orange gradient palette */
+  --brand-50: #ffe6d5ff;
+  --brand-100: #ffccaaff;
+  --brand-200: #ffb380ff;
+  --brand-300: #ff9955ff;
+  --brand-400: #ff7f2aff;
+  --brand-500: #ff6600ff;
+
+  --brand-gradient: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 20%, var(--brand-300) 45%, var(--brand-200) 70%, var(--brand-100) 100%);
+
+  /* Common brand aliases */
+  --brand-bg: var(--brand-gradient);
+  --brand-primary: var(--brand-500);
+  --brand-primary-hover: #e65c00;
+  --brand-accent: var(--brand-300);
+}
+
 #app {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--brand-bg);
 }
+
+/* Reusable brand utilities */
+.bg-brand-gradient { background: var(--brand-gradient); }
+.text-brand { color: var(--brand-primary); }
+.border-brand { border-color: var(--brand-primary); }
+.btn-brand { background: var(--brand-primary); color: #fff; }
+.btn-brand:hover { background: var(--brand-primary-hover); }
 
 .navbar {
   background: rgba(255, 255, 255, 0.95);
@@ -59,7 +84,7 @@ export default {
 }
 
 .nav-link:hover {
-  background: #e2e8f0;
+  background: rgba(255, 102, 0, 0.12);
   color: #2d3748;
 }
 
