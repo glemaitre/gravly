@@ -1,8 +1,19 @@
 <template>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="logo">
+        <img :src="logoUrl" alt="Cycling Segments" class="logo-img" />
+      </div>
+      <nav class="nav">
+        <!-- Add actions/links here if needed -->
+      </nav>
+    </div>
+  </header>
   <div class="editor">
     <div class="content">
     <div class="page">
       <div class="sidebar">
+        <div class="sidebar-scroll">
         <div class="sidebar-group card">
           <h3 class="group-title">Load</h3>
           <button class="menu-btn" @click="triggerFileOpen" title="Load GPX">
@@ -11,83 +22,85 @@
           </button>
           <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
         </div>
+        <div v-if="loaded" class="sidebar-group card">
+          <h3 class="group-title">Actions</h3>
+          <button class="save-side" :disabled="isSaveDisabled" :title="isSaveDisabled ? saveDisabledTitle : ''" @click="onSubmit">
+            <span>Save segment</span>
+          </button>
+        </div>
+        </div>
       </div>
       <section v-if="loaded" class="main-col">
-        <div class="card card-elevation">
-          <div class="axis-toggle">
-            <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance</button>
-            <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time</button>
+        <div class="card controls">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="badge start">Start</span>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric" title="Elapsed time from start">
+                <span class="icon">⏱️</span>
+                <span class="value">{{ formatElapsed(startIndex) }}</span>
+              </div>
+              <div class="metric" title="Distance (km)">
+                <span class="icon">📏</span>
+                <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
+              </div>
+              <div class="metric" title="Elevation (m)">
+                <span class="icon">⛰️</span>
+                <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
+              </div>
+              <div class="gps-title" title="GPS location"><span class="icon">📍</span><span class="text">GPS</span></div>
+              <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+              <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+            </div>
+            <div class="slider-row">
+              <button type="button" class="btn" @click="startIndex = Math.max(0, startIndex - 1)">−</button>
+              <div class="range-wrap">
+                <input class="range" type="range" :min="startMin" :max="startMax" :value="startIndex" @input="onStartInput($event)" />
+                <div class="index-badge" :style="{ left: startPercent + '%' }" title="Index">{{ startIndex }}</div>
+              </div>
+              <button type="button" class="btn" @click="startIndex = Math.min(endIndex - 1, startIndex + 1)">+</button>
+            </div>
           </div>
-          <canvas ref="chartCanvas" class="chart"></canvas>
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="badge end">End</span>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric" title="Elapsed time from start">
+                <span class="icon">⏱️</span>
+                <span class="value">{{ formatElapsed(endIndex) }}</span>
+              </div>
+              <div class="metric" title="Distance (km)">
+                <span class="icon">📏</span>
+                <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
+              </div>
+              <div class="metric" title="Elevation (m)">
+                <span class="icon">⛰️</span>
+                <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
+              </div>
+              <div class="gps-title" title="GPS location"><span class="icon">📍</span><span class="text">GPS</span></div>
+              <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+              <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+            </div>
+            <div class="slider-row">
+              <button type="button" class="btn" @click="endIndex = Math.max(startIndex + 1, endIndex - 1)">−</button>
+              <div class="range-wrap">
+                <input class="range" type="range" :min="endMin" :max="endMax" :value="endIndex" @input="onEndInput($event)" />
+                <div class="index-badge" :style="{ left: endPercent + '%' }" title="Index">{{ endIndex }}</div>
+              </div>
+              <button type="button" class="btn" @click="endIndex = Math.min(points.length - 1, endIndex + 1)">+</button>
+            </div>
+          </div>
         </div>
         <div class="card card-map">
           <div id="map" class="map"></div>
         </div>
-        <div class="card controls">
-          <h3 class="meta-title">Segment selector</h3>
-          <div class="slider-group">
-            <div class="slider-header">
-              <span class="badge start">Start of segment</span>
-            </div>
-            <div class="slider-row">
-              <button type="button" class="btn" @click="startIndex = Math.max(0, startIndex - 1)">−</button>
-              <input class="range" type="range" :min="0" :max="Math.max(1, endIndex - 1)" :value="startIndex" @input="onStartInput($event)" />
-              <button type="button" class="btn" @click="startIndex = Math.min(endIndex - 1, startIndex + 1)">+</button>
-            </div>
-            <div class="info-grid">
-              <div class="info" title="Index">
-                <span class="icon">#️⃣</span>
-                <span class="value">{{ startIndex }}</span>
-              </div>
-              <div class="info" title="Elapsed time from start">
-                <span class="icon">⏱️</span>
-                <span class="value">{{ formatElapsed(startIndex) }}</span>
-              </div>
-              <div class="info" title="GPS location">
-                <span class="icon">📍</span>
-                <span class="value">{{ formatLatLon(pointAt(startIndex)) }}</span>
-              </div>
-              <div class="info" title="Distance (km)">
-                <span class="icon">📏</span>
-                <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
-              </div>
-              <div class="info" title="Elevation (m)">
-                <span class="icon">⛰️</span>
-                <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="slider-group">
-            <div class="slider-header">
-              <span class="badge end">End of segment</span>
-            </div>
-            <div class="slider-row">
-              <button type="button" class="btn" @click="endIndex = Math.max(startIndex + 1, endIndex - 1)">−</button>
-              <input class="range" type="range" :min="Math.min(points.length - 1, startIndex + 1)" :max="points.length - 1" :value="endIndex" @input="onEndInput($event)" />
-              <button type="button" class="btn" @click="endIndex = Math.min(points.length - 1, endIndex + 1)">+</button>
-            </div>
-            <div class="info-grid">
-              <div class="info" title="Index">
-                <span class="icon">#️⃣</span>
-                <span class="value">{{ endIndex }}</span>
-              </div>
-              <div class="info" title="Elapsed time from start">
-                <span class="icon">⏱️</span>
-                <span class="value">{{ formatElapsed(endIndex) }}</span>
-              </div>
-              <div class="info" title="GPS location">
-                <span class="icon">📍</span>
-                <span class="value">{{ formatLatLon(pointAt(endIndex)) }}</span>
-              </div>
-              <div class="info" title="Distance (km)">
-                <span class="icon">📏</span>
-                <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
-              </div>
-              <div class="info" title="Elevation (m)">
-                <span class="icon">⛰️</span>
-                <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
-              </div>
-            </div>
+        <div class="card card-elevation">
+          <canvas ref="chartCanvas" class="chart"></canvas>
+          <div class="axis-toggle below">
+            <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance (km)</button>
+            <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time (hh:mm:ss)</button>
           </div>
         </div>
 
@@ -117,18 +130,10 @@
               </select>
             </div>
           </div>
-          <!-- Save moved to right sidebar button -->
+          <!-- Save button is available in the sidebar -->
         </form>
       </section>
-      <aside v-if="loaded" class="actions-col">
-        <div class="card action-card">
-          <h3 class="action-title">Actions</h3>
-          <button class="save-side" :disabled="submitting || !name || !loaded" @click="onSubmit">
-            <span>Save segment</span>
-            <span v-if="!name" class="info-dot" title="Enter a segment name to enable saving">i</span>
-          </button>
-        </div>
-      </aside>
+
     </div>
 
     <div v-if="!loaded" class="empty">
@@ -141,8 +146,9 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, watch, nextTick } from 'vue'
-import L, { Map as LeafletMap, Polyline } from 'leaflet'
+import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
+import logoUrl from '../assets/images/logo.svg'
+import L from 'leaflet'
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale } from 'chart.js'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title)
@@ -167,14 +173,35 @@ const cumulativeKm = ref<number[]>([])
 const cumulativeSec = ref<number[]>([])
 const xMode = ref<'distance' | 'time'>('distance')
 
-let map: LeafletMap | null = null
-let fullLine: Polyline | null = null
-let selectedLine: Polyline | null = null
-let baseLayer: L.TileLayer | null = null
+// Save button state and tooltip
+const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
+const saveDisabledTitle = computed(() => {
+  if (!loaded.value) return 'Load a GPX first to enable saving'
+  if (!name.value) return 'Enter a segment name to enable saving'
+  if (submitting.value) return 'Submitting…'
+  return ''
+})
+
+let map: any = null
+let fullLine: any = null
+let selectedLine: any = null
+let baseLayer: any = null
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 const smoothedElevations = ref<number[]>([])
+
+// Slider bounds and index badge positions
+const startMin = computed(() => 0)
+const startMax = computed(() => Math.max(1, endIndex.value - 1))
+const endMin = computed(() => Math.min(points.value.length - 1, startIndex.value + 1))
+const endMax = computed(() => points.value.length - 1)
+function toPercent(value: number, min: number, max: number): number {
+  if (max <= min) return 0
+  return ((value - min) / (max - min)) * 100
+}
+const startPercent = computed(() => toPercent(startIndex.value, startMin.value, startMax.value))
+const endPercent = computed(() => toPercent(endIndex.value, endMin.value, endMax.value))
 
 function triggerFileOpen() {
   fileInput.value?.click()
@@ -308,7 +335,7 @@ function updateSelectedPolyline() {
   if (!map) return
   const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.lat, p.lon]) as [number, number][]
   if (selectedLine) selectedLine.remove()
-  selectedLine = L.polyline(segLatLngs, { color: '#1e90ff', weight: 5 })
+  selectedLine = L.polyline(segLatLngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600', weight: 5 })
   selectedLine.addTo(map)
 }
 
@@ -326,7 +353,7 @@ function renderChart() {
         {
           label: 'Elevation (m)',
           data: data.map(d => ({ x: d.x, y: d.y })),
-          borderColor: '#1e90ff',
+          borderColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
           borderWidth: 2,
           pointRadius: 0,
           fill: false,
@@ -339,7 +366,7 @@ function renderChart() {
       maintainAspectRatio: false,
       animation: false,
       scales: {
-        x: { type: 'linear', display: true, title: { display: true, text: xAxisTitle() }, min: getX(startIndex.value), max: getX(endIndex.value), ticks: { callback: (v: any) => formatXTick(Number(v)) } },
+        x: { type: 'linear', display: true, title: { display: false }, min: getX(startIndex.value), max: getX(endIndex.value), ticks: { callback: (v: any) => formatXTick(Number(v)) } },
         y: { display: true, title: { display: true, text: 'Elevation (m)' } }
       },
       plugins: { legend: { display: false } }
@@ -405,8 +432,6 @@ watch([startIndex, endIndex], () => {
     // @ts-ignore
     chart.data.datasets[0].data = data.map(d => ({ x: d.x, y: d.y }))
     // @ts-ignore
-    chart.options.scales.x.title.text = xAxisTitle()
-    // @ts-ignore
     chart.options.scales.x.min = getX(startIndex.value)
     // @ts-ignore
     chart.options.scales.x.max = getX(endIndex.value)
@@ -425,8 +450,6 @@ watch(xMode, () => {
   const data = buildXYData()
   // @ts-ignore
   chart.data.datasets[0].data = data.map(d => ({ x: d.x, y: d.y }))
-  // @ts-ignore
-  chart.options.scales.x.title.text = xAxisTitle()
   // @ts-ignore
   chart.options.scales.x.ticks.callback = (v) => formatXTick(Number(v))
   // @ts-ignore
@@ -513,14 +536,31 @@ async function onSubmit() {
 }
 </script>
 
+<style>
+/* Local brand variables to support the standalone editor entry */
+:root {
+  --brand-50: #ffe6d5ff;
+  --brand-100: #ffccaaff;
+  --brand-200: #ffb380ff;
+  --brand-300: #ff9955ff;
+  --brand-400: #ff7f2aff;
+  --brand-500: #ff6600ff;
+
+  --brand-primary: var(--brand-500);
+  --brand-primary-hover: #e65c00;
+  --brand-accent: var(--brand-300);
+}
+</style>
+
 <style scoped>
 .editor { display: flex; min-height: 100vh; background: #f8fafc; }
 .content { flex: 1 1 auto; padding: 1rem 1.5rem; }
-.page { --sidebar-w: 200px; display: grid; grid-template-columns: var(--sidebar-w) 1fr var(--sidebar-w); gap: 1.25rem; align-items: start; max-width: 1200px; margin: 0 auto; }
+.page { --sidebar-w: 200px; display: grid; grid-template-columns: var(--sidebar-w) 1fr; gap: 1.25rem; align-items: start; max-width: 1200px; margin: 0 auto; }
 .main-col { display: flex; flex-direction: column; gap: 0.75rem; }
 .actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
-.sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; }
+.sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: sticky; top: calc(var(--topbar-h, 48px) + 12px); align-self: start; }
+.sidebar-scroll { display: flex; flex-direction: column; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px) - 24px); overflow: auto; padding-right: 2px; }
 .sidebar .card { margin: 0; width: 100%; box-sizing: border-box; }
 .sidebar .group-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; text-transform: none; letter-spacing: 0; }
 .sidebar .menu-btn { width: 100%; justify-content: center; padding: 0.5rem 0; gap: 0.5rem; }
@@ -542,6 +582,7 @@ async function onSubmit() {
 .card-elevation { padding: 0.75rem; }
 .map { height: 480px; width: 100%; }
 .axis-toggle { display: inline-flex; gap: 0; margin: 0.25rem auto 0.25rem; border: 1px solid #e5e7eb; border-radius: 999px; overflow: hidden; background: #fff; position: relative; left: 50%; transform: translateX(-50%); }
+.axis-toggle.below { margin-top: 0.5rem; }
 .axis-toggle .seg { font-size: 12px; padding: 4px 10px; border: none; background: transparent; cursor: pointer; color: #374151; }
 .axis-toggle .seg.left { border-right: 1px solid #e5e7eb; }
 .axis-toggle .seg.active { background: #f3f4f6; color: #111827; }
@@ -550,16 +591,29 @@ async function onSubmit() {
 .slider-group { background: #fafafa; padding: 0.75rem; border: 1px solid #eee; border-radius: 8px; }
 .slider-header { display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
 .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
-.badge.start { background: #1e90ff; color: #ffffff; }
-.badge.end { background: #f59e0b; color: #ffffff; }
+.badge.start { background: var(--brand-500, #ff6600); color: #ffffff; }
+.badge.end { background: var(--brand-500, #ff6600); color: #ffffff; }
 .slider-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
 .btn { border: none; background: #e5e7eb; border-radius: 6px; height: 32px; cursor: pointer; }
 .btn:hover { background: #d1d5db; }
 .range { width: 100%; }
+.range-wrap { position: relative; width: 100%; }
+.index-badge { position: absolute; bottom: -18px; transform: translateX(-50%); background: #111827; color: #ffffff; font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.5rem; }
 .info { display: flex; align-items: center; gap: 0.5rem; color: #374151; user-select: none; cursor: default; }
 .info .icon { width: 20px; text-align: center; }
 .info .value { font-variant-numeric: tabular-nums; }
+.info.gps { grid-column: 1 / -1; }
+.metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
+.metric { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
+.metric .icon { width: 18px; text-align: center; }
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
+.gps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.25rem 0; align-items: center; }
+.gps-title { display: inline-flex; align-items: center; gap: 0.35rem; color: #374151; font-weight: 500; }
+.gps-title .icon { width: 18px; text-align: center; }
+.gps-col { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
+.gps-col .label { font-size: 12px; color: #6b7280; }
+.gps-col .value { font-variant-numeric: tabular-nums; }
 .workspace-right { display: flex; flex-direction: column; gap: 1rem; }
 .chart { width: 100%; height: 200px; max-height: 200px; }
 .meta { background: #ffffff; width: 100%; margin: 0; display: block; }
@@ -570,9 +624,9 @@ async function onSubmit() {
 .save-btn { display: none; }
 .action-card { position: static; }
 .action-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; }
-.save-side { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: #1e90ff; color: #ffffff; border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; cursor: pointer; }
-.save-side:hover { background: #1b82e6; }
-.save-side:disabled { background: rgba(30, 144, 255, 0.1); color: #7f8286; cursor: not-allowed; border: 1px solid #e5e7eb; }
+.save-side { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: var(--brand-primary, var(--brand-500, #ff6600)); color: #ffffff; border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; cursor: pointer; }
+.save-side:hover { background: var(--brand-primary-hover, #e65c00); }
+.save-side:disabled { background: rgba(255, 102, 0, 0.1); color: #7f8286; cursor: not-allowed; border: 1px solid #e5e7eb; }
 .info-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: 12px; user-select: none; }
 .empty { padding: 2rem; text-align: center; color: #666; }
 .message { margin-top: 1rem; }
@@ -580,4 +634,15 @@ async function onSubmit() {
 @media (max-width: 960px) {
   .workspace { grid-template-columns: 1fr; }
 }
+
+/* Sticky top navigation bar */
+:root { --topbar-h: 48px; }
+.topbar { position: sticky; top: 0; z-index: 1000; background: #ffffff; border-bottom: 1px solid #e5e7eb; height: var(--topbar-h, 48px); }
+.topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; height: var(--topbar-h, 48px); display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; }
+.topbar .logo { display: inline-flex; align-items: center; }
+.topbar .logo-img { height: 28px; display: block; }
+.topbar .nav { display: flex; align-items: center; gap: 0.75rem; }
+
+/* Ensure sticky sidebars account for topbar height */
+.sidebar { top: calc(var(--topbar-h, 48px) + 12px); }
 </style>
