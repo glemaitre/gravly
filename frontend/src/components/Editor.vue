@@ -11,45 +11,62 @@
   </header>
   <div class="editor">
     <div class="content">
-    <div class="page">
+    <div class="page" :style="{ '--section-offset': sectionOffset + 'px' } as any">
       <div class="sidebar">
         <div class="sidebar-scroll">
-        <div class="sidebar-group card">
-          <h3 class="group-title">Load</h3>
-          <button class="menu-btn" @click="triggerFileOpen" title="Load GPX">
-            <span class="icon" aria-hidden="true">📄</span>
-            <span class="label">GPX</span>
-          </button>
-          <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
-        </div>
-        <div v-if="loaded" class="sidebar-group card">
-          <h3 class="group-title">Actions</h3>
-          <button class="save-side" :disabled="isSaveDisabled" :title="isSaveDisabled ? saveDisabledTitle : ''" @click="onSubmit">
-            <span>Save segment</span>
-          </button>
-        </div>
+          <div class="card menu-card">
+            <div class="menu-section">
+              <div class="menu-section-title">Import from ...</div>
+              <ul class="menu-list">
+                <li class="menu-item" @click="triggerFileOpen" title="Load GPX file" role="button">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
+                  <span class="text">GPX file</span>
+                </li>
+              </ul>
+              <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
+            </div>
+            <div class="menu-section">
+              <div class="menu-section-title">Segments</div>
+              <ul class="menu-list">
+                <li
+                  class="menu-item action"
+                  :class="{ disabled: isSaveDisabled }"
+                  :aria-disabled="isSaveDisabled"
+                  :title="isSaveDisabled ? saveDisabledTitle : 'Save in DB'"
+                  @click="!isSaveDisabled && onSubmit()"
+                >
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
+                  <span class="text">Save in DB</span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
       <section v-if="loaded" class="main-col">
-        <div class="card controls">
+        <div class="section-indicator" ref="firstSectionIndicator">
+          <span class="icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></span>
+          <span class="label">Segment selector</span>
+        </div>
+        <div class="card controls" ref="controlsCard">
           <div class="slider-group">
             <div class="slider-header">
               <span class="badge start">Start</span>
             </div>
             <div class="metrics-grid">
               <div class="metric" title="Elapsed time from start">
-                <span class="icon">⏱️</span>
+                <span class="icon"><i class="fa-solid fa-clock"></i></span>
                 <span class="value">{{ formatElapsed(startIndex) }}</span>
               </div>
               <div class="metric" title="Distance (km)">
-                <span class="icon">📏</span>
+                <span class="icon"><i class="fa-solid fa-ruler"></i></span>
                 <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
               </div>
               <div class="metric" title="Elevation (m)">
-                <span class="icon">⛰️</span>
+                <span class="icon"><i class="fa-solid fa-mountain"></i></span>
                 <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
               </div>
-              <div class="gps-title" title="GPS location"><span class="icon">📍</span><span class="text">GPS</span></div>
+              <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
               <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
               <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
             </div>
@@ -68,18 +85,18 @@
             </div>
             <div class="metrics-grid">
               <div class="metric" title="Elapsed time from start">
-                <span class="icon">⏱️</span>
+                <span class="icon"><i class="fa-solid fa-clock"></i></span>
                 <span class="value">{{ formatElapsed(endIndex) }}</span>
               </div>
               <div class="metric" title="Distance (km)">
-                <span class="icon">📏</span>
+                <span class="icon"><i class="fa-solid fa-ruler"></i></span>
                 <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
               </div>
               <div class="metric" title="Elevation (m)">
-                <span class="icon">⛰️</span>
+                <span class="icon"><i class="fa-solid fa-mountain"></i></span>
                 <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
               </div>
-              <div class="gps-title" title="GPS location"><span class="icon">📍</span><span class="text">GPS</span></div>
+              <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
               <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
               <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
             </div>
@@ -105,8 +122,11 @@
         </div>
 
         <!-- Segment information under selector -->
+        <div class="section-indicator">
+          <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
+          <span class="label">Segment information</span>
+        </div>
         <form class="card meta" @submit.prevent="onSubmit">
-          <h3 class="meta-title">Segment information</h3>
           <div>
             <label for="name">Segment name <span class="req">*</span></label>
             <input id="name" v-model="name" type="text" required />
@@ -149,9 +169,9 @@
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import logoUrl from '../assets/images/logo.svg'
 import L from 'leaflet'
-import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale } from 'chart.js'
+import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, Filler } from 'chart.js'
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title)
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler)
 
 type Tire = 'slick' | 'semi-slick' | 'knobs'
 
@@ -172,6 +192,10 @@ const endIndex = ref(0)
 const cumulativeKm = ref<number[]>([])
 const cumulativeSec = ref<number[]>([])
 const xMode = ref<'distance' | 'time'>('distance')
+
+// Constant offset so the sidebar aligns with the top of the controls card
+const sectionOffset = ref(0)
+const controlsCard = ref<HTMLElement | null>(null)
 
 // Save button state and tooltip
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
@@ -230,6 +254,8 @@ function onFileChange(ev: Event) {
     await nextTick()
     renderMap()
     renderChart()
+    // Recompute layout-dependent offsets after controls render
+    try { (window as any).__editorRecomputeSectionOffset?.() } catch {}
   }
   reader.readAsText(file)
 }
@@ -356,7 +382,10 @@ function renderChart() {
           borderColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
           borderWidth: 2,
           pointRadius: 0,
-          fill: false,
+          pointHoverRadius: 5,
+          backgroundColor: 'rgba(255, 102, 0, 0.12)',
+          fill: 'start',
+          tension: 0.1,
           parsing: false
         }
       ]
@@ -465,6 +494,12 @@ watch(sidebarCollapsed, () => {
   }
 })
 
+// Ensure the sidebar offset recomputes when the loaded state toggles and layout changes
+watch(loaded, async () => {
+  await nextTick()
+  try { (window as any).__editorRecomputeSectionOffset?.() } catch {}
+})
+
 onMounted(() => {
   const onResize = () => {
     if (map) {
@@ -474,11 +509,28 @@ onMounted(() => {
   }
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
+
+  // Measure the controls card and set a constant sidebar offset matching its initial gap below the topbar
+  const recomputeSectionOffset = () => {
+    const el = controlsCard.value
+    const topbarAndGap = (Number(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h').replace('px','')) || 48) + 12
+    if (!el) { sectionOffset.value = 0; return }
+    const rect = el.getBoundingClientRect()
+    sectionOffset.value = Math.max(0, Math.round(rect.top - topbarAndGap))
+  }
+  // Initial compute after layout
+  setTimeout(recomputeSectionOffset, 0)
+  window.addEventListener('resize', recomputeSectionOffset)
+  ;(window as any).__editorRecomputeSectionOffset = recomputeSectionOffset
 })
 
 onUnmounted(() => {
   const onResize = (window as any).__editorOnResize
   if (onResize) window.removeEventListener('resize', onResize)
+  const recompute = (window as any).__editorRecomputeSectionOffset
+  if (recompute) {
+    window.removeEventListener('resize', recompute)
+  }
 })
 
 function buildSegmentGPX(): string {
@@ -559,8 +611,8 @@ async function onSubmit() {
 .main-col { display: flex; flex-direction: column; gap: 0.75rem; }
 .actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
-.sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: sticky; top: calc(var(--topbar-h, 48px) + 12px); align-self: start; }
-.sidebar-scroll { display: flex; flex-direction: column; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px) - 24px); overflow: auto; padding-right: 2px; }
+.sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: sticky; top: calc(var(--topbar-h, 48px) + 12px + var(--section-offset, 0px)); align-self: start; }
+.sidebar-scroll { display: flex; flex-direction: column; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px) - 24px - var(--section-offset, 0px)); overflow: auto; padding-right: 2px; }
 .sidebar .card { margin: 0; width: 100%; box-sizing: border-box; }
 .sidebar .group-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; text-transform: none; letter-spacing: 0; }
 .sidebar .menu-btn { width: 100%; justify-content: center; padding: 0.5rem 0; gap: 0.5rem; }
@@ -573,6 +625,20 @@ async function onSubmit() {
 .menu-btn:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
 .menu-btn .icon { width: 24px; text-align: center; }
 .menu-btn .label { white-space: nowrap; }
+
+/* Unified sidebar menu */
+.menu-card { padding: 0.5rem 0; }
+.menu-section { margin-top: 0.5rem; }
+.menu-section + .menu-section { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid #f1f5f9; }
+.menu-section-title { margin: 0.25rem 0 0.25rem; padding: 0 0.75rem; font-size: 1rem; font-weight: 400; color: #6b7280; text-align: left; }
+.menu-list { list-style: none; margin: 0; padding: 0.1rem 0.25rem 0.25rem; }
+.menu-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0.6rem 0.4rem 0.75rem; margin: 0.1rem 0.35rem; border-radius: 8px; cursor: pointer; color: #111827; user-select: none; }
+.menu-item .icon { width: 20px; text-align: center; opacity: 0.9; }
+.menu-item .text { font-size: 0.8rem; }
+.menu-item:hover { background: #f3f4f6; }
+.menu-item:active { background: #e5e7eb; }
+.menu-item.disabled { opacity: 0.5; cursor: not-allowed; background: transparent; }
+.menu-item.disabled:hover { background: transparent; }
 
 .workspace { display: contents; }
 .workspace-left { display: contents; }
@@ -593,7 +659,7 @@ async function onSubmit() {
 .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
 .badge.start { background: var(--brand-500, #ff6600); color: #ffffff; }
 .badge.end { background: var(--brand-500, #ff6600); color: #ffffff; }
-.slider-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.slider-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 0.5rem; align-items: center; margin-top: 0.25rem; margin-bottom: 0.5rem; }
 .btn { border: none; background: #e5e7eb; border-radius: 6px; height: 32px; cursor: pointer; }
 .btn:hover { background: #d1d5db; }
 .range { width: 100%; }
@@ -607,7 +673,7 @@ async function onSubmit() {
 .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
 .metric { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
 .metric .icon { width: 18px; text-align: center; }
-.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.75rem; }
 .gps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.25rem 0; align-items: center; }
 .gps-title { display: inline-flex; align-items: center; gap: 0.35rem; color: #374151; font-weight: 500; }
 .gps-title .icon { width: 18px; text-align: center; }
@@ -621,6 +687,8 @@ async function onSubmit() {
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
 .req { color: #dc2626; }
+.section-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 1rem; color: #374151; padding: 0 0.25rem; margin-top: 0.5rem; }
+.section-indicator .icon { width: 18px; text-align: center; }
 .save-btn { display: none; }
 .action-card { position: static; }
 .action-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; }
@@ -644,5 +712,5 @@ async function onSubmit() {
 .topbar .nav { display: flex; align-items: center; gap: 0.75rem; }
 
 /* Ensure sticky sidebars account for topbar height */
-.sidebar { top: calc(var(--topbar-h, 48px) + 12px); }
+.sidebar { top: calc(var(--topbar-h, 48px) + 12px + var(--section-offset, 0px)); }
 </style>
