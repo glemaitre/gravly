@@ -133,21 +133,54 @@
           </div>
 
           <div class="grid">
-            <div>
-              <label for="tireDry">Tire (dry)</label>
-              <select id="tireDry" v-model="tireDry" required>
-                <option value="slick">slick</option>
-                <option value="semi-slick">semi-slick</option>
-                <option value="knobs">knobs</option>
-              </select>
+            <label class="group-main-label">Tire</label>
+            <div class="tire-group">
+              <div class="tire-group-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
+                <span class="tire-group-title">Dry</span>
+              </div>
+              <p class="tire-group-help">Use for clear, dry conditions where grip is high.</p>
+              <div class="tire-row" role="radiogroup" aria-label="Tire dry">
+                <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
+                  <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
+                  <img :src="tireImages.slick" alt="slick" />
+                  <span class="tire-caption">slick</span>
+                </label>
+                <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
+                  <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
+                  <img :src="tireImages.semiSlick" alt="semi-slick" />
+                  <span class="tire-caption">semi-slick</span>
+                </label>
+                <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
+                  <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
+                  <img :src="tireImages.knobs" alt="knobs" />
+                  <span class="tire-caption">knobs</span>
+                </label>
+              </div>
             </div>
-            <div>
-              <label for="tireWet">Tire (wet)</label>
-              <select id="tireWet" v-model="tireWet" required>
-                <option value="slick">slick</option>
-                <option value="semi-slick">semi-slick</option>
-                <option value="knobs">knobs</option>
-              </select>
+            <div class="tire-group">
+              <div class="tire-group-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
+                <span class="tire-group-title">Wet</span>
+              </div>
+              <p class="tire-group-help">Use for rain, mud, or low-grip conditions.</p>
+              <div class="tire-row" role="radiogroup" aria-label="Tire wet">
+                <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
+                  <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
+                  <img :src="tireImages.slick" alt="slick" />
+                  <span class="tire-caption">slick</span>
+                </label>
+                <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
+                  <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
+                  <img :src="tireImages.semiSlick" alt="semi-slick" />
+                  <span class="tire-caption">semi-slick</span>
+                </label>
+                <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
+                  <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
+                  <img :src="tireImages.knobs" alt="knobs" />
+                  <span class="tire-caption">knobs</span>
+                </label>
+              </div>
             </div>
           </div>
           <!-- Save button is available in the sidebar -->
@@ -170,10 +203,15 @@ import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import logoUrl from '../assets/images/logo.svg'
 import L from 'leaflet'
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, Filler } from 'chart.js'
+import tireSlickUrl from '../assets/images/slick.png'
+import tireSemiSlickUrl from '../assets/images/semi-slick.png'
+import tireKnobsUrl from '../assets/images/ext.png'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler)
 
 type Tire = 'slick' | 'semi-slick' | 'knobs'
+
+const tireImages = { slick: tireSlickUrl, semiSlick: tireSemiSlickUrl, knobs: tireKnobsUrl }
 
 type TrackPoint = { lat: number; lon: number; ele: number; time?: string }
 
@@ -686,6 +724,19 @@ async function onSubmit() {
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
+.meta .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; align-items: start; }
+.group-main-label { grid-column: 1 / -1; margin-top: 0.25rem; color: #111827; }
+.tire-group { background: #fbfcfe; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.5rem; }
+.tire-group-header { display: flex; align-items: center; gap: 0.4rem; color: #374151; margin: 0 0 0.5rem 0; }
+.tire-group-help { margin: 0 0 0.5rem 0; font-size: 12px; color: #6b7280; }
+.tire-group-header .icon { width: 18px; text-align: center; color: var(--brand-500, #ff6600); }
+.tire-group-title { font-size: 0.95rem; }
+.tire-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; align-items: start; }
+.tire-option { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.5rem; cursor: pointer; background: #fff; }
+.tire-option input { position: absolute; opacity: 0; pointer-events: none; }
+.tire-option img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px; }
+.tire-option .tire-caption { font-size: 12px; color: #374151; }
+.tire-option.selected { border-color: var(--brand-500, #ff6600); box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15); }
 .req { color: #dc2626; }
 .section-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 1rem; color: #374151; padding: 0 0.25rem; margin-top: 0.5rem; }
 .section-indicator .icon { width: 18px; text-align: center; }
