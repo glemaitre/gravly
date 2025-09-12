@@ -37,9 +37,20 @@ export default {
   --brand-accent: var(--brand-300);
 }
 
+/* Global styles to prevent horizontal overflow */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 #app {
   min-height: 100vh;
   background: var(--brand-bg);
+  overflow-x: hidden;
 }
 
 /* Reusable brand utilities */

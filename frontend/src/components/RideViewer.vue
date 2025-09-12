@@ -345,6 +345,7 @@ export default {
 .ride-viewer {
   min-height: 100vh;
   background: var(--brand-bg);
+  overflow-x: hidden;
 }
 
 .loading {

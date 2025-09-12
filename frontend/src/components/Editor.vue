@@ -52,28 +52,58 @@
           <div id="map" class="map"></div>
         </div>
         <div class="card card-elevation">
-          <div class="chart-container">
-            <canvas ref="chartCanvas" class="chart"></canvas>
-            <!-- Draggable vertical sliders -->
-            <div
-              class="vertical-slider start-slider"
-              :style="{ left: startSliderPosition + '%' }"
-              @mousedown="startDrag('start', $event)"
-              @touchstart="startDrag('start', $event)"
-            >
-              <div class="slider-handle"></div>
-              <div class="slider-line"></div>
-              <div class="slider-index">{{ startIndex }}</div>
-            </div>
-            <div
-              class="vertical-slider end-slider"
-              :style="{ left: endSliderPosition + '%' }"
-              @mousedown="startDrag('end', $event)"
-              @touchstart="startDrag('end', $event)"
-            >
-              <div class="slider-handle"></div>
-              <div class="slider-line"></div>
-              <div class="slider-index">{{ endIndex }}</div>
+          <div class="chart-wrapper">
+            <div class="chart-container">
+              <canvas ref="chartCanvas" class="chart"></canvas>
+              <!-- Draggable vertical sliders -->
+              <div
+                class="vertical-slider start-slider"
+                :style="{ left: startSliderPosition + '%' }"
+                @mousedown="startDrag('start', $event)"
+                @touchstart="startDrag('start', $event)"
+              >
+                <div class="slider-handle"></div>
+                <div class="slider-line"></div>
+                <div class="slider-index">{{ startIndex }}</div>
+                <div class="slider-controls">
+                  <button
+                    class="slider-btn slider-btn-minus"
+                    @click="moveSlider('start', -1)"
+                    :disabled="startIndex <= 0"
+                    title="Move start marker back one point"
+                  >-</button>
+                  <button
+                    class="slider-btn slider-btn-plus"
+                    @click="moveSlider('start', 1)"
+                    :disabled="startIndex >= endIndex - 1"
+                    title="Move start marker forward one point"
+                  >+</button>
+                </div>
+              </div>
+              <div
+                class="vertical-slider end-slider"
+                :style="{ left: endSliderPosition + '%' }"
+                @mousedown="startDrag('end', $event)"
+                @touchstart="startDrag('end', $event)"
+              >
+                <div class="slider-handle"></div>
+                <div class="slider-line"></div>
+                <div class="slider-index">{{ endIndex }}</div>
+                <div class="slider-controls">
+                  <button
+                    class="slider-btn slider-btn-minus"
+                    @click="moveSlider('end', -1)"
+                    :disabled="endIndex <= startIndex + 1"
+                    title="Move end marker back one point"
+                  >-</button>
+                  <button
+                    class="slider-btn slider-btn-plus"
+                    @click="moveSlider('end', 1)"
+                    :disabled="endIndex >= points.length - 1"
+                    title="Move end marker forward one point"
+                  >+</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="axis-toggle below">
@@ -392,6 +422,21 @@ function onStartInput(e: Event) {
 function onEndInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value)
   endIndex.value = Math.max(v, startIndex.value + 1)
+}
+
+// Move slider by single index
+function moveSlider(type: 'start' | 'end', direction: -1 | 1) {
+  if (type === 'start') {
+    const newIndex = startIndex.value + direction
+    if (newIndex >= 0 && newIndex < endIndex.value) {
+      startIndex.value = newIndex
+    }
+  } else {
+    const newIndex = endIndex.value + direction
+    if (newIndex > startIndex.value && newIndex < points.value.length) {
+      endIndex.value = newIndex
+    }
+  }
 }
 
 // Slider drag functionality
@@ -972,10 +1017,10 @@ async function onSubmit() {
 </style>
 
 <style scoped>
-.editor { display: flex; min-height: 100vh; background: #f8fafc; }
-.content { flex: 1 1 auto; padding: 1rem 1.5rem; }
-.page { --sidebar-w: 200px; display: grid; grid-template-columns: var(--sidebar-w) 1fr; gap: 1.25rem; align-items: start; max-width: 1200px; margin: 0 auto; }
-.main-col { display: flex; flex-direction: column; gap: 0.75rem; }
+.editor { display: flex; min-height: 100vh; background: #f8fafc; overflow-x: hidden; }
+.content { flex: 1 1 auto; padding: 1rem 1.5rem; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+.page { --sidebar-w: 200px; display: grid; grid-template-columns: var(--sidebar-w) 1fr; gap: 1.25rem; align-items: start; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+.main-col { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; overflow: hidden; }
 .actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
 .sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: sticky; top: calc(var(--topbar-h, 48px) + 12px + var(--section-offset, 0px)); align-self: start; }
@@ -1012,16 +1057,16 @@ async function onSubmit() {
 .workspace-actions { display: contents; }
 .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); padding: 0.75rem; width: 100%; box-sizing: border-box; }
 .card-map { padding: 0; overflow: hidden; }
-.card-elevation { padding: 0.75rem; }
+.card-elevation { padding: 0.75rem; overflow: visible; }
 .map { height: 480px; width: 100%; }
-.axis-toggle { display: inline-flex; gap: 0; margin: 0.25rem auto 0.25rem; border: 1px solid #e5e7eb; border-radius: 999px; overflow: hidden; background: #fff; position: relative; left: 50%; transform: translateX(-50%); }
-.axis-toggle.below { margin-top: 2rem; }
+.axis-toggle { display: inline-flex; gap: 0; margin: 0.25rem auto 0.25rem; border: 1px solid #e5e7eb; border-radius: 999px; overflow: hidden; background: #fff; position: relative; left: 50%; transform: translateX(-50%); max-width: 100%; }
+.axis-toggle.below { margin-top: 0.5rem; }
 .axis-toggle .seg { font-size: 12px; padding: 4px 10px; border: none; background: transparent; cursor: pointer; color: #374151; }
 .axis-toggle .seg.left { border-right: 1px solid #e5e7eb; }
 .axis-toggle .seg.active { background: #f3f4f6; color: #111827; }
-.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%; box-sizing: border-box; }
 .controls .meta-title { grid-column: 1 / -1; text-align: center; margin: 0 0 0.5rem 0; }
-.slider-group { background: #fafafa; padding: 0.75rem; border: 1px solid #eee; border-radius: 8px; }
+.slider-group { background: #fafafa; padding: 0.75rem; border: 1px solid #eee; border-radius: 8px; width: 100%; box-sizing: border-box; overflow: hidden; }
 .slider-header { display: flex; align-items: center; justify-content: center; margin-bottom: 0.5rem; }
 .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
 .badge.start { background: var(--brand-500, #ff6600); color: #ffffff; }
@@ -1031,7 +1076,7 @@ async function onSubmit() {
 .btn:hover { background: #d1d5db; }
 .range { width: 100%; }
 .range-wrap { position: relative; width: 100%; }
-.index-badge { position: absolute; bottom: -18px; transform: translateX(-50%); background: #111827; color: #ffffff; font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: 8px; white-space: nowrap; }
+.index-badge { position: absolute; bottom: -18px; transform: translateX(-50%); background: #111827; color: #ffffff; font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: 8px; white-space: nowrap; max-width: 40px; overflow: hidden; text-overflow: ellipsis; }
 .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.5rem; }
 .info { display: flex; align-items: center; gap: 0.5rem; color: #374151; user-select: none; cursor: default; }
 .info .icon { width: 20px; text-align: center; }
@@ -1040,7 +1085,7 @@ async function onSubmit() {
 .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
 .metric { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
 .metric .icon { width: 18px; text-align: center; }
-.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.75rem; width: 100%; box-sizing: border-box; }
 .gps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.25rem 0; align-items: center; }
 .gps-title { display: inline-flex; align-items: center; gap: 0.35rem; color: #374151; font-weight: 500; }
 .gps-title .icon { width: 18px; text-align: center; }
@@ -1048,7 +1093,8 @@ async function onSubmit() {
 .gps-col .label { font-size: 12px; color: #6b7280; }
 .gps-col .value { font-variant-numeric: tabular-nums; }
 .workspace-right { display: flex; flex-direction: column; gap: 1rem; }
-.chart-container { position: relative; width: 100%; }
+.chart-wrapper { width: 100%; overflow: visible; margin-bottom: 20px; }
+.chart-container { position: relative; width: 100%; overflow: visible; }
 .chart { width: 100%; height: 200px; max-height: 200px; cursor: crosshair; }
 
 /* Vertical sliders */
@@ -1119,13 +1165,67 @@ async function onSubmit() {
   padding: 2px 6px;
   border-radius: 8px;
   white-space: nowrap;
-  z-index: 12;
+  z-index: 14;
+  max-width: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slider-controls {
+  position: absolute;
+  top: 0;
+  left: -18px;
+  right: -18px;
+  height: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 13;
+  pointer-events: none;
+}
+
+.slider-btn {
+  width: 12px;
+  height: 12px;
+  border: none;
+  border-radius: 50%;
+  background: var(--brand-500, #ff6600);
+  color: #ffffff;
+  font-size: 8px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.slider-btn:hover:not(:disabled) {
+  background: var(--brand-primary-hover, #e65c00);
+  transform: scale(1.1);
+}
+
+.slider-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.slider-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.slider-btn:disabled:hover {
+  transform: none;
 }
 .meta { background: #ffffff; width: 100%; margin: 0; display: block; }
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-.meta .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; align-items: start; }
+.meta .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; align-items: start; width: 100%; box-sizing: border-box; }
 .group-main-label { grid-column: 1 / -1; margin-top: 0.25rem; color: #111827; }
 .tire-group { background: #fbfcfe; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.5rem; }
 .tire-group-header { display: flex; align-items: center; gap: 0.4rem; color: #374151; margin: 0 0 0.5rem 0; }

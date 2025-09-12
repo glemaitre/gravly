@@ -294,6 +294,7 @@ export default {
 <style scoped>
 .home {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .hero-section {
