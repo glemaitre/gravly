@@ -10,230 +10,230 @@
     </div>
   </header>
   <div class="editor">
-    <div class="content">
-    <div class="page" :style="{ '--section-offset': sectionOffset + 'px' } as any">
-      <div class="sidebar">
-        <div class="sidebar-scroll">
-          <div class="card menu-card">
-            <div class="menu-section">
-              <div class="menu-section-title">Import from ...</div>
-              <ul class="menu-list">
-                <li class="menu-item" @click="triggerFileOpen" title="Load GPX file" role="button">
-                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
-                  <span class="text">GPX file</span>
-                </li>
-              </ul>
-              <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
-            </div>
-            <div class="menu-section">
-              <div class="menu-section-title">Segments</div>
-              <ul class="menu-list">
-                <li
-                  class="menu-item action"
-                  :class="{ disabled: isSaveDisabled }"
-                  :aria-disabled="isSaveDisabled"
-                  :title="isSaveDisabled ? saveDisabledTitle : 'Save in DB'"
-                  @click="!isSaveDisabled && onSubmit()"
-                >
-                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
-                  <span class="text">Save in DB</span>
-                </li>
-              </ul>
-            </div>
+    <!-- Sidebar completely independent -->
+    <div class="sidebar">
+      <div class="sidebar-scroll">
+        <div class="card menu-card">
+          <div class="menu-section">
+            <div class="menu-section-title">Import from ...</div>
+            <ul class="menu-list">
+              <li class="menu-item" @click="triggerFileOpen" title="Load GPX file" role="button">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
+                <span class="text">GPX file</span>
+              </li>
+            </ul>
+            <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
+          </div>
+          <div class="menu-section">
+            <div class="menu-section-title">Segments</div>
+            <ul class="menu-list">
+              <li
+                class="menu-item action"
+                :class="{ disabled: isSaveDisabled }"
+                :aria-disabled="isSaveDisabled"
+                :title="isSaveDisabled ? saveDisabledTitle : 'Save in DB'"
+                @click="!isSaveDisabled && onSubmit()"
+              >
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
+                <span class="text">Save in DB</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
-      <section v-if="loaded" class="main-col">
-        <div class="section-indicator" ref="firstSectionIndicator">
-          <span class="icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></span>
-          <span class="label">Segment selector</span>
-        </div>
-        <div class="card card-map">
-          <div id="map" class="map"></div>
-        </div>
-        <div class="card card-elevation">
-          <div class="chart-wrapper">
-            <div class="chart-container">
-              <canvas ref="chartCanvas" class="chart"></canvas>
-              <!-- Draggable vertical sliders -->
-              <div
-                class="vertical-slider start-slider"
-                :style="{ left: startSliderPosition + '%' }"
-                @mousedown="startDrag('start', $event)"
-                @touchstart="startDrag('start', $event)"
-              >
-                <div class="slider-handle"></div>
-                <div class="slider-line"></div>
-                <div class="slider-index">{{ startIndex }}</div>
-                <div class="slider-controls">
-                  <button
-                    class="slider-btn slider-btn-minus"
-                    @click="moveSlider('start', -1)"
-                    :disabled="startIndex <= 0"
-                    title="Move start marker back one point"
-                  >-</button>
-                  <button
-                    class="slider-btn slider-btn-plus"
-                    @click="moveSlider('start', 1)"
-                    :disabled="startIndex >= endIndex - 1"
-                    title="Move start marker forward one point"
-                  >+</button>
-                </div>
-              </div>
-              <div
-                class="vertical-slider end-slider"
-                :style="{ left: endSliderPosition + '%' }"
-                @mousedown="startDrag('end', $event)"
-                @touchstart="startDrag('end', $event)"
-              >
-                <div class="slider-handle"></div>
-                <div class="slider-line"></div>
-                <div class="slider-index">{{ endIndex }}</div>
-                <div class="slider-controls">
-                  <button
-                    class="slider-btn slider-btn-minus"
-                    @click="moveSlider('end', -1)"
-                    :disabled="endIndex <= startIndex + 1"
-                    title="Move end marker back one point"
-                  >-</button>
-                  <button
-                    class="slider-btn slider-btn-plus"
-                    @click="moveSlider('end', 1)"
-                    :disabled="endIndex >= points.length - 1"
-                    title="Move end marker forward one point"
-                  >+</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="axis-toggle below">
-            <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance (km)</button>
-            <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time (hh:mm:ss)</button>
-          </div>
-
-          <!-- Selector controls moved here -->
-          <div class="controls" ref="controlsCard">
-            <div class="slider-group">
-              <div class="slider-header">
-                <span class="badge start">Start</span>
-              </div>
-              <div class="metrics-grid">
-                <div class="metric" title="Elapsed time from start">
-                  <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                  <span class="value">{{ formatElapsed(startIndex) }}</span>
-                </div>
-                <div class="metric" title="Distance (km)">
-                  <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                  <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
-                </div>
-                <div class="metric" title="Elevation (m)">
-                  <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                  <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
-                </div>
-                <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-                <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
-              </div>
-            </div>
-            <div class="slider-group">
-              <div class="slider-header">
-                <span class="badge end">End</span>
-              </div>
-              <div class="metrics-grid">
-                <div class="metric" title="Elapsed time from start">
-                  <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                  <span class="value">{{ formatElapsed(endIndex) }}</span>
-                </div>
-                <div class="metric" title="Distance (km)">
-                  <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                  <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
-                </div>
-                <div class="metric" title="Elevation (m)">
-                  <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                  <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
-                </div>
-                <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-                <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Segment information under selector -->
-        <div class="section-indicator">
-          <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
-          <span class="label">Segment information</span>
-        </div>
-        <form class="card meta" @submit.prevent="onSubmit">
-          <div>
-            <label for="name">Segment name <span class="req">*</span></label>
-            <input id="name" v-model="name" type="text" required />
-          </div>
-
-          <div class="grid">
-            <label class="group-main-label">Tire</label>
-            <div class="tire-group">
-              <div class="tire-group-header">
-                <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
-                <span class="tire-group-title">Dry</span>
-              </div>
-              <p class="tire-group-help">Use for clear, dry conditions where grip is high.</p>
-              <div class="tire-row" role="radiogroup" aria-label="Tire dry">
-                <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
-                  <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
-                  <img :src="tireImages.slick" alt="slick" />
-                  <span class="tire-caption">slick</span>
-                </label>
-                <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
-                  <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
-                  <img :src="tireImages.semiSlick" alt="semi-slick" />
-                  <span class="tire-caption">semi-slick</span>
-                </label>
-                <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
-                  <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
-                  <img :src="tireImages.knobs" alt="knobs" />
-                  <span class="tire-caption">knobs</span>
-                </label>
-              </div>
-            </div>
-            <div class="tire-group">
-              <div class="tire-group-header">
-                <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
-                <span class="tire-group-title">Wet</span>
-              </div>
-              <p class="tire-group-help">Use for rain, mud, or low-grip conditions.</p>
-              <div class="tire-row" role="radiogroup" aria-label="Tire wet">
-                <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
-                  <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
-                  <img :src="tireImages.slick" alt="slick" />
-                  <span class="tire-caption">slick</span>
-                </label>
-                <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
-                  <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
-                  <img :src="tireImages.semiSlick" alt="semi-slick" />
-                  <span class="tire-caption">semi-slick</span>
-                </label>
-                <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
-                  <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
-                  <img :src="tireImages.knobs" alt="knobs" />
-                  <span class="tire-caption">knobs</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          <!-- Save button is available in the sidebar -->
-        </form>
-      </section>
-
     </div>
 
-    <div v-if="!loaded" class="empty">
-      <p>Use File → Load GPX to begin.</p>
+    <!-- Main content area independent from sidebar -->
+    <div class="content">
+      <div class="page">
+        <div class="main-col">
+        <div v-if="loaded">
+          <div class="card card-map">
+            <div id="map" class="map"></div>
+          </div>
+          <div class="card card-elevation">
+            <div class="chart-wrapper">
+              <div class="chart-container">
+                <canvas ref="chartCanvas" class="chart"></canvas>
+                <!-- Draggable vertical sliders -->
+                <div
+                  class="vertical-slider start-slider"
+                  :style="{ left: startSliderPosition + '%' }"
+                  @mousedown="startDrag('start', $event)"
+                  @touchstart="startDrag('start', $event)"
+                >
+                  <div class="slider-handle"></div>
+                  <div class="slider-line"></div>
+                  <div class="slider-index">{{ startIndex }}</div>
+                  <div class="slider-controls">
+                    <button
+                      class="slider-btn slider-btn-minus"
+                      @click="moveSlider('start', -1)"
+                      :disabled="startIndex <= 0"
+                      title="Move start marker back one point"
+                    >-</button>
+                    <button
+                      class="slider-btn slider-btn-plus"
+                      @click="moveSlider('start', 1)"
+                      :disabled="startIndex >= endIndex - 1"
+                      title="Move start marker forward one point"
+                    >+</button>
+                  </div>
+                </div>
+                <div
+                  class="vertical-slider end-slider"
+                  :style="{ left: endSliderPosition + '%' }"
+                  @mousedown="startDrag('end', $event)"
+                  @touchstart="startDrag('end', $event)"
+                >
+                  <div class="slider-handle"></div>
+                  <div class="slider-line"></div>
+                  <div class="slider-index">{{ endIndex }}</div>
+                  <div class="slider-controls" :style="{ top: `-${endSliderOffset}px` }">
+                    <button
+                      class="slider-btn slider-btn-minus"
+                      @click="moveSlider('end', -1)"
+                      :disabled="endIndex <= startIndex + 1"
+                      title="Move end marker back one point"
+                    >-</button>
+                    <button
+                      class="slider-btn slider-btn-plus"
+                      @click="moveSlider('end', 1)"
+                      :disabled="endIndex >= points.length - 1"
+                      title="Move end marker forward one point"
+                    >+</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="axis-toggle below">
+              <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance (km)</button>
+              <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time (hh:mm:ss)</button>
+            </div>
+
+            <!-- Selector controls moved here -->
+            <div class="controls" ref="controlsCard">
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="badge start">Start</span>
+                </div>
+                <div class="metrics-grid">
+                  <div class="metric" title="Elapsed time from start">
+                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                    <span class="value">{{ formatElapsed(startIndex) }}</span>
+                  </div>
+                  <div class="metric" title="Distance (km)">
+                    <span class="icon"><i class="fa-solid fa-ruler"></i></span>
+                    <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
+                  </div>
+                  <div class="metric" title="Elevation (m)">
+                    <span class="icon"><i class="fa-solid fa-mountain"></i></span>
+                    <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
+                  </div>
+                  <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
+                  <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                </div>
+              </div>
+              <div class="slider-group">
+                <div class="slider-header">
+                  <span class="badge end">End</span>
+                </div>
+                <div class="metrics-grid">
+                  <div class="metric" title="Elapsed time from start">
+                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                    <span class="value">{{ formatElapsed(endIndex) }}</span>
+                  </div>
+                  <div class="metric" title="Distance (km)">
+                    <span class="icon"><i class="fa-solid fa-ruler"></i></span>
+                    <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
+                  </div>
+                  <div class="metric" title="Elevation (m)">
+                    <span class="icon"><i class="fa-solid fa-mountain"></i></span>
+                    <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
+                  </div>
+                  <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
+                  <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segment information under selector -->
+          <div class="section-indicator">
+            <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
+            <span class="label">Segment information</span>
+          </div>
+          <form class="card meta" @submit.prevent="onSubmit">
+            <div>
+              <label for="name">Segment name <span class="req">*</span></label>
+              <input id="name" v-model="name" type="text" required />
+            </div>
+
+            <div class="grid">
+              <label class="group-main-label">Tire</label>
+              <div class="tire-group">
+                <div class="tire-group-header">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
+                  <span class="tire-group-title">Dry</span>
+                </div>
+                <p class="tire-group-help">Use for clear, dry conditions where grip is high.</p>
+                <div class="tire-row" role="radiogroup" aria-label="Tire dry">
+                  <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
+                    <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
+                    <img :src="tireImages.slick" alt="slick" />
+                    <span class="tire-caption">slick</span>
+                  </label>
+                  <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
+                    <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
+                    <img :src="tireImages.semiSlick" alt="semi-slick" />
+                    <span class="tire-caption">semi-slick</span>
+                  </label>
+                  <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
+                    <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
+                    <img :src="tireImages.knobs" alt="knobs" />
+                    <span class="tire-caption">knobs</span>
+                  </label>
+                </div>
+              </div>
+              <div class="tire-group">
+                <div class="tire-group-header">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
+                  <span class="tire-group-title">Wet</span>
+                </div>
+                <p class="tire-group-help">Use for rain, mud, or low-grip conditions.</p>
+                <div class="tire-row" role="radiogroup" aria-label="Tire wet">
+                  <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
+                    <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
+                    <img :src="tireImages.slick" alt="slick" />
+                    <span class="tire-caption">slick</span>
+                  </label>
+                  <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
+                    <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
+                    <img :src="tireImages.semiSlick" alt="semi-slick" />
+                    <span class="tire-caption">semi-slick</span>
+                  </label>
+                  <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
+                    <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
+                    <img :src="tireImages.knobs" alt="knobs" />
+                    <span class="tire-caption">knobs</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <!-- Save button is available in the sidebar -->
+          </form>
+        </div>
+
+        <div v-if="!loaded" class="empty">
+          <p>Use File → Load GPX to begin.</p>
+        </div>
+        </div>
+      </div>
     </div>
 
     <p v-if="message" class="message">{{ message }}</p>
-    </div>
   </div>
 </template>
 
@@ -271,8 +271,6 @@ const cumulativeKm = ref<number[]>([])
 const cumulativeSec = ref<number[]>([])
 const xMode = ref<'distance' | 'time'>('distance')
 
-// Constant offset so the sidebar aligns with the top of the controls card
-const sectionOffset = ref(0)
 const controlsCard = ref<HTMLElement | null>(null)
 
 // Save button state and tooltip
@@ -299,6 +297,11 @@ const dragType = ref<'start' | 'end' | null>(null)
 const startSliderPosition = ref(0)
 const endSliderPosition = ref(100)
 
+// Overlap detection and offsetting
+const endSliderOffset = ref(0)
+const overlapThreshold = 20 // pixels - minimum distance before offsetting
+const constantOffset = 25 // pixels - constant offset amount when overlap detected
+
 // Slider bounds and index badge positions
 const startMin = computed(() => 0)
 const startMax = computed(() => Math.max(1, endIndex.value - 1))
@@ -310,6 +313,33 @@ function toPercent(value: number, min: number, max: number): number {
 }
 const startPercent = computed(() => toPercent(startIndex.value, startMin.value, startMax.value))
 const endPercent = computed(() => toPercent(endIndex.value, endMin.value, endMax.value))
+
+// Overlap detection function
+function checkSliderOverlap() {
+  if (!chart || !chartCanvas.value) return
+
+  const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
+  const sliderWidth = 20 // px - matches CSS width
+  const controlsExtension = 18 // px - how far controls extend from slider center
+
+  // Calculate pixel positions of slider centers
+  const startPixelCenter = (startSliderPosition.value / 100) * containerRect.width + (sliderWidth / 2)
+  const endPixelCenter = (endSliderPosition.value / 100) * containerRect.width + (sliderWidth / 2)
+
+  // Calculate the bounds of each slider's control area
+  const startControlRight = startPixelCenter + controlsExtension
+  const endControlLeft = endPixelCenter - controlsExtension
+
+  // Check if controls overlap
+  const distance = endControlLeft - startControlRight
+
+  if (distance < overlapThreshold) {
+    // Apply constant offset when overlap detected
+    endSliderOffset.value = constantOffset
+  } else {
+    endSliderOffset.value = 0
+  }
+}
 
 // Update slider positions when indices change
 watch([startIndex, endIndex], () => {
@@ -340,6 +370,9 @@ watch([startIndex, endIndex], () => {
 
     startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
     endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+
+    // Check for overlap after position update
+    checkSliderOverlap()
   }
 })
 
@@ -370,7 +403,6 @@ function onFileChange(ev: Event) {
     await nextTick()
     renderMap()
     renderChart()
-    // Layout is now stable with fixed sidebar offset
   }
   reader.readAsText(file)
 }
@@ -716,6 +748,9 @@ function renderChart() {
 
       startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
       endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+
+      // Check for overlap after initial position setting
+      checkSliderOverlap()
     }
   })
 }
@@ -906,6 +941,9 @@ watch(xMode, () => {
 
       startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
       endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+
+      // Check for overlap after xMode position update
+      checkSliderOverlap()
     }
   })
 })
@@ -916,10 +954,8 @@ watch(sidebarCollapsed, () => {
   }
 })
 
-// Layout is stable with fixed sidebar offset when loaded state changes
 watch(loaded, async () => {
   await nextTick()
-  // No dynamic offset calculation needed
 })
 
 onMounted(() => {
@@ -932,12 +968,6 @@ onMounted(() => {
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
 
-  // Set a fixed sidebar offset to maintain consistent distance from topbar
-  const setFixedSidebarOffset = () => {
-    sectionOffset.value = 0 // Fixed distance from topbar
-  }
-  // Initial compute after layout
-  setTimeout(setFixedSidebarOffset, 0)
 })
 
 onUnmounted(() => {
@@ -1013,18 +1043,28 @@ async function onSubmit() {
   --brand-primary: var(--brand-500);
   --brand-primary-hover: #e65c00;
   --brand-accent: var(--brand-300);
+
+  /* Blue colors for end segment */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
 }
 </style>
 
 <style scoped>
-.editor { display: flex; min-height: 100vh; background: #f8fafc; overflow-x: hidden; }
+.editor { display: flex; min-height: 100vh; background: #f8fafc; overflow-x: hidden; position: relative; }
 .content { flex: 1 1 auto; padding: 1rem 1.5rem; width: 100%; box-sizing: border-box; overflow-x: hidden; }
-.page { --sidebar-w: 200px; display: grid; grid-template-columns: var(--sidebar-w) 1fr; gap: 1.25rem; align-items: start; max-width: 1200px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+.page { max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-x: hidden; }
 .main-col { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; overflow: hidden; }
 .actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
-.sidebar { width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: sticky; top: calc(var(--topbar-h, 48px) + 12px + var(--section-offset, 0px)); align-self: start; }
-.sidebar-scroll { display: flex; flex-direction: column; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px) - 24px - var(--section-offset, 0px)); overflow: auto; padding-right: 2px; }
+.sidebar { --sidebar-w: 200px; width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: fixed; top: var(--topbar-h, 48px); left: calc(50% - 500px - var(--sidebar-w)); display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 48px)); z-index: 100; }
+.sidebar-scroll { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px)); overflow-y: auto; overflow-x: hidden; padding: 1rem; }
 .sidebar .card { margin: 0; width: 100%; box-sizing: border-box; }
 .sidebar .group-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; text-transform: none; letter-spacing: 0; }
 .sidebar .menu-btn { width: 100%; justify-content: center; padding: 0.5rem 0; gap: 0.5rem; }
@@ -1039,7 +1079,7 @@ async function onSubmit() {
 .menu-btn .label { white-space: nowrap; }
 
 /* Unified sidebar menu */
-.menu-card { padding: 0.5rem 0; }
+.menu-card { padding: 0.5rem 0; position: sticky; top: 0; background: #ffffff; z-index: 10; }
 .menu-section { margin-top: 0.5rem; }
 .menu-section + .menu-section { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid #f1f5f9; }
 .menu-section-title { margin: 0.25rem 0 0.25rem; padding: 0 0.75rem; font-size: 1rem; font-weight: 400; color: #6b7280; text-align: left; }
@@ -1057,7 +1097,7 @@ async function onSubmit() {
 .workspace-actions { display: contents; }
 .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); padding: 0.75rem; width: 100%; box-sizing: border-box; }
 .card-map { padding: 0; overflow: hidden; }
-.card-elevation { padding: 0.75rem; overflow: visible; }
+.card-elevation { padding: 0.75rem; overflow: visible; margin-top: 1rem; margin-bottom: 1rem; }
 .map { height: 480px; width: 100%; }
 .axis-toggle { display: inline-flex; gap: 0; margin: 0.25rem auto 0.25rem; border: 1px solid #e5e7eb; border-radius: 999px; overflow: hidden; background: #fff; position: relative; left: 50%; transform: translateX(-50%); max-width: 100%; }
 .axis-toggle.below { margin-top: 0.5rem; }
@@ -1221,7 +1261,7 @@ async function onSubmit() {
 .slider-btn:disabled:hover {
   transform: none;
 }
-.meta { background: #ffffff; width: 100%; margin: 0; display: block; }
+.meta { background: #ffffff; width: 100%; margin-top: 1rem; margin-bottom: 1rem; display: block; }
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
@@ -1257,12 +1297,42 @@ async function onSubmit() {
 
 /* Sticky top navigation bar */
 :root { --topbar-h: 48px; }
-.topbar { position: sticky; top: 0; z-index: 1000; background: #ffffff; border-bottom: 1px solid #e5e7eb; height: var(--topbar-h, 48px); }
-.topbar-inner { max-width: 1200px; margin: 0 auto; padding: 0 1.5rem; height: var(--topbar-h, 48px); display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; }
-.topbar .logo { display: inline-flex; align-items: center; }
-.topbar .logo-img { height: 28px; display: block; }
+.topbar { position: sticky; top: 0; z-index: 9999; background: #ffffff; border-bottom: 1px solid #e5e7eb; height: var(--topbar-h, 48px); }
+.topbar-inner { max-width: none; margin: 0; padding: 0 1.5rem; height: var(--topbar-h, 48px); display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; position: relative; }
+.topbar .logo { display: inline-flex; align-items: center; position: absolute; left: calc(50% - 500px - var(--sidebar-w, 200px)); width: var(--sidebar-w, 200px); }
+.topbar .logo-img { width: 100%; height: auto; display: block; max-height: 32px; object-fit: contain; }
 .topbar .nav { display: flex; align-items: center; gap: 0.75rem; }
 
-/* Ensure sticky sidebars account for topbar height */
-.sidebar { top: calc(var(--topbar-h, 48px) + 12px + var(--section-offset, 0px)); }
+/* Blue styling for end segment elements */
+.end-slider .slider-handle {
+  background: var(--blue-500);
+}
+
+.end-slider .slider-line {
+  background: var(--blue-500);
+}
+
+.end-slider .slider-btn {
+  background: var(--blue-500);
+}
+
+.end-slider .slider-btn:hover:not(:disabled) {
+  background: var(--blue-600);
+}
+
+.badge.end {
+  background: var(--blue-500);
+  color: #ffffff;
+}
+
+/* Blue styling for wet tire section */
+.tire-group:nth-child(3) .tire-group-header .icon {
+  color: var(--blue-500);
+}
+
+.tire-group:nth-child(3) .tire-option.selected {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
 </style>

@@ -343,7 +343,7 @@ export default {
   position: absolute;
   top: 1rem;
   right: 1rem;
-  z-index: 1000;
+  z-index: 100;
 }
 
 .search-btn {
