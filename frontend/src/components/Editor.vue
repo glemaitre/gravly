@@ -48,76 +48,85 @@
           <span class="icon" aria-hidden="true"><i class="fa-solid fa-compass"></i></span>
           <span class="label">Segment selector</span>
         </div>
-        <div class="card controls" ref="controlsCard">
-          <div class="slider-group">
-            <div class="slider-header">
-              <span class="badge start">Start</span>
-            </div>
-            <div class="metrics-grid">
-              <div class="metric" title="Elapsed time from start">
-                <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                <span class="value">{{ formatElapsed(startIndex) }}</span>
-              </div>
-              <div class="metric" title="Distance (km)">
-                <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
-              </div>
-              <div class="metric" title="Elevation (m)">
-                <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
-              </div>
-              <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-              <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-              <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
-            </div>
-            <div class="slider-row">
-              <button type="button" class="btn" @click="startIndex = Math.max(0, startIndex - 1)">−</button>
-              <div class="range-wrap">
-                <input class="range" type="range" :min="startMin" :max="startMax" :value="startIndex" @input="onStartInput($event)" />
-                <div class="index-badge" :style="{ left: startPercent + '%' }" title="Index">{{ startIndex }}</div>
-              </div>
-              <button type="button" class="btn" @click="startIndex = Math.min(endIndex - 1, startIndex + 1)">+</button>
-            </div>
-          </div>
-          <div class="slider-group">
-            <div class="slider-header">
-              <span class="badge end">End</span>
-            </div>
-            <div class="metrics-grid">
-              <div class="metric" title="Elapsed time from start">
-                <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                <span class="value">{{ formatElapsed(endIndex) }}</span>
-              </div>
-              <div class="metric" title="Distance (km)">
-                <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
-              </div>
-              <div class="metric" title="Elevation (m)">
-                <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
-              </div>
-              <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-              <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-              <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
-            </div>
-            <div class="slider-row">
-              <button type="button" class="btn" @click="endIndex = Math.max(startIndex + 1, endIndex - 1)">−</button>
-              <div class="range-wrap">
-                <input class="range" type="range" :min="endMin" :max="endMax" :value="endIndex" @input="onEndInput($event)" />
-                <div class="index-badge" :style="{ left: endPercent + '%' }" title="Index">{{ endIndex }}</div>
-              </div>
-              <button type="button" class="btn" @click="endIndex = Math.min(points.length - 1, endIndex + 1)">+</button>
-            </div>
-          </div>
-        </div>
         <div class="card card-map">
           <div id="map" class="map"></div>
         </div>
         <div class="card card-elevation">
-          <canvas ref="chartCanvas" class="chart"></canvas>
+          <div class="chart-container">
+            <canvas ref="chartCanvas" class="chart"></canvas>
+            <!-- Draggable vertical sliders -->
+            <div
+              class="vertical-slider start-slider"
+              :style="{ left: startSliderPosition + '%' }"
+              @mousedown="startDrag('start', $event)"
+              @touchstart="startDrag('start', $event)"
+            >
+              <div class="slider-handle"></div>
+              <div class="slider-line"></div>
+              <div class="slider-index">{{ startIndex }}</div>
+            </div>
+            <div
+              class="vertical-slider end-slider"
+              :style="{ left: endSliderPosition + '%' }"
+              @mousedown="startDrag('end', $event)"
+              @touchstart="startDrag('end', $event)"
+            >
+              <div class="slider-handle"></div>
+              <div class="slider-line"></div>
+              <div class="slider-index">{{ endIndex }}</div>
+            </div>
+          </div>
           <div class="axis-toggle below">
             <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance (km)</button>
             <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time (hh:mm:ss)</button>
+          </div>
+
+          <!-- Selector controls moved here -->
+          <div class="controls" ref="controlsCard">
+            <div class="slider-group">
+              <div class="slider-header">
+                <span class="badge start">Start</span>
+              </div>
+              <div class="metrics-grid">
+                <div class="metric" title="Elapsed time from start">
+                  <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                  <span class="value">{{ formatElapsed(startIndex) }}</span>
+                </div>
+                <div class="metric" title="Distance (km)">
+                  <span class="icon"><i class="fa-solid fa-ruler"></i></span>
+                  <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
+                </div>
+                <div class="metric" title="Elevation (m)">
+                  <span class="icon"><i class="fa-solid fa-mountain"></i></span>
+                  <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
+                </div>
+                <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
+                <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+              </div>
+            </div>
+            <div class="slider-group">
+              <div class="slider-header">
+                <span class="badge end">End</span>
+              </div>
+              <div class="metrics-grid">
+                <div class="metric" title="Elapsed time from start">
+                  <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                  <span class="value">{{ formatElapsed(endIndex) }}</span>
+                </div>
+                <div class="metric" title="Distance (km)">
+                  <span class="icon"><i class="fa-solid fa-ruler"></i></span>
+                  <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
+                </div>
+                <div class="metric" title="Elevation (m)">
+                  <span class="icon"><i class="fa-solid fa-mountain"></i></span>
+                  <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
+                </div>
+                <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
+                <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -202,12 +211,13 @@
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import logoUrl from '../assets/images/logo.svg'
 import L from 'leaflet'
-import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, Filler } from 'chart.js'
+import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, Filler, Tooltip } from 'chart.js'
+import annotationPlugin from 'chartjs-plugin-annotation'
 import tireSlickUrl from '../assets/images/slick.png'
 import tireSemiSlickUrl from '../assets/images/semi-slick.png'
 import tireKnobsUrl from '../assets/images/ext.png'
 
-Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler)
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler, Tooltip, annotationPlugin)
 
 type Tire = 'slick' | 'semi-slick' | 'knobs'
 
@@ -253,6 +263,12 @@ const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 const smoothedElevations = ref<number[]>([])
 
+// Slider functionality
+const isDragging = ref(false)
+const dragType = ref<'start' | 'end' | null>(null)
+const startSliderPosition = ref(0)
+const endSliderPosition = ref(100)
+
 // Slider bounds and index badge positions
 const startMin = computed(() => 0)
 const startMax = computed(() => Math.max(1, endIndex.value - 1))
@@ -264,6 +280,38 @@ function toPercent(value: number, min: number, max: number): number {
 }
 const startPercent = computed(() => toPercent(startIndex.value, startMin.value, startMax.value))
 const endPercent = computed(() => toPercent(endIndex.value, endMin.value, endMax.value))
+
+// Update slider positions when indices change
+watch([startIndex, endIndex], () => {
+  if (points.value.length > 0 && chart && chartCanvas.value) {
+    // Get the data values
+    const startX = getX(startIndex.value)
+    const endX = getX(endIndex.value)
+
+    // Get the canvas and container dimensions
+    const canvasRect = chart.canvas.getBoundingClientRect()
+    const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
+
+    // Convert data values to pixel positions using Chart.js built-in method
+    const startPixel = chart.scales.x.getPixelForValue(startX)
+    const endPixel = chart.scales.x.getPixelForValue(endX)
+
+    // Calculate the offset of the canvas within the container
+    const canvasOffsetLeft = canvasRect.left - containerRect.left
+
+    // Adjust pixel positions to be relative to the container
+    const startPixelInContainer = startPixel + canvasOffsetLeft
+    const endPixelInContainer = endPixel + canvasOffsetLeft
+
+    // Convert to percentage of container width and center the slider
+    const sliderWidth = 20 // px - matches CSS width
+    const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
+    const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
+
+    startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
+    endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+  }
+})
 
 function triggerFileOpen() {
   fileInput.value?.click()
@@ -292,8 +340,7 @@ function onFileChange(ev: Event) {
     await nextTick()
     renderMap()
     renderChart()
-    // Recompute layout-dependent offsets after controls render
-    try { (window as any).__editorRecomputeSectionOffset?.() } catch {}
+    // Layout is now stable with fixed sidebar offset
   }
   reader.readAsText(file)
 }
@@ -345,6 +392,62 @@ function onStartInput(e: Event) {
 function onEndInput(e: Event) {
   const v = Number((e.target as HTMLInputElement).value)
   endIndex.value = Math.max(v, startIndex.value + 1)
+}
+
+// Slider drag functionality
+function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
+  event.preventDefault()
+  isDragging.value = true
+  dragType.value = type
+
+  const handleMouseMove = (e: MouseEvent | TouchEvent) => {
+    if (!isDragging.value || !chartCanvas.value || !chart) return
+
+    const rect = chartCanvas.value.getBoundingClientRect()
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
+    const x = clientX - rect.left
+
+    // Convert pixel position to data x value
+    const dataX = chart.scales.x.getValueForPixel(x)
+    if (dataX === undefined) return
+
+    // Find closest point index
+    let closestIndex = 0
+    let minDistance = Infinity
+
+    for (let i = 0; i < points.value.length; i++) {
+      const pointX = getX(i)
+      const distance = Math.abs(pointX - dataX)
+      if (distance < minDistance) {
+        minDistance = distance
+        closestIndex = i
+      }
+    }
+
+    if (type === 'start') {
+      // S slider cannot go beyond E slider
+      const newIndex = Math.min(closestIndex, endIndex.value - 1)
+      startIndex.value = Math.max(0, newIndex)
+    } else {
+      // E slider cannot go before S slider
+      const newIndex = Math.max(closestIndex, startIndex.value + 1)
+      endIndex.value = Math.min(points.value.length - 1, newIndex)
+    }
+  }
+
+  const handleMouseUp = () => {
+    isDragging.value = false
+    dragType.value = null
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+    document.removeEventListener('touchmove', handleMouseMove)
+    document.removeEventListener('touchend', handleMouseUp)
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  document.addEventListener('touchmove', handleMouseMove)
+  document.addEventListener('touchend', handleMouseUp)
 }
 
 function parseGPX(xmlText: string): TrackPoint[] {
@@ -408,6 +511,8 @@ function renderChart() {
   const ctx = chartCanvas.value.getContext('2d')!
   const labels = points.value.map((_, i) => i)
   const data = buildXYData()
+  const fullData = buildFullXYData()
+
   chart?.destroy()
   chart = new Chart(ctx, {
     type: 'line',
@@ -416,15 +521,27 @@ function renderChart() {
       datasets: [
         {
           label: 'Elevation (m)',
-          data: data.map(d => ({ x: d.x, y: d.y })),
+          data: fullData.map(d => ({ x: d.x, y: d.y })),
           borderColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
           borderWidth: 2,
           pointRadius: 0,
           pointHoverRadius: 5,
-          backgroundColor: 'rgba(255, 102, 0, 0.12)',
-          fill: 'start',
+          backgroundColor: 'transparent',
+          fill: false,
           tension: 0.1,
           parsing: false
+        },
+        // Orange fill between selectors (under elevation line)
+        {
+          label: 'Selected Area',
+          data: buildSelectedAreaData(),
+          borderColor: 'transparent',
+          backgroundColor: 'rgba(255, 102, 0, 0.15)',
+          fill: 'origin',
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          parsing: false,
+          tension: 0
         }
       ]
     },
@@ -432,11 +549,128 @@ function renderChart() {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
-      scales: {
-        x: { type: 'linear', display: true, title: { display: false }, min: getX(startIndex.value), max: getX(endIndex.value), ticks: { callback: (v: any) => formatXTick(Number(v)) } },
-        y: { display: true, title: { display: true, text: 'Elevation (m)' } }
+      layout: {
+        padding: {
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0
+        }
       },
-      plugins: { legend: { display: false } }
+      scales: {
+        x: {
+          type: 'linear',
+          display: true,
+          title: { display: false },
+          min: getX(0),
+          max: getX(points.value.length - 1),
+          ticks: { callback: (v: any) => formatXTick(Number(v)) }
+        },
+        y: {
+          display: true,
+          title: { display: true, text: 'Elevation (m)' },
+          min: Math.min(...smoothedElevations.value)
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          filter: function(tooltipItem) {
+            // Only show tooltip for the elevation line (first dataset)
+            return tooltipItem.datasetIndex === 0;
+          },
+          callbacks: {
+            title: function(context) {
+              const dataIndex = context[0].dataIndex;
+              const xValue = context[0].parsed.x;
+              return xMode.value === 'distance' ? `${xValue.toFixed(2)} km` : formatXTick(xValue);
+            },
+            label: function(context) {
+              const yValue = context.parsed.y;
+              return `Elevation: ${Math.round(yValue)} m`;
+            }
+          }
+        },
+      },
+      onClick: (event, elements) => {
+        if (event && chart && event.x !== null && event.y !== null) {
+          const rect = chart.canvas.getBoundingClientRect()
+          const x = event.x - rect.left
+          const y = event.y - rect.top
+
+          const dataX = chart.scales.x.getValueForPixel(x)
+          const dataY = chart.scales.y.getValueForPixel(y)
+
+          if (dataX === undefined || dataY === undefined) return
+
+          // Find closest point index based on x position
+          let closestIndex = 0
+          let minDistance = Infinity
+
+          for (let i = 0; i < points.value.length; i++) {
+            const pointX = getX(i)
+            const distance = Math.abs(pointX - dataX)
+            if (distance < minDistance) {
+              minDistance = distance
+              closestIndex = i
+            }
+          }
+
+          // Determine which selector to update based on x position
+          const startX = getX(startIndex.value)
+          const endX = getX(endIndex.value)
+
+          if (dataX < startX) {
+            // Click before start line - update start
+            startIndex.value = Math.min(closestIndex, endIndex.value - 1)
+          } else if (dataX > endX) {
+            // Click after end line - update end
+            endIndex.value = Math.max(closestIndex, startIndex.value + 1)
+          } else {
+            // Click between lines - determine which is closer
+            const distToStart = Math.abs(dataX - startX)
+            const distToEnd = Math.abs(dataX - endX)
+
+            if (distToStart < distToEnd) {
+              startIndex.value = Math.min(closestIndex, endIndex.value - 1)
+            } else {
+              endIndex.value = Math.max(closestIndex, startIndex.value + 1)
+            }
+          }
+        }
+      }
+    }
+  })
+
+  // Update slider positions after chart is created
+  nextTick(() => {
+    if (points.value.length > 0 && chart && chartCanvas.value) {
+      // Get the data values
+      const startX = getX(startIndex.value)
+      const endX = getX(endIndex.value)
+
+      // Get the canvas and container dimensions
+      const canvasRect = chart.canvas.getBoundingClientRect()
+      const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
+
+      // Convert data values to pixel positions using Chart.js built-in method
+      const startPixel = chart.scales.x.getPixelForValue(startX)
+      const endPixel = chart.scales.x.getPixelForValue(endX)
+
+      // Calculate the offset of the canvas within the container
+      const canvasOffsetLeft = canvasRect.left - containerRect.left
+
+      // Adjust pixel positions to be relative to the container
+      const startPixelInContainer = startPixel + canvasOffsetLeft
+      const endPixelInContainer = endPixel + canvasOffsetLeft
+
+      // Convert to percentage of container width and center the slider
+      const sliderWidth = 20 // px - matches CSS width
+      const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
+      const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
+
+      startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
+      endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
     }
   })
 }
@@ -447,6 +681,75 @@ function getX(i: number): number {
 
 function buildXYData(): { x: number, y: number }[] {
   return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.ele }))
+}
+
+function buildFullXYData(): { x: number, y: number }[] {
+  return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.ele }))
+}
+
+function buildSelectedAreaData(): { x: number, y: number }[] {
+  // Create a dataset that only contains the selected portion of the elevation data
+  // This will be used with fill: 'origin' to fill from the baseline to the line
+  const selectedData = []
+
+  for (let i = startIndex.value; i <= endIndex.value; i++) {
+    selectedData.push({
+      x: getX(i),
+      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
+    })
+  }
+
+  return selectedData
+}
+
+function buildBeforeStartAreaData(): { x: number, y: number }[] {
+  const minY = Math.min(...smoothedElevations.value)
+
+  // Create area under the elevation line before the start selector
+  const beforeData = []
+
+  // First, add points along the elevation line from start to beginning
+  for (let i = startIndex.value; i >= 0; i--) {
+    beforeData.push({
+      x: getX(i),
+      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
+    })
+  }
+
+  // Then, add points along the bottom (min elevation) from beginning back to start
+  for (let i = 0; i <= startIndex.value; i++) {
+    beforeData.push({
+      x: getX(i),
+      y: minY
+    })
+  }
+
+  return beforeData
+}
+
+function buildAfterEndAreaData(): { x: number, y: number }[] {
+  const minY = Math.min(...smoothedElevations.value)
+
+  // Create area under the elevation line after the end selector
+  const afterData = []
+
+  // First, add points along the elevation line from end to the end
+  for (let i = endIndex.value; i < points.value.length; i++) {
+    afterData.push({
+      x: getX(i),
+      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
+    })
+  }
+
+  // Then, add points along the bottom (min elevation) from end back to end
+  for (let i = points.value.length - 1; i >= endIndex.value; i--) {
+    afterData.push({
+      x: getX(i),
+      y: minY
+    })
+  }
+
+  return afterData
 }
 
 function xAxisTitle(): string { return xMode.value === 'distance' ? 'Distance (km)' : 'Time (hh:mm:ss)' }
@@ -493,15 +796,12 @@ watch([startIndex, endIndex], () => {
     endIndex.value = Math.min(points.value.length - 1, startIndex.value + 1)
   }
   updateSelectedPolyline()
-  // Update selected dataset in chart
+  // Update chart area data
   if (chart) {
-    const data = buildXYData()
+    // Update area datasets
     // @ts-ignore
-    chart.data.datasets[0].data = data.map(d => ({ x: d.x, y: d.y }))
-    // @ts-ignore
-    chart.options.scales.x.min = getX(startIndex.value)
-    // @ts-ignore
-    chart.options.scales.x.max = getX(endIndex.value)
+    chart.data.datasets[1].data = buildSelectedAreaData()
+
     chart.update()
   }
   // Fit map to selected segment
@@ -514,16 +814,55 @@ watch([startIndex, endIndex], () => {
 
 watch(xMode, () => {
   if (!chart) return
-  const data = buildXYData()
+  const fullData = buildFullXYData()
+
+  // Update all datasets
   // @ts-ignore
-  chart.data.datasets[0].data = data.map(d => ({ x: d.x, y: d.y }))
+  chart.data.datasets[0].data = fullData.map(d => ({ x: d.x, y: d.y }))
+  // @ts-ignore
+  chart.data.datasets[1].data = buildSelectedAreaData()
+
+  // Update x-axis configuration
   // @ts-ignore
   chart.options.scales.x.ticks.callback = (v) => formatXTick(Number(v))
   // @ts-ignore
-  chart.options.scales.x.min = getX(startIndex.value)
+  chart.options.scales.x.min = getX(0)
   // @ts-ignore
-  chart.options.scales.x.max = getX(endIndex.value)
+  chart.options.scales.x.max = getX(points.value.length - 1)
+
   chart.update()
+
+  // Update slider positions after chart update
+  nextTick(() => {
+    if (points.value.length > 0 && chart && chartCanvas.value) {
+      // Get the data values
+      const startX = getX(startIndex.value)
+      const endX = getX(endIndex.value)
+
+      // Get the canvas and container dimensions
+      const canvasRect = chart.canvas.getBoundingClientRect()
+      const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
+
+      // Convert data values to pixel positions using Chart.js built-in method
+      const startPixel = chart.scales.x.getPixelForValue(startX)
+      const endPixel = chart.scales.x.getPixelForValue(endX)
+
+      // Calculate the offset of the canvas within the container
+      const canvasOffsetLeft = canvasRect.left - containerRect.left
+
+      // Adjust pixel positions to be relative to the container
+      const startPixelInContainer = startPixel + canvasOffsetLeft
+      const endPixelInContainer = endPixel + canvasOffsetLeft
+
+      // Convert to percentage of container width and center the slider
+      const sliderWidth = 20 // px - matches CSS width
+      const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
+      const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
+
+      startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
+      endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+    }
+  })
 })
 
 watch(sidebarCollapsed, () => {
@@ -532,10 +871,10 @@ watch(sidebarCollapsed, () => {
   }
 })
 
-// Ensure the sidebar offset recomputes when the loaded state toggles and layout changes
+// Layout is stable with fixed sidebar offset when loaded state changes
 watch(loaded, async () => {
   await nextTick()
-  try { (window as any).__editorRecomputeSectionOffset?.() } catch {}
+  // No dynamic offset calculation needed
 })
 
 onMounted(() => {
@@ -548,27 +887,17 @@ onMounted(() => {
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
 
-  // Measure the controls card and set a constant sidebar offset matching its initial gap below the topbar
-  const recomputeSectionOffset = () => {
-    const el = controlsCard.value
-    const topbarAndGap = (Number(getComputedStyle(document.documentElement).getPropertyValue('--topbar-h').replace('px','')) || 48) + 12
-    if (!el) { sectionOffset.value = 0; return }
-    const rect = el.getBoundingClientRect()
-    sectionOffset.value = Math.max(0, Math.round(rect.top - topbarAndGap))
+  // Set a fixed sidebar offset to maintain consistent distance from topbar
+  const setFixedSidebarOffset = () => {
+    sectionOffset.value = 0 // Fixed distance from topbar
   }
   // Initial compute after layout
-  setTimeout(recomputeSectionOffset, 0)
-  window.addEventListener('resize', recomputeSectionOffset)
-  ;(window as any).__editorRecomputeSectionOffset = recomputeSectionOffset
+  setTimeout(setFixedSidebarOffset, 0)
 })
 
 onUnmounted(() => {
   const onResize = (window as any).__editorOnResize
   if (onResize) window.removeEventListener('resize', onResize)
-  const recompute = (window as any).__editorRecomputeSectionOffset
-  if (recompute) {
-    window.removeEventListener('resize', recompute)
-  }
 })
 
 function buildSegmentGPX(): string {
@@ -686,7 +1015,7 @@ async function onSubmit() {
 .card-elevation { padding: 0.75rem; }
 .map { height: 480px; width: 100%; }
 .axis-toggle { display: inline-flex; gap: 0; margin: 0.25rem auto 0.25rem; border: 1px solid #e5e7eb; border-radius: 999px; overflow: hidden; background: #fff; position: relative; left: 50%; transform: translateX(-50%); }
-.axis-toggle.below { margin-top: 0.5rem; }
+.axis-toggle.below { margin-top: 2rem; }
 .axis-toggle .seg { font-size: 12px; padding: 4px 10px; border: none; background: transparent; cursor: pointer; color: #374151; }
 .axis-toggle .seg.left { border-right: 1px solid #e5e7eb; }
 .axis-toggle .seg.active { background: #f3f4f6; color: #111827; }
@@ -719,7 +1048,79 @@ async function onSubmit() {
 .gps-col .label { font-size: 12px; color: #6b7280; }
 .gps-col .value { font-variant-numeric: tabular-nums; }
 .workspace-right { display: flex; flex-direction: column; gap: 1rem; }
-.chart { width: 100%; height: 200px; max-height: 200px; }
+.chart-container { position: relative; width: 100%; }
+.chart { width: 100%; height: 200px; max-height: 200px; cursor: crosshair; }
+
+/* Vertical sliders */
+.vertical-slider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  cursor: grab;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.vertical-slider:active {
+  cursor: grabbing;
+}
+
+.slider-handle {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  background: var(--brand-500, #ff6600);
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin-bottom: 4px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slider-line {
+  width: 3px;
+  height: 100%;
+  background: var(--brand-500, #ff6600);
+  border-radius: 2px;
+  opacity: 0.8;
+}
+
+.start-slider .slider-handle::after {
+  content: 'S';
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.end-slider .slider-handle::after {
+  content: 'E';
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.slider-index {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111827;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  z-index: 12;
+}
 .meta { background: #ffffff; width: 100%; margin: 0; display: block; }
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
