@@ -1,0 +1,84 @@
+export default {
+  // Menu items
+  menu: {
+    import: 'Importer depuis ...',
+    segments: 'Segments',
+    gpxFile: 'Fichier GPX',
+    saveInDb: 'Sauvegarder en BD'
+  },
+
+  // Chart and controls
+  chart: {
+    distance: 'Distance (km)',
+    time: 'Temps (hh:mm:ss)',
+    elevation: 'Altitude (m)',
+    start: 'Début',
+    end: 'Fin',
+    gps: 'GPS'
+  },
+
+  // GPS labels
+  gps: {
+    lat: 'Lat',
+    lon: 'Lon'
+  },
+
+  // Form labels
+  form: {
+    segmentName: 'Nom du segment',
+    tire: 'Pneu',
+    segmentInfo: 'Informations du segment'
+  },
+
+  // Tire conditions
+  tire: {
+    dry: 'Sec',
+    wet: 'Humide',
+    dryHelp: 'Utiliser par temps clair et sec où l\'adhérence est élevée.',
+    wetHelp: 'Utiliser par temps de pluie, boue ou faible adhérence.',
+    slick: 'lisse',
+    semiSlick: 'semi-lisse',
+    knobs: 'crampons'
+  },
+
+  // Tooltips and help text
+  tooltip: {
+    loadGpxFirst: 'Charger un fichier GPX d\'abord pour activer la sauvegarde',
+    enterSegmentName: 'Entrer un nom de segment pour activer la sauvegarde',
+    submitting: 'Envoi en cours…',
+    loadGpxFile: 'Charger un fichier GPX',
+    moveStartBack: 'Reculer le marqueur de début d\'un point',
+    moveStartForward: 'Avancer le marqueur de début d\'un point',
+    moveEndBack: 'Reculer le marqueur de fin d\'un point',
+    moveEndForward: 'Avancer le marqueur de fin d\'un point',
+    elapsedTime: 'Temps écoulé depuis le début',
+    distance: 'Distance (km)',
+    elevation: 'Altitude (m)',
+    gpsLocation: 'Position GPS'
+  },
+
+  // Messages
+  message: {
+    loadGpxFirst: 'Charger un fichier GPX d\'abord.',
+    insufficientPoints: 'Le fichier GPX a des points insuffisants.',
+    useFileLoad: 'Utiliser Fichier → Charger GPX pour commencer.',
+    segmentCreated: 'Segment créé avec succès.',
+    createError: 'Erreur lors de la création du segment.'
+  },
+
+  // Language selector
+  language: {
+    title: 'Langue',
+    english: 'English',
+    french: 'Français'
+  },
+
+  // Units and formatting
+  units: {
+    km: 'km',
+    m: 'm'
+  },
+
+  // Required field indicator
+  required: '*'
+}

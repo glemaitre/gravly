@@ -1,11 +1,46 @@
 <template>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="logo">
-        <img :src="logoUrl" alt="Cycling Segments" class="logo-img" />
+      <div class="nav-left">
+        <div class="logo">
+          <img :src="logoUrl" alt="Cycling Segments" class="logo-img" />
+        </div>
+        <div class="nav-menu">
+          <a href="#" class="nav-item">Home</a>
+          <a href="#" class="nav-item">Segments</a>
+          <a href="#" class="nav-item">About</a>
+          <a href="#" class="nav-item">Contact</a>
+        </div>
       </div>
       <nav class="nav">
-        <!-- Add actions/links here if needed -->
+        <div class="language-dropdown" ref="languageDropdown">
+          <button
+            class="language-dropdown-trigger navbar-trigger"
+            @click="toggleLanguageDropdown"
+            :class="{ active: languageDropdownOpen }"
+          >
+            <span class="language-flag">{{ languageOptions[currentLanguage].flag }}</span>
+            <span class="language-name">{{ languageOptions[currentLanguage].name }}</span>
+            <span class="dropdown-arrow">
+              <i class="fa-solid fa-chevron-down" :class="{ rotated: languageDropdownOpen }"></i>
+            </span>
+          </button>
+          <div class="language-dropdown-menu navbar-menu" :class="{ open: languageDropdownOpen }">
+            <button
+              v-for="(option, lang) in languageOptions"
+              :key="lang"
+              class="language-option"
+              :class="{ active: currentLanguage === lang }"
+              @click="(e) => { e.stopPropagation(); changeLanguage(lang as MessageLanguages) }"
+            >
+              <span class="language-flag">{{ option.flag }}</span>
+              <span class="language-name">{{ option.name }}</span>
+              <span v-if="currentLanguage === lang" class="checkmark">
+                <i class="fa-solid fa-check"></i>
+              </span>
+            </button>
+          </div>
+        </div>
       </nav>
     </div>
   </header>
@@ -15,27 +50,27 @@
       <div class="sidebar-scroll">
         <div class="card menu-card">
           <div class="menu-section">
-            <div class="menu-section-title">Import from ...</div>
+            <div class="menu-section-title">{{ t('menu.import') }}</div>
             <ul class="menu-list">
-              <li class="menu-item" @click="triggerFileOpen" title="Load GPX file" role="button">
+              <li class="menu-item" @click="triggerFileOpen" :title="t('tooltip.loadGpxFile')" role="button">
                 <span class="icon" aria-hidden="true"><i class="fa-solid fa-file-lines"></i></span>
-                <span class="text">GPX file</span>
+                <span class="text">{{ t('menu.gpxFile') }}</span>
               </li>
             </ul>
             <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
           </div>
           <div class="menu-section">
-            <div class="menu-section-title">Segments</div>
+            <div class="menu-section-title">{{ t('menu.segments') }}</div>
             <ul class="menu-list">
               <li
                 class="menu-item action"
                 :class="{ disabled: isSaveDisabled }"
                 :aria-disabled="isSaveDisabled"
-                :title="isSaveDisabled ? saveDisabledTitle : 'Save in DB'"
+                :title="isSaveDisabled ? saveDisabledTitle : t('menu.saveInDb')"
                 @click="!isSaveDisabled && onSubmit()"
               >
                 <span class="icon" aria-hidden="true"><i class="fa-solid fa-database"></i></span>
-                <span class="text">Save in DB</span>
+                <span class="text">{{ t('menu.saveInDb') }}</span>
               </li>
             </ul>
           </div>
@@ -70,13 +105,13 @@
                       class="slider-btn slider-btn-minus"
                       @click="moveSlider('start', -1)"
                       :disabled="startIndex <= 0"
-                      title="Move start marker back one point"
+                      :title="t('tooltip.moveStartBack')"
                     >-</button>
                     <button
                       class="slider-btn slider-btn-plus"
                       @click="moveSlider('start', 1)"
                       :disabled="startIndex >= endIndex - 1"
-                      title="Move start marker forward one point"
+                      :title="t('tooltip.moveStartForward')"
                     >+</button>
                   </div>
                 </div>
@@ -94,67 +129,67 @@
                       class="slider-btn slider-btn-minus"
                       @click="moveSlider('end', -1)"
                       :disabled="endIndex <= startIndex + 1"
-                      title="Move end marker back one point"
+                      :title="t('tooltip.moveEndBack')"
                     >-</button>
                     <button
                       class="slider-btn slider-btn-plus"
                       @click="moveSlider('end', 1)"
                       :disabled="endIndex >= points.length - 1"
-                      title="Move end marker forward one point"
+                      :title="t('tooltip.moveEndForward')"
                     >+</button>
                   </div>
                 </div>
               </div>
             </div>
             <div class="axis-toggle below">
-              <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">Distance (km)</button>
-              <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">Time (hh:mm:ss)</button>
+              <button type="button" class="seg left" :class="{ active: xMode === 'distance' }" @click="xMode = 'distance'">{{ t('chart.distance') }}</button>
+              <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">{{ t('chart.time') }}</button>
             </div>
 
             <!-- Selector controls moved here -->
             <div class="controls" ref="controlsCard">
               <div class="slider-group">
                 <div class="slider-header">
-                  <span class="badge start">Start</span>
+                  <span class="badge start">{{ t('chart.start') }}</span>
                 </div>
                 <div class="metrics-grid">
-                  <div class="metric" title="Elapsed time from start">
+                  <div class="metric" :title="t('tooltip.elapsedTime')">
                     <span class="icon"><i class="fa-solid fa-clock"></i></span>
                     <span class="value">{{ formatElapsed(startIndex) }}</span>
                   </div>
-                  <div class="metric" title="Distance (km)">
+                  <div class="metric" :title="t('tooltip.distance')">
                     <span class="icon"><i class="fa-solid fa-ruler"></i></span>
                     <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
                   </div>
-                  <div class="metric" title="Elevation (m)">
+                  <div class="metric" :title="t('tooltip.elevation')">
                     <span class="icon"><i class="fa-solid fa-mountain"></i></span>
                     <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
                   </div>
-                  <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-                  <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                  <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-title" :title="t('tooltip.gpsLocation')"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">{{ t('chart.gps') }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.lat') }}</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.lon') }}</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
                 </div>
               </div>
               <div class="slider-group">
                 <div class="slider-header">
-                  <span class="badge end">End</span>
+                  <span class="badge end">{{ t('chart.end') }}</span>
                 </div>
                 <div class="metrics-grid">
-                  <div class="metric" title="Elapsed time from start">
+                  <div class="metric" :title="t('tooltip.elapsedTime')">
                     <span class="icon"><i class="fa-solid fa-clock"></i></span>
                     <span class="value">{{ formatElapsed(endIndex) }}</span>
                   </div>
-                  <div class="metric" title="Distance (km)">
+                  <div class="metric" :title="t('tooltip.distance')">
                     <span class="icon"><i class="fa-solid fa-ruler"></i></span>
                     <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
                   </div>
-                  <div class="metric" title="Elevation (m)">
+                  <div class="metric" :title="t('tooltip.elevation')">
                     <span class="icon"><i class="fa-solid fa-mountain"></i></span>
                     <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
                   </div>
-                  <div class="gps-title" title="GPS location"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">GPS</span></div>
-                  <div class="gps-col"><span class="label">Lat</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                  <div class="gps-col"><span class="label">Lon</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-title" :title="t('tooltip.gpsLocation')"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">{{ t('chart.gps') }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.lat') }}</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.lon') }}</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
                 </div>
               </div>
             </div>
@@ -163,61 +198,61 @@
           <!-- Segment information under selector -->
           <div class="section-indicator">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
-            <span class="label">Segment information</span>
+            <span class="label">{{ t('form.segmentInfo') }}</span>
           </div>
           <form class="card meta" @submit.prevent="onSubmit">
             <div>
-              <label for="name">Segment name <span class="req">*</span></label>
+              <label for="name">{{ t('form.segmentName') }} <span class="req">{{ t('required') }}</span></label>
               <input id="name" v-model="name" type="text" required />
             </div>
 
             <div class="grid">
-              <label class="group-main-label">Tire</label>
+              <label class="group-main-label">{{ t('form.tire') }}</label>
               <div class="tire-group">
                 <div class="tire-group-header">
                   <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
-                  <span class="tire-group-title">Dry</span>
+                  <span class="tire-group-title">{{ t('tire.dry') }}</span>
                 </div>
-                <p class="tire-group-help">Use for clear, dry conditions where grip is high.</p>
-                <div class="tire-row" role="radiogroup" aria-label="Tire dry">
+                <p class="tire-group-help">{{ t('tire.dryHelp') }}</p>
+                <div class="tire-row" role="radiogroup" :aria-label="t('tire.dry')">
                   <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
                     <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
-                    <img :src="tireImages.slick" alt="slick" />
-                    <span class="tire-caption">slick</span>
+                    <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                    <span class="tire-caption">{{ t('tire.slick') }}</span>
                   </label>
                   <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
                     <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
-                    <img :src="tireImages.semiSlick" alt="semi-slick" />
-                    <span class="tire-caption">semi-slick</span>
+                    <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                    <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
                   </label>
                   <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
                     <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
-                    <img :src="tireImages.knobs" alt="knobs" />
-                    <span class="tire-caption">knobs</span>
+                    <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                    <span class="tire-caption">{{ t('tire.knobs') }}</span>
                   </label>
                 </div>
               </div>
               <div class="tire-group">
                 <div class="tire-group-header">
                   <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
-                  <span class="tire-group-title">Wet</span>
+                  <span class="tire-group-title">{{ t('tire.wet') }}</span>
                 </div>
-                <p class="tire-group-help">Use for rain, mud, or low-grip conditions.</p>
-                <div class="tire-row" role="radiogroup" aria-label="Tire wet">
+                <p class="tire-group-help">{{ t('tire.wetHelp') }}</p>
+                <div class="tire-row" role="radiogroup" :aria-label="t('tire.wet')">
                   <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
                     <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
-                    <img :src="tireImages.slick" alt="slick" />
-                    <span class="tire-caption">slick</span>
+                    <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                    <span class="tire-caption">{{ t('tire.slick') }}</span>
                   </label>
                   <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
                     <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
-                    <img :src="tireImages.semiSlick" alt="semi-slick" />
-                    <span class="tire-caption">semi-slick</span>
+                    <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                    <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
                   </label>
                   <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
                     <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
-                    <img :src="tireImages.knobs" alt="knobs" />
-                    <span class="tire-caption">knobs</span>
+                    <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                    <span class="tire-caption">{{ t('tire.knobs') }}</span>
                   </label>
                 </div>
               </div>
@@ -227,7 +262,7 @@
         </div>
 
         <div v-if="!loaded" class="empty">
-          <p>Use File → Load GPX to begin.</p>
+          <p>{{ t('message.useFileLoad') }}</p>
         </div>
         </div>
       </div>
@@ -239,6 +274,8 @@
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { setLanguage, type MessageLanguages } from '../i18n'
 import logoUrl from '../assets/images/logo.svg'
 import L from 'leaflet'
 import { Chart, LineController, LineElement, PointElement, LinearScale, Title, CategoryScale, Filler, Tooltip } from 'chart.js'
@@ -254,6 +291,41 @@ type Tire = 'slick' | 'semi-slick' | 'knobs'
 const tireImages = { slick: tireSlickUrl, semiSlick: tireSemiSlickUrl, knobs: tireKnobsUrl }
 
 type TrackPoint = { lat: number; lon: number; ele: number; time?: string }
+
+// i18n setup
+const { t, locale } = useI18n()
+const currentLanguage = ref<MessageLanguages>('en')
+
+// Watch for locale changes to update currentLanguage
+watch(locale, (newLocale) => {
+  currentLanguage.value = newLocale as MessageLanguages
+}, { immediate: true })
+
+// Language dropdown state
+const languageDropdownOpen = ref(false)
+
+// Language options with flags
+const languageOptions = {
+  en: { flag: '🇺🇸', name: 'English' },
+  fr: { flag: '🇫🇷', name: 'Français' }
+}
+
+// Close dropdown when clicking outside
+const languageDropdown = ref<HTMLElement | null>(null)
+
+function closeLanguageDropdown(event: MouseEvent) {
+  if (languageDropdown.value && !languageDropdown.value.contains(event.target as Node)) {
+    languageDropdownOpen.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', closeLanguageDropdown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', closeLanguageDropdown)
+})
 
 const loaded = ref(false)
 const sidebarCollapsed = ref(false)
@@ -273,12 +345,25 @@ const xMode = ref<'distance' | 'time'>('distance')
 
 const controlsCard = ref<HTMLElement | null>(null)
 
+// Language switching function
+function changeLanguage(lang: MessageLanguages) {
+  currentLanguage.value = lang
+  setLanguage(lang)
+  languageDropdownOpen.value = false // Close dropdown after selection
+}
+
+// Toggle dropdown function that prevents event bubbling
+function toggleLanguageDropdown(event: Event) {
+  event.stopPropagation()
+  languageDropdownOpen.value = !languageDropdownOpen.value
+}
+
 // Save button state and tooltip
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
 const saveDisabledTitle = computed(() => {
-  if (!loaded.value) return 'Load a GPX first to enable saving'
-  if (!name.value) return 'Enter a segment name to enable saving'
-  if (submitting.value) return 'Submitting…'
+  if (!loaded.value) return t('tooltip.loadGpxFirst')
+  if (!name.value) return t('tooltip.enterSegmentName')
+  if (submitting.value) return t('tooltip.submitting')
   return ''
 })
 
@@ -389,7 +474,7 @@ function onFileChange(ev: Event) {
     const text = String(reader.result)
     const parsed = parseGPX(text)
     if (parsed.length < 2) {
-      message.value = 'GPX has insufficient points.'
+      message.value = t('message.insufficientPoints')
       return
     }
     points.value = parsed
@@ -427,8 +512,8 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
 
 function distanceAt(i: number): number { return cumulativeKm.value[i] ?? 0 }
 function pointAt(i: number): TrackPoint | undefined { return points.value[i] }
-function formatKm(km?: number): string { return km == null ? '-' : `${km.toFixed(2)} km` }
-function formatElevation(ele?: number): string { return ele == null ? '-' : `${Math.round(ele)} m` }
+function formatKm(km?: number): string { return km == null ? '-' : `${km.toFixed(2)} ${t('units.km')}` }
+function formatElevation(ele?: number): string { return ele == null ? '-' : `${Math.round(ele)} ${t('units.m')}` }
 function formatLatLon(p?: TrackPoint): string { return p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '-' }
 function formatTime(t?: string): string { return t ? new Date(t).toLocaleString() : '-' }
 function formatElapsed(i: number): string {
@@ -597,7 +682,7 @@ function renderChart() {
       labels,
       datasets: [
         {
-          label: 'Elevation (m)',
+          label: t('chart.elevation'),
           data: fullData.map(d => ({ x: d.x, y: d.y })),
           borderColor: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600',
           borderWidth: 2,
@@ -645,7 +730,7 @@ function renderChart() {
         },
         y: {
           display: true,
-          title: { display: true, text: 'Elevation (m)' },
+          title: { display: true, text: t('chart.elevation') },
           min: Math.min(...smoothedElevations.value)
         }
       },
@@ -660,11 +745,11 @@ function renderChart() {
             title: function(context) {
               const dataIndex = context[0].dataIndex;
               const xValue = context[0].parsed.x;
-              return xMode.value === 'distance' ? `${xValue.toFixed(2)} km` : formatXTick(xValue);
+              return xMode.value === 'distance' ? `${xValue.toFixed(2)} ${t('units.km')}` : formatXTick(xValue);
             },
             label: function(context) {
               const yValue = context.parsed.y;
-              return `Elevation: ${Math.round(yValue)} m`;
+              return `${t('chart.elevation')}: ${Math.round(yValue)} ${t('units.m')}`;
             }
           }
         },
@@ -832,9 +917,9 @@ function buildAfterEndAreaData(): { x: number, y: number }[] {
   return afterData
 }
 
-function xAxisTitle(): string { return xMode.value === 'distance' ? 'Distance (km)' : 'Time (hh:mm:ss)' }
+function xAxisTitle(): string { return xMode.value === 'distance' ? t('chart.distance') : t('chart.time') }
 function formatXTick(v: number): string {
-  if (xMode.value === 'distance') return `${v.toFixed(1)} km`
+  if (xMode.value === 'distance') return `${v.toFixed(1)} ${t('units.km')}`
   const sec = Math.max(0, Math.round(v))
   const h = Math.floor(sec / 3600)
   const m = Math.floor((sec % 3600) / 60)
@@ -992,7 +1077,7 @@ function escapeXml(s: string): string {
 
 async function onSubmit() {
   if (!loaded.value || points.value.length < 2) {
-    message.value = 'Load a GPX first.'
+    message.value = t('message.loadGpxFirst')
     return
   }
   submitting.value = true
@@ -1021,9 +1106,9 @@ async function onSubmit() {
     chart?.destroy(); chart = null
     if (fullLine) { fullLine.remove(); fullLine = null }
     if (selectedLine) { selectedLine.remove(); selectedLine = null }
-    message.value = 'Segment created successfully.'
+    message.value = t('message.segmentCreated')
   } catch (err: any) {
-    message.value = err.message || 'Error while creating segment.'
+    message.value = err.message || t('message.createError')
   } finally {
     submitting.value = false
   }
@@ -1039,6 +1124,7 @@ async function onSubmit() {
   --brand-300: #ff9955ff;
   --brand-400: #ff7f2aff;
   --brand-500: #ff6600ff;
+  --brand-600: #e65c00ff;
 
   --brand-primary: var(--brand-500);
   --brand-primary-hover: #e65c00;
@@ -1091,6 +1177,88 @@ async function onSubmit() {
 .menu-item:active { background: #e5e7eb; }
 .menu-item.disabled { opacity: 0.5; cursor: not-allowed; background: transparent; }
 .menu-item.disabled:hover { background: transparent; }
+.menu-item.active { background: var(--brand-50); color: var(--brand-600); font-weight: 500; }
+.menu-item.active:hover { background: var(--brand-100); }
+
+/* Language Dropdown Styles (General) */
+.language-dropdown {
+  position: relative;
+}
+
+/* Shared Language Dropdown Elements */
+.language-flag {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.language-name {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.dropdown-arrow {
+  font-size: 0.75em;
+  transition: transform 0.2s ease;
+  opacity: 0.7;
+}
+
+.dropdown-arrow .fa-chevron-down.rotated {
+  transform: rotate(180deg);
+}
+
+.language-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  border-radius: 0;
+}
+
+.language-option:first-child {
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.language-option:last-child {
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+.language-option:hover {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.language-option.active {
+  background: var(--brand-50);
+  color: var(--brand-600);
+  font-weight: 500;
+}
+
+.language-option.active:hover {
+  background: var(--brand-100);
+}
+
+.language-option .language-flag {
+  font-size: 1.1em;
+}
+
+.language-option .language-name {
+  flex: 1;
+}
+
+.checkmark {
+  font-size: 0.75em;
+  color: var(--brand-500);
+}
 
 .workspace { display: contents; }
 .workspace-left { display: contents; }
@@ -1291,17 +1459,222 @@ async function onSubmit() {
 .empty { padding: 2rem; text-align: center; color: #666; }
 .message { margin-top: 1rem; }
 
+/* Responsive breakpoints */
+@media (max-width: 1200px) {
+  .topbar-inner {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+}
+
 @media (max-width: 960px) {
   .workspace { grid-template-columns: 1fr; }
+
+  .nav-left {
+    left: calc(50% - 500px - 150px + 1rem);
+    gap: 1rem;
+  }
+
+  .topbar .logo {
+    width: 150px;
+  }
+
+  .nav-menu {
+    gap: 0.25rem;
+  }
+
+  .nav-item {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .nav .language-dropdown-trigger.navbar-trigger {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-menu {
+    display: none; /* Hide menu items on mobile, keep only language dropdown */
+  }
+
+  .nav-left {
+    left: calc(50% - 500px - 120px + 1rem);
+  }
+
+  .topbar .logo {
+    width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-inner {
+    padding: 0 0.75rem;
+  }
+
+  .nav-left {
+    left: calc(50% - 500px - 100px + 0.75rem);
+  }
+
+  .topbar .logo {
+    width: 100px;
+  }
+
+  .nav .language-dropdown-trigger.navbar-trigger {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .language-name {
+    display: none; /* Hide language name on very small screens */
+  }
 }
 
 /* Sticky top navigation bar */
 :root { --topbar-h: 48px; }
-.topbar { position: sticky; top: 0; z-index: 9999; background: #ffffff; border-bottom: 1px solid #e5e7eb; height: var(--topbar-h, 48px); }
-.topbar-inner { max-width: none; margin: 0; padding: 0 1.5rem; height: var(--topbar-h, 48px); display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; position: relative; }
-.topbar .logo { display: inline-flex; align-items: center; position: absolute; left: calc(50% - 500px - var(--sidebar-w, 200px)); width: var(--sidebar-w, 200px); }
-.topbar .logo-img { width: 100%; height: auto; display: block; max-height: 32px; object-fit: contain; }
-.topbar .nav { display: flex; align-items: center; gap: 0.75rem; }
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  height: var(--topbar-h, 48px);
+  width: 100%;
+}
+
+.topbar-inner {
+  max-width: none;
+  margin: 0;
+  padding: 0 1.5rem;
+  height: var(--topbar-h, 48px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  gap: 2rem;
+  position: relative;
+}
+
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  position: absolute;
+  left: calc(50% - 500px - 200px + 1.5rem);
+}
+
+.topbar .logo {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 200px;
+}
+
+.topbar .logo-img {
+  height: 32px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.topbar .nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+}
+
+/* Navigation Menu Styles */
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  color: var(--brand-600);
+  background: rgba(255, 102, 0, 0.05);
+}
+
+.nav-item:focus {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+}
+
+/* Navbar Language Dropdown Styles */
+.nav .language-dropdown {
+  position: relative;
+}
+
+.nav .language-dropdown-trigger.navbar-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.nav .language-dropdown-trigger.navbar-trigger:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.nav .language-dropdown-trigger.navbar-trigger.active {
+  background: var(--brand-50);
+  border-color: var(--brand-300);
+  color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+}
+
+.nav .language-dropdown-menu.navbar-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+  margin-top: 6px;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.nav .language-dropdown-menu.navbar-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
 
 /* Blue styling for end segment elements */
 .end-slider .slider-handle {
