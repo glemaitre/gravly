@@ -183,7 +183,8 @@ async def create_segment(
     commentary_text: str = Form(""),
     video_links: str = Form("[]"),
 ):
-    """Create a new segment: process uploaded GPX file with indices, store locally and metadata in DB.
+    """Create a new segment: process uploaded GPX file with indices, store
+    locally and metadata in DB.
 
     Note: Files are saved under `mock_gpx/` for now; later this should target S3.
     """

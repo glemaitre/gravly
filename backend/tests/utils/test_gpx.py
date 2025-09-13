@@ -3,7 +3,7 @@
 from pathlib import Path
 
 import gpxpy
-from src.utils.gpx import GPXData, extract_from_gpx_file
+from src.utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
 
 
 def test_extract_from_gpx_file_with_data_file():
@@ -11,7 +11,7 @@ def test_extract_from_gpx_file_with_data_file():
     data_dir = Path(__file__).parent / "data"
     gpx_file_path = data_dir / "file.gpx"
 
-    with open(gpx_file_path, "r", encoding="utf-8") as gpx_file:
+    with open(gpx_file_path, encoding="utf-8") as gpx_file:
         gpx = gpxpy.parse(gpx_file)
 
     result = extract_from_gpx_file(gpx, file_id="test_file")
@@ -56,3 +56,65 @@ def test_extract_from_gpx_file_with_data_file():
     assert isinstance(point.longitude, float)
     assert isinstance(point.elevation, float)
     assert isinstance(point.time, str)
+
+
+def test_generate_gpx_segment(tmp_dir):
+    """Test generate_gpx_segment function with the file.gpx from data folder."""
+    data_dir = Path(__file__).parent / "data"
+    input_file_path = data_dir / "file.gpx"
+
+    start_index = 10
+    end_index = 50
+    segment_name = "Test Segment"
+
+    file_id = generate_gpx_segment(
+        input_file_path=input_file_path,
+        start_index=start_index,
+        end_index=end_index,
+        segment_name=segment_name,
+        output_dir=tmp_dir,
+    )
+
+    assert isinstance(file_id, str)
+    assert len(file_id) > 0  # UUID should not be empty
+
+    output_file_path = tmp_dir / f"{file_id}.gpx"
+    assert output_file_path.exists()
+
+    with open(output_file_path, encoding="utf-8") as gpx_file:
+        generated_gpx = gpxpy.parse(gpx_file)
+
+    assert len(generated_gpx.tracks) == 1
+    track = generated_gpx.tracks[0]
+    assert track.name == segment_name
+    assert len(track.segments) == 1
+    segment = track.segments[0]
+
+    expected_points = end_index - start_index + 1
+    assert len(segment.points) == expected_points
+
+    with open(input_file_path, encoding="utf-8") as original_file:
+        original_gpx = gpxpy.parse(original_file)
+
+    original_points = original_gpx.tracks[0].segments[0].points
+
+    generated_first_point = segment.points[0]
+    original_first_point = original_points[start_index]
+    assert generated_first_point.latitude == original_first_point.latitude
+    assert generated_first_point.longitude == original_first_point.longitude
+    assert generated_first_point.elevation == original_first_point.elevation
+    assert generated_first_point.time == original_first_point.time
+
+    generated_last_point = segment.points[-1]
+    original_last_point = original_points[end_index]
+    assert generated_last_point.latitude == original_last_point.latitude
+    assert generated_last_point.longitude == original_last_point.longitude
+    assert generated_last_point.elevation == original_last_point.elevation
+    assert generated_last_point.time == original_last_point.time
+
+    for i, generated_point in enumerate(segment.points):
+        original_point = original_points[start_index + i]
+        assert generated_point.latitude == original_point.latitude
+        assert generated_point.longitude == original_point.longitude
+        assert generated_point.elevation == original_point.elevation
+        assert generated_point.time == original_point.time
