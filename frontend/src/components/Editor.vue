@@ -1149,7 +1149,7 @@ async function onSubmit() {
 .main-col { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; overflow: hidden; }
 .actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
-.sidebar { --sidebar-w: 200px; width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: fixed; top: var(--topbar-h, 48px); left: calc(50% - 500px - var(--sidebar-w)); display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 48px)); z-index: 100; }
+.sidebar { --sidebar-w: 230px; width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: fixed; top: var(--topbar-h, 48px); left: calc(50% - 500px - var(--sidebar-w)); display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 48px)); z-index: 100; }
 .sidebar-scroll { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px)); overflow-y: auto; overflow-x: hidden; padding: 1rem; }
 .sidebar .card { margin: 0; width: 100%; box-sizing: border-box; }
 .sidebar .group-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; text-transform: none; letter-spacing: 0; }
@@ -1471,12 +1471,12 @@ async function onSubmit() {
   .workspace { grid-template-columns: 1fr; }
 
   .nav-left {
-    left: calc(50% - 500px - 150px + 1rem);
+    left: calc(50% - 500px - 172px + 1rem);
     gap: 1rem;
   }
 
   .topbar .logo {
-    width: 150px;
+    width: 172px;
   }
 
   .nav-menu {
@@ -1500,11 +1500,11 @@ async function onSubmit() {
   }
 
   .nav-left {
-    left: calc(50% - 500px - 120px + 1rem);
+    left: calc(50% - 500px - 138px + 1rem);
   }
 
   .topbar .logo {
-    width: 120px;
+    width: 138px;
   }
 }
 
@@ -1514,11 +1514,11 @@ async function onSubmit() {
   }
 
   .nav-left {
-    left: calc(50% - 500px - 100px + 0.75rem);
+    left: calc(50% - 500px - 115px + 0.75rem);
   }
 
   .topbar .logo {
-    width: 100px;
+    width: 115px;
   }
 
   .nav .language-dropdown-trigger.navbar-trigger {
@@ -1561,14 +1561,14 @@ async function onSubmit() {
   align-items: center;
   gap: 1.5rem;
   position: absolute;
-  left: calc(50% - 500px - 200px + 1.5rem);
+  left: calc(50% - 500px - 230px + 1.5rem);
 }
 
 .topbar .logo {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 200px;
+  width: 230px;
 }
 
 .topbar .logo-img {
