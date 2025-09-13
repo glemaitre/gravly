@@ -254,7 +254,9 @@ def test_lifespan_creates_index_and_loads_mock(monkeypatch):
         return None
 
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
-    monkeypatch.setattr(backend_main, "index_gpx_file", fake_index_gpx_file, raising=True)
+    monkeypatch.setattr(
+        backend_main, "index_gpx_file", fake_index_gpx_file, raising=True
+    )
     monkeypatch.setattr("src.main.os.path.exists", lambda path: True)
     monkeypatch.setattr("src.main.os.listdir", lambda path: ["mock1.gpx"])
 

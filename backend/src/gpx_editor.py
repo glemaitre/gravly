@@ -105,7 +105,9 @@ def extract_gpx_segment(
         # Generate output file path
         base_name = os.path.splitext(os.path.basename(input_file_path))[0]
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        output_filename = f"{base_name}_segment_{start_index}_{end_index}_{timestamp}.gpx"
+        output_filename = (
+            f"{base_name}_segment_{start_index}_{end_index}_{timestamp}.gpx"
+        )
         output_file_path = os.path.join(output_dir, output_filename)
 
         # Save the processed GPX file
@@ -162,7 +164,12 @@ def get_gpx_statistics(file_path: str) -> dict[str, Any]:
         # Calculate bounds
         bounds = None
         if lats and lons:
-            bounds = {"north": max(lats), "south": min(lats), "east": max(lons), "west": min(lons)}
+            bounds = {
+                "north": max(lats),
+                "south": min(lats),
+                "east": max(lons),
+                "west": min(lons),
+            }
 
         # Calculate elevation statistics
         elevation_stats = None
@@ -200,7 +207,9 @@ def get_gpx_statistics(file_path: str) -> dict[str, Any]:
         raise GPXProcessingError(f"Failed to get GPX statistics: {str(e)}")
 
 
-def validate_indices(file_path: str, start_index: int, end_index: int) -> tuple[bool, str]:
+def validate_indices(
+    file_path: str, start_index: int, end_index: int
+) -> tuple[bool, str]:
     """
     Validate that the given indices are valid for the GPX file.
 
@@ -225,13 +234,22 @@ def validate_indices(file_path: str, start_index: int, end_index: int) -> tuple[
             return False, f"Start index {start_index} cannot be negative"
 
         if start_index >= total_points:
-            return False, f"Start index {start_index} is out of range (max: {total_points - 1})"
+            return (
+                False,
+                f"Start index {start_index} is out of range (max: {total_points - 1})",
+            )
 
         if end_index < start_index:
-            return False, f"End index {end_index} cannot be less than start index {start_index}"
+            return (
+                False,
+                f"End index {end_index} cannot be less than start index {start_index}",
+            )
 
         if end_index >= total_points:
-            return False, f"End index {end_index} is out of range (max: {total_points - 1})"
+            return (
+                False,
+                f"End index {end_index} is out of range (max: {total_points - 1})",
+            )
 
         return True, ""
 

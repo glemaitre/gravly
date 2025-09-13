@@ -95,7 +95,9 @@ class Segment(Base):
         nullable=False,
     )
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
 
 
 engine = create_async_engine(DATABASE_URL, echo=False, future=True)
@@ -187,12 +189,20 @@ def parse_gpx_file(file_path: str) -> dict:
         lat2, lon2 = math.radians(p2.lat), math.radians(p2.lon)
         dlat = lat2 - lat1
         dlon = lon2 - lon1
-        a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
         c = 2 * math.asin(math.sqrt(a))
         distance = 6371 * c  # Earth radius in km
         total_distance += distance
 
-    bounds = {"north": max(lats), "south": min(lats), "east": max(lons), "west": min(lons)}
+    bounds = {
+        "north": max(lats),
+        "south": min(lats),
+        "east": max(lons),
+        "west": min(lons),
+    }
 
     elevation_stats = None
     if elevations:
@@ -222,7 +232,9 @@ async def upload_gpx(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File must be a GPX file")
 
     if not temp_dir:
-        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+        raise HTTPException(
+            status_code=500, detail="Temporary directory not initialized"
+        )
 
     # Generate unique file ID
     file_id = str(uuid.uuid4())
@@ -268,7 +280,9 @@ async def get_gpx_points(file_id: str):
     global temp_dir
 
     if not temp_dir:
-        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+        raise HTTPException(
+            status_code=500, detail="Temporary directory not initialized"
+        )
 
     file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
     logger.info(f"Fetching points for file {file_id}.gpx from: {file_path}")
@@ -285,7 +299,9 @@ async def get_gpx_points(file_id: str):
         return {"points": gpx_data["points"]}
     except Exception as e:
         logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to parse GPX file: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to parse GPX file: {str(e)}"
+        )
 
 
 @app.post("/api/segments", response_model=SegmentCreateResponse)
@@ -313,7 +329,9 @@ async def create_segment(
     global temp_dir
 
     if not temp_dir:
-        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+        raise HTTPException(
+            status_code=500, detail="Temporary directory not initialized"
+        )
 
     original_file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
     logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
@@ -328,7 +346,9 @@ async def create_segment(
 
     # Process the GPX file with the given indices
     try:
-        logger.info(f"Processing segment '{name}' from indices {start_index} to {end_index}")
+        logger.info(
+            f"Processing segment '{name}' from indices {start_index} to {end_index}"
+        )
         processing_result = process_gpx_for_segment_creation(
             input_file_path=original_file_path,
             start_index=start_index,
@@ -341,10 +361,14 @@ async def create_segment(
 
     except GPXProcessingError as gpx_e:
         logger.error(f"GPX processing failed for segment '{name}': {str(gpx_e)}")
-        raise HTTPException(status_code=422, detail=f"GPX processing failed: {str(gpx_e)}")
+        raise HTTPException(
+            status_code=422, detail=f"GPX processing failed: {str(gpx_e)}"
+        )
     except Exception as e:
         logger.error(f"Failed to process GPX file for segment '{name}': {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to process GPX file: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process GPX file: {str(e)}"
+        )
 
     # Store metadata in DB (using the processed file path)
     # TODO: Uncomment when database is needed
