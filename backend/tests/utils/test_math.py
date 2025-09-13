@@ -19,9 +19,9 @@ def test_paris_to_london_distance():
     london = Coordinates(latitude=51.5074, longitude=-0.1278)
 
     distance = haversine_distance(
-        lat1=paris.latitude,
-        lon1=paris.longitude,
-        lat2=london.latitude,
-        lon2=london.longitude,
+        latitude_1=paris.latitude,
+        longitude_1=paris.longitude,
+        latitude_2=london.latitude,
+        longitude_2=london.longitude,
     )
     assert distance == pytest.approx(343.556, rel=1e-3)

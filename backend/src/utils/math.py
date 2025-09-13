@@ -1,7 +1,9 @@
 import math
 
 
-def haversine_distance(*, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_distance(
+    *, latitude_1: float, longitude_1: float, latitude_2: float, longitude_2: float
+) -> float:
     """Compute the great circle distance between two points on Earth in kilometers.
 
     This function uses the Haversine formula to calculate the shortest distance
@@ -9,13 +11,13 @@ def haversine_distance(*, lat1: float, lon1: float, lat2: float, lon2: float) ->
 
     Parameters
     ----------
-    lat1 : float
+    latitude_1 : float
         Latitude of the first point in decimal degrees.
-    lon1 : float
+    longitude_1 : float
         Longitude of the first point in decimal degrees.
-    lat2 : float
+    latitude_2 : float
         Latitude of the second point in decimal degrees.
-    lon2 : float
+    longitude_2 : float
         Longitude of the second point in decimal degrees.
 
     Returns
@@ -31,19 +33,23 @@ def haversine_distance(*, lat1: float, lon1: float, lat2: float, lon2: float) ->
 
     Examples
     --------
-    >>> haversine_distance(lat1=46.0, lon1=4.0, lat2=46.1, lon2=4.1)
+    >>> haversine_distance(
+    ...    latitude_1=46.0, longitude_1=4.0, latitude_2=46.1, longitude_2=4.1
+    ... )
     12.345678901234567
     """
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    earth_radius, diff_latitude, diff_longitude = 6371, lat2 - lat1, lon2 - lon1
-
-    return (
-        earth_radius
-        * 2
-        * math.asin(
-            math.sqrt(
-                math.sin(diff_latitude / 2) ** 2
-                + math.cos(lat1) * math.cos(lat2) * math.sin(diff_longitude / 2) ** 2
-            )
-        )
+    latitude_1, longitude_1, latitude_2, longitude_2 = map(
+        math.radians, [latitude_1, longitude_1, latitude_2, longitude_2]
     )
+    earth_radius = 6371
+    diff_latitude = latitude_2 - latitude_1
+    diff_longitude = longitude_2 - longitude_1
+
+    haversine = (
+        math.sin(diff_latitude / 2) ** 2
+        + math.cos(latitude_1)
+        * math.cos(latitude_2)
+        * math.sin(diff_longitude / 2) ** 2
+    )
+
+    return earth_radius * 2 * math.asin(math.sqrt(haversine))
