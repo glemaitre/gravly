@@ -195,60 +195,127 @@
               <input id="name" v-model="name" type="text" required />
             </div>
 
-            <!-- Tire Selection Card -->
-            <div class="tire-card">
-              <div class="tire-card-header">
-                <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-dot"></i></span>
-                <span class="tire-card-title">{{ t('form.tire') }}</span>
+            <!-- Trail Conditions Card -->
+            <div class="trail-conditions-card">
+              <div class="trail-conditions-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-mountain"></i></span>
+                <span class="trail-conditions-title">{{ t('form.trailConditions') }}</span>
               </div>
 
-              <div class="tire-groups">
-                <div class="tire-group">
-                  <div class="tire-group-header">
-                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
-                    <span class="tire-group-title">{{ t('tire.dry') }}</span>
-                  </div>
-                  <p class="tire-group-help">{{ t('tire.dryHelp') }}</p>
-                  <div class="tire-row" role="radiogroup" :aria-label="t('tire.dry')">
-                    <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
-                      <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
-                      <img :src="tireImages.slick" :alt="t('tire.slick')" />
-                      <span class="tire-caption">{{ t('tire.slick') }}</span>
-                    </label>
-                    <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
-                      <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
-                      <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
-                      <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
-                    </label>
-                    <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
-                      <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
-                      <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
-                      <span class="tire-caption">{{ t('tire.knobs') }}</span>
-                    </label>
+              <!-- Difficulty Level -->
+              <div class="trail-subsection">
+                <div class="subsection-header">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-signal"></i></span>
+                  <span class="subsection-title">{{ t('form.difficultyLevel') }}</span>
+                </div>
+
+                <div class="difficulty-container">
+                  <div class="difficulty-slider-container">
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      v-model="trailConditions.difficulty_level"
+                      class="difficulty-slider"
+                      :style="{ '--slider-progress': difficultyProgress + '%' }"
+                      :aria-label="t('form.difficultyLevel')"
+                    />
+                    <div class="difficulty-marks">
+                      <div
+                        v-for="i in 5"
+                        :key="i"
+                        class="difficulty-mark"
+                        :class="{ active: trailConditions.difficulty_level >= i }"
+                      >
+                        <span class="difficulty-number">{{ i }}</span>
+                        <span class="difficulty-text">{{ t(`difficulty.level${i}`) }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="tire-group">
-                  <div class="tire-group-header">
-                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
-                    <span class="tire-group-title">{{ t('tire.wet') }}</span>
+              </div>
+
+              <!-- Surface Type Selection -->
+              <div class="trail-subsection">
+                <div class="subsection-header">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-road"></i></span>
+                  <span class="subsection-title">{{ t('form.surfaceType') }}</span>
+                </div>
+
+                <div class="surface-options">
+                  <label
+                    v-for="(image, surfaceType) in surfaceImages"
+                    :key="surfaceType"
+                    class="surface-option"
+                    :class="{ selected: trailConditions.surface_type === surfaceType }"
+                  >
+                    <input
+                      type="radio"
+                      name="surfaceType"
+                      :value="surfaceType"
+                      v-model="trailConditions.surface_type"
+                    />
+                    <img :src="image" :alt="t(`surface.${surfaceType}`)" />
+                    <span class="surface-caption">{{ t(`surface.${surfaceType}`) }}</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Tire Selection -->
+              <div class="trail-subsection">
+                <div class="subsection-header">
+                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-dot"></i></span>
+                  <span class="subsection-title">{{ t('form.tire') }}</span>
+                </div>
+
+                <div class="tire-groups">
+                  <div class="tire-group">
+                    <div class="tire-group-header">
+                      <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
+                      <span class="tire-group-title">{{ t('tire.dry') }}</span>
+                    </div>
+                    <p class="tire-group-help">{{ t('tire.dryHelp') }}</p>
+                    <div class="tire-row" role="radiogroup" :aria-label="t('tire.dry')">
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_dry === 'slick' }">
+                        <input type="radio" name="tireDry" value="slick" v-model="trailConditions.tire_dry" />
+                        <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                        <span class="tire-caption">{{ t('tire.slick') }}</span>
+                      </label>
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_dry === 'semi-slick' }">
+                        <input type="radio" name="tireDry" value="semi-slick" v-model="trailConditions.tire_dry" />
+                        <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                        <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
+                      </label>
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_dry === 'knobs' }">
+                        <input type="radio" name="tireDry" value="knobs" v-model="trailConditions.tire_dry" />
+                        <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                        <span class="tire-caption">{{ t('tire.knobs') }}</span>
+                      </label>
+                    </div>
                   </div>
-                  <p class="tire-group-help">{{ t('tire.wetHelp') }}</p>
-                  <div class="tire-row" role="radiogroup" :aria-label="t('tire.wet')">
-                    <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
-                      <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
-                      <img :src="tireImages.slick" :alt="t('tire.slick')" />
-                      <span class="tire-caption">{{ t('tire.slick') }}</span>
-                    </label>
-                    <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
-                      <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
-                      <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
-                      <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
-                    </label>
-                    <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
-                      <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
-                      <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
-                      <span class="tire-caption">{{ t('tire.knobs') }}</span>
-                    </label>
+                  <div class="tire-group">
+                    <div class="tire-group-header">
+                      <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
+                      <span class="tire-group-title">{{ t('tire.wet') }}</span>
+                    </div>
+                    <p class="tire-group-help">{{ t('tire.wetHelp') }}</p>
+                    <div class="tire-row" role="radiogroup" :aria-label="t('tire.wet')">
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_wet === 'slick' }">
+                        <input type="radio" name="tireWet" value="slick" v-model="trailConditions.tire_wet" />
+                        <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                        <span class="tire-caption">{{ t('tire.slick') }}</span>
+                      </label>
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_wet === 'semi-slick' }">
+                        <input type="radio" name="tireWet" value="semi-slick" v-model="trailConditions.tire_wet" />
+                        <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                        <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
+                      </label>
+                      <label class="tire-option" :class="{ selected: trailConditions.tire_wet === 'knobs' }">
+                        <input type="radio" name="tireWet" value="knobs" v-model="trailConditions.tire_wet" />
+                        <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                        <span class="tire-caption">{{ t('tire.knobs') }}</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -408,13 +475,28 @@ import annotationPlugin from 'chartjs-plugin-annotation'
 import tireSlickUrl from '../assets/images/slick.png'
 import tireSemiSlickUrl from '../assets/images/semi-slick.png'
 import tireKnobsUrl from '../assets/images/ext.png'
-import type { Commentary, VideoLink, CommentaryImage } from '../types'
+import bigStoneRoadUrl from '../assets/images/big-stone-road.jpeg'
+import brokenPavedRoadUrl from '../assets/images/broken-paved-road.jpeg'
+import dirtyRoadUrl from '../assets/images/dirty-road.jpeg'
+import fieldTrailUrl from '../assets/images/field-trail.jpeg'
+import forestTrailUrl from '../assets/images/forest-trail.jpeg'
+import smallStoneRoadUrl from '../assets/images/small-stone-road.jpeg'
+import type { Commentary, VideoLink, CommentaryImage, TrailConditions } from '../types'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler, Tooltip, annotationPlugin)
 
 type Tire = 'slick' | 'semi-slick' | 'knobs'
 
 const tireImages = { slick: tireSlickUrl, semiSlick: tireSemiSlickUrl, knobs: tireKnobsUrl }
+
+const surfaceImages = {
+  'broken-paved-road': brokenPavedRoadUrl,
+  'dirty-road': dirtyRoadUrl,
+  'small-stone-road': smallStoneRoadUrl,
+  'big-stone-road': bigStoneRoadUrl,
+  'field-trail': fieldTrailUrl,
+  'forest-trail': forestTrailUrl
+}
 
 type TrackPoint = { lat: number; lon: number; ele: number; time?: string }
 
@@ -448,8 +530,12 @@ onUnmounted(() => {
 
 const loaded = ref(false)
 const name = ref('')
-const tireDry = ref<Tire>('slick')
-const tireWet = ref<Tire>('slick')
+const trailConditions = ref<TrailConditions>({
+  tire_dry: 'slick',
+  tire_wet: 'slick',
+  surface_type: 'forest-trail',
+  difficulty_level: 3
+})
 const submitting = ref(false)
 const message = ref('')
 
@@ -488,6 +574,11 @@ const saveDisabledTitle = computed(() => {
   if (!name.value) return t('tooltip.enterSegmentName')
   if (submitting.value) return t('tooltip.submitting')
   return ''
+})
+
+// Difficulty slider progress
+const difficultyProgress = computed(() => {
+  return ((trailConditions.value.difficulty_level - 1) / 4) * 100
 })
 
 let map: any = null
@@ -1161,8 +1252,10 @@ async function onSubmit() {
     const blob = new Blob([xml], { type: 'application/gpx+xml' })
     const formData = new FormData()
     formData.append('name', name.value)
-    formData.append('tire_dry', tireDry.value)
-    formData.append('tire_wet', tireWet.value)
+    formData.append('tire_dry', trailConditions.value.tire_dry)
+    formData.append('tire_wet', trailConditions.value.tire_wet)
+    formData.append('surface_type', trailConditions.value.surface_type)
+    formData.append('difficulty_level', trailConditions.value.difficulty_level.toString())
     formData.append('file', blob, (name.value || 'segment') + '.gpx')
 
     // Add commentary data
@@ -1182,8 +1275,7 @@ async function onSubmit() {
     }
 
     name.value = ''
-    tireDry.value = 'slick'
-    tireWet.value = 'slick'
+    trailConditions.value = { tire_dry: 'slick', tire_wet: 'slick', surface_type: 'forest-trail', difficulty_level: 3 }
     loaded.value = false
     points.value = []
     commentary.value = { text: '', video_links: [], images: [] }
@@ -1481,8 +1573,8 @@ async function onSubmit() {
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-/* Tire Card Styles */
-.tire-card {
+/* Trail Conditions Card Styles */
+.trail-conditions-card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
@@ -1492,7 +1584,36 @@ async function onSubmit() {
   box-sizing: border-box;
 }
 
-.tire-card-header {
+.trail-conditions-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.trail-conditions-header .icon {
+  width: 18px;
+  text-align: center;
+  color: var(--brand-500);
+}
+
+.trail-conditions-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.trail-subsection {
+  margin-bottom: 2rem;
+}
+
+.trail-subsection:last-child {
+  margin-bottom: 0;
+}
+
+.subsection-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1501,16 +1622,16 @@ async function onSubmit() {
   border-bottom: 1px solid #f1f5f9;
 }
 
-.tire-card-header .icon {
-  width: 18px;
+.subsection-header .icon {
+  width: 16px;
   text-align: center;
   color: var(--brand-500);
 }
 
-.tire-card-title {
-  font-size: 1rem;
+.subsection-title {
+  font-size: 0.95rem;
   font-weight: 600;
-  color: #111827;
+  color: #374151;
 }
 
 .tire-groups {
@@ -1523,6 +1644,155 @@ async function onSubmit() {
 }
 
 .tire-group { background: #fbfcfe; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.5rem; }
+
+/* Surface Type Styles */
+.surface-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.surface-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.75rem;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.surface-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.surface-option img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.surface-caption {
+  font-size: 0.8rem;
+  color: #374151;
+  text-align: center;
+  font-weight: 500;
+}
+
+.surface-option.selected {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
+  background: var(--brand-50);
+}
+
+/* Difficulty Level Styles */
+.difficulty-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.difficulty-slider-container {
+  position: relative;
+  padding: 0.5rem 0;
+}
+
+.difficulty-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand-500);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.difficulty-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--brand-500);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.difficulty-slider::-webkit-slider-track {
+  background: linear-gradient(to right, var(--brand-500) 0%, var(--brand-500) var(--slider-progress, 0%), #e5e7eb var(--slider-progress, 0%), #e5e7eb 100%);
+}
+
+.difficulty-slider::-moz-range-track {
+  background: linear-gradient(to right, var(--brand-500) 0%, var(--brand-500) var(--slider-progress, 0%), #e5e7eb var(--slider-progress, 0%), #e5e7eb 100%);
+}
+
+.difficulty-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+
+.difficulty-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s;
+  min-width: 60px;
+}
+
+.difficulty-mark.active {
+  background: var(--brand-50);
+  border-color: var(--brand-300);
+}
+
+.difficulty-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #374151;
+  line-height: 1;
+}
+
+.difficulty-text {
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+}
+
+.difficulty-mark.active .difficulty-number {
+  color: var(--brand-600);
+}
+
+.difficulty-mark.active .difficulty-text {
+  color: var(--brand-600);
+}
 .tire-group-header { display: flex; align-items: center; gap: 0.4rem; color: #374151; margin: 0 0 0.5rem 0; }
 .tire-group-help { margin: 0 0 0.5rem 0; font-size: 12px; color: #6b7280; }
 .tire-group-header .icon { width: 18px; text-align: center; color: var(--brand-500, #ff6600); }

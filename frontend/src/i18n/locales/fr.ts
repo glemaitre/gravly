@@ -28,6 +28,9 @@ export default {
     segmentName: 'Nom du segment',
     tire: 'Pneu',
     segmentInfo: 'Informations du segment',
+    trailConditions: 'Conditions de Piste',
+    surfaceType: 'Type de Surface',
+    difficultyLevel: 'Niveau de Difficulté',
     comments: 'Commentaires',
     commentaryText: 'Description',
     commentaryPlaceholder: 'Ajoutez votre description détaillée de ce segment...',
@@ -95,5 +98,26 @@ export default {
   },
 
   // Required field indicator
-  required: '*'
+  required: '*',
+
+  // Surface types
+  surface: {
+    'broken-paved-road': 'Route Pavée',
+    'dirty-road': 'Route Sale',
+    'small-stone-road': 'Route de Petites Pierres',
+    'big-stone-road': 'Route de Grosses Pierres',
+    'field-trail': 'Sentier de Champ',
+    'forest-trail': 'Sentier de Forêt'
+  },
+
+  // Difficulty levels
+  difficulty: {
+    easy: 'Facile',
+    hard: 'Difficile',
+    level1: 'Très Facile',
+    level2: 'Facile',
+    level3: 'Modéré',
+    level4: 'Difficile',
+    level5: 'Très Difficile'
+  }
 }

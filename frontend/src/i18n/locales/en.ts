@@ -28,6 +28,9 @@ export default {
     segmentName: 'Segment name',
     tire: 'Tire',
     segmentInfo: 'Segment information',
+    trailConditions: 'Trail Conditions',
+    surfaceType: 'Surface Type',
+    difficultyLevel: 'Difficulty Level',
     comments: 'Comments',
     commentaryText: 'Description',
     commentaryPlaceholder: 'Add your detailed description of this segment...',
@@ -95,5 +98,26 @@ export default {
   },
 
   // Required field indicator
-  required: '*'
+  required: '*',
+
+  // Surface types
+  surface: {
+    'broken-paved-road': 'Paved Road',
+    'dirty-road': 'Dirty Road',
+    'small-stone-road': 'Small Stone Road',
+    'big-stone-road': 'Big Stone Road',
+    'field-trail': 'Field Trail',
+    'forest-trail': 'Forest Trail'
+  },
+
+  // Difficulty levels
+  difficulty: {
+    easy: 'Easy',
+    hard: 'Hard',
+    level1: 'Very Easy',
+    level2: 'Easy',
+    level3: 'Moderate',
+    level4: 'Hard',
+    level5: 'Very Hard'
+  }
 }

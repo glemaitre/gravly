@@ -49,3 +49,10 @@ export interface CommentaryImage {
   preview: string
   caption?: string
 }
+
+export interface TrailConditions {
+  tire_dry: 'slick' | 'semi-slick' | 'knobs'
+  tire_wet: 'slick' | 'semi-slick' | 'knobs'
+  surface_type: 'big-stone-road' | 'broken-paved-road' | 'dirty-road' | 'field-trail' | 'forest-trail' | 'small-stone-road'
+  difficulty_level: number // 1-5
+}
