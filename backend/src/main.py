@@ -16,7 +16,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from .gpx_editor import (
+from .utils.gpx import (
     GPXProcessingError,
     parse_gpx_file,
     process_gpx_for_segment_creation,

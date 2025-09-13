@@ -39,7 +39,7 @@ lint-backend = { cmd = "ruff check backend/src/ backend/tests/ scripts/ --fix" }
 lint-frontend = { cmd = "npm run lint", cwd = "frontend" }
 format-backend = { cmd = "ruff format backend/src/ backend/tests/ scripts/" }
 format-frontend = { cmd = "npm run format", cwd = "frontend" }
-test-backend = { cmd = "pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
+test-backend = { cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
 test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
 
 # Local Postgres via Docker

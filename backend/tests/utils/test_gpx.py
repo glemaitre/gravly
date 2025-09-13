@@ -5,7 +5,6 @@ This module contains comprehensive tests for the GPX processing functions,
 particularly the parse_gpx_file function.
 """
 
-import math
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -13,38 +12,10 @@ from unittest.mock import patch
 import pytest
 from fastapi import HTTPException
 
-from backend.src.gpx_editor import (
+from backend.src.utils.gpx import (
     GPXProcessingError,
-    haversine_distance,
     parse_gpx_file,
 )
-
-
-class TestHaversineDistance:
-    """Test cases for the haversine_distance function."""
-
-    def test_haversine_distance_same_point(self):
-        """Test distance calculation for the same point."""
-        distance = haversine_distance(46.0, 4.0, 46.0, 4.0)
-        assert distance == 0.0
-
-    def test_haversine_distance_known_distance(self):
-        """Test distance calculation with known values."""
-        # Distance between Paris and London (approximately 344 km)
-        distance = haversine_distance(48.8566, 2.3522, 51.5074, -0.1278)
-        assert abs(distance - 344.0) < 10.0  # Allow 10km tolerance
-
-    def test_haversine_distance_short_distance(self):
-        """Test distance calculation for short distances."""
-        # Two points about 1km apart
-        distance = haversine_distance(46.0, 4.0, 46.009, 4.0)
-        assert abs(distance - 1.0) < 0.1  # Allow 100m tolerance
-
-    def test_haversine_distance_equator(self):
-        """Test distance calculation along the equator."""
-        # 1 degree of longitude at equator is approximately 111 km
-        distance = haversine_distance(0.0, 0.0, 0.0, 1.0)
-        assert abs(distance - 111.0) < 5.0  # Allow 5km tolerance
 
 
 class TestParseGpxFile:
