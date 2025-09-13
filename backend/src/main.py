@@ -168,8 +168,11 @@ async def upload_gpx(file: UploadFile = File(...)):
         logger.error(f"Failed to save file {file.filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
+    with open(file_path) as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
     try:
-        gpx_data = parse_gpx_file(file_path)
+        gpx_data = parse_gpx_file(gpx)
         logger.info(
             f"Successfully parsed GPX file {file_id}.gpx with {len(gpx_data['points'])} points"
         )
