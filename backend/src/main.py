@@ -17,8 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from .utils.gpx import (
+    GPXData,
     GPXProcessingError,
-    parse_gpx_file,
+    extract_from_gpx_file,
     process_gpx_for_segment_creation,
 )
 
@@ -109,24 +110,7 @@ engine = create_async_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
-# Pydantic models
-class GPXPoint(BaseModel):
-    lat: float
-    lon: float
-    elevation: float
-    time: str | None = None
-
-
-class GPXUploadResponse(BaseModel):
-    file_id: str
-    track_name: str
-    total_points: int
-    total_distance: float
-    total_elevation_gain: float
-    total_elevation_loss: float
-    bounds: dict
-    elevation_stats: dict | None = None
-    points: list[GPXPoint]
+# Pydantic models - using GPXData directly from gpx.py
 
 
 class SegmentCreateResponse(BaseModel):
@@ -142,7 +126,7 @@ async def root():
     return {"message": "Cycling GPX API"}
 
 
-@app.post("/api/upload-gpx", response_model=GPXUploadResponse)
+@app.post("/api/upload-gpx", response_model=GPXData)
 async def upload_gpx(file: UploadFile = File(...)):
     """Upload a GPX file temporarily and return track information"""
     global temp_dir
@@ -172,39 +156,18 @@ async def upload_gpx(file: UploadFile = File(...)):
         gpx = gpxpy.parse(gpx_file)
 
     try:
-        gpx_data = parse_gpx_file(gpx)
+        gpx_data = extract_from_gpx_file(gpx, file_id)
         logger.info(
-            f"Successfully parsed GPX file {file_id}.gpx with {len(gpx_data['points'])} points"
+            f"Successfully parsed GPX file {file_id}.gpx with {len(gpx_data.points)}"
+            " points"
         )
     except Exception as e:
-        # Clean up file on error
         if file_path.exists():
             file_path.unlink()
         logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
 
-    # Convert dictionary points to GPXPoint objects
-    gpx_points = [
-        GPXPoint(
-            lat=point["lat"],
-            lon=point["lon"],
-            elevation=point["elevation"],
-            time=point["time"],
-        )
-        for point in gpx_data["points"]
-    ]
-
-    return GPXUploadResponse(
-        file_id=file_id,
-        track_name=gpx_data["name"],
-        total_points=len(gpx_data["points"]),
-        total_distance=gpx_data["total_distance"],
-        total_elevation_gain=gpx_data["total_elevation_gain"],
-        total_elevation_loss=gpx_data["total_elevation_loss"],
-        bounds=gpx_data["bounds"],
-        elevation_stats=gpx_data["elevation_stats"],
-        points=gpx_points,
-    )
+    return gpx_data
 
 
 @app.post("/api/segments", response_model=SegmentCreateResponse)

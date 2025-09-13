@@ -19,8 +19,8 @@ export default {
 
   // GPS labels
   gps: {
-    lat: 'Lat',
-    lon: 'Lon'
+    latitude: 'Lat',
+    longitude: 'Lon'
   },
 
   // Form labels

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import gpxpy
+from pydantic import BaseModel
 
 from .math import haversine_distance
 
@@ -21,56 +22,91 @@ class GPXProcessingError(Exception):
     pass
 
 
-def extract_from_gpx(gpx: gpxpy.gpx.GPX) -> dict[str, Any]:
+class GPXPoint(BaseModel):
+    latitude: float
+    longitude: float
+    elevation: float
+    time: str
+
+
+class GPXTotalStats(BaseModel):
+    total_points: int
+    total_distance: float
+    total_elevation_gain: float
+    total_elevation_loss: float
+
+
+class GPXBounds(BaseModel):
+    north: float
+    south: float
+    east: float
+    west: float
+
+
+class GPXElevationStats(BaseModel):
+    min: float
+    max: float
+
+
+class GPXData(BaseModel):
+    file_id: str
+    track_name: str
+    points: list[GPXPoint]
+    total_stats: GPXTotalStats
+    bounds: GPXBounds
+    elevation_stats: GPXElevationStats
+
+
+def extract_from_gpx_file(gpx: gpxpy.gpx.GPX, file_id: str) -> GPXData:
     """Extract comprehensive track information from a parsed GPX object.
 
     Parameters
     ----------
     gpx : gpxpy.gpx.GPX
         The parsed GPX object.
+    file_id: str
+        The ID of the file.
 
     Returns
     -------
-    dict[str, Any]
-        Dictionary containing parsed GPX data with the following keys:
+    GPXData
+        GPXData object containing parsed GPX data with the following attributes:
 
-        - name (str): Track name or "Unnamed Track" if not specified
-        - points (list[dict]): List of track points, each containing:
-            - lat (float): Latitude in decimal degrees
-            - lon (float): Longitude in decimal degrees
+        - file_id (str): The ID of the file
+        - track_name (str): Track name or "Unnamed Track" if not specified
+        - points (list[GPXPoint]): List of track points, each containing:
+            - latitude (float): Latitude in decimal degrees
+            - longitude (float): Longitude in decimal degrees
             - elevation (float): Elevation in meters
             - time (str): ISO format timestamp
-        - total_distance (float): Total distance in kilometers
-        - total_elevation_gain (float): Total elevation gain in meters
-        - total_elevation_loss (float): Total elevation loss in meters
-        - bounds (dict): Geographic bounds with keys:
+        - total_stats (GPXTotalStats): Statistics including:
+            - total_distance (float): Total distance in kilometers
+            - total_elevation_gain (float): Total elevation gain in meters
+            - total_elevation_loss (float): Total elevation loss in meters
+            - total_points (int): Number of points
+        - bounds (GPXBounds): Geographic bounds with:
             - north (float): Northernmost latitude
             - south (float): Southernmost latitude
             - east (float): Easternmost longitude
             - west (float): Westernmost longitude
-        - elevation_stats (dict): Elevation statistics with keys:
+        - elevation_stats (GPXElevationStats): Elevation statistics with:
             - min (float): Minimum elevation in meters
             - max (float): Maximum elevation in meters
-            - total_points (int): Number of points with elevation data
 
     Examples
     --------
     >>> import gpxpy
     >>> with open("track.gpx", "r") as gpx_file:
     ...     gpx = gpxpy.parse(gpx_file)
-    >>> result = extract_from_gpx(gpx)
-    >>> print(f"Track: {result['name']}")
-    >>> print(f"Distance: {result['total_distance']:.2f} km")
-    >>> print(f"Points: {len(result['points'])}")
+    >>> result = extract_from_gpx_file(gpx, "track_001")
+    >>> print(f"Track: {result.track_name}")
+    >>> print(f"Distance: {result.total_stats.total_distance:.2f} km")
+    >>> print(f"Points: {result.total_stats.total_points}")
     """
     track = gpx.tracks[0]
 
-    points, total_distance, total_elevation_gain, total_elevation_loss = (
-        [],
-        0.0,
-        0.0,
-        0.0,
-    )
+    points: list[GPXPoint] = []
+    total_distance, total_elevation_gain, total_elevation_loss = 0.0, 0.0, 0.0
     min_latitude, min_longitude, min_elevation = math.inf, math.inf, math.inf
     max_latitude, max_longitude, max_elevation = -math.inf, -math.inf, -math.inf
 
@@ -88,127 +124,55 @@ def extract_from_gpx(gpx: gpxpy.gpx.GPX) -> dict[str, Any]:
             if point_index > 0:
                 previous_point = points[-1]
                 distance = haversine_distance(
-                    latitude_1=previous_point["lat"],
-                    longitude_1=previous_point["lon"],
+                    latitude_1=previous_point.latitude,
+                    longitude_1=previous_point.longitude,
                     latitude_2=point.latitude,
                     longitude_2=point.longitude,
                 )
                 total_distance += distance
 
-                elevation_diff = elevation - previous_point["elevation"]
+                elevation_diff = elevation - previous_point.elevation
                 if elevation_diff > 0:
                     total_elevation_gain += elevation_diff
                 else:
                     total_elevation_loss += abs(elevation_diff)
 
             points.append(
-                {
-                    "lat": point.latitude,
-                    "lon": point.longitude,
-                    "elevation": elevation,
-                    "time": point.time.isoformat(),
-                }
+                GPXPoint(
+                    latitude=point.latitude,
+                    longitude=point.longitude,
+                    elevation=elevation,
+                    time=point.time.isoformat(),
+                )
             )
 
-    bounds = {
-        "north": max_latitude,
-        "south": min_latitude,
-        "east": max_longitude,
-        "west": min_longitude,
-    }
+    bounds = GPXBounds(
+        north=max_latitude,
+        south=min_latitude,
+        east=max_longitude,
+        west=min_longitude,
+    )
 
-    elevation_stats = {
-        "min": min_elevation,
-        "max": max_elevation,
-        "total_points": len(points),
-    }
+    elevation_stats = GPXElevationStats(
+        min=min_elevation,
+        max=max_elevation,
+    )
 
-    return {
-        "name": track.name or "Unnamed Track",
-        "points": points,
-        "total_distance": total_distance,
-        "total_elevation_gain": total_elevation_gain,
-        "total_elevation_loss": total_elevation_loss,
-        "bounds": bounds,
-        "elevation_stats": elevation_stats,
-    }
+    total_stats = GPXTotalStats(
+        total_points=len(points),
+        total_distance=total_distance,
+        total_elevation_gain=total_elevation_gain,
+        total_elevation_loss=total_elevation_loss,
+    )
 
-
-def parse_gpx_file(file_path: str) -> dict[str, Any]:
-    """
-    Parse a GPX file and extract comprehensive track information.
-
-    This function reads a GPX file from disk, parses it, and extracts comprehensive
-    track information including distance, elevation changes, and bounds.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the GPX file to parse.
-
-    Returns
-    -------
-    dict[str, Any]
-        Dictionary containing parsed GPX data with the following keys:
-        - name (str): Track name or "Unnamed Track" if not specified
-        - points (list[dict]): List of track points, each containing:
-            - lat (float): Latitude in decimal degrees
-            - lon (float): Longitude in decimal degrees
-            - elevation (float): Elevation in meters
-            - time (str | None): ISO format timestamp or None
-        - total_distance (float): Total distance in kilometers
-        - total_elevation_gain (float): Total elevation gain in meters
-        - total_elevation_loss (float): Total elevation loss in meters
-        - bounds (dict): Geographic bounds with keys:
-            - north (float): Northernmost latitude
-            - south (float): Southernmost latitude
-            - east (float): Easternmost longitude
-            - west (float): Westernmost longitude
-        - elevation_stats (dict): Elevation statistics with keys:
-            - min (float): Minimum elevation in meters
-            - max (float): Maximum elevation in meters
-            - total_points (int): Number of points with elevation data
-
-    Raises
-    ------
-    FileNotFoundError
-        If the specified file path does not exist.
-    gpxpy.gpx.GPXException
-        If the file is not a valid GPX file.
-    ValueError
-        If no tracks are found in the GPX file.
-    HTTPException
-        If elevation data is missing from the GPX file or any track point.
-
-    Notes
-    -----
-    This function requires that all track points have elevation data. If any point
-    is missing elevation information, an HTTPException will be raised with status
-    code 400.
-
-    The distance calculation uses the Haversine formula for great-circle distances
-    between consecutive points. Elevation gain/loss is calculated as the difference
-    between consecutive points.
-
-    Examples
-    --------
-    >>> result = parse_gpx_file("track.gpx")
-    >>> print(f"Track: {result['name']}")
-    >>> print(f"Distance: {result['total_distance']:.2f} km")
-    >>> print(f"Points: {len(result['points'])}")
-    """
-    try:
-        with open(file_path, encoding="utf-8") as gpx_file:
-            gpx = gpxpy.parse(gpx_file)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"GPX file not found: {file_path}")
-    except Exception as e:
-        raise gpxpy.gpx.GPXException(f"Failed to parse GPX file: {str(e)}")
-
-    if not gpx.tracks:
-        raise ValueError("No tracks found in GPX file")
-
-    return extract_from_gpx(gpx)
+    return GPXData(
+        file_id=file_id,
+        track_name=track.name or "Unnamed Track",
+        points=points,
+        total_stats=total_stats,
+        bounds=bounds,
+        elevation_stats=elevation_stats,
+    )
 
 
 def extract_gpx_segment(

@@ -169,11 +169,11 @@
                   </div>
                   <div class="metric" :title="t('tooltip.elevation')">
                     <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                    <span class="value">{{ formatElevation(pointAt(startIndex)?.ele) }}</span>
+                    <span class="value">{{ formatElevation(pointAt(startIndex)?.elevation) }}</span>
                   </div>
                   <div class="gps-title" :title="t('tooltip.gpsLocation')"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">{{ t('chart.gps') }}</span></div>
-                  <div class="gps-col"><span class="label">{{ t('gps.lat') }}</span><span class="value">{{ pointAt(startIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                  <div class="gps-col"><span class="label">{{ t('gps.lon') }}</span><span class="value">{{ pointAt(startIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.latitude') }}</span><span class="value">{{ pointAt(startIndex)?.latitude?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.longitude') }}</span><span class="value">{{ pointAt(startIndex)?.longitude?.toFixed(5) ?? '-' }}</span></div>
                 </div>
               </div>
               <div class="slider-group">
@@ -191,11 +191,11 @@
                   </div>
                   <div class="metric" :title="t('tooltip.elevation')">
                     <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                    <span class="value">{{ formatElevation(pointAt(endIndex)?.ele) }}</span>
+                    <span class="value">{{ formatElevation(pointAt(endIndex)?.elevation) }}</span>
                   </div>
                   <div class="gps-title" :title="t('tooltip.gpsLocation')"><span class="icon"><i class="fa-solid fa-location-dot"></i></span><span class="text">{{ t('chart.gps') }}</span></div>
-                  <div class="gps-col"><span class="label">{{ t('gps.lat') }}</span><span class="value">{{ pointAt(endIndex)?.lat?.toFixed(5) ?? '-' }}</span></div>
-                  <div class="gps-col"><span class="label">{{ t('gps.lon') }}</span><span class="value">{{ pointAt(endIndex)?.lon?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.latitude') }}</span><span class="value">{{ pointAt(endIndex)?.latitude?.toFixed(5) ?? '-' }}</span></div>
+                  <div class="gps-col"><span class="label">{{ t('gps.longitude') }}</span><span class="value">{{ pointAt(endIndex)?.longitude?.toFixed(5) ?? '-' }}</span></div>
                 </div>
               </div>
             </div>
@@ -517,7 +517,7 @@ const surfaceImages = {
   'forest-trail': forestTrailUrl
 }
 
-type TrackPoint = { lat: number; lon: number; ele: number; time?: string }
+type TrackPoint = { latitude: number; longitude: number; elevation: number; time?: string }
 
 const { t, locale } = useI18n()
 const currentLanguage = ref<MessageLanguages>('en')
@@ -721,9 +721,9 @@ async function onFileChange(ev: Event) {
 
     // Use points directly from upload response
     const actualPoints: TrackPoint[] = uploadData.points.map((p: any) => ({
-      lat: p.lat,
-      lon: p.lon,
-      ele: p.elevation,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      elevation: p.elevation,
       time: p.time
     }))
 
@@ -761,7 +761,7 @@ async function onFileChange(ev: Event) {
 function computeCumulativeKm(pts: TrackPoint[]): number[] {
   const out: number[] = [0]
   for (let i = 1; i < pts.length; i++) {
-    const d = haversine(pts[i-1].lat, pts[i-1].lon, pts[i].lat, pts[i].lon)
+    const d = haversine(pts[i-1].latitude, pts[i-1].longitude, pts[i].latitude, pts[i].longitude)
     out.push(out[i-1] + d)
   }
   return out
@@ -967,7 +967,7 @@ function renderMap() {
     if (!container) return
     map = L.map(container)
   }
-  const latlngs = points.value.map(p => [p.lat, p.lon]) as [number, number][]
+  const latlngs = points.value.map(p => [p.latitude, p.longitude]) as [number, number][]
   const bounds = L.latLngBounds(latlngs)
   map!.invalidateSize()
   map!.fitBounds(bounds, { padding: [20, 20] })
@@ -987,7 +987,7 @@ function renderMap() {
 
 function updateSelectedPolyline() {
   if (!map) return
-  const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.lat, p.lon]) as [number, number][]
+  const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.latitude, p.longitude]) as [number, number][]
   if (selectedLine) selectedLine.remove()
   selectedLine = L.polyline(segLatLngs, { color: getComputedStyle(document.documentElement).getPropertyValue('--brand-500').trim() || '#ff6600', weight: 5 })
   selectedLine.addTo(map)
@@ -1148,11 +1148,11 @@ function getX(i: number): number {
 }
 
 function buildXYData(): { x: number, y: number }[] {
-  return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.ele }))
+  return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.elevation }))
 }
 
 function buildFullXYData(): { x: number, y: number }[] {
-  return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.ele }))
+  return points.value.map((p, i) => ({ x: getX(i), y: smoothedElevations.value[i] ?? p.elevation }))
 }
 
 function buildSelectedAreaData(): { x: number, y: number }[] {
@@ -1161,7 +1161,7 @@ function buildSelectedAreaData(): { x: number, y: number }[] {
   for (let i = startIndex.value; i <= endIndex.value; i++) {
     selectedData.push({
       x: getX(i),
-      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
+      y: smoothedElevations.value[i] ?? points.value[i]?.elevation ?? 0
     })
   }
 
@@ -1199,10 +1199,10 @@ function computeSmoothedElevations(pts: TrackPoint[], windowSize = 5): number[] 
     let sum = 0
     let count = 0
     for (let j = Math.max(0, i - half); j <= Math.min(pts.length - 1, i + half); j++) {
-      sum += pts[j].ele
+      sum += pts[j].elevation
       count += 1
     }
-    out[i] = count ? sum / count : pts[i].ele
+    out[i] = count ? sum / count : pts[i].elevation
   }
   return out
 }
@@ -1218,7 +1218,7 @@ watch([startIndex, endIndex], () => {
     chart.update()
   }
   if (map && points.value.length > 1) {
-    const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.lat, p.lon]) as [number, number][]
+    const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.latitude, p.longitude]) as [number, number][]
     const segBounds = L.latLngBounds(segLatLngs)
     map.fitBounds(segBounds, { padding: [20, 20] })
   }
