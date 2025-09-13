@@ -28,20 +28,20 @@ export default {
     segmentName: 'Nom du segment',
     tire: 'Pneu',
     segmentInfo: 'Informations du segment',
-    trailConditions: 'Conditions de Piste',
-    surfaceType: 'Type de Surface',
-    difficultyLevel: 'Niveau de Difficulté',
+    trailConditions: 'Conditions de piste',
+    surfaceType: 'Type de surface',
+    difficultyLevel: 'Niveau de difficulté',
     comments: 'Commentaires',
     commentaryText: 'Description',
     commentaryPlaceholder: 'Ajoutez votre description détaillée de ce segment...',
     media: 'Médias',
-    videoLinks: 'Liens Vidéo',
-    addVideoLink: 'Ajouter un Lien Vidéo',
+    videoLinks: 'Liens vidéo',
+    addVideoLink: 'Ajouter un lien vidéo',
     videoUrlPlaceholder: 'https://youtube.com/watch?v=...',
     videoTitlePlaceholder: 'Titre de la vidéo (optionnel)',
     removeVideo: 'Supprimer la vidéo',
     images: 'Images',
-    uploadImages: 'Télécharger des Images',
+    uploadImages: 'Télécharger des images',
     uploadHint: 'Glisser-déposer ou cliquer pour sélectionner des images',
     imageAlt: 'Image du segment',
     imageCaptionPlaceholder: 'Légende de l\'image (optionnel)',
@@ -102,22 +102,22 @@ export default {
 
   // Surface types
   surface: {
-    'broken-paved-road': 'Route Pavée',
-    'dirty-road': 'Route Sale',
-    'small-stone-road': 'Route de Petites Pierres',
-    'big-stone-road': 'Route de Grosses Pierres',
-    'field-trail': 'Sentier de Champ',
-    'forest-trail': 'Sentier de Forêt'
+    'broken-paved-road': 'Asphalte',
+    'dirty-road': 'Piste',
+    'small-stone-road': 'Petites pierres',
+    'big-stone-road': 'Grosses pierres',
+    'field-trail': 'Sentier',
+    'forest-trail': 'Forêt'
   },
 
   // Difficulty levels
   difficulty: {
     easy: 'Facile',
     hard: 'Difficile',
-    level1: 'Très Facile',
+    level1: 'Très facile',
     level2: 'Facile',
     level3: 'Modéré',
     level4: 'Difficile',
-    level5: 'Très Difficile'
+    level5: 'Très difficile'
   }
 }

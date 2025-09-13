@@ -28,20 +28,20 @@ export default {
     segmentName: 'Segment name',
     tire: 'Tire',
     segmentInfo: 'Segment information',
-    trailConditions: 'Trail Conditions',
-    surfaceType: 'Surface Type',
-    difficultyLevel: 'Difficulty Level',
+    trailConditions: 'Trail conditions',
+    surfaceType: 'Surface type',
+    difficultyLevel: 'Difficulty level',
     comments: 'Comments',
     commentaryText: 'Description',
     commentaryPlaceholder: 'Add your detailed description of this segment...',
     media: 'Media',
-    videoLinks: 'Video Links',
-    addVideoLink: 'Add Video Link',
+    videoLinks: 'Video links',
+    addVideoLink: 'Add video link',
     videoUrlPlaceholder: 'https://youtube.com/watch?v=...',
     videoTitlePlaceholder: 'Video title (optional)',
     removeVideo: 'Remove video',
     images: 'Images',
-    uploadImages: 'Upload Images',
+    uploadImages: 'Upload images',
     uploadHint: 'Drag & drop or click to select images',
     imageAlt: 'Segment image',
     imageCaptionPlaceholder: 'Image caption (optional)',
@@ -102,22 +102,22 @@ export default {
 
   // Surface types
   surface: {
-    'broken-paved-road': 'Paved Road',
-    'dirty-road': 'Dirty Road',
-    'small-stone-road': 'Small Stone Road',
-    'big-stone-road': 'Big Stone Road',
-    'field-trail': 'Field Trail',
-    'forest-trail': 'Forest Trail'
+    'broken-paved-road': 'Paved road',
+    'dirty-road': 'Dirty road',
+    'small-stone-road': 'Small stone road',
+    'big-stone-road': 'Big stone road',
+    'field-trail': 'Field trail',
+    'forest-trail': 'Forest trail',
   },
 
   // Difficulty levels
   difficulty: {
     easy: 'Easy',
     hard: 'Hard',
-    level1: 'Very Easy',
+    level1: 'Very easy',
     level2: 'Easy',
     level3: 'Moderate',
     level4: 'Hard',
-    level5: 'Very Hard'
+    level5: 'Very hard'
   }
 }
