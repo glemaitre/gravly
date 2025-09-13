@@ -1802,7 +1802,7 @@ async function onSubmit() {
 .tire-option input { position: absolute; opacity: 0; pointer-events: none; }
 .tire-option img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 6px; }
 .tire-option .tire-caption { font-size: 12px; color: #374151; }
-.tire-option.selected { border-color: var(--brand-500, #ff6600); box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15); }
+.tire-option.selected { border-color: var(--brand-500, #ff6600); box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15); background: var(--brand-50); }
 .req { color: #dc2626; }
 .section-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 1rem; color: #374151; padding: 0 0.25rem; margin-top: 0.5rem; }
 .section-indicator .icon { width: 18px; text-align: center; }
@@ -2005,6 +2005,7 @@ async function onSubmit() {
 .tire-group:nth-child(2) .tire-option.selected {
   border-color: var(--blue-500);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  background: var(--blue-50);
 }
 
 /* Commentary Section Styles */
