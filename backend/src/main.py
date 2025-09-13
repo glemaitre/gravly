@@ -3,6 +3,7 @@ import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import gpxpy
@@ -236,11 +237,8 @@ async def upload_gpx(file: UploadFile = File(...)):
             status_code=500, detail="Temporary directory not initialized"
         )
 
-    # Generate unique file ID
     file_id = str(uuid.uuid4())
-
-    # Save uploaded file in the session temporary directory
-    file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    file_path = Path(temp_dir.name) / f"{file_id}.gpx"
     logger.info(f"Uploading file {file.filename} to temporary directory: {file_path}")
 
     try:
@@ -252,7 +250,6 @@ async def upload_gpx(file: UploadFile = File(...)):
         logger.error(f"Failed to save file {file.filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
-    # Parse GPX file
     try:
         gpx_data = parse_gpx_file(file_path)
         logger.info(
@@ -260,8 +257,8 @@ async def upload_gpx(file: UploadFile = File(...)):
         )
     except Exception as e:
         # Clean up file on error
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        if file_path.exists():
+            file_path.unlink()
         logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
 
@@ -284,10 +281,10 @@ async def get_gpx_points(file_id: str):
             status_code=500, detail="Temporary directory not initialized"
         )
 
-    file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    file_path = Path(temp_dir.name) / f"{file_id}.gpx"
     logger.info(f"Fetching points for file {file_id}.gpx from: {file_path}")
 
-    if not os.path.exists(file_path):
+    if not file_path.exists():
         logger.warning(f"File not found: {file_path}")
         raise HTTPException(status_code=404, detail="File not found")
 
@@ -333,16 +330,16 @@ async def create_segment(
             status_code=500, detail="Temporary directory not initialized"
         )
 
-    original_file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    original_file_path = Path(temp_dir.name) / f"{file_id}.gpx"
     logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
 
-    if not os.path.exists(original_file_path):
+    if not original_file_path.exists():
         logger.warning(f"Uploaded file not found: {original_file_path}")
         raise HTTPException(status_code=404, detail="Uploaded file not found")
 
     # Ensure destination directory exists
-    dest_dir = "mock_gpx"
-    os.makedirs(dest_dir, exist_ok=True)
+    dest_dir = Path("mock_gpx")
+    dest_dir.mkdir(exist_ok=True)
 
     # Process the GPX file with the given indices
     try:
@@ -382,7 +379,7 @@ async def create_segment(
 
     # Clean up temporary file
     try:
-        os.remove(original_file_path)
+        original_file_path.unlink()
     except Exception:
         pass  # Don't fail if cleanup fails
 

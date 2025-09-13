@@ -242,6 +242,8 @@
                         :key="i"
                         class="difficulty-mark"
                         :class="{ active: trailConditions.difficulty_level >= i }"
+                        @click="setDifficultyLevel(i)"
+                        :title="t(`difficulty.level${i}`)"
                       >
                         <span class="difficulty-number">{{ i }}</span>
                         <span class="difficulty-text">{{ t(`difficulty.level${i}`) }}</span>
@@ -600,6 +602,11 @@ const saveDisabledTitle = computed(() => {
 const difficultyProgress = computed(() => {
   return ((trailConditions.value.difficulty_level - 1) / 4) * 100
 })
+
+// Set difficulty level when clicking on difficulty marks
+function setDifficultyLevel(level: number) {
+  trailConditions.value.difficulty_level = level
+}
 
 let map: any = null
 let fullLine: any = null
@@ -1816,11 +1823,25 @@ async function onSubmit() {
   border-radius: 8px;
   transition: all 0.2s;
   min-width: 60px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.difficulty-mark:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .difficulty-mark.active {
   background: var(--brand-50);
   border-color: var(--brand-300);
+}
+
+.difficulty-mark.active:hover {
+  background: var(--brand-100);
+  border-color: var(--brand-400);
 }
 
 .difficulty-number {

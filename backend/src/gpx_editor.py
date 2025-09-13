@@ -5,8 +5,8 @@ This module provides functionality to process GPX files, particularly for extrac
 segments based on start and end indices, and saving processed GPX files.
 """
 
-import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import gpxpy
@@ -100,15 +100,17 @@ def extract_gpx_segment(
             new_segment.points.append(new_point)
 
         # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir_path = Path(output_dir)
+        output_dir_path.mkdir(exist_ok=True)
 
         # Generate output file path
-        base_name = os.path.splitext(os.path.basename(input_file_path))[0]
+        input_path = Path(input_file_path)
+        base_name = input_path.stem
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         output_filename = (
             f"{base_name}_segment_{start_index}_{end_index}_{timestamp}.gpx"
         )
-        output_file_path = os.path.join(output_dir, output_filename)
+        output_file_path = output_dir_path / output_filename
 
         # Save the processed GPX file
         with open(output_file_path, "w") as output_file:

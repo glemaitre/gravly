@@ -1,4 +1,5 @@
 import asyncio
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
@@ -60,7 +61,7 @@ def get_app_and_es(monkeypatch):
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
 
     # Prevent loading mock GPX data during startup
-    monkeypatch.setattr("src.main.os.path.exists", lambda path: False)
+    monkeypatch.setattr("src.main.Path.exists", lambda self: False)
 
     return backend_main.app, fake_es
 
@@ -257,8 +258,8 @@ def test_lifespan_creates_index_and_loads_mock(monkeypatch):
     monkeypatch.setattr(
         backend_main, "index_gpx_file", fake_index_gpx_file, raising=True
     )
-    monkeypatch.setattr("src.main.os.path.exists", lambda path: True)
-    monkeypatch.setattr("src.main.os.listdir", lambda path: ["mock1.gpx"])
+    monkeypatch.setattr("src.main.Path.exists", lambda self: True)
+    monkeypatch.setattr("src.main.Path.iterdir", lambda self: [Path("mock1.gpx")])
 
     with TestClient(backend_main.app):
         pass
