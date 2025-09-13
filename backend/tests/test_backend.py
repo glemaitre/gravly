@@ -52,7 +52,7 @@ class FakeElasticsearch:
 
 def get_app_and_es(monkeypatch):
     # Import the backend app
-    from backend import main as backend_main
+    from src import main as backend_main
 
     fake_es = FakeElasticsearch()
 
@@ -60,7 +60,7 @@ def get_app_and_es(monkeypatch):
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
 
     # Prevent loading mock GPX data during startup
-    monkeypatch.setattr("backend.main.os.path.exists", lambda path: False)
+    monkeypatch.setattr("src.main.os.path.exists", lambda path: False)
 
     return backend_main.app, fake_es
 
@@ -166,7 +166,7 @@ def test_search_rides_builds_filters(monkeypatch):
 
 
 def test_parse_gpx_file_success(tmp_path, monkeypatch):
-    from backend.main import parse_gpx_file
+    from src.main import parse_gpx_file
 
     # Minimal GPX content with a track and two points
     gpx_content = """
@@ -191,7 +191,7 @@ def test_parse_gpx_file_success(tmp_path, monkeypatch):
 
 
 def test_parse_gpx_file_no_tracks(tmp_path):
-    from backend.main import parse_gpx_file
+    from src.main import parse_gpx_file
 
     gpx_content = """
     <gpx version="1.1" creator="test">
@@ -208,7 +208,7 @@ def test_parse_gpx_file_no_tracks(tmp_path):
 
 
 def test_index_gpx_file_success(monkeypatch, tmp_path):
-    from backend import main as backend_main
+    from src import main as backend_main
 
     fake_es = FakeElasticsearch()
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
@@ -231,7 +231,7 @@ def test_index_gpx_file_success(monkeypatch, tmp_path):
 
 
 def test_index_gpx_file_failure(monkeypatch):
-    from backend import main as backend_main
+    from src import main as backend_main
 
     fake_es = FakeElasticsearch()
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
@@ -243,7 +243,7 @@ def test_index_gpx_file_failure(monkeypatch):
 
 def test_lifespan_creates_index_and_loads_mock(monkeypatch):
     # Prepare app import with mocked conditions before TestClient creation
-    from backend import main as backend_main
+    from src import main as backend_main
 
     fake_es = FakeElasticsearch()
     fake_es.indices._exists = False
@@ -255,8 +255,8 @@ def test_lifespan_creates_index_and_loads_mock(monkeypatch):
 
     monkeypatch.setattr(backend_main, "es", fake_es, raising=True)
     monkeypatch.setattr(backend_main, "index_gpx_file", fake_index_gpx_file, raising=True)
-    monkeypatch.setattr("backend.main.os.path.exists", lambda path: True)
-    monkeypatch.setattr("backend.main.os.listdir", lambda path: ["mock1.gpx"])
+    monkeypatch.setattr("src.main.os.path.exists", lambda path: True)
+    monkeypatch.setattr("src.main.os.listdir", lambda path: ["mock1.gpx"])
 
     with TestClient(backend_main.app):
         pass
@@ -268,7 +268,7 @@ def test_lifespan_creates_index_and_loads_mock(monkeypatch):
 
 
 def test_parse_gpx_file_elevation_loss(tmp_path):
-    from backend.main import parse_gpx_file
+    from src.main import parse_gpx_file
 
     gpx_content = """
     <gpx version=\"1.1\" creator=\"test\">
@@ -329,12 +329,12 @@ def test_main_guard_invokes_uvicorn(monkeypatch):
     import types
 
     # Remove cached module to avoid RuntimeWarning from runpy
-    sys.modules.pop("backend.main", None)
+    sys.modules.pop("src.main", None)
 
     # Provide a fake uvicorn before executing module
     fake_uvicorn = types.SimpleNamespace(run=fake_run)
     monkeypatch.setitem(sys.modules, "uvicorn", fake_uvicorn)
 
     # Execute module as if run directly
-    runpy.run_module("backend.main", run_name="__main__")
+    runpy.run_module("src.main", run_name="__main__")
     assert called["value"] is True

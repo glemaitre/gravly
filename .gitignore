@@ -308,3 +308,6 @@ dist/
 # Backup files
 *.bak
 *.backup
+
+# scratch files
+scratch/

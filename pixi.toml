@@ -25,8 +25,13 @@ pre-commit = "*" # Git hooks framework
 pytest = "*"
 pytest-cov = "*"
 
+[feature.dev.dependencies]
+ipykernel = "*"
+ipython = "*"
+jupyterlab = "*"
+
 [tasks]
-start-backend = { cmd = "uvicorn main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
+start-backend = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
 start-frontend = { cmd = "npm run dev", cwd = "frontend", depends-on = ["frontend-install"] }
 frontend-install = { cmd = "npm install", cwd = "frontend" }
 frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
@@ -38,11 +43,11 @@ type-check-frontend = { cmd = "npm run type-check", cwd = "frontend" }
 install-pre-commit = { cmd = "pre-commit install" }
 pre-commit = { cmd = "pre-commit run --all-files" }
 pre-commit-update = { cmd = "pre-commit autoupdate" }
-lint-backend = { cmd = "ruff check backend/ scripts/ --fix" }
+lint-backend = { cmd = "ruff check backend/src/ backend/tests/ scripts/ --fix" }
 lint-frontend = { cmd = "npm run lint", cwd = "frontend" }
-format-backend = { cmd = "ruff format backend/ scripts/" }
+format-backend = { cmd = "ruff format backend/src/ backend/tests/ scripts/" }
 format-frontend = { cmd = "npm run format", cwd = "frontend" }
-test-backend = { cmd = "pytest -q --cov=backend --cov-report=term-missing" }
+test-backend = { cmd = "pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
 test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
 
 # Local Postgres via Docker
@@ -50,3 +55,6 @@ pg-up = { cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e P
 pg-down = { cmd = "docker rm -f cycling-pg" }
 # Export DATABASE_URL for backend tasks (example for local Docker)
 env-dev = { cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling" }
+
+[environments]
+dev = { features = ["dev"] }
