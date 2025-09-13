@@ -16,7 +16,11 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from .gpx_editor import GPXProcessingError, process_gpx_for_segment_creation
+from .gpx_editor import (
+    GPXProcessingError,
+    parse_gpx_file,
+    process_gpx_for_segment_creation,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -117,8 +121,12 @@ class GPXUploadResponse(BaseModel):
     file_id: str
     track_name: str
     total_points: int
+    total_distance: float
+    total_elevation_gain: float
+    total_elevation_loss: float
     bounds: dict
     elevation_stats: dict | None = None
+    points: list[GPXPoint]
 
 
 class SegmentCreateResponse(BaseModel):
@@ -132,96 +140,6 @@ class SegmentCreateResponse(BaseModel):
 @app.get("/")
 async def root():
     return {"message": "Cycling GPX API"}
-
-
-def parse_gpx_file(file_path: str) -> dict:
-    """Parse a GPX file and extract track information"""
-    with open(file_path) as gpx_file:
-        gpx = gpxpy.parse(gpx_file)
-
-    if not gpx.tracks:
-        raise ValueError("No tracks found in GPX file")
-
-    track = gpx.tracks[0]
-    points = []
-    total_distance = 0
-    total_elevation_gain = 0
-    total_elevation_loss = 0
-    prev_elevation = None
-
-    lats = []
-    lons = []
-    elevations = []
-
-    for segment in track.segments:
-        for point in segment.points:
-            if point.latitude and point.longitude:
-                lats.append(point.latitude)
-                lons.append(point.longitude)
-
-                elevation = point.elevation or 0
-                elevations.append(elevation)
-                points.append(
-                    GPXPoint(
-                        lat=point.latitude,
-                        lon=point.longitude,
-                        elevation=elevation,
-                        time=point.time.isoformat() if point.time else None,
-                    )
-                )
-
-                if prev_elevation is not None:
-                    elevation_diff = elevation - prev_elevation
-                    if elevation_diff > 0:
-                        total_elevation_gain += elevation_diff
-                    else:
-                        total_elevation_loss += abs(elevation_diff)
-
-                prev_elevation = elevation
-
-    # Calculate total distance
-    for i in range(1, len(points)):
-        p1 = points[i - 1]
-        p2 = points[i]
-        # Simple distance calculation (for more accuracy, use geopy)
-        import math
-
-        lat1, lon1 = math.radians(p1.lat), math.radians(p1.lon)
-        lat2, lon2 = math.radians(p2.lat), math.radians(p2.lon)
-        dlat = lat2 - lat1
-        dlon = lon2 - lon1
-        a = (
-            math.sin(dlat / 2) ** 2
-            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-        )
-        c = 2 * math.asin(math.sqrt(a))
-        distance = 6371 * c  # Earth radius in km
-        total_distance += distance
-
-    bounds = {
-        "north": max(lats),
-        "south": min(lats),
-        "east": max(lons),
-        "west": min(lons),
-    }
-
-    elevation_stats = None
-    if elevations:
-        elevation_stats = {
-            "min": min(elevations),
-            "max": max(elevations),
-            "total_points": len(elevations),
-        }
-
-    return {
-        "name": track.name or "Unnamed Track",
-        "points": points,
-        "total_distance": total_distance,
-        "total_elevation_gain": total_elevation_gain,
-        "total_elevation_loss": total_elevation_loss,
-        "bounds": bounds,
-        "elevation_stats": elevation_stats,
-    }
 
 
 @app.post("/api/upload-gpx", response_model=GPXUploadResponse)
@@ -262,43 +180,28 @@ async def upload_gpx(file: UploadFile = File(...)):
         logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
 
+    # Convert dictionary points to GPXPoint objects
+    gpx_points = [
+        GPXPoint(
+            lat=point["lat"],
+            lon=point["lon"],
+            elevation=point["elevation"],
+            time=point["time"],
+        )
+        for point in gpx_data["points"]
+    ]
+
     return GPXUploadResponse(
         file_id=file_id,
         track_name=gpx_data["name"],
         total_points=len(gpx_data["points"]),
+        total_distance=gpx_data["total_distance"],
+        total_elevation_gain=gpx_data["total_elevation_gain"],
+        total_elevation_loss=gpx_data["total_elevation_loss"],
         bounds=gpx_data["bounds"],
         elevation_stats=gpx_data["elevation_stats"],
+        points=gpx_points,
     )
-
-
-@app.get("/api/gpx-points/{file_id}")
-async def get_gpx_points(file_id: str):
-    """Get the actual track points from an uploaded GPX file"""
-    global temp_dir
-
-    if not temp_dir:
-        raise HTTPException(
-            status_code=500, detail="Temporary directory not initialized"
-        )
-
-    file_path = Path(temp_dir.name) / f"{file_id}.gpx"
-    logger.info(f"Fetching points for file {file_id}.gpx from: {file_path}")
-
-    if not file_path.exists():
-        logger.warning(f"File not found: {file_path}")
-        raise HTTPException(status_code=404, detail="File not found")
-
-    try:
-        gpx_data = parse_gpx_file(file_path)
-        logger.info(
-            f"Successfully retrieved {len(gpx_data['points'])} points for file {file_id}.gpx"
-        )
-        return {"points": gpx_data["points"]}
-    except Exception as e:
-        logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to parse GPX file: {str(e)}"
-        )
 
 
 @app.post("/api/segments", response_model=SegmentCreateResponse)

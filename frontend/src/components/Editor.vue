@@ -719,14 +719,8 @@ async function onFileChange(ev: Event) {
 
     const uploadData = await response.json()
 
-    // Fetch the actual track points from the backend
-    const pointsResponse = await fetch(`/api/gpx-points/${uploadData.file_id}`)
-    if (!pointsResponse.ok) {
-      throw new Error('Failed to fetch track points')
-    }
-
-    const pointsData = await pointsResponse.json()
-    const actualPoints: TrackPoint[] = pointsData.points.map((p: any) => ({
+    // Use points directly from upload response
+    const actualPoints: TrackPoint[] = uploadData.points.map((p: any) => ({
       lat: p.lat,
       lon: p.lon,
       ele: p.elevation,

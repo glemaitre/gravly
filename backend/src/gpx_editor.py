@@ -5,17 +5,246 @@ This module provides functionality to process GPX files, particularly for extrac
 segments based on start and end indices, and saving processed GPX files.
 """
 
+import math
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import gpxpy
+from fastapi import HTTPException
 
 
 class GPXProcessingError(Exception):
     """Custom exception for GPX processing errors."""
 
     pass
+
+
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great circle distance between two points on Earth in kilometers.
+
+    This function uses the Haversine formula to calculate the shortest distance
+    between two points on the Earth's surface, accounting for the Earth's curvature.
+
+    Parameters
+    ----------
+    lat1 : float
+        Latitude of the first point in decimal degrees.
+    lon1 : float
+        Longitude of the first point in decimal degrees.
+    lat2 : float
+        Latitude of the second point in decimal degrees.
+    lon2 : float
+        Longitude of the second point in decimal degrees.
+
+    Returns
+    -------
+    float
+        Distance between the two points in kilometers.
+
+    Notes
+    -----
+    The Haversine formula assumes the Earth is a perfect sphere with radius 6371 km.
+    For more accurate calculations over long distances, consider using more
+    sophisticated ellipsoidal models.
+
+    Examples
+    --------
+    >>> haversine_distance(46.0, 4.0, 46.1, 4.1)
+    12.345678901234567
+    """
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.asin(math.sqrt(a))
+
+    # Earth radius in kilometers
+    return 6371 * c
+
+
+def parse_gpx_file(file_path: str) -> dict[str, Any]:
+    """
+    Parse a GPX file and extract comprehensive track information in a single pass.
+
+    This function efficiently processes a GPX file by iterating through all track points
+    only once, calculating distance, elevation changes, and bounds on-the-fly. It validates
+    that elevation data is present for all points and raises an error if missing.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the GPX file to be parsed.
+
+    Returns
+    -------
+    dict[str, Any]
+        Dictionary containing parsed GPX data with the following keys:
+        - name (str): Track name or "Unnamed Track" if not specified
+        - points (list[dict]): List of track points, each containing:
+            - lat (float): Latitude in decimal degrees
+            - lon (float): Longitude in decimal degrees
+            - elevation (float): Elevation in meters
+            - time (str | None): ISO format timestamp or None
+        - total_distance (float): Total distance in kilometers
+        - total_elevation_gain (float): Total elevation gain in meters
+        - total_elevation_loss (float): Total elevation loss in meters
+        - bounds (dict): Geographic bounds with keys:
+            - north (float): Northernmost latitude
+            - south (float): Southernmost latitude
+            - east (float): Easternmost longitude
+            - west (float): Westernmost longitude
+        - elevation_stats (dict): Elevation statistics with keys:
+            - min (float): Minimum elevation in meters
+            - max (float): Maximum elevation in meters
+            - total_points (int): Number of points with elevation data
+
+    Raises
+    ------
+    ValueError
+        If no tracks are found in the GPX file.
+    HTTPException
+        If elevation data is missing from the GPX file or any track point.
+    FileNotFoundError
+        If the specified file path does not exist.
+    gpxpy.gpx.GPXException
+        If the file is not a valid GPX file.
+
+    Notes
+    -----
+    This function requires that all track points have elevation data. If any point
+    is missing elevation information, an HTTPException will be raised with status
+    code 400.
+
+    The distance calculation uses the Haversine formula for great-circle distances
+    between consecutive points. Elevation gain/loss is calculated as the difference
+    between consecutive points.
+
+    Examples
+    --------
+    >>> result = parse_gpx_file("track.gpx")
+    >>> print(f"Track: {result['name']}")
+    >>> print(f"Distance: {result['total_distance']:.2f} km")
+    >>> print(f"Points: {len(result['points'])}")
+    """
+    with open(file_path) as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
+    if not gpx.tracks:
+        raise ValueError("No tracks found in GPX file")
+
+    track = gpx.tracks[0]
+    points = []
+    total_distance = 0.0
+    total_elevation_gain = 0.0
+    total_elevation_loss = 0.0
+
+    # Initialize bounds tracking
+    min_lat = max_lat = None
+    min_lon = max_lon = None
+    min_elevation = max_elevation = None
+
+    # Check if elevation data exists
+    has_elevation = False
+    for segment in track.segments:
+        for point in segment.points:
+            if point.elevation is not None:
+                has_elevation = True
+                break
+        if has_elevation:
+            break
+
+    if not has_elevation:
+        raise HTTPException(
+            status_code=400, detail="GPX file must contain elevation data"
+        )
+
+    prev_point = None
+
+    for segment in track.segments:
+        for point in segment.points:
+            if point.latitude and point.longitude:
+                # Validate elevation is present
+                if point.elevation is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="All track points must have elevation data",
+                    )
+
+                elevation = point.elevation
+
+                # Update bounds on the fly
+                if min_lat is None:
+                    min_lat = max_lat = point.latitude
+                    min_lon = max_lon = point.longitude
+                    min_elevation = max_elevation = elevation
+                else:
+                    min_lat = min(min_lat, point.latitude)
+                    max_lat = max(max_lat, point.latitude)
+                    min_lon = min(min_lon, point.longitude)
+                    max_lon = max(max_lon, point.longitude)
+                    min_elevation = min(min_elevation, elevation)
+                    max_elevation = max(max_elevation, elevation)
+
+                # Create GPX point
+                gpx_point = {
+                    "lat": point.latitude,
+                    "lon": point.longitude,
+                    "elevation": elevation,
+                    "time": point.time.isoformat() if point.time else None,
+                }
+                points.append(gpx_point)
+
+                # Calculate distance and elevation changes on the fly
+                if prev_point is not None:
+                    # Calculate distance using haversine formula
+                    distance = haversine_distance(
+                        prev_point["lat"],
+                        prev_point["lon"],
+                        point.latitude,
+                        point.longitude,
+                    )
+                    total_distance += distance
+
+                    # Calculate elevation changes
+                    elevation_diff = elevation - prev_point["elevation"]
+                    if elevation_diff > 0:
+                        total_elevation_gain += elevation_diff
+                    else:
+                        total_elevation_loss += abs(elevation_diff)
+
+                # Update prev_point for next iteration
+                prev_point = gpx_point
+
+    bounds = {
+        "north": max_lat,
+        "south": min_lat,
+        "east": max_lon,
+        "west": min_lon,
+    }
+
+    elevation_stats = {
+        "min": min_elevation,
+        "max": max_elevation,
+        "total_points": len(points),
+    }
+
+    return {
+        "name": track.name or "Unnamed Track",
+        "points": points,
+        "total_distance": total_distance,
+        "total_elevation_gain": total_elevation_gain,
+        "total_elevation_loss": total_elevation_loss,
+        "bounds": bounds,
+        "elevation_stats": elevation_stats,
+    }
 
 
 def extract_gpx_segment(
