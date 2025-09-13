@@ -79,9 +79,11 @@ export default {
   message: {
     loadGpxFirst: 'Charger un fichier GPX d\'abord.',
     insufficientPoints: 'Le fichier GPX a des points insuffisants.',
-    useFileLoad: 'Utiliser Fichier → Charger GPX pour commencer.',
+    useFileLoad: 'Utiliser "Importer depuis ..." → "Fichier GPX" pour commencer.',
     segmentCreated: 'Segment créé avec succès.',
-    createError: 'Erreur lors de la création du segment.'
+    createError: 'Erreur lors de la création du segment.',
+    uploading: 'Téléchargement du fichier GPX...',
+    uploadError: 'Erreur lors du téléchargement du fichier GPX.'
   },
 
   // Language selector

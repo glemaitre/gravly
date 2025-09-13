@@ -52,6 +52,22 @@
             </ul>
             <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
           </div>
+
+          <!-- Upload Progress Bar in Menu -->
+          <div v-if="isUploading" class="menu-section upload-progress-section">
+            <div class="upload-progress-container">
+              <div class="upload-progress-bar">
+                <div
+                  class="upload-progress-fill"
+                  :style="{ width: uploadProgress + '%' }"
+                ></div>
+              </div>
+              <div class="upload-progress-text">
+                {{ t('message.uploading') }} {{ Math.round(uploadProgress) }}%
+              </div>
+            </div>
+          </div>
+
           <div class="menu-section">
             <div class="menu-section-title">{{ t('menu.segments') }}</div>
             <ul class="menu-list">
@@ -460,6 +476,7 @@
       </div>
     </div>
 
+    <!-- Regular Messages -->
     <p v-if="message" class="message">{{ message }}</p>
   </div>
 </template>
@@ -555,6 +572,9 @@ const endIndex = ref(0)
 const cumulativeKm = ref<number[]>([])
 const cumulativeSec = ref<number[]>([])
 const xMode = ref<'distance' | 'time'>('distance')
+const uploadedFileId = ref<string | null>(null)
+const uploadProgress = ref<number>(0)
+const isUploading = ref<boolean>(false)
 
 const controlsCard = ref<HTMLElement | null>(null)
 
@@ -656,31 +676,85 @@ function triggerFileOpen() {
   fileInput.value?.click()
 }
 
-function onFileChange(ev: Event) {
+async function onFileChange(ev: Event) {
   const input = ev.target as HTMLInputElement
   const file = input.files && input.files[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = async () => {
-    const text = String(reader.result)
-    const parsed = parseGPX(text)
-    if (parsed.length < 2) {
+
+  isUploading.value = true
+  uploadProgress.value = 0
+  message.value = ''
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // Simulate upload progress for better UX
+    const progressInterval = setInterval(() => {
+      if (uploadProgress.value < 90) {
+        uploadProgress.value += Math.random() * 20
+        if (uploadProgress.value > 90) uploadProgress.value = 90
+      }
+    }, 200)
+
+    const response = await fetch('/api/upload-gpx', {
+      method: 'POST',
+      body: formData
+    })
+
+    clearInterval(progressInterval)
+    uploadProgress.value = 100
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(error || 'Upload failed')
+    }
+
+    const uploadData = await response.json()
+
+    // Fetch the actual track points from the backend
+    const pointsResponse = await fetch(`/api/gpx-points/${uploadData.file_id}`)
+    if (!pointsResponse.ok) {
+      throw new Error('Failed to fetch track points')
+    }
+
+    const pointsData = await pointsResponse.json()
+    const actualPoints: TrackPoint[] = pointsData.points.map((p: any) => ({
+      lat: p.lat,
+      lon: p.lon,
+      ele: p.elevation,
+      time: p.time
+    }))
+
+    if (actualPoints.length < 2) {
       message.value = t('message.insufficientPoints')
       return
     }
-    points.value = parsed
-    cumulativeKm.value = computeCumulativeKm(parsed)
-    cumulativeSec.value = computeCumulativeSec(parsed)
-    smoothedElevations.value = computeSmoothedElevations(parsed, 5)
+
+    points.value = actualPoints
+    cumulativeKm.value = computeCumulativeKm(actualPoints)
+    cumulativeSec.value = computeCumulativeSec(actualPoints)
+    smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
     startIndex.value = 0
-    endIndex.value = parsed.length - 1
+    endIndex.value = actualPoints.length - 1
+    uploadedFileId.value = uploadData.file_id
     loaded.value = true
     message.value = ''
+
+    // Reset upload state after a short delay to show completion
+    setTimeout(() => {
+      isUploading.value = false
+      uploadProgress.value = 0
+    }, 1000)
+
     await nextTick()
     renderMap()
     renderChart()
+  } catch (err: any) {
+    isUploading.value = false
+    uploadProgress.value = 0
+    message.value = err.message || t('message.uploadError')
   }
-  reader.readAsText(file)
 }
 
 function computeCumulativeKm(pts: TrackPoint[]): number[] {
@@ -885,23 +959,6 @@ function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
   document.addEventListener('touchend', handleMouseUp)
 }
 
-function parseGPX(xmlText: string): TrackPoint[] {
-  const doc = new DOMParser().parseFromString(xmlText, 'application/xml')
-  const trkpts = Array.from(doc.getElementsByTagName('trkpt'))
-  const pts: TrackPoint[] = []
-  for (const el of trkpts) {
-    const lat = parseFloat(el.getAttribute('lat') || '0')
-    const lon = parseFloat(el.getAttribute('lon') || '0')
-    const eleEl = el.getElementsByTagName('ele')[0]
-    const timeEl = el.getElementsByTagName('time')[0]
-    const ele = eleEl ? parseFloat(eleEl.textContent || '0') : 0
-    const time = timeEl ? timeEl.textContent || undefined : undefined
-    if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
-      pts.push({ lat, lon, ele, time })
-    }
-  }
-  return pts
-}
 
 function renderMap() {
   if (!map) {
@@ -1225,38 +1282,32 @@ onUnmounted(() => {
   if (onResize) window.removeEventListener('resize', onResize)
 })
 
-function buildSegmentGPX(): string {
-  const segPoints = points.value.slice(startIndex.value, endIndex.value + 1)
-  const trkpts = segPoints
-    .map(p => `<trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.ele}</ele>${p.time ? `<time>${p.time}</time>` : ''}</trkpt>`)
-    .join('')
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="editor" xmlns="http://www.topografix.com/GPX/1/1">
-  <trk><name>${escapeXml(name.value || 'segment')}</name><trkseg>${trkpts}</trkseg></trk>
-</gpx>`
-}
 
 function escapeXml(s: string): string {
   return s.replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c] as string))
 }
 
 async function onSubmit() {
-  if (!loaded.value || points.value.length < 2) {
+  if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
     message.value = t('message.loadGpxFirst')
     return
   }
   submitting.value = true
   message.value = ''
   try {
-    const xml = buildSegmentGPX()
-    const blob = new Blob([xml], { type: 'application/gpx+xml' })
     const formData = new FormData()
     formData.append('name', name.value)
     formData.append('tire_dry', trailConditions.value.tire_dry)
     formData.append('tire_wet', trailConditions.value.tire_wet)
     formData.append('surface_type', trailConditions.value.surface_type)
     formData.append('difficulty_level', trailConditions.value.difficulty_level.toString())
-    formData.append('file', blob, (name.value || 'segment') + '.gpx')
+
+    // Add the start and end indices for GPX processing
+    formData.append('start_index', startIndex.value.toString())
+    formData.append('end_index', endIndex.value.toString())
+
+    // Add the uploaded file ID instead of the file itself
+    formData.append('file_id', uploadedFileId.value)
 
     // Add commentary data
     formData.append('commentary_text', commentary.value.text)
@@ -1278,6 +1329,7 @@ async function onSubmit() {
     trailConditions.value = { tire_dry: 'slick', tire_wet: 'slick', surface_type: 'forest-trail', difficulty_level: 3 }
     loaded.value = false
     points.value = []
+    uploadedFileId.value = null
     commentary.value = { text: '', video_links: [], images: [] }
     chart?.destroy(); chart = null
     if (fullLine) { fullLine.remove(); fullLine = null }
@@ -1808,6 +1860,46 @@ async function onSubmit() {
 .section-indicator .icon { width: 18px; text-align: center; }
 .empty { padding: 2rem; text-align: center; color: #666; }
 .message { margin-top: 1rem; }
+
+/* Upload Progress Bar Styles - Integrated in Menu */
+.upload-progress-section {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.upload-progress-container {
+  padding: 0.75rem;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  margin: 0 0.25rem;
+}
+
+.upload-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.upload-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff6600, #ff8533);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  box-shadow: 0 1px 2px rgba(255, 102, 0, 0.2);
+}
+
+.upload-progress-text {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.2;
+}
 
 @media (max-width: 1200px) {
   .topbar-inner {

@@ -1,12 +1,13 @@
-import json
+import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from tempfile import TemporaryDirectory
 
 import gpxpy
 import uvicorn
-from elasticsearch import AsyncElasticsearch
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy import DateTime, Integer, String, Text
@@ -14,64 +15,41 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from .gpx_editor import GPXProcessingError, process_gpx_for_segment_creation
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Global temporary directory for the session
+temp_dir: TemporaryDirectory | None = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and clean up on shutdown."""
-    try:
-        # Test connection first
-        await es.ping()
-        print("Connected to Elasticsearch successfully")
+    global temp_dir
 
-        # Create index if it doesn't exist
-        if not await es.indices.exists(index="gpx_tracks"):
-            await es.indices.create(
-                index="gpx_tracks",
-                body={
-                    "mappings": {
-                        "properties": {
-                            "name": {"type": "text"},
-                            "distance": {"type": "float"},
-                            "elevation_gain": {"type": "float"},
-                            "elevation_loss": {"type": "float"},
-                            "bounds": {"type": "object"},
-                            "points": {"type": "nested"},
-                            "created_at": {"type": "date"},
-                        }
-                    }
-                },
-            )
-            print("Created gpx_tracks index")
+    # Create temporary directory for the session
+    temp_dir = TemporaryDirectory(prefix="cycling_gpx_")
+    logger.info(f"Created temporary directory: {temp_dir.name}")
 
-        # Initialize database (create tables if not exist)
-        try:
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            print("Database tables ensured")
-        except Exception as db_e:
-            print(f"Warning: Could not initialize database: {db_e}")
-
-        # Load mock GPX files
-        mock_dir = "mock_gpx"
-        if os.path.exists(mock_dir):
-            for filename in os.listdir(mock_dir):
-                if filename.endswith(".gpx"):
-                    file_path = os.path.join(mock_dir, filename)
-                    file_id = filename.replace(".gpx", "")
-                    await index_gpx_file(file_path, file_id)
-            print("Loaded mock GPX files")
-    except Exception as e:
-        print(f"Warning: Could not connect to Elasticsearch: {e}")
-        print("Backend will start but search functionality will be limited")
+    # Initialize database (create tables if not exist)
+    # TODO: Uncomment when database is needed
+    # try:
+    #     async with engine.begin() as conn:
+    #         await conn.run_sync(Base.metadata.create_all)
+    #     print("Database tables ensured")
+    # except Exception as db_e:
+    #     print(f"Warning: Could not initialize database: {db_e}")
 
     # Yield control to the application
     yield
 
-    # Shutdown: close Elasticsearch
-    try:
-        await es.close()
-    except Exception:
-        pass
+    # Clean up temporary directory on shutdown
+    if temp_dir:
+        logger.info(f"Cleaning up temporary directory: {temp_dir.name}")
+        temp_dir.cleanup()
 
 
 app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
@@ -83,12 +61,6 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-# Elasticsearch client
-es = AsyncElasticsearch(
-    "http://localhost:9200",
-    headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"},
 )
 
 # Database setup (PostgreSQL via SQLAlchemy async)
@@ -138,33 +110,12 @@ class GPXPoint(BaseModel):
     time: str | None = None
 
 
-class GPXTrack(BaseModel):
-    name: str
-    points: list[GPXPoint]
-    total_distance: float
-    total_elevation_gain: float
-    total_elevation_loss: float
-    duration: float | None = None
+class GPXUploadResponse(BaseModel):
+    file_id: str
+    track_name: str
+    total_points: int
     bounds: dict
-
-
-class RideCard(BaseModel):
-    id: str
-    name: str
-    distance: float
-    elevation_gain: float
-    duration: float | None = None
-    bounds: dict
-    points: list[dict] | None = []
-    thumbnail_url: str | None = None
-
-
-class RideSearchRequest(BaseModel):
-    bounds: dict | None = None
-    min_distance: float | None = None
-    max_distance: float | None = None
-    min_elevation: float | None = None
-    max_elevation: float | None = None
+    elevation_stats: dict | None = None
 
 
 class SegmentCreateResponse(BaseModel):
@@ -175,7 +126,12 @@ class SegmentCreateResponse(BaseModel):
     file_path: str
 
 
-def parse_gpx_file(file_path: str) -> GPXTrack:
+@app.get("/")
+async def root():
+    return {"message": "Cycling GPX API"}
+
+
+def parse_gpx_file(file_path: str) -> dict:
     """Parse a GPX file and extract track information"""
     with open(file_path) as gpx_file:
         gpx = gpxpy.parse(gpx_file)
@@ -192,6 +148,7 @@ def parse_gpx_file(file_path: str) -> GPXTrack:
 
     lats = []
     lons = []
+    elevations = []
 
     for segment in track.segments:
         for point in segment.points:
@@ -200,6 +157,7 @@ def parse_gpx_file(file_path: str) -> GPXTrack:
                 lons.append(point.longitude)
 
                 elevation = point.elevation or 0
+                elevations.append(elevation)
                 points.append(
                     GPXPoint(
                         lat=point.latitude,
@@ -236,154 +194,98 @@ def parse_gpx_file(file_path: str) -> GPXTrack:
 
     bounds = {"north": max(lats), "south": min(lats), "east": max(lons), "west": min(lons)}
 
-    return GPXTrack(
-        name=track.name or "Unnamed Track",
-        points=points,
-        total_distance=total_distance,
-        total_elevation_gain=total_elevation_gain,
-        total_elevation_loss=total_elevation_loss,
-        bounds=bounds,
+    elevation_stats = None
+    if elevations:
+        elevation_stats = {
+            "min": min(elevations),
+            "max": max(elevations),
+            "total_points": len(elevations),
+        }
+
+    return {
+        "name": track.name or "Unnamed Track",
+        "points": points,
+        "total_distance": total_distance,
+        "total_elevation_gain": total_elevation_gain,
+        "total_elevation_loss": total_elevation_loss,
+        "bounds": bounds,
+        "elevation_stats": elevation_stats,
+    }
+
+
+@app.post("/api/upload-gpx", response_model=GPXUploadResponse)
+async def upload_gpx(file: UploadFile = File(...)):
+    """Upload a GPX file temporarily and return track information"""
+    global temp_dir
+
+    if not file.filename.endswith(".gpx"):
+        raise HTTPException(status_code=400, detail="File must be a GPX file")
+
+    if not temp_dir:
+        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+
+    # Generate unique file ID
+    file_id = str(uuid.uuid4())
+
+    # Save uploaded file in the session temporary directory
+    file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    logger.info(f"Uploading file {file.filename} to temporary directory: {file_path}")
+
+    try:
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        logger.info(f"Successfully saved file {file.filename} as {file_id}.gpx")
+    except Exception as e:
+        logger.error(f"Failed to save file {file.filename}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+    # Parse GPX file
+    try:
+        gpx_data = parse_gpx_file(file_path)
+        logger.info(
+            f"Successfully parsed GPX file {file_id}.gpx with {len(gpx_data['points'])} points"
+        )
+    except Exception as e:
+        # Clean up file on error
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
+
+    return GPXUploadResponse(
+        file_id=file_id,
+        track_name=gpx_data["name"],
+        total_points=len(gpx_data["points"]),
+        bounds=gpx_data["bounds"],
+        elevation_stats=gpx_data["elevation_stats"],
     )
 
 
-async def index_gpx_file(file_path: str, file_id: str):
-    """Index a GPX file in Elasticsearch"""
-    try:
-        track = parse_gpx_file(file_path)
+@app.get("/api/gpx-points/{file_id}")
+async def get_gpx_points(file_id: str):
+    """Get the actual track points from an uploaded GPX file"""
+    global temp_dir
 
-        # Create document for Elasticsearch
-        doc = {
-            "id": file_id,
-            "name": track.name,
-            "distance": track.total_distance,
-            "elevation_gain": track.total_elevation_gain,
-            "elevation_loss": track.total_elevation_loss,
-            "bounds": track.bounds,
-            "points": [
-                {"lat": p.lat, "lon": p.lon, "elevation": p.elevation} for p in track.points
-            ],
-            "created_at": datetime.now().isoformat(),
-        }
+    if not temp_dir:
+        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
 
-        await es.index(index="gpx_tracks", id=file_id, body=doc)
-        return track
-    except Exception as e:
-        print(f"Error indexing {file_path}: {e}")
-        return None
+    file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    logger.info(f"Fetching points for file {file_id}.gpx from: {file_path}")
 
-
-@app.get("/")
-async def root():
-    return {"message": "Cycling GPX API"}
-
-
-@app.get("/api/rides", response_model=list[RideCard])
-async def search_rides(
-    bounds: str | None = Query(
-        None, description="JSON string with north, south, east, west bounds"
-    ),
-    min_distance: float | None = None,
-    max_distance: float | None = None,
-    min_elevation: float | None = None,
-    max_elevation: float | None = None,
-):
-    """Search for rides with optional filters"""
-    try:
-        # Test Elasticsearch connection
-        await es.ping()
-    except Exception:
-        raise HTTPException(status_code=503, detail="Elasticsearch is not available")
-
-    query = {"match_all": {}}
-
-    filters = []
-
-    if bounds:
-        try:
-            bounds_data = json.loads(bounds)
-            # For now, we'll use a simple bounding box filter on the bounds field
-            # In a real implementation, you'd want to index the track points for geo queries
-            filters.append(
-                {
-                    "bool": {
-                        "must": [
-                            {"range": {"bounds.north": {"lte": bounds_data["north"]}}},
-                            {"range": {"bounds.south": {"gte": bounds_data["south"]}}},
-                            {"range": {"bounds.east": {"lte": bounds_data["east"]}}},
-                            {"range": {"bounds.west": {"gte": bounds_data["west"]}}},
-                        ]
-                    }
-                }
-            )
-        except:
-            pass
-
-    if min_distance is not None or max_distance is not None:
-        distance_range = {}
-        if min_distance is not None:
-            distance_range["gte"] = min_distance
-        if max_distance is not None:
-            distance_range["lte"] = max_distance
-        filters.append({"range": {"distance": distance_range}})
-
-    if min_elevation is not None or max_elevation is not None:
-        elevation_range = {}
-        if min_elevation is not None:
-            elevation_range["gte"] = min_elevation
-        if max_elevation is not None:
-            elevation_range["lte"] = max_elevation
-        filters.append({"range": {"elevation_gain": elevation_range}})
-
-    if filters:
-        query = {"bool": {"must": filters}}
+    if not os.path.exists(file_path):
+        logger.warning(f"File not found: {file_path}")
+        raise HTTPException(status_code=404, detail="File not found")
 
     try:
-        response = await es.search(index="gpx_tracks", body={"query": query, "size": 100})
-
-        rides = []
-        for hit in response["hits"]["hits"]:
-            source = hit["_source"]
-            rides.append(
-                RideCard(
-                    id=hit["_id"],
-                    name=source["name"],
-                    distance=source["distance"],
-                    elevation_gain=source["elevation_gain"],
-                    bounds=source["bounds"],
-                    points=source.get("points", []),
-                )
-            )
-
-        return rides
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/rides/{ride_id}", response_model=GPXTrack)
-async def get_ride(ride_id: str):
-    """Get detailed information about a specific ride"""
-    try:
-        # Test Elasticsearch connection
-        await es.ping()
-    except Exception:
-        raise HTTPException(status_code=503, detail="Elasticsearch is not available")
-
-    try:
-        response = await es.get(index="gpx_tracks", id=ride_id)
-        source = response["_source"]
-
-        points = [GPXPoint(**p) for p in source["points"]]
-
-        return GPXTrack(
-            name=source["name"],
-            points=points,
-            total_distance=source["distance"],
-            total_elevation_gain=source["elevation_gain"],
-            total_elevation_loss=source["elevation_loss"],
-            bounds=source["bounds"],
+        gpx_data = parse_gpx_file(file_path)
+        logger.info(
+            f"Successfully retrieved {len(gpx_data['points'])} points for file {file_id}.gpx"
         )
-    except Exception:
-        raise HTTPException(status_code=404, detail="Ride not found")
+        return {"points": gpx_data["points"]}
+    except Exception as e:
+        logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse GPX file: {str(e)}")
 
 
 @app.post("/api/segments", response_model=SegmentCreateResponse)
@@ -391,9 +293,15 @@ async def create_segment(
     name: str = Form(...),
     tire_dry: str = Form(...),
     tire_wet: str = Form(...),
-    file: UploadFile = File(...),
+    file_id: str = Form(...),
+    start_index: int = Form(...),
+    end_index: int = Form(...),
+    surface_type: str = Form(None),
+    difficulty_level: int = Form(None),
+    commentary_text: str = Form(""),
+    video_links: str = Form("[]"),
 ):
-    """Create a new segment: store file locally and metadata in DB.
+    """Create a new segment: process uploaded GPX file with indices, store locally and metadata in DB.
 
     Note: Files are saved under `mock_gpx/` for now; later this should target S3.
     """
@@ -401,38 +309,66 @@ async def create_segment(
     if tire_dry not in allowed or tire_wet not in allowed:
         raise HTTPException(status_code=422, detail="Invalid tire types")
 
+    # Find the uploaded file
+    global temp_dir
+
+    if not temp_dir:
+        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+
+    original_file_path = os.path.join(temp_dir.name, f"{file_id}.gpx")
+    logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
+
+    if not os.path.exists(original_file_path):
+        logger.warning(f"Uploaded file not found: {original_file_path}")
+        raise HTTPException(status_code=404, detail="Uploaded file not found")
+
     # Ensure destination directory exists
     dest_dir = "mock_gpx"
     os.makedirs(dest_dir, exist_ok=True)
 
-    # Persist file
-    raw_bytes = await file.read()
-    safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in name.lower())
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    # Save as .gpx if user provided a valid GPX file
-    filename = f"segment-{timestamp}-{safe_name}.gpx"
-    file_path = os.path.join(dest_dir, filename)
+    # Process the GPX file with the given indices
     try:
-        with open(file_path, "wb") as f:
-            f.write(raw_bytes)
-    except Exception as write_e:
-        raise HTTPException(status_code=500, detail=f"Failed to store file: {write_e}")
+        logger.info(f"Processing segment '{name}' from indices {start_index} to {end_index}")
+        processing_result = process_gpx_for_segment_creation(
+            input_file_path=original_file_path,
+            start_index=start_index,
+            end_index=end_index,
+            segment_name=name,
+            output_dir=dest_dir,
+        )
+        processed_file_path = processing_result["processed_file"]
+        logger.info(f"Successfully created segment file: {processed_file_path}")
 
-    # Store metadata in DB
-    async with SessionLocal() as session:
-        seg = Segment(name=name, tire_dry=tire_dry, tire_wet=tire_wet, file_path=file_path)
-        session.add(seg)
-        await session.commit()
-        await session.refresh(seg)
+    except GPXProcessingError as gpx_e:
+        logger.error(f"GPX processing failed for segment '{name}': {str(gpx_e)}")
+        raise HTTPException(status_code=422, detail=f"GPX processing failed: {str(gpx_e)}")
+    except Exception as e:
+        logger.error(f"Failed to process GPX file for segment '{name}': {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process GPX file: {str(e)}")
 
-    # Index in Elasticsearch for search/viewing
+    # Store metadata in DB (using the processed file path)
+    # TODO: Uncomment when database is needed
+    # async with SessionLocal() as session:
+    #     seg = Segment(
+    #         name=name, tire_dry=tire_dry, tire_wet=tire_wet, file_path=processed_file_path
+    #     )
+    #     session.add(seg)
+    #     await session.commit()
+    #     await session.refresh(seg)
+
+    # Clean up temporary file
     try:
-        await index_gpx_file(file_path, f"segment-{seg.id}")
+        os.remove(original_file_path)
     except Exception:
-        pass
+        pass  # Don't fail if cleanup fails
 
+    # For now, return a mock response since we're not using the database
     return SegmentCreateResponse(
-        id=seg.id, name=seg.name, tire_dry=seg.tire_dry, tire_wet=seg.tire_wet, file_path=file_path
+        id=1,  # Mock ID
+        name=name,
+        tire_dry=tire_dry,
+        tire_wet=tire_wet,
+        file_path=processed_file_path,
     )
 
 
