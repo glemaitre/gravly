@@ -27,7 +27,22 @@ export default {
   form: {
     segmentName: 'Nom du segment',
     tire: 'Pneu',
-    segmentInfo: 'Informations du segment'
+    segmentInfo: 'Informations du segment',
+    comments: 'Commentaires',
+    commentaryText: 'Description',
+    commentaryPlaceholder: 'Ajoutez votre description détaillée de ce segment...',
+    media: 'Médias',
+    videoLinks: 'Liens Vidéo',
+    addVideoLink: 'Ajouter un Lien Vidéo',
+    videoUrlPlaceholder: 'https://youtube.com/watch?v=...',
+    videoTitlePlaceholder: 'Titre de la vidéo (optionnel)',
+    removeVideo: 'Supprimer la vidéo',
+    images: 'Images',
+    uploadImages: 'Télécharger des Images',
+    uploadHint: 'Glisser-déposer ou cliquer pour sélectionner des images',
+    imageAlt: 'Image du segment',
+    imageCaptionPlaceholder: 'Légende de l\'image (optionnel)',
+    removeImage: 'Supprimer l\'image'
   },
 
   // Tire conditions

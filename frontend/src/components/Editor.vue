@@ -195,55 +195,192 @@
               <input id="name" v-model="name" type="text" required />
             </div>
 
-            <div class="grid">
-              <label class="group-main-label">{{ t('form.tire') }}</label>
-              <div class="tire-group">
-                <div class="tire-group-header">
-                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
-                  <span class="tire-group-title">{{ t('tire.dry') }}</span>
+            <!-- Tire Selection Card -->
+            <div class="tire-card">
+              <div class="tire-card-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-dot"></i></span>
+                <span class="tire-card-title">{{ t('form.tire') }}</span>
+              </div>
+
+              <div class="tire-groups">
+                <div class="tire-group">
+                  <div class="tire-group-header">
+                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-sun"></i></span>
+                    <span class="tire-group-title">{{ t('tire.dry') }}</span>
+                  </div>
+                  <p class="tire-group-help">{{ t('tire.dryHelp') }}</p>
+                  <div class="tire-row" role="radiogroup" :aria-label="t('tire.dry')">
+                    <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
+                      <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
+                      <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                      <span class="tire-caption">{{ t('tire.slick') }}</span>
+                    </label>
+                    <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
+                      <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
+                      <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                      <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
+                    </label>
+                    <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
+                      <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
+                      <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                      <span class="tire-caption">{{ t('tire.knobs') }}</span>
+                    </label>
+                  </div>
                 </div>
-                <p class="tire-group-help">{{ t('tire.dryHelp') }}</p>
-                <div class="tire-row" role="radiogroup" :aria-label="t('tire.dry')">
-                  <label class="tire-option" :class="{ selected: tireDry === 'slick' }">
-                    <input type="radio" name="tireDry" value="slick" v-model="tireDry" />
-                    <img :src="tireImages.slick" :alt="t('tire.slick')" />
-                    <span class="tire-caption">{{ t('tire.slick') }}</span>
-                  </label>
-                  <label class="tire-option" :class="{ selected: tireDry === 'semi-slick' }">
-                    <input type="radio" name="tireDry" value="semi-slick" v-model="tireDry" />
-                    <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
-                    <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
-                  </label>
-                  <label class="tire-option" :class="{ selected: tireDry === 'knobs' }">
-                    <input type="radio" name="tireDry" value="knobs" v-model="tireDry" />
-                    <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
-                    <span class="tire-caption">{{ t('tire.knobs') }}</span>
-                  </label>
+                <div class="tire-group">
+                  <div class="tire-group-header">
+                    <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
+                    <span class="tire-group-title">{{ t('tire.wet') }}</span>
+                  </div>
+                  <p class="tire-group-help">{{ t('tire.wetHelp') }}</p>
+                  <div class="tire-row" role="radiogroup" :aria-label="t('tire.wet')">
+                    <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
+                      <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
+                      <img :src="tireImages.slick" :alt="t('tire.slick')" />
+                      <span class="tire-caption">{{ t('tire.slick') }}</span>
+                    </label>
+                    <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
+                      <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
+                      <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
+                      <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
+                    </label>
+                    <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
+                      <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
+                      <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
+                      <span class="tire-caption">{{ t('tire.knobs') }}</span>
+                    </label>
+                  </div>
                 </div>
               </div>
-              <div class="tire-group">
-                <div class="tire-group-header">
-                  <span class="icon" aria-hidden="true"><i class="fa-solid fa-cloud-rain"></i></span>
-                  <span class="tire-group-title">{{ t('tire.wet') }}</span>
+            </div>
+
+            <!-- Media Section -->
+            <div class="media-section">
+              <div class="media-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-photo-film"></i></span>
+                <span class="media-title">{{ t('form.media') }}</span>
+              </div>
+
+              <!-- Video Links Section -->
+              <div class="media-field">
+                <label>{{ t('form.videoLinks') }}</label>
+                <div class="video-links-container">
+                  <div
+                    v-for="(video, index) in commentary.video_links"
+                    :key="video.id"
+                    class="video-link-item"
+                  >
+                    <div class="video-link-content">
+                      <div class="video-platform">
+                        <i :class="getVideoIcon(video.platform)"></i>
+                        <span class="platform-name">{{ getPlatformName(video.platform) }}</span>
+                      </div>
+                      <input
+                        v-model="video.url"
+                        type="url"
+                        :placeholder="t('form.videoUrlPlaceholder')"
+                        class="video-url-input"
+                        @input="validateVideoUrl(video)"
+                      />
+                      <input
+                        v-model="video.title"
+                        type="text"
+                        :placeholder="t('form.videoTitlePlaceholder')"
+                        class="video-title-input"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      @click="removeVideoLink(index)"
+                      class="remove-video-btn"
+                      :title="t('form.removeVideo')"
+                    >
+                      <i class="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    @click="addVideoLink"
+                    class="add-video-btn"
+                  >
+                    <i class="fa-solid fa-plus"></i>
+                    <span>{{ t('form.addVideoLink') }}</span>
+                  </button>
                 </div>
-                <p class="tire-group-help">{{ t('tire.wetHelp') }}</p>
-                <div class="tire-row" role="radiogroup" :aria-label="t('tire.wet')">
-                  <label class="tire-option" :class="{ selected: tireWet === 'slick' }">
-                    <input type="radio" name="tireWet" value="slick" v-model="tireWet" />
-                    <img :src="tireImages.slick" :alt="t('tire.slick')" />
-                    <span class="tire-caption">{{ t('tire.slick') }}</span>
-                  </label>
-                  <label class="tire-option" :class="{ selected: tireWet === 'semi-slick' }">
-                    <input type="radio" name="tireWet" value="semi-slick" v-model="tireWet" />
-                    <img :src="tireImages.semiSlick" :alt="t('tire.semiSlick')" />
-                    <span class="tire-caption">{{ t('tire.semiSlick') }}</span>
-                  </label>
-                  <label class="tire-option" :class="{ selected: tireWet === 'knobs' }">
-                    <input type="radio" name="tireWet" value="knobs" v-model="tireWet" />
-                    <img :src="tireImages.knobs" :alt="t('tire.knobs')" />
-                    <span class="tire-caption">{{ t('tire.knobs') }}</span>
-                  </label>
+              </div>
+
+              <!-- Image Upload Section -->
+              <div class="media-field">
+                <label>{{ t('form.images') }}</label>
+                <div class="image-upload-container">
+                  <div
+                    v-for="(image, index) in commentary.images"
+                    :key="image.id"
+                    class="image-item"
+                  >
+                    <div class="image-preview">
+                      <img :src="image.preview" :alt="image.caption || t('form.imageAlt')" />
+                      <div class="image-overlay">
+                        <button
+                          type="button"
+                          @click="removeImage(index)"
+                          class="remove-image-btn"
+                          :title="t('form.removeImage')"
+                        >
+                          <i class="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      v-model="image.caption"
+                      type="text"
+                      :placeholder="t('form.imageCaptionPlaceholder')"
+                      class="image-caption-input"
+                    />
+                  </div>
+                  <div
+                    class="image-upload-area"
+                    :class="{ 'drag-over': isDragOver }"
+                    @click="triggerImageUpload"
+                    @dragover.prevent="handleDragOver"
+                    @dragleave.prevent="handleDragLeave"
+                    @drop.prevent="handleImageDrop"
+                  >
+                    <div class="upload-content">
+                      <i class="fa-solid fa-cloud-upload-alt upload-icon"></i>
+                      <span class="upload-text">{{ t('form.uploadImages') }}</span>
+                      <span class="upload-hint">{{ t('form.uploadHint') }}</span>
+                    </div>
+                  </div>
                 </div>
+                <input
+                  ref="imageInput"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  @change="handleImageSelect"
+                  hidden
+                />
+              </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="commentary-section">
+              <div class="commentary-header">
+                <span class="icon" aria-hidden="true"><i class="fa-solid fa-comment-dots"></i></span>
+                <span class="commentary-title">{{ t('form.comments') }}</span>
+              </div>
+
+              <!-- Free Text Commentary -->
+              <div class="commentary-field">
+                <label for="commentary-text">{{ t('form.commentaryText') }}</label>
+                <textarea
+                  id="commentary-text"
+                  v-model="commentary.text"
+                  :placeholder="t('form.commentaryPlaceholder')"
+                  rows="4"
+                  class="commentary-textarea"
+                ></textarea>
               </div>
             </div>
           </form>
@@ -271,6 +408,7 @@ import annotationPlugin from 'chartjs-plugin-annotation'
 import tireSlickUrl from '../assets/images/slick.png'
 import tireSemiSlickUrl from '../assets/images/semi-slick.png'
 import tireKnobsUrl from '../assets/images/ext.png'
+import type { Commentary, VideoLink, CommentaryImage } from '../types'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Title, Filler, Tooltip, annotationPlugin)
 
@@ -315,7 +453,16 @@ const tireWet = ref<Tire>('slick')
 const submitting = ref(false)
 const message = ref('')
 
+// Commentary data
+const commentary = ref<Commentary>({
+  text: '',
+  video_links: [],
+  images: []
+})
+const isDragOver = ref(false)
+
 const fileInput = ref<HTMLInputElement | null>(null)
+const imageInput = ref<HTMLInputElement | null>(null)
 const points = ref<TrackPoint[]>([])
 const startIndex = ref(0)
 const endIndex = ref(0)
@@ -480,6 +627,106 @@ function formatElapsed(i: number): string {
   const mm = h > 0 ? String(m).padStart(2, '0') : String(m)
   const ss = String(s).padStart(2, '0')
   return `${hh}${mm}:${ss}`
+}
+
+// Commentary methods
+function generateId(): string {
+  return Math.random().toString(36).substr(2, 9)
+}
+
+function addVideoLink() {
+  commentary.value.video_links.push({
+    id: generateId(),
+    url: '',
+    title: '',
+    platform: 'youtube'
+  })
+}
+
+function removeVideoLink(index: number) {
+  commentary.value.video_links.splice(index, 1)
+}
+
+function validateVideoUrl(video: VideoLink) {
+  const url = video.url.toLowerCase()
+  if (url.includes('youtube.com') || url.includes('youtu.be')) {
+    video.platform = 'youtube'
+  } else if (url.includes('vimeo.com')) {
+    video.platform = 'vimeo'
+  } else if (url) {
+    video.platform = 'other'
+  }
+}
+
+function getVideoIcon(platform: string): string {
+  switch (platform) {
+    case 'youtube': return 'fa-brands fa-youtube'
+    case 'vimeo': return 'fa-brands fa-vimeo'
+    default: return 'fa-solid fa-video'
+  }
+}
+
+function getPlatformName(platform: string): string {
+  switch (platform) {
+    case 'youtube': return 'YouTube'
+    case 'vimeo': return 'Vimeo'
+    default: return 'Other'
+  }
+}
+
+function triggerImageUpload() {
+  imageInput.value?.click()
+}
+
+function handleImageSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = input.files
+  if (files) {
+    processImageFiles(Array.from(files))
+  }
+}
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault()
+  isDragOver.value = true
+}
+
+function handleDragLeave(event: DragEvent) {
+  event.preventDefault()
+  isDragOver.value = false
+}
+
+function handleImageDrop(event: DragEvent) {
+  event.preventDefault()
+  isDragOver.value = false
+
+  const files = event.dataTransfer?.files
+  if (files) {
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'))
+    processImageFiles(imageFiles)
+  }
+}
+
+function processImageFiles(files: File[]) {
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const preview = e.target?.result as string
+        commentary.value.images.push({
+          id: generateId(),
+          file,
+          preview,
+          caption: ''
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+  })
+}
+
+function removeImage(index: number) {
+  commentary.value.images.splice(index, 1)
 }
 
 
@@ -918,6 +1165,16 @@ async function onSubmit() {
     formData.append('tire_wet', tireWet.value)
     formData.append('file', blob, (name.value || 'segment') + '.gpx')
 
+    // Add commentary data
+    formData.append('commentary_text', commentary.value.text)
+    formData.append('video_links', JSON.stringify(commentary.value.video_links))
+
+    // Add images
+    commentary.value.images.forEach((image, index) => {
+      formData.append(`image_${index}`, image.file)
+      formData.append(`image_${index}_caption`, image.caption || '')
+    })
+
     const res = await fetch('/api/segments', { method: 'POST', body: formData })
     if (!res.ok) {
       const detail = await res.text()
@@ -929,6 +1186,7 @@ async function onSubmit() {
     tireWet.value = 'slick'
     loaded.value = false
     points.value = []
+    commentary.value = { text: '', video_links: [], images: [] }
     chart?.destroy(); chart = null
     if (fullLine) { fullLine.remove(); fullLine = null }
     if (selectedLine) { selectedLine.remove(); selectedLine = null }
@@ -1223,8 +1481,47 @@ async function onSubmit() {
 .meta-title { text-align: center; margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; }
 .meta label { display: block; margin: 0.5rem 0 0.25rem; }
 .meta input, .meta select { width: 100%; max-width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-.meta .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem; align-items: start; width: 100%; box-sizing: border-box; }
-.group-main-label { grid-column: 1 / -1; margin-top: 0.25rem; color: #111827; }
+/* Tire Card Styles */
+.tire-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tire-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.tire-card-header .icon {
+  width: 18px;
+  text-align: center;
+  color: var(--brand-500);
+}
+
+.tire-card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.tire-groups {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  align-items: start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .tire-group { background: #fbfcfe; border: 1px solid #e5e7eb; border-radius: 10px; padding: 0.5rem; }
 .tire-group-header { display: flex; align-items: center; gap: 0.4rem; color: #374151; margin: 0 0 0.5rem 0; }
 .tire-group-help { margin: 0 0 0.5rem 0; font-size: 12px; color: #6b7280; }
@@ -1431,13 +1728,335 @@ async function onSubmit() {
   color: #ffffff;
 }
 
-.tire-group:nth-child(3) .tire-group-header .icon {
+.tire-group:nth-child(2) .tire-group-header .icon {
   color: var(--blue-500);
 }
 
-.tire-group:nth-child(3) .tire-option.selected {
+.tire-group:nth-child(2) .tire-option.selected {
   border-color: var(--blue-500);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+/* Commentary Section Styles */
+.commentary-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.commentary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.commentary-header .icon {
+  width: 18px;
+  text-align: center;
+  color: var(--brand-500);
+}
+
+.commentary-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.commentary-field {
+  margin-bottom: 1.5rem;
+}
+
+.commentary-field:last-child {
+  margin-bottom: 0;
+}
+
+.commentary-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.commentary-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 100px;
+  box-sizing: border-box;
+}
+
+.commentary-textarea:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+}
+
+/* Media Section Styles */
+.media-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.media-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.media-header .icon {
+  width: 18px;
+  text-align: center;
+  color: var(--brand-500);
+}
+
+.media-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.media-field {
+  margin-bottom: 1.5rem;
+}
+
+.media-field:last-child {
+  margin-bottom: 0;
+}
+
+.media-field label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+/* Video Links Styles */
+.video-links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.video-link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.video-link-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.video-platform {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.video-platform i {
+  width: 16px;
+  text-align: center;
+}
+
+.platform-name {
+  font-weight: 500;
+}
+
+.video-url-input,
+.video-title-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+}
+
+.video-url-input:focus,
+.video-title-input:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);
+}
+
+.remove-video-btn {
+  padding: 0.5rem;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.remove-video-btn:hover {
+  background: #dc2626;
+}
+
+.add-video-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 2px dashed #d1d5db;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.add-video-btn:hover {
+  border-color: var(--brand-500);
+  color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+/* Image Upload Styles */
+.image-upload-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.image-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.image-preview {
+  position: relative;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.image-preview:hover .image-overlay {
+  opacity: 1;
+}
+
+.remove-image-btn {
+  padding: 0.5rem;
+  border: none;
+  background: #ef4444;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.remove-image-btn:hover {
+  background: #dc2626;
+}
+
+.image-caption-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+}
+
+.image-caption-input:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);
+}
+
+.image-upload-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+  transition: all 0.2s;
+  grid-column: 1 / -1;
+}
+
+.image-upload-area:hover,
+.image-upload-area.drag-over {
+  border-color: var(--brand-500);
+  background: var(--brand-50);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.upload-icon {
+  font-size: 2rem;
+  color: #9ca3af;
+}
+
+.upload-text {
+  font-weight: 500;
+  color: #374151;
+}
+
+.upload-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
 }
 
 </style>

@@ -29,3 +29,23 @@ export interface GPXTrack {
   bounds: Bounds
   points: TrackPoint[]
 }
+
+export interface Commentary {
+  text: string
+  video_links: VideoLink[]
+  images: CommentaryImage[]
+}
+
+export interface VideoLink {
+  id: string
+  url: string
+  title: string
+  platform: 'youtube' | 'vimeo' | 'other'
+}
+
+export interface CommentaryImage {
+  id: string
+  file: File
+  preview: string
+  caption?: string
+}

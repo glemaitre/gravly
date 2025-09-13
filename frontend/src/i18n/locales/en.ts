@@ -27,7 +27,22 @@ export default {
   form: {
     segmentName: 'Segment name',
     tire: 'Tire',
-    segmentInfo: 'Segment information'
+    segmentInfo: 'Segment information',
+    comments: 'Comments',
+    commentaryText: 'Description',
+    commentaryPlaceholder: 'Add your detailed description of this segment...',
+    media: 'Media',
+    videoLinks: 'Video Links',
+    addVideoLink: 'Add Video Link',
+    videoUrlPlaceholder: 'https://youtube.com/watch?v=...',
+    videoTitlePlaceholder: 'Video title (optional)',
+    removeVideo: 'Remove video',
+    images: 'Images',
+    uploadImages: 'Upload Images',
+    uploadHint: 'Drag & drop or click to select images',
+    imageAlt: 'Segment image',
+    imageCaptionPlaceholder: 'Image caption (optional)',
+    removeImage: 'Remove image'
   },
 
   // Tire conditions
