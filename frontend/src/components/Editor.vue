@@ -5,12 +5,6 @@
         <div class="logo">
           <img :src="logoUrl" alt="Cycling Segments" class="logo-img" />
         </div>
-        <div class="nav-menu">
-          <a href="#" class="nav-item">Home</a>
-          <a href="#" class="nav-item">Segments</a>
-          <a href="#" class="nav-item">About</a>
-          <a href="#" class="nav-item">Contact</a>
-        </div>
       </div>
       <nav class="nav">
         <div class="language-dropdown" ref="languageDropdown">
@@ -45,7 +39,6 @@
     </div>
   </header>
   <div class="editor">
-    <!-- Sidebar completely independent -->
     <div class="sidebar">
       <div class="sidebar-scroll">
         <div class="card menu-card">
@@ -78,7 +71,6 @@
       </div>
     </div>
 
-    <!-- Main content area independent from sidebar -->
     <div class="content">
       <div class="page">
         <div class="main-col">
@@ -90,7 +82,6 @@
             <div class="chart-wrapper">
               <div class="chart-container">
                 <canvas ref="chartCanvas" class="chart"></canvas>
-                <!-- Draggable vertical sliders -->
                 <div
                   class="vertical-slider start-slider"
                   :style="{ left: startSliderPosition + '%' }"
@@ -146,7 +137,6 @@
               <button type="button" class="seg right" :class="{ active: xMode === 'time' }" @click="xMode = 'time'">{{ t('chart.time') }}</button>
             </div>
 
-            <!-- Selector controls moved here -->
             <div class="controls" ref="controlsCard">
               <div class="slider-group">
                 <div class="slider-header">
@@ -195,7 +185,6 @@
             </div>
           </div>
 
-          <!-- Segment information under selector -->
           <div class="section-indicator">
             <span class="icon" aria-hidden="true"><i class="fa-solid fa-circle-info"></i></span>
             <span class="label">{{ t('form.segmentInfo') }}</span>
@@ -257,7 +246,6 @@
                 </div>
               </div>
             </div>
-            <!-- Save button is available in the sidebar -->
           </form>
         </div>
 
@@ -292,25 +280,18 @@ const tireImages = { slick: tireSlickUrl, semiSlick: tireSemiSlickUrl, knobs: ti
 
 type TrackPoint = { lat: number; lon: number; ele: number; time?: string }
 
-// i18n setup
 const { t, locale } = useI18n()
 const currentLanguage = ref<MessageLanguages>('en')
-
-// Watch for locale changes to update currentLanguage
 watch(locale, (newLocale) => {
   currentLanguage.value = newLocale as MessageLanguages
 }, { immediate: true })
 
-// Language dropdown state
 const languageDropdownOpen = ref(false)
-
-// Language options with flags
 const languageOptions = {
   en: { flag: '🇺🇸', name: 'English' },
   fr: { flag: '🇫🇷', name: 'Français' }
 }
 
-// Close dropdown when clicking outside
 const languageDropdown = ref<HTMLElement | null>(null)
 
 function closeLanguageDropdown(event: MouseEvent) {
@@ -328,7 +309,6 @@ onUnmounted(() => {
 })
 
 const loaded = ref(false)
-const sidebarCollapsed = ref(false)
 const name = ref('')
 const tireDry = ref<Tire>('slick')
 const tireWet = ref<Tire>('slick')
@@ -345,20 +325,16 @@ const xMode = ref<'distance' | 'time'>('distance')
 
 const controlsCard = ref<HTMLElement | null>(null)
 
-// Language switching function
 function changeLanguage(lang: MessageLanguages) {
   currentLanguage.value = lang
   setLanguage(lang)
-  languageDropdownOpen.value = false // Close dropdown after selection
+  languageDropdownOpen.value = false
 }
-
-// Toggle dropdown function that prevents event bubbling
 function toggleLanguageDropdown(event: Event) {
   event.stopPropagation()
   languageDropdownOpen.value = !languageDropdownOpen.value
 }
 
-// Save button state and tooltip
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
 const saveDisabledTitle = computed(() => {
   if (!loaded.value) return t('tooltip.loadGpxFirst')
@@ -376,18 +352,14 @@ const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 const smoothedElevations = ref<number[]>([])
 
-// Slider functionality
 const isDragging = ref(false)
 const dragType = ref<'start' | 'end' | null>(null)
 const startSliderPosition = ref(0)
 const endSliderPosition = ref(100)
 
-// Overlap detection and offsetting
 const endSliderOffset = ref(0)
-const overlapThreshold = 20 // pixels - minimum distance before offsetting
-const constantOffset = 25 // pixels - constant offset amount when overlap detected
-
-// Slider bounds and index badge positions
+const overlapThreshold = 20
+const constantOffset = 25
 const startMin = computed(() => 0)
 const startMax = computed(() => Math.max(1, endIndex.value - 1))
 const endMin = computed(() => Math.min(points.value.length - 1, startIndex.value + 1))
@@ -399,64 +371,45 @@ function toPercent(value: number, min: number, max: number): number {
 const startPercent = computed(() => toPercent(startIndex.value, startMin.value, startMax.value))
 const endPercent = computed(() => toPercent(endIndex.value, endMin.value, endMax.value))
 
-// Overlap detection function
 function checkSliderOverlap() {
   if (!chart || !chartCanvas.value) return
 
   const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-  const sliderWidth = 20 // px - matches CSS width
-  const controlsExtension = 18 // px - how far controls extend from slider center
-
-  // Calculate pixel positions of slider centers
+  const sliderWidth = 20
+  const controlsExtension = 18
   const startPixelCenter = (startSliderPosition.value / 100) * containerRect.width + (sliderWidth / 2)
   const endPixelCenter = (endSliderPosition.value / 100) * containerRect.width + (sliderWidth / 2)
 
-  // Calculate the bounds of each slider's control area
   const startControlRight = startPixelCenter + controlsExtension
   const endControlLeft = endPixelCenter - controlsExtension
-
-  // Check if controls overlap
   const distance = endControlLeft - startControlRight
 
   if (distance < overlapThreshold) {
-    // Apply constant offset when overlap detected
     endSliderOffset.value = constantOffset
   } else {
     endSliderOffset.value = 0
   }
 }
 
-// Update slider positions when indices change
 watch([startIndex, endIndex], () => {
   if (points.value.length > 0 && chart && chartCanvas.value) {
-    // Get the data values
     const startX = getX(startIndex.value)
     const endX = getX(endIndex.value)
-
-    // Get the canvas and container dimensions
     const canvasRect = chart.canvas.getBoundingClientRect()
     const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
 
-    // Convert data values to pixel positions using Chart.js built-in method
     const startPixel = chart.scales.x.getPixelForValue(startX)
     const endPixel = chart.scales.x.getPixelForValue(endX)
-
-    // Calculate the offset of the canvas within the container
     const canvasOffsetLeft = canvasRect.left - containerRect.left
 
-    // Adjust pixel positions to be relative to the container
     const startPixelInContainer = startPixel + canvasOffsetLeft
     const endPixelInContainer = endPixel + canvasOffsetLeft
-
-    // Convert to percentage of container width and center the slider
-    const sliderWidth = 20 // px - matches CSS width
+    const sliderWidth = 20
     const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
     const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
 
     startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
     endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-
-    // Check for overlap after position update
     checkSliderOverlap()
   }
 })
@@ -514,8 +467,6 @@ function distanceAt(i: number): number { return cumulativeKm.value[i] ?? 0 }
 function pointAt(i: number): TrackPoint | undefined { return points.value[i] }
 function formatKm(km?: number): string { return km == null ? '-' : `${km.toFixed(2)} ${t('units.km')}` }
 function formatElevation(ele?: number): string { return ele == null ? '-' : `${Math.round(ele)} ${t('units.m')}` }
-function formatLatLon(p?: TrackPoint): string { return p ? `${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}` : '-' }
-function formatTime(t?: string): string { return t ? new Date(t).toLocaleString() : '-' }
 function formatElapsed(i: number): string {
   const t0 = points.value[0]?.time ? new Date(points.value[0].time as string).getTime() : undefined
   const ti = points.value[i]?.time ? new Date(points.value[i].time as string).getTime() : undefined
@@ -531,17 +482,7 @@ function formatElapsed(i: number): string {
   return `${hh}${mm}:${ss}`
 }
 
-function onStartInput(e: Event) {
-  const v = Number((e.target as HTMLInputElement).value)
-  startIndex.value = Math.min(v, endIndex.value - 1)
-}
 
-function onEndInput(e: Event) {
-  const v = Number((e.target as HTMLInputElement).value)
-  endIndex.value = Math.max(v, startIndex.value + 1)
-}
-
-// Move slider by single index
 function moveSlider(type: 'start' | 'end', direction: -1 | 1) {
   if (type === 'start') {
     const newIndex = startIndex.value + direction
@@ -556,7 +497,6 @@ function moveSlider(type: 'start' | 'end', direction: -1 | 1) {
   }
 }
 
-// Slider drag functionality
 function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
   event.preventDefault()
   isDragging.value = true
@@ -569,11 +509,8 @@ function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const x = clientX - rect.left
 
-    // Convert pixel position to data x value
     const dataX = chart.scales.x.getValueForPixel(x)
     if (dataX === undefined) return
-
-    // Find closest point index
     let closestIndex = 0
     let minDistance = Infinity
 
@@ -587,11 +524,9 @@ function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
     }
 
     if (type === 'start') {
-      // S slider cannot go beyond E slider
       const newIndex = Math.min(closestIndex, endIndex.value - 1)
       startIndex.value = Math.max(0, newIndex)
     } else {
-      // E slider cannot go before S slider
       const newIndex = Math.max(closestIndex, startIndex.value + 1)
       endIndex.value = Math.min(points.value.length - 1, newIndex)
     }
@@ -636,13 +571,10 @@ function renderMap() {
     if (!container) return
     map = L.map(container)
   }
-  // compute bounds
   const latlngs = points.value.map(p => [p.lat, p.lon]) as [number, number][]
   const bounds = L.latLngBounds(latlngs)
   map!.invalidateSize()
   map!.fitBounds(bounds, { padding: [20, 20] })
-
-  // base layer
   if (!baseLayer) {
     baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -651,12 +583,9 @@ function renderMap() {
     baseLayer.addTo(map!)
   }
 
-  // full path
   if (fullLine) fullLine.remove()
   fullLine = L.polyline(latlngs, { color: '#888', weight: 4 })
   fullLine.addTo(map!)
-
-  // selected segment
   updateSelectedPolyline()
 }
 
@@ -693,7 +622,6 @@ function renderChart() {
           tension: 0.1,
           parsing: false
         },
-        // Orange fill between selectors (under elevation line)
         {
           label: 'Selected Area',
           data: buildSelectedAreaData(),
@@ -738,7 +666,6 @@ function renderChart() {
         legend: { display: false },
         tooltip: {
           filter: function(tooltipItem) {
-            // Only show tooltip for the elevation line (first dataset)
             return tooltipItem.datasetIndex === 0;
           },
           callbacks: {
@@ -765,7 +692,6 @@ function renderChart() {
 
           if (dataX === undefined || dataY === undefined) return
 
-          // Find closest point index based on x position
           let closestIndex = 0
           let minDistance = Infinity
 
@@ -777,19 +703,14 @@ function renderChart() {
               closestIndex = i
             }
           }
-
-          // Determine which selector to update based on x position
           const startX = getX(startIndex.value)
           const endX = getX(endIndex.value)
 
           if (dataX < startX) {
-            // Click before start line - update start
             startIndex.value = Math.min(closestIndex, endIndex.value - 1)
           } else if (dataX > endX) {
-            // Click after end line - update end
             endIndex.value = Math.max(closestIndex, startIndex.value + 1)
           } else {
-            // Click between lines - determine which is closer
             const distToStart = Math.abs(dataX - startX)
             const distToEnd = Math.abs(dataX - endX)
 
@@ -804,37 +725,23 @@ function renderChart() {
     }
   })
 
-  // Update slider positions after chart is created
   nextTick(() => {
     if (points.value.length > 0 && chart && chartCanvas.value) {
-      // Get the data values
       const startX = getX(startIndex.value)
       const endX = getX(endIndex.value)
-
-      // Get the canvas and container dimensions
       const canvasRect = chart.canvas.getBoundingClientRect()
       const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-
-      // Convert data values to pixel positions using Chart.js built-in method
       const startPixel = chart.scales.x.getPixelForValue(startX)
       const endPixel = chart.scales.x.getPixelForValue(endX)
-
-      // Calculate the offset of the canvas within the container
       const canvasOffsetLeft = canvasRect.left - containerRect.left
-
-      // Adjust pixel positions to be relative to the container
       const startPixelInContainer = startPixel + canvasOffsetLeft
       const endPixelInContainer = endPixel + canvasOffsetLeft
-
-      // Convert to percentage of container width and center the slider
-      const sliderWidth = 20 // px - matches CSS width
+      const sliderWidth = 20
       const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
       const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
 
       startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
       endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-
-      // Check for overlap after initial position setting
       checkSliderOverlap()
     }
   })
@@ -853,8 +760,6 @@ function buildFullXYData(): { x: number, y: number }[] {
 }
 
 function buildSelectedAreaData(): { x: number, y: number }[] {
-  // Create a dataset that only contains the selected portion of the elevation data
-  // This will be used with fill: 'origin' to fill from the baseline to the line
   const selectedData = []
 
   for (let i = startIndex.value; i <= endIndex.value; i++) {
@@ -867,57 +772,7 @@ function buildSelectedAreaData(): { x: number, y: number }[] {
   return selectedData
 }
 
-function buildBeforeStartAreaData(): { x: number, y: number }[] {
-  const minY = Math.min(...smoothedElevations.value)
 
-  // Create area under the elevation line before the start selector
-  const beforeData = []
-
-  // First, add points along the elevation line from start to beginning
-  for (let i = startIndex.value; i >= 0; i--) {
-    beforeData.push({
-      x: getX(i),
-      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
-    })
-  }
-
-  // Then, add points along the bottom (min elevation) from beginning back to start
-  for (let i = 0; i <= startIndex.value; i++) {
-    beforeData.push({
-      x: getX(i),
-      y: minY
-    })
-  }
-
-  return beforeData
-}
-
-function buildAfterEndAreaData(): { x: number, y: number }[] {
-  const minY = Math.min(...smoothedElevations.value)
-
-  // Create area under the elevation line after the end selector
-  const afterData = []
-
-  // First, add points along the elevation line from end to the end
-  for (let i = endIndex.value; i < points.value.length; i++) {
-    afterData.push({
-      x: getX(i),
-      y: smoothedElevations.value[i] ?? points.value[i]?.ele ?? 0
-    })
-  }
-
-  // Then, add points along the bottom (min elevation) from end back to end
-  for (let i = points.value.length - 1; i >= endIndex.value; i--) {
-    afterData.push({
-      x: getX(i),
-      y: minY
-    })
-  }
-
-  return afterData
-}
-
-function xAxisTitle(): string { return xMode.value === 'distance' ? t('chart.distance') : t('chart.time') }
 function formatXTick(v: number): string {
   if (xMode.value === 'distance') return `${v.toFixed(1)} ${t('units.km')}`
   const sec = Math.max(0, Math.round(v))
@@ -961,15 +816,11 @@ watch([startIndex, endIndex], () => {
     endIndex.value = Math.min(points.value.length - 1, startIndex.value + 1)
   }
   updateSelectedPolyline()
-  // Update chart area data
   if (chart) {
-    // Update area datasets
     // @ts-ignore
     chart.data.datasets[1].data = buildSelectedAreaData()
-
     chart.update()
   }
-  // Fit map to selected segment
   if (map && points.value.length > 1) {
     const segLatLngs = points.value.slice(startIndex.value, endIndex.value + 1).map(p => [p.lat, p.lon]) as [number, number][]
     const segBounds = L.latLngBounds(segLatLngs)
@@ -980,14 +831,10 @@ watch([startIndex, endIndex], () => {
 watch(xMode, () => {
   if (!chart) return
   const fullData = buildFullXYData()
-
-  // Update all datasets
   // @ts-ignore
   chart.data.datasets[0].data = fullData.map(d => ({ x: d.x, y: d.y }))
   // @ts-ignore
   chart.data.datasets[1].data = buildSelectedAreaData()
-
-  // Update x-axis configuration
   // @ts-ignore
   chart.options.scales.x.ticks.callback = (v) => formatXTick(Number(v))
   // @ts-ignore
@@ -997,47 +844,28 @@ watch(xMode, () => {
 
   chart.update()
 
-  // Update slider positions after chart update
   nextTick(() => {
     if (points.value.length > 0 && chart && chartCanvas.value) {
-      // Get the data values
       const startX = getX(startIndex.value)
       const endX = getX(endIndex.value)
-
-      // Get the canvas and container dimensions
       const canvasRect = chart.canvas.getBoundingClientRect()
       const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-
-      // Convert data values to pixel positions using Chart.js built-in method
       const startPixel = chart.scales.x.getPixelForValue(startX)
       const endPixel = chart.scales.x.getPixelForValue(endX)
-
-      // Calculate the offset of the canvas within the container
       const canvasOffsetLeft = canvasRect.left - containerRect.left
-
-      // Adjust pixel positions to be relative to the container
       const startPixelInContainer = startPixel + canvasOffsetLeft
       const endPixelInContainer = endPixel + canvasOffsetLeft
-
-      // Convert to percentage of container width and center the slider
-      const sliderWidth = 20 // px - matches CSS width
+      const sliderWidth = 20
       const startPixelCentered = startPixelInContainer - (sliderWidth / 2)
       const endPixelCentered = endPixelInContainer - (sliderWidth / 2)
 
       startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
       endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-
-      // Check for overlap after xMode position update
       checkSliderOverlap()
     }
   })
 })
 
-watch(sidebarCollapsed, () => {
-  if (map) {
-    setTimeout(() => map!.invalidateSize(), 220)
-  }
-})
 
 watch(loaded, async () => {
   await nextTick()
@@ -1046,7 +874,6 @@ watch(loaded, async () => {
 onMounted(() => {
   const onResize = () => {
     if (map) {
-      // let layout settle before resizing the map canvas
       setTimeout(() => map!.invalidateSize(), 0)
     }
   }
@@ -1097,7 +924,6 @@ async function onSubmit() {
       throw new Error(detail || 'Failed to create segment')
     }
 
-    // Reset for next segment
     name.value = ''
     tireDry.value = 'slick'
     tireWet.value = 'slick'
@@ -1116,7 +942,6 @@ async function onSubmit() {
 </script>
 
 <style>
-/* Local brand variables to support the standalone editor entry */
 :root {
   --brand-50: #ffe6d5ff;
   --brand-100: #ffccaaff;
@@ -1129,8 +954,6 @@ async function onSubmit() {
   --brand-primary: var(--brand-500);
   --brand-primary-hover: #e65c00;
   --brand-accent: var(--brand-300);
-
-  /* Blue colors for end segment */
   --blue-50: #eff6ff;
   --blue-100: #dbeafe;
   --blue-200: #bfdbfe;
@@ -1147,24 +970,11 @@ async function onSubmit() {
 .content { flex: 1 1 auto; padding: 1rem 1.5rem; width: 100%; box-sizing: border-box; overflow-x: hidden; }
 .page { max-width: 1000px; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-x: hidden; }
 .main-col { display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; overflow: hidden; }
-.actions-col { display: flex; flex-direction: column; gap: 0.75rem; position: sticky; top: 12px; align-self: start; height: fit-content; width: var(--sidebar-w); }
 
 .sidebar { --sidebar-w: 230px; width: var(--sidebar-w); background: transparent; border-right: none; padding: 0; margin: 0; box-sizing: border-box; position: fixed; top: var(--topbar-h, 48px); left: calc(50% - 500px - var(--sidebar-w)); display: flex; flex-direction: column; height: calc(100vh - var(--topbar-h, 48px)); z-index: 100; }
 .sidebar-scroll { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; max-height: calc(100vh - var(--topbar-h, 48px)); overflow-y: auto; overflow-x: hidden; padding: 1rem; }
 .sidebar .card { margin: 0; width: 100%; box-sizing: border-box; }
-.sidebar .group-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; text-transform: none; letter-spacing: 0; }
-.sidebar .menu-btn { width: 100%; justify-content: center; padding: 0.5rem 0; gap: 0.5rem; }
-.sidebar-header { display: none; }
-.brand { display: none; }
-.sidebar-group { display: flex; flex-direction: column; gap: 0.25rem; }
-.group-title { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin: 0.25rem 0; }
-.menu-btn { display: flex; align-items: center; gap: 0.75rem; border: none; background: transparent; padding: 0.5rem; border-radius: 8px; cursor: pointer; color: #111827; text-align: left; }
-.menu-btn:hover { background: #f3f4f6; }
-.menu-btn:disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
-.menu-btn .icon { width: 24px; text-align: center; }
-.menu-btn .label { white-space: nowrap; }
 
-/* Unified sidebar menu */
 .menu-card { padding: 0.5rem 0; position: sticky; top: 0; background: #ffffff; z-index: 10; }
 .menu-section { margin-top: 0.5rem; }
 .menu-section + .menu-section { margin-top: 0.25rem; padding-top: 0.25rem; border-top: 1px solid #f1f5f9; }
@@ -1180,12 +990,10 @@ async function onSubmit() {
 .menu-item.active { background: var(--brand-50); color: var(--brand-600); font-weight: 500; }
 .menu-item.active:hover { background: var(--brand-100); }
 
-/* Language Dropdown Styles (General) */
 .language-dropdown {
   position: relative;
 }
 
-/* Shared Language Dropdown Elements */
 .language-flag {
   font-size: 1.1em;
   line-height: 1;
@@ -1260,9 +1068,6 @@ async function onSubmit() {
   color: var(--brand-500);
 }
 
-.workspace { display: contents; }
-.workspace-left { display: contents; }
-.workspace-actions { display: contents; }
 .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); padding: 0.75rem; width: 100%; box-sizing: border-box; }
 .card-map { padding: 0; overflow: hidden; }
 .card-elevation { padding: 0.75rem; overflow: visible; margin-top: 1rem; margin-bottom: 1rem; }
@@ -1279,33 +1084,18 @@ async function onSubmit() {
 .badge { font-size: 12px; padding: 2px 10px; border-radius: 999px; font-weight: 600; }
 .badge.start { background: var(--brand-500, #ff6600); color: #ffffff; }
 .badge.end { background: var(--brand-500, #ff6600); color: #ffffff; }
-.slider-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 0.5rem; align-items: center; margin-top: 0.25rem; margin-bottom: 0.5rem; }
-.btn { border: none; background: #e5e7eb; border-radius: 6px; height: 32px; cursor: pointer; }
-.btn:hover { background: #d1d5db; }
-.range { width: 100%; }
-.range-wrap { position: relative; width: 100%; }
-.index-badge { position: absolute; bottom: -18px; transform: translateX(-50%); background: #111827; color: #ffffff; font-size: 11px; line-height: 1; padding: 2px 6px; border-radius: 8px; white-space: nowrap; max-width: 40px; overflow: hidden; text-overflow: ellipsis; }
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem 0.5rem; }
-.info { display: flex; align-items: center; gap: 0.5rem; color: #374151; user-select: none; cursor: default; }
-.info .icon { width: 20px; text-align: center; }
-.info .value { font-variant-numeric: tabular-nums; }
-.info.gps { grid-column: 1 / -1; }
-.metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.25rem; }
 .metric { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
 .metric .icon { width: 18px; text-align: center; }
 .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.25rem 0.5rem; align-items: center; margin-bottom: 0.75rem; width: 100%; box-sizing: border-box; }
-.gps-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin: 0.25rem 0; align-items: center; }
 .gps-title { display: inline-flex; align-items: center; gap: 0.35rem; color: #374151; font-weight: 500; }
 .gps-title .icon { width: 18px; text-align: center; }
 .gps-col { display: flex; align-items: center; gap: 0.4rem; color: #374151; }
 .gps-col .label { font-size: 12px; color: #6b7280; }
 .gps-col .value { font-variant-numeric: tabular-nums; }
-.workspace-right { display: flex; flex-direction: column; gap: 1rem; }
 .chart-wrapper { width: 100%; overflow: visible; margin-bottom: 20px; }
 .chart-container { position: relative; width: 100%; overflow: visible; }
 .chart { width: 100%; height: 200px; max-height: 200px; cursor: crosshair; }
 
-/* Vertical sliders */
 .vertical-slider {
   position: absolute;
   top: 0;
@@ -1449,17 +1239,9 @@ async function onSubmit() {
 .req { color: #dc2626; }
 .section-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 1rem; color: #374151; padding: 0 0.25rem; margin-top: 0.5rem; }
 .section-indicator .icon { width: 18px; text-align: center; }
-.save-btn { display: none; }
-.action-card { position: static; }
-.action-title { margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 700; color: #111827; text-align: center; }
-.save-side { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: var(--brand-primary, var(--brand-500, #ff6600)); color: #ffffff; border: none; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 500; cursor: pointer; }
-.save-side:hover { background: var(--brand-primary-hover, #e65c00); }
-.save-side:disabled { background: rgba(255, 102, 0, 0.1); color: #7f8286; cursor: not-allowed; border: 1px solid #e5e7eb; }
-.info-dot { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 999px; background: #f3f4f6; color: #374151; font-size: 12px; user-select: none; }
 .empty { padding: 2rem; text-align: center; color: #666; }
 .message { margin-top: 1rem; }
 
-/* Responsive breakpoints */
 @media (max-width: 1200px) {
   .topbar-inner {
     max-width: 100%;
@@ -1468,8 +1250,6 @@ async function onSubmit() {
 }
 
 @media (max-width: 960px) {
-  .workspace { grid-template-columns: 1fr; }
-
   .nav-left {
     left: calc(50% - 500px - 172px + 1rem);
     gap: 1rem;
@@ -1479,15 +1259,6 @@ async function onSubmit() {
     width: 172px;
   }
 
-  .nav-menu {
-    gap: 0.25rem;
-  }
-
-  .nav-item {
-    padding: 0.4rem 0.5rem;
-    font-size: 0.8rem;
-  }
-
   .nav .language-dropdown-trigger.navbar-trigger {
     padding: 0.4rem 0.6rem;
     font-size: 0.8rem;
@@ -1495,10 +1266,6 @@ async function onSubmit() {
 }
 
 @media (max-width: 768px) {
-  .nav-menu {
-    display: none; /* Hide menu items on mobile, keep only language dropdown */
-  }
-
   .nav-left {
     left: calc(50% - 500px - 138px + 1rem);
   }
@@ -1531,7 +1298,6 @@ async function onSubmit() {
   }
 }
 
-/* Sticky top navigation bar */
 :root { --topbar-h: 48px; }
 .topbar {
   position: sticky;
@@ -1585,39 +1351,7 @@ async function onSubmit() {
   flex: 1;
 }
 
-/* Navigation Menu Styles */
-.nav-menu {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
-  justify-content: flex-start;
-}
 
-.nav-item {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.5rem 0.75rem;
-  color: #374151;
-  text-decoration: none;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.nav-item:hover {
-  color: var(--brand-600);
-  background: rgba(255, 102, 0, 0.05);
-}
-
-.nav-item:focus {
-  outline: 2px solid var(--brand-500);
-  outline-offset: 2px;
-}
-
-/* Navbar Language Dropdown Styles */
 .nav .language-dropdown {
   position: relative;
 }
@@ -1676,7 +1410,6 @@ async function onSubmit() {
   transform: translateY(0);
 }
 
-/* Blue styling for end segment elements */
 .end-slider .slider-handle {
   background: var(--blue-500);
 }
@@ -1698,7 +1431,6 @@ async function onSubmit() {
   color: #ffffff;
 }
 
-/* Blue styling for wet tire section */
 .tire-group:nth-child(3) .tire-group-header .icon {
   color: var(--blue-500);
 }
