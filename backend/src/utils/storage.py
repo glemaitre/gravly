@@ -221,19 +221,25 @@ class S3Manager:
 class LocalStorageManager:
     """Local filesystem storage manager that mimics S3 API."""
 
-    def __init__(self, storage_root: str | None = None, base_url: str | None = None):
+    def __init__(
+        self,
+        storage_root: str = "../scratch/local_storage",
+        base_url: str = "http://localhost:8000/storage",
+    ):
         """Initialize local storage manager.
 
         Parameters
         ----------
         storage_root : Optional[str]
-            Root directory for local storage. If None, defaults to "../scratch/local_storage".
+            Root directory for local storage. If None, defaults to
+            `../scratch/local_storage`.
         base_url : Optional[str]
-            Base URL for serving files. If None, defaults to "http://localhost:8000/storage".
+            Base URL for serving files. If None, defaults to
+            http://localhost:8000/storage.
         """
-        self.storage_root = Path(storage_root or "../scratch/local_storage")
+        self.storage_root = Path(storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
-        self.base_url = base_url or "http://localhost:8000/storage"
+        self.base_url = base_url
 
         logger.info(f"Local storage manager initialized with root: {self.storage_root}")
 

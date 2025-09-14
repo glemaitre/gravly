@@ -54,11 +54,15 @@ async def lifespan(app: FastAPI):
                 "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
                 "aws_region": os.getenv("AWS_REGION", "us-east-1"),
             }
+            # Filter out None values for S3
+            config = {k: v for k, v in config.items() if v is not None}
         else:
             config = {
                 "storage_root": os.getenv("LOCAL_STORAGE_ROOT"),
                 "base_url": os.getenv("LOCAL_STORAGE_BASE_URL"),
             }
+            # Filter out None values for local storage
+            config = {k: v for k, v in config.items() if v is not None}
 
         storage_manager = get_storage_manager(storage_type, config)
         logger.info(f"Storage manager initialized successfully (type: {storage_type})")
