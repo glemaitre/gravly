@@ -6,7 +6,8 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 - **Interactive Map Search**: Search for cycling routes using an interactive map with OpenStreetMap and cycling-specific layers
 - **Route Cards**: Browse routes with mini-map previews and key statistics (distance, elevation gain)
-- **Detailed Route Viewer**: View complete routes with synchronized map and elevation profile
+- **Detailed Route Viewer**: View complete routes with synchronized map and
+  elevation profile
 - **Playback Mode**: Animate through routes with synchronized map and elevation chart
 - **Responsive Design**: Works on desktop and mobile devices
 
@@ -68,9 +69,13 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 ## Environment Configuration
 
-This project uses environment-specific `.env` files to manage configuration for different deployment environments. The backend automatically loads environment variables from `.env` files based on the `ENVIRONMENT` variable.
+This project uses environment-specific `.env` files to manage configuration for
+different deployment environments. The backend automatically loads environment variables
+from `.env` files based on the `ENVIRONMENT` variable.
 
-The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, making it easy to switch between different environments. You can also override the environment variable from the shell when needed.
+The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, making it
+easy to switch between different environments. You can also override the environment
+variable from the shell when needed.
 
 ### Setup Environment Files
 
@@ -86,7 +91,7 @@ The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, ma
    ```bash
    # For local development, edit .env/local and update:
    DB_PASSWORD=your_secure_password_here
-   
+
    # Optionally customize other database settings:
    # DB_HOST=localhost
    # DB_PORT=5432
@@ -94,7 +99,9 @@ The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, ma
    # DB_USER=postgres
    ```
 
-3. **Never commit actual `.env` files** - they contain sensitive information and are already in `.gitignore`. Only the example files in the `.env/` folder are tracked in git.
+3. **Never commit actual `.env` files** - they contain sensitive information and are
+   already in `.gitignore`. Only the example files in the `.env/` folder are tracked in
+   git.
 
 ### Environment Variables
 
@@ -137,14 +144,16 @@ The application automatically constructs the PostgreSQL connection string from t
    pixi run pg-status
    ```
 
-**Note**: The database will be initialized in a `postgres_data` directory in your project root. This directory should be added to `.gitignore` (which it already is).
+**Note**: The database will be initialized in a `postgres_data` directory in your
+project root. This directory should be added to `.gitignore` (which it already is).
 
 ### Local Storage Configuration
 
 When using local storage, you can configure:
 
 - `LOCAL_STORAGE_ROOT` - Root directory for storing files (default: `../scratch/local_storage`)
-- `LOCAL_STORAGE_BASE_URL` - Base URL for serving files (default: `http://localhost:8000/storage`)
+- `LOCAL_STORAGE_BASE_URL` - Base URL for serving files (default:
+  `http://localhost:8000/storage`)
 
 ### AWS S3 Configuration
 
@@ -194,7 +203,8 @@ ENVIRONMENT=production uvicorn backend.src.main:app --reload --host 0.0.0.0 --po
 ```
 
 #### Override Environment from Shell
-You can also override the environment variable from the shell, which will take precedence over the pixi task configuration:
+You can also override the environment variable from the shell, which will take
+precedence over the pixi task configuration:
 
 ```bash
 # Override to use s3 environment even when running local task
@@ -216,8 +226,10 @@ Files are accessed via presigned URLs when using S3 storage.
 
 ### Development Workflow
 
-1. **Local Development**: Use `STORAGE_TYPE=local` for development without needing AWS credentials
-2. **Testing**: Tests use moto to mock S3, so they work regardless of storage configuration
+1. **Local Development**: Use `STORAGE_TYPE=local` for development without needing AWS
+   credentials
+2. **Testing**: Tests use moto to mock S3, so they work regardless of storage
+   configuration
 3. **Production**: Use `STORAGE_TYPE=s3` with proper AWS credentials
 
 ### File Structure (Local Storage)
@@ -312,9 +324,12 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 
 ## Mock Data
 
-The application includes sample GPX files in the `mock_gpx/` directory for testing. These are automatically loaded into Elasticsearch when you run the setup script.
+The application includes sample GPX files in the `mock_gpx/` directory for testing.
+These are automatically loaded into Elasticsearch when you run the setup script.
 
-For S3-based loading at startup, configure env vars `S3_BUCKET` and optional `S3_PREFIX`. Elasticsearch persists indexed data; consider loading mock data only if the index is empty.
+For S3-based loading at startup, configure env vars `S3_BUCKET` and optional
+`S3_PREFIX`. Elasticsearch persists indexed data; consider loading mock data only if the
+index is empty.
 
 ## Testing
 
@@ -331,7 +346,8 @@ GitHub Actions run tests on push/PR to `main` using `prefix-dev/setup-pixi`:
 - Backend: `.github/workflows/backend-tests.yml`
 - Frontend: `.github/workflows/frontend-tests.yml`
 
-Workflows activate the Pixi environment and run the Pixi tasks, posting coverage summaries.
+Workflows activate the Pixi environment and run the Pixi tasks, posting coverage
+summaries.
 
 ## Future Enhancements
 
