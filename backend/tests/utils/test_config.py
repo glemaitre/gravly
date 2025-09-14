@@ -1,7 +1,6 @@
 """Tests for the config module."""
 
 import os
-from unittest.mock import patch
 
 import pytest
 
@@ -127,7 +126,6 @@ DB_USER=postgres
 DB_PASSWORD=password""")
 
     # Clear any existing environment variables that might interfere
-    import os
 
     for key in list(os.environ.keys()):
         if key.startswith(("AWS_", "STORAGE_", "DB_")):
