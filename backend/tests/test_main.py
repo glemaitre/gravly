@@ -431,6 +431,92 @@ def test_create_segment_no_temp_directory(client):
     assert "Temporary directory not initialized" in response.json()["detail"]
 
 
+@patch(
+    "src.main.generate_gpx_segment", side_effect=Exception("Segment generation failed")
+)
+def test_create_segment_generation_failure(
+    mock_generate, client, sample_gpx_file, tmp_path
+):
+    """Test segment creation when GPX segment generation fails."""
+    # First upload a GPX file
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    file_id = upload_response.json()["file_id"]
+
+    # Mock the destination directory to use tmp_path
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Try to create segment - should fail during generation
+        response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "100",
+            },
+        )
+
+    assert response.status_code == 500
+    assert "Failed to process GPX file" in response.json()["detail"]
+    assert "Segment generation failed" in response.json()["detail"]
+
+
+@patch(
+    "src.main.generate_gpx_segment", side_effect=ValueError("Invalid segment indices")
+)
+def test_create_segment_invalid_indices_generation(
+    mock_generate, client, sample_gpx_file, tmp_path
+):
+    """Test segment creation when generation fails due to invalid indices."""
+    # First upload a GPX file
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    file_id = upload_response.json()["file_id"]
+
+    # Mock the destination directory to use tmp_path
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Try to create segment - should fail during generation
+        response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "100",
+            },
+        )
+
+    assert response.status_code == 500
+    assert "Failed to process GPX file" in response.json()["detail"]
+    assert "Invalid segment indices" in response.json()["detail"]
+
+
 def test_cors_headers(client):
     """Test that CORS headers are properly set."""
     response = client.options("/api/upload-gpx")

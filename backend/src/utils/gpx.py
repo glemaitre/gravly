@@ -15,12 +15,6 @@ from pydantic import BaseModel
 from .math import haversine_distance
 
 
-class GPXProcessingError(Exception):
-    """Custom exception for GPX processing errors."""
-
-    pass
-
-
 class GPXPoint(BaseModel):
     latitude: float
     longitude: float

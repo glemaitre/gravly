@@ -18,7 +18,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from .utils.gpx import (
     GPXData,
-    GPXProcessingError,
     extract_from_gpx_file,
     generate_gpx_segment,
 )
@@ -227,11 +226,6 @@ async def create_segment(
         processed_file_path = str(dest_dir / f"{file_id}.gpx")
         logger.info(f"Successfully created segment file: {processed_file_path}")
 
-    except GPXProcessingError as gpx_e:
-        logger.error(f"GPX processing failed for segment '{name}': {str(gpx_e)}")
-        raise HTTPException(
-            status_code=422, detail=f"GPX processing failed: {str(gpx_e)}"
-        )
     except Exception as e:
         logger.error(f"Failed to process GPX file for segment '{name}': {str(e)}")
         raise HTTPException(
