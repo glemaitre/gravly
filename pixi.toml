@@ -44,14 +44,14 @@ frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["front
 install-pre-commit = { cmd = "pre-commit install" }
 pre-commit = { cmd = "pre-commit run --all-files" }
 pre-commit-update = { cmd = "pre-commit autoupdate" }
-lint-backend = { cmd = "ruff check backend/src/ backend/tests/ scripts/ --fix" }
-lint-frontend = { cmd = "npm run lint", cwd = "frontend" }
-format-backend = { cmd = "ruff format backend/src/ backend/tests/ scripts/" }
-format-frontend = { cmd = "npm run format", cwd = "frontend" }
+lint-backend = { cmd = "ruff check backend/src/ backend/tests/ --fix" }
+lint-frontend = { cmd = "npm run lint", cwd = "frontend", depends-on = ["frontend-install"] }
+format-backend = { cmd = "ruff format backend/src/ backend/tests/ " }
+format-frontend = { cmd = "npm run format", cwd = "frontend", depends-on = ["frontend-install"] }
 lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
 format-all = { depends-on = ["format-backend", "format-frontend"] }
 type-check = { depends-on = ["type-check-frontend"] }
-type-check-frontend = { cmd = "npm run type-check", cwd = "frontend" }
+type-check-frontend = { cmd = "npm run type-check", cwd = "frontend", depends-on = ["frontend-install"] }
 
 [feature.tests.tasks]
 test-backend = { cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
