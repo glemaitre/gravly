@@ -76,7 +76,7 @@ def test_generate_gpx_segment(tmp_dir):
 
     assert isinstance(file_id, str)
     assert len(file_id) > 0  # UUID should not be empty
-    
+
     assert isinstance(output_file_path, Path)
     assert output_file_path.exists()
 

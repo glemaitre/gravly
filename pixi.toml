@@ -13,25 +13,30 @@ gpxpy = "*"
 python-multipart = "*"
 sqlalchemy = "*"
 asyncpg = "*"
-ruff = "*" # Python linter and formatter
-pre-commit = "*" # Git hooks framework
-pytest = "*"
-pytest-cov = "*"
+boto3 = "*"
+pre-commit = "*"
 
 [feature.dev.dependencies]
 ipykernel = "*"
 ipython = "*"
 jupyterlab = "*"
 
+[feature.lint.dependencies]
+ruff = "*" # Python linter and formatter
+pre-commit = "*" # Git hooks framework
+
+[feature.tests.dependencies]
+pytest = "*"
+pytest-cov = "*"
+moto = "*"
+
 [tasks]
 start-backend = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
 start-frontend = { cmd = "npm run dev", cwd = "frontend", depends-on = ["frontend-install"] }
 frontend-install = { cmd = "npm install", cwd = "frontend" }
 frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
-lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
-format-all = { depends-on = ["format-backend", "format-frontend"] }
-type-check = { depends-on = ["type-check-frontend"] }
-type-check-frontend = { cmd = "npm run type-check", cwd = "frontend" }
+
+[feature.lint.tasks]
 install-pre-commit = { cmd = "pre-commit install" }
 pre-commit = { cmd = "pre-commit run --all-files" }
 pre-commit-update = { cmd = "pre-commit autoupdate" }
@@ -39,6 +44,12 @@ lint-backend = { cmd = "ruff check backend/src/ backend/tests/ scripts/ --fix" }
 lint-frontend = { cmd = "npm run lint", cwd = "frontend" }
 format-backend = { cmd = "ruff format backend/src/ backend/tests/ scripts/" }
 format-frontend = { cmd = "npm run format", cwd = "frontend" }
+lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
+format-all = { depends-on = ["format-backend", "format-frontend"] }
+type-check = { depends-on = ["type-check-frontend"] }
+type-check-frontend = { cmd = "npm run type-check", cwd = "frontend" }
+
+[feature.tests.tasks]
 test-backend = { cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
 test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
 
@@ -49,4 +60,4 @@ pg-down = { cmd = "docker rm -f cycling-pg" }
 env-dev = { cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling" }
 
 [environments]
-dev = { features = ["dev"] }
+dev = { features = ["dev", "tests", "lint"] }

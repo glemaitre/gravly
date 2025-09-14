@@ -9,7 +9,6 @@ import boto3
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
-
 from src.main import app
 from src.utils.gpx import generate_gpx_segment
 from src.utils.s3 import S3Manager, cleanup_local_file
@@ -39,11 +38,14 @@ def mock_bucket_name():
 @pytest.fixture
 def mock_s3_environment(mock_bucket_name):
     """Set up mock S3 environment with environment variables."""
-    with patch.dict(os.environ, {
-        "AWS_S3_BUCKET": mock_bucket_name,
-        "AWS_ACCESS_KEY_ID": "test-key",
-        "AWS_SECRET_ACCESS_KEY": "test-secret",
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "AWS_S3_BUCKET": mock_bucket_name,
+            "AWS_ACCESS_KEY_ID": "test-key",
+            "AWS_SECRET_ACCESS_KEY": "test-secret",
+        },
+    ):
         yield mock_bucket_name
 
 
@@ -115,10 +117,10 @@ def test_upload_gpx_no_file(client):
 def test_create_segment_success(client, sample_gpx_file, tmp_path):
     """Test successful segment creation."""
     import boto3
-    
+
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
-    
+
     with open(sample_gpx_file, "rb") as f:
         upload_response = client.post(
             "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
@@ -263,10 +265,10 @@ def test_create_segment_invalid_indices(client, sample_gpx_file, tmp_path):
 def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_path):
     """Test segment creation with commentary and media."""
     import boto3
-    
+
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
-    
+
     with open(sample_gpx_file, "rb") as f:
         upload_response = client.post(
             "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
@@ -310,10 +312,10 @@ def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_p
 def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
     """Test creating multiple segments from the same uploaded file."""
     import boto3
-    
+
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
-    
+
     with open(sample_gpx_file, "rb") as f:
         upload_response = client.post(
             "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
@@ -549,11 +551,11 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
-        
+
         s3_manager = S3Manager()
-        
+
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
-        
+
         file_id, segment_file_path = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
@@ -561,18 +563,18 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
             segment_name="Test Segment",
             output_dir=frontend_temp_dir,
         )
-        
+
         assert segment_file_path.exists()
         assert file_id is not None
-        
+
         s3_key = s3_manager.upload_gpx_segment(
             local_file_path=segment_file_path,
             file_id=file_id,
             prefix="gpx-segments",
         )
-        
+
         assert s3_key == f"gpx-segments/{file_id}.gpx"
-        
+
         response = s3_client.head_object(
             Bucket=mock_s3_environment,
             Key=s3_key,
@@ -580,7 +582,7 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
         assert response["ContentType"] == "application/gpx+xml"
         assert response["Metadata"]["file-id"] == file_id
         assert response["Metadata"]["file-type"] == "gpx-segment"
-        
+
         cleanup_success = cleanup_local_file(segment_file_path)
         assert cleanup_success is True
         assert not segment_file_path.exists()
@@ -596,9 +598,9 @@ def test_s3_upload_failure_cleanup(mock_s3_environment, sample_gpx_file, tmp_pat
             aws_access_key_id="test-key",
             aws_secret_access_key="test-secret",
         )
-        
+
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
-        
+
         file_id, segment_file_path = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
@@ -606,74 +608,78 @@ def test_s3_upload_failure_cleanup(mock_s3_environment, sample_gpx_file, tmp_pat
             segment_name="Test Segment",
             output_dir=frontend_temp_dir,
         )
-        
+
         assert segment_file_path.exists()
-        
+
         with pytest.raises(Exception):
             s3_manager.upload_gpx_segment(
                 local_file_path=segment_file_path,
                 file_id=file_id,
                 prefix="gpx-segments",
             )
-        
+
         cleanup_success = cleanup_local_file(segment_file_path)
         assert cleanup_success is True
         assert not segment_file_path.exists()
 
 
-def test_multiple_segments_from_same_file(mock_s3_environment, sample_gpx_file, tmp_path):
+def test_multiple_segments_from_same_file(
+    mock_s3_environment, sample_gpx_file, tmp_path
+):
     """Test creating multiple segments from the same original file."""
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
-        
+
         s3_manager = S3Manager()
-        
+
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
-        
+
         segments = []
         for i, (start, end) in enumerate([(0, 1), (1, 3), (3, 4)]):
             file_id, segment_file_path = generate_gpx_segment(
                 input_file_path=sample_gpx_file,
                 start_index=start,
                 end_index=end,
-                segment_name=f"Segment {i+1}",
+                segment_name=f"Segment {i + 1}",
                 output_dir=frontend_temp_dir,
             )
-            
+
             s3_key = s3_manager.upload_gpx_segment(
                 local_file_path=segment_file_path,
                 file_id=file_id,
                 prefix="gpx-segments",
             )
-            
+
             segments.append((file_id, s3_key))
-            
+
             cleanup_local_file(segment_file_path)
-        
+
         for file_id, s3_key in segments:
             response = s3_client.head_object(
                 Bucket=mock_s3_environment,
                 Key=s3_key,
             )
             assert response["Metadata"]["file-id"] == file_id
-        
+
         for file_path in frontend_temp_dir.glob("*.gpx"):
             assert False, f"Local file should have been cleaned up: {file_path}"
 
 
-def test_frontend_temp_directory_creation(mock_s3_environment, sample_gpx_file, tmp_path):
+def test_frontend_temp_directory_creation(
+    mock_s3_environment, sample_gpx_file, tmp_path
+):
     """Test that frontend temp directory is created if it doesn't exist."""
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
-        
+
         s3_manager = S3Manager()
-        
+
         frontend_temp_dir = tmp_path / "nonexistent" / "temp_gpx_segments"
-        
+
         assert not frontend_temp_dir.exists()
-        
+
         file_id, segment_file_path = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
@@ -681,10 +687,10 @@ def test_frontend_temp_directory_creation(mock_s3_environment, sample_gpx_file, 
             segment_name="Test Segment",
             output_dir=frontend_temp_dir,
         )
-        
+
         assert frontend_temp_dir.exists()
         assert segment_file_path.exists()
-        
+
         cleanup_local_file(segment_file_path)
 
 
@@ -693,19 +699,19 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket="test-bucket")
-        
+
         with open(sample_gpx_file, "rb") as f:
             upload_response = client.post(
                 "/api/upload-gpx",
                 files={"file": ("test.gpx", f, "application/gpx+xml")},
             )
-        
+
         if upload_response.status_code == 200:
             upload_data = upload_response.json()
             file_id = upload_data["file_id"]
         else:
             return
-        
+
         segment_response = client.post(
             "/api/segments",
             data={
@@ -717,7 +723,7 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
                 "end_index": 2,
             },
         )
-        
+
         # Note: This test demonstrates the expected flow
         # The segment creation might fail due to S3 manager initialization
         # but we've already tested the core functionality in other tests
@@ -731,6 +737,6 @@ def test_s3_manager_initialization_failure_handling(client):
         # This should cause S3 manager initialization to fail
         response = client.get("/")
         assert response.status_code == 200
-        
+
         # The app should still be running even if S3 is not configured
         # This tests the graceful degradation in the lifespan function

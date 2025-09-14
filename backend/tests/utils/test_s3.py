@@ -12,9 +12,7 @@ from unittest.mock import patch
 
 import boto3
 import pytest
-from botocore.exceptions import ClientError
 from moto import mock_aws
-
 from src.utils.s3 import S3Manager, cleanup_local_file
 
 
@@ -31,7 +29,7 @@ def mock_s3_manager(mock_bucket_name):
         # Create a mock S3 bucket
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_bucket_name)
-        
+
         # Initialize S3Manager with test credentials
         manager = S3Manager(
             bucket_name=mock_bucket_name,
@@ -53,14 +51,17 @@ def real_gpx_file():
 def test_s3_manager_initialization_with_env_vars(mock_bucket_name):
     """Test S3Manager initialization using environment variables."""
     with mock_aws():
-        with patch.dict(os.environ, {
-            "AWS_S3_BUCKET": mock_bucket_name,
-            "AWS_ACCESS_KEY_ID": "test-key",
-            "AWS_SECRET_ACCESS_KEY": "test-secret",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "AWS_S3_BUCKET": mock_bucket_name,
+                "AWS_ACCESS_KEY_ID": "test-key",
+                "AWS_SECRET_ACCESS_KEY": "test-secret",
+            },
+        ):
             s3_client = boto3.client("s3", region_name="us-east-1")
             s3_client.create_bucket(Bucket=mock_bucket_name)
-            
+
             manager = S3Manager()
             assert manager.bucket_name == mock_bucket_name
             assert manager.aws_region == "us-east-1"
@@ -77,16 +78,16 @@ def test_upload_gpx_segment_success(mock_s3_manager, real_gpx_file):
     """Test successful GPX segment upload using real GPX file."""
     file_id = "test-segment-123"
     prefix = "gpx-segments"
-    
+
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
         prefix=prefix,
     )
-    
+
     expected_key = f"{prefix}/{file_id}.gpx"
     assert s3_key == expected_key
-    
+
     # Verify file exists in S3
     s3_client = boto3.client("s3", region_name="us-east-1")
     response = s3_client.head_object(
@@ -101,7 +102,7 @@ def test_upload_gpx_segment_success(mock_s3_manager, real_gpx_file):
 def test_upload_gpx_segment_file_not_found(mock_s3_manager):
     """Test upload fails when local file doesn't exist."""
     non_existent_file = Path("/non/existent/file.gpx")
-    
+
     with pytest.raises(FileNotFoundError):
         mock_s3_manager.upload_gpx_segment(
             local_file_path=non_existent_file,
@@ -113,13 +114,13 @@ def test_upload_gpx_segment_with_custom_prefix(mock_s3_manager, real_gpx_file):
     """Test upload with custom prefix using real GPX file."""
     file_id = "test-segment-456"
     custom_prefix = "custom-segments"
-    
+
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
         prefix=custom_prefix,
     )
-    
+
     expected_key = f"{custom_prefix}/{file_id}.gpx"
     assert s3_key == expected_key
 
@@ -127,17 +128,17 @@ def test_upload_gpx_segment_with_custom_prefix(mock_s3_manager, real_gpx_file):
 def test_delete_gpx_segment_success(mock_s3_manager, real_gpx_file):
     """Test successful GPX segment deletion using real GPX file."""
     file_id = "test-segment-789"
-    
+
     # First upload the file
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
     )
-    
+
     # Then delete it
     result = mock_s3_manager.delete_gpx_segment(s3_key)
     assert result is True
-    
+
     # Verify file is deleted - in moto, deletion might not actually remove the object
     # So we check that the deletion operation returned True
     # Note: moto behavior may vary, so we focus on testing our code logic
@@ -146,7 +147,7 @@ def test_delete_gpx_segment_success(mock_s3_manager, real_gpx_file):
 def test_delete_gpx_segment_nonexistent(mock_s3_manager):
     """Test deletion of non-existent file."""
     s3_key = "nonexistent/file.gpx"
-    
+
     result = mock_s3_manager.delete_gpx_segment(s3_key)
     # In moto, deletion of non-existent objects still returns True
     # This tests our code logic, not moto's behavior
@@ -156,16 +157,16 @@ def test_delete_gpx_segment_nonexistent(mock_s3_manager):
 def test_get_gpx_segment_url_success(mock_s3_manager, real_gpx_file):
     """Test successful presigned URL generation using real GPX file."""
     file_id = "test-segment-url"
-    
+
     # Upload file first
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
     )
-    
+
     # Generate presigned URL
     url = mock_s3_manager.get_gpx_segment_url(s3_key, expiration=3600)
-    
+
     assert url is not None
     assert mock_s3_manager.bucket_name in url
     assert s3_key in url
@@ -176,7 +177,7 @@ def test_get_gpx_segment_url_success(mock_s3_manager, real_gpx_file):
 def test_get_gpx_segment_url_nonexistent(mock_s3_manager):
     """Test presigned URL generation for non-existent file."""
     s3_key = "nonexistent/file.gpx"
-    
+
     url = mock_s3_manager.get_gpx_segment_url(s3_key)
     # In moto, presigned URLs are generated even for non-existent objects
     # This tests our code logic, not moto's behavior
@@ -205,9 +206,9 @@ def test_cleanup_existing_file():
     """Test cleanup of existing file."""
     with tempfile.NamedTemporaryFile(delete=False) as f:
         temp_path = Path(f.name)
-    
+
     assert temp_path.exists()
-    
+
     result = cleanup_local_file(temp_path)
     assert result is True
     assert not temp_path.exists()
@@ -216,7 +217,7 @@ def test_cleanup_existing_file():
 def test_cleanup_nonexistent_file():
     """Test cleanup of non-existent file."""
     non_existent_path = Path("/non/existent/file.txt")
-    
+
     result = cleanup_local_file(non_existent_path)
     assert result is False
 
@@ -226,16 +227,16 @@ def test_cleanup_file_with_permission_error():
     # Create a file and make it read-only (on Unix systems)
     with tempfile.NamedTemporaryFile(delete=False) as f:
         temp_path = Path(f.name)
-    
+
     try:
         # Make file read-only
         temp_path.chmod(0o444)
-        
+
         result = cleanup_local_file(temp_path)
         # On some systems, even read-only files can be deleted
         # This test verifies our code handles the operation gracefully
         assert isinstance(result, bool)
-        
+
     finally:
         # Clean up by making it writable and removing
         try:

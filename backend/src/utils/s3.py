@@ -8,7 +8,6 @@ uploading files with appropriate prefixes and cleaning up temporary files.
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
@@ -21,9 +20,9 @@ class S3Manager:
 
     def __init__(
         self,
-        bucket_name: Optional[str] = None,
-        aws_access_key_id: Optional[str] = None,
-        aws_secret_access_key: Optional[str] = None,
+        bucket_name: str | None = None,
+        aws_access_key_id: str | None = None,
+        aws_secret_access_key: str | None = None,
         aws_region: str = "us-east-1",
     ):
         """Initialize S3 manager with credentials and configuration.
@@ -43,14 +42,17 @@ class S3Manager:
         self.aws_region = aws_region
 
         if not self.bucket_name:
-            raise ValueError("S3 bucket name must be provided or set in AWS_S3_BUCKET environment variable")
+            raise ValueError(
+                "S3 bucket name must be provided or set in AWS_S3_BUCKET environment variable"
+            )
 
         try:
             # Initialize S3 client
             self.s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=aws_secret_access_key or os.getenv("AWS_SECRET_ACCESS_KEY"),
+                aws_secret_access_key=aws_secret_access_key
+                or os.getenv("AWS_SECRET_ACCESS_KEY"),
                 region_name=aws_region,
             )
             logger.info(f"S3 client initialized for bucket: {self.bucket_name}")
@@ -94,8 +96,10 @@ class S3Manager:
         s3_key = f"{prefix}/{file_id}.gpx"
 
         try:
-            logger.info(f"Uploading {local_file_path} to s3://{self.bucket_name}/{s3_key}")
-            
+            logger.info(
+                f"Uploading {local_file_path} to s3://{self.bucket_name}/{s3_key}"
+            )
+
             # Upload file to S3
             self.s3_client.upload_file(
                 str(local_file_path),
@@ -109,8 +113,10 @@ class S3Manager:
                     },
                 },
             )
-            
-            logger.info(f"Successfully uploaded GPX segment to s3://{self.bucket_name}/{s3_key}")
+
+            logger.info(
+                f"Successfully uploaded GPX segment to s3://{self.bucket_name}/{s3_key}"
+            )
             return s3_key
 
         except ClientError as e:
@@ -144,7 +150,7 @@ class S3Manager:
             logger.error(f"Failed to delete from S3: {error_code} - {error_message}")
             return False
 
-    def get_gpx_segment_url(self, s3_key: str, expiration: int = 3600) -> Optional[str]:
+    def get_gpx_segment_url(self, s3_key: str, expiration: int = 3600) -> str | None:
         """Generate a presigned URL for a GPX segment file.
 
         Parameters
@@ -171,7 +177,9 @@ class S3Manager:
         except ClientError as e:
             error_code = e.response["Error"]["Code"]
             error_message = e.response["Error"]["Message"]
-            logger.error(f"Failed to generate presigned URL: {error_code} - {error_message}")
+            logger.error(
+                f"Failed to generate presigned URL: {error_code} - {error_message}"
+            )
             return None
 
     def bucket_exists(self) -> bool:
