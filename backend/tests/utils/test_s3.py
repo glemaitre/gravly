@@ -26,11 +26,9 @@ def mock_bucket_name():
 def mock_s3_manager(mock_bucket_name):
     """Create an S3Manager instance with mocked S3."""
     with mock_aws():
-        # Create a mock S3 bucket
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_bucket_name)
 
-        # Initialize S3Manager with test credentials
         manager = S3Manager(
             bucket_name=mock_bucket_name,
             aws_access_key_id="test-key",
@@ -129,13 +127,11 @@ def test_delete_gpx_segment_success(mock_s3_manager, real_gpx_file):
     """Test successful GPX segment deletion using real GPX file."""
     file_id = "test-segment-789"
 
-    # First upload the file
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
     )
 
-    # Then delete it
     result = mock_s3_manager.delete_gpx_segment(s3_key)
     assert result is True
 
@@ -158,19 +154,16 @@ def test_get_gpx_segment_url_success(mock_s3_manager, real_gpx_file):
     """Test successful presigned URL generation using real GPX file."""
     file_id = "test-segment-url"
 
-    # Upload file first
     s3_key = mock_s3_manager.upload_gpx_segment(
         local_file_path=real_gpx_file,
         file_id=file_id,
     )
 
-    # Generate presigned URL
     url = mock_s3_manager.get_gpx_segment_url(s3_key, expiration=3600)
 
     assert url is not None
     assert mock_s3_manager.bucket_name in url
     assert s3_key in url
-    # Check that URL contains expiration parameter (format may vary in moto)
     assert "Expires=" in url
 
 
@@ -224,23 +217,18 @@ def test_cleanup_nonexistent_file():
 
 def test_cleanup_file_with_permission_error():
     """Test cleanup when file deletion fails."""
-    # Create a file and make it read-only (on Unix systems)
     with tempfile.NamedTemporaryFile(delete=False) as f:
         temp_path = Path(f.name)
 
     try:
-        # Make file read-only
         temp_path.chmod(0o444)
 
         result = cleanup_local_file(temp_path)
-        # On some systems, even read-only files can be deleted
-        # This test verifies our code handles the operation gracefully
         assert isinstance(result, bool)
 
     finally:
-        # Clean up by making it writable and removing
         try:
             temp_path.chmod(0o644)
             temp_path.unlink()
         except (OSError, FileNotFoundError):
-            pass  # File might already be cleaned up
+            pass

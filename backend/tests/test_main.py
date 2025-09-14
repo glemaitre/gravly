@@ -802,3 +802,45 @@ def test_create_segment_s3_manager_not_initialized(client, sample_gpx_file):
 
     finally:
         src.main.s3_manager = original_s3_manager
+
+
+@mock_aws
+def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_path):
+    """Test segment creation when local file cleanup fails."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("src.main.cleanup_local_file", return_value=False):
+            response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Test Segment"
+        assert data["file_path"].startswith("s3:/")
