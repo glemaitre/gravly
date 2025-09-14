@@ -9,13 +9,12 @@ from backend.src.utils.config import (
     DatabaseConfig,
     LocalStorageConfig,
     S3StorageConfig,
-    StorageConfig,
     load_environment_config,
 )
 
 
 def test_load_existing_env_file_with_full_config(tmp_path):
-    """Test loading an existing environment file with database and storage configuration."""
+    """Test loading an existing environment file with database and storage config."""
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 

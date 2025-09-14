@@ -100,7 +100,8 @@ def load_environment_config(
 
     if missing_db_params:
         raise ValueError(
-            f"Missing required database configuration parameters: {', '.join(missing_db_params)}. "
+            f"Missing required database configuration parameters: "
+            f"{', '.join(missing_db_params)}. "
             f"Please set these environment variables in your .env file."
         )
 
@@ -120,7 +121,8 @@ def load_environment_config(
 
         if missing_s3_params:
             raise ValueError(
-                f"Missing required S3 configuration parameters: {', '.join(missing_s3_params)}. "
+                f"Missing required S3 configuration parameters: "
+                f"{', '.join(missing_s3_params)}. "
                 f"Please set these environment variables in your .env file."
             )
 

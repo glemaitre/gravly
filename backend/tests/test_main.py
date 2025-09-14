@@ -18,7 +18,18 @@ from backend.src.utils.config import LocalStorageConfig, S3StorageConfig
 
 @pytest.fixture(autouse=True)
 def setup_test_database_config():
-    """Set up database and storage configuration for tests."""
+    """Set up database and storage configuration for tests.
+
+    IMPORTANT: This fixture must run BEFORE src.main is imported because:
+    1. src.main calls load_environment_config() at import time
+    2. If we import src.main at the top of this file, it would use real environment
+       variables instead of our test configuration
+    3. This fixture ensures test environment variables are set FIRST, then imports
+       src.main with the correct test configuration
+
+    This pattern prevents tests from failing due to missing or incorrect environment
+    variables in the test environment.
+    """
     test_config = {
         "DB_HOST": "localhost",
         "DB_PORT": "5432",
@@ -31,17 +42,27 @@ def setup_test_database_config():
     }
 
     with patch.dict(os.environ, test_config, clear=False):
-        # Import main module after setting up environment variables
+        # Import main module AFTER setting up environment variables
+        # This ensures src.main loads with test configuration, not real environment
         import src.main as main_module
 
         # Make main_module available globally for tests as 'src'
+        # This allows existing @patch decorators to work with src.main references
         globals()["src"] = type("MockSrc", (), {"main": main_module})()
         yield
 
 
 @pytest.fixture
 def main_module():
-    """Get access to the main module for testing."""
+    """Get access to the main module for testing.
+
+    This fixture provides access to the src.main module that was imported with
+    test configuration by the setup_test_database_config fixture. Tests can use
+    this fixture instead of accessing the global 'src' variable directly, which
+    provides better type safety and cleaner test code.
+    """
+    import src.main
+
     return src.main
 
 
@@ -807,7 +828,7 @@ def test_storage_manager_initialization_failure_handling(app, lifespan, main_mod
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert src.main.storage_manager is None
+                        assert main_module.storage_manager is None
                         return True
 
                 result = asyncio.run(run_lifespan())
@@ -817,11 +838,11 @@ def test_storage_manager_initialization_failure_handling(app, lifespan, main_mod
         main_module.storage_manager = original_storage_manager
 
 
-def test_storage_manager_initialization_exception_handling(app, lifespan):
+def test_storage_manager_initialization_exception_handling(app, lifespan, main_module):
     """Test that storage manager initialization exceptions are properly caught
     and logged."""
 
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         with patch.dict(
@@ -836,7 +857,7 @@ def test_storage_manager_initialization_exception_handling(app, lifespan):
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert src.main.storage_manager is None
+                        assert main_module.storage_manager is None
                         return True
 
                 result = asyncio.run(run_lifespan())
@@ -846,7 +867,9 @@ def test_storage_manager_initialization_exception_handling(app, lifespan):
         main_module.storage_manager = original_storage_manager
 
 
-def test_create_segment_storage_manager_not_initialized(client, sample_gpx_file):
+def test_create_segment_storage_manager_not_initialized(
+    client, sample_gpx_file, main_module
+):
     """Test segment creation when storage manager is not initialized."""
     with open(sample_gpx_file, "rb") as f:
         upload_response = client.post(
@@ -856,10 +879,10 @@ def test_create_segment_storage_manager_not_initialized(client, sample_gpx_file)
     assert upload_response.status_code == 200
     file_id = upload_response.json()["file_id"]
 
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
-        src.main.storage_manager = None
+        main_module.storage_manager = None
 
         response = client.post(
             "/api/segments",
@@ -922,12 +945,12 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
         assert data["file_path"].startswith(("s3://", "local://", "local:/"))
 
 
-def test_serve_storage_file_storage_manager_not_initialized(client):
+def test_serve_storage_file_storage_manager_not_initialized(client, main_module):
     """Test serving storage file when storage manager is not initialized."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
-        src.main.storage_manager = None
+        main_module.storage_manager = None
 
         response = client.get("/storage/test-file.gpx")
 
@@ -938,9 +961,9 @@ def test_serve_storage_file_storage_manager_not_initialized(client):
         main_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
+def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file, main_module):
     """Test serving storage file when in S3 mode (not available)."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = S3StorageConfig(
@@ -951,7 +974,7 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
             region="us-east-1",
         )
         s3_manager = S3Manager(config)
-        src.main.storage_manager = s3_manager
+        main_module.storage_manager = s3_manager
 
         response = client.get("/storage/test-file.gpx")
 
@@ -962,9 +985,11 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
         main_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path):
+def test_serve_storage_file_local_mode_success(
+    client, sample_gpx_file, tmp_path, main_module
+):
     """Test successfully serving a file from local storage."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -973,7 +998,7 @@ def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        src.main.storage_manager = local_manager
+        main_module.storage_manager = local_manager
 
         test_file_path = tmp_path / "test-file.gpx"
         test_file_path.write_text(sample_gpx_file.read_text())
@@ -992,9 +1017,9 @@ def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path
         main_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_file_not_found(client, tmp_path):
+def test_serve_storage_file_file_not_found(client, tmp_path, main_module):
     """Test serving storage file when file doesn't exist."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1003,7 +1028,7 @@ def test_serve_storage_file_file_not_found(client, tmp_path):
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        src.main.storage_manager = local_manager
+        main_module.storage_manager = local_manager
 
         response = client.get("/storage/nonexistent-file.gpx")
 
@@ -1014,9 +1039,11 @@ def test_serve_storage_file_file_not_found(client, tmp_path):
         main_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path):
+def test_serve_storage_file_with_subdirectory(
+    client, sample_gpx_file, tmp_path, main_module
+):
     """Test serving a file from a subdirectory."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1025,7 +1052,7 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path)
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        src.main.storage_manager = local_manager
+        main_module.storage_manager = local_manager
 
         subdir = tmp_path / "gpx-segments"
         subdir.mkdir()
@@ -1046,10 +1073,10 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path)
         main_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_local_storage_not_available(client, tmp_path):
+def test_serve_storage_file_local_storage_not_available(client, tmp_path, main_module):
     """Test serving storage file when local storage manager doesn't have
     get_file_path method."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1058,7 +1085,7 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path):
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        src.main.storage_manager = local_manager
+        main_module.storage_manager = local_manager
 
         with patch("src.main.hasattr") as mock_hasattr:
 
@@ -1078,9 +1105,11 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path):
         main_module.storage_manager = original_storage_manager
 
 
-def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path):
+def test_create_segment_storage_upload_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
     """Test create segment when storage upload fails."""
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1089,7 +1118,7 @@ def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        src.main.storage_manager = local_manager
+        main_module.storage_manager = local_manager
 
         with open(sample_gpx_file, "rb") as f:
             upload_response = client.post(
@@ -1111,7 +1140,7 @@ def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path
                 return "mock://test-bucket"
 
         mock_storage_manager = MockStorageManager()
-        src.main.storage_manager = mock_storage_manager
+        main_module.storage_manager = mock_storage_manager
 
         segment_data = {
             "file_id": file_id,
@@ -1132,3 +1161,67 @@ def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path
 
     finally:
         main_module.storage_manager = original_storage_manager
+
+
+def test_database_initialization_failure_handling(app, lifespan, main_module):
+    """Test that the app handles database initialization failure gracefully."""
+
+    original_engine = main_module.engine
+    original_session_local = main_module.SessionLocal
+
+    try:
+        with patch.dict(os.environ, {}, clear=True):
+            with patch(
+                "src.main.create_async_engine",
+                side_effect=Exception("Database connection failed"),
+            ):
+
+                async def run_lifespan():
+                    async with lifespan(app):
+                        assert main_module.engine is None
+                        assert main_module.SessionLocal is None
+                        return True
+
+                result = asyncio.run(run_lifespan())
+                assert result is True
+
+    finally:
+        main_module.engine = original_engine
+        main_module.SessionLocal = original_session_local
+
+
+def test_database_initialization_exception_handling(app, lifespan, main_module):
+    """Test that database initialization exceptions are properly caught and logged."""
+
+    original_engine = main_module.engine
+    original_session_local = main_module.SessionLocal
+
+    try:
+        with patch.dict(
+            os.environ,
+            {
+                "DB_HOST": "invalid_host",
+                "DB_PORT": "5432",
+                "DB_NAME": "test_db",
+                "DB_USER": "test_user",
+                "DB_PASSWORD": "test_password",
+            },
+            clear=True,
+        ):
+            with patch(
+                "src.main.create_async_engine",
+                side_effect=Exception("Connection refused"),
+            ):
+
+                async def run_lifespan():
+                    async with lifespan(app):
+                        assert main_module.engine is None
+                        assert main_module.SessionLocal is None
+                        return True
+
+                result = asyncio.run(run_lifespan())
+                assert result is True
+
+    finally:
+        main_module.engine = original_engine
+        main_module.SessionLocal = original_session_local

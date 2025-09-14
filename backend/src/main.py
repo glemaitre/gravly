@@ -1,5 +1,4 @@
 import logging
-import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -18,10 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from .utils.config import (
-    DatabaseConfig,
-    LocalStorageConfig,
-    S3StorageConfig,
-    StorageConfig,
     load_environment_config,
 )
 from .utils.gpx import (
@@ -78,7 +73,8 @@ async def lifespan(app: FastAPI):
     try:
         storage_manager = get_storage_manager(storage_config)
         logger.info(
-            f"Storage manager initialized successfully (type: {storage_config.storage_type})"
+            f"Storage manager initialized successfully "
+            f"(type: {storage_config.storage_type})"
         )
     except Exception as e:
         logger.warning(f"Failed to initialize storage manager: {str(e)}")
