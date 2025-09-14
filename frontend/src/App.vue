@@ -4,7 +4,6 @@
       <div class="nav-container">
         <h1 class="nav-title"><i class="fa-solid fa-person-biking" aria-hidden="true"></i> Cycling Routes</h1>
         <div class="nav-right">
-          <router-link to="/" class="nav-link">Home</router-link>
           <div class="language-dropdown" ref="languageDropdown">
             <button
               class="language-dropdown-trigger navbar-trigger"

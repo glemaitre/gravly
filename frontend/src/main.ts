@@ -2,12 +2,10 @@ import { createApp } from 'vue'
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import { i18n, initializeLanguage } from './i18n'
 import App from './App.vue'
-import Home from './components/Home.vue'
-import RideViewer from './components/RideViewer.vue'
+import Editor from './components/Editor.vue'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: Home },
-  { path: '/ride/:id', component: RideViewer, props: true }
+  { path: '/', component: Editor }
 ]
 
 const router = createRouter({
