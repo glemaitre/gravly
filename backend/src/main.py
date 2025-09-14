@@ -31,12 +31,14 @@ from .utils.storage import (
 )
 
 env_file = (
-    Path(__file__).parent.parent.parent / f".env.{os.getenv('ENVIRONMENT', 'local')}"
+    Path(__file__).parent.parent.parent
+    / ".env"
+    / f"{os.getenv('ENVIRONMENT', 'local')}"
 )
 if env_file.exists():
     load_dotenv(env_file)
     logging.info(f"Loaded environment variables from {env_file}")
-else:  # fallback to .env file
+else:  # fallback to .env file in root
     fallback_env = Path(__file__).parent.parent.parent / ".env"
     if fallback_env.exists():
         load_dotenv(fallback_env)

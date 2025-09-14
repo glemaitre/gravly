@@ -69,15 +69,15 @@ This project uses environment-specific `.env` files to manage configuration for 
 
 1. **Copy the example files** for your desired environment:
    ```bash
-   cp .env.local.example .env.local      # For local development
-   cp .env.s3.example .env.s3            # For S3 testing
-   cp .env.staging.example .env.staging  # For staging
-   cp .env.production.example .env.production  # For production
+   cp .env/.env.local.example .env/local      # For local development
+   cp .env/.env.s3.example .env/s3            # For S3 testing
+   cp .env/.env.staging.example .env/staging  # For staging
+   cp .env/.env.production.example .env/production  # For production
    ```
 
 2. **Edit the copied files** with your actual configuration values.
 
-3. **Never commit `.env` files** - they contain sensitive information and are already in `.gitignore`.
+3. **Never commit actual `.env` files** - they contain sensitive information and are already in `.gitignore`. Only the example files in the `.env/` folder are tracked in git.
 
 ### Environment Variables
 
@@ -190,6 +190,12 @@ website_cycling/
 │   │   └── main.ts         # App entry point
 │   ├── package.json        # Frontend dependencies
 │   └── vite.config.js      # Vite configuration
+├── .env/                   # Environment configuration files
+│   ├── .env.example        # Main template
+│   ├── .env.local.example  # Local development template
+│   ├── .env.s3.example     # S3 testing template
+│   ├── .env.staging.example # Staging template
+│   └── .env.production.example # Production template
 ├── mock_gpx/               # Sample GPX files for testing
 ├── scripts/                # Setup and utility scripts
 │   └── setup_elasticsearch.py
