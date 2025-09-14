@@ -79,7 +79,7 @@ The storage backend is controlled by the `STORAGE_TYPE` environment variable:
 
 When using local storage, you can configure:
 
-- `LOCAL_STORAGE_ROOT` - Root directory for storing files (default: `./scratch/local_storage`)
+- `LOCAL_STORAGE_ROOT` - Root directory for storing files (default: `../scratch/local_storage`)
 - `LOCAL_STORAGE_BASE_URL` - Base URL for serving files (default: `http://localhost:8000/storage`)
 
 ### AWS S3 Configuration

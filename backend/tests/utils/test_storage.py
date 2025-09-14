@@ -58,7 +58,7 @@ def test_local_storage_manager_default_initialization():
     """Test LocalStorageManager initialization with default values."""
     with patch.dict(os.environ, {}, clear=True):
         manager = LocalStorageManager()
-        assert manager.storage_root == Path("./scratch/local_storage")
+        assert manager.storage_root == Path("../scratch/local_storage")
 
 
 def test_upload_gpx_segment_success(local_storage_manager, real_gpx_file):

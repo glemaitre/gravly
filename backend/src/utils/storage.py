@@ -50,10 +50,10 @@ class LocalStorageManager:
         ----------
         storage_root : Optional[str]
             Root directory for local storage. If None, will use LOCAL_STORAGE_ROOT
-            environment variable or default to "./scratch/local_storage".
+            environment variable or default to "../scratch/local_storage".
         """
         self.storage_root = Path(
-            storage_root or os.getenv("LOCAL_STORAGE_ROOT", "./scratch/local_storage")
+            storage_root or os.getenv("LOCAL_STORAGE_ROOT", "../scratch/local_storage")
         )
         self.storage_root.mkdir(parents=True, exist_ok=True)
         self.base_url = os.getenv(
