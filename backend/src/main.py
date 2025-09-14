@@ -80,7 +80,6 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Failed to initialize storage manager: {str(e)}")
         storage_manager = None
 
-    # Initialize database (create tables if not exist)
     if engine is not None:
         try:
             async with engine.begin() as conn:
@@ -91,10 +90,8 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Skipping database initialization - engine not available")
 
-    # Yield control to the application
     yield
 
-    # Clean up resources on shutdown
     if temp_dir:
         logger.info(f"Cleaning up temporary directory: {temp_dir.name}")
         temp_dir.cleanup()
