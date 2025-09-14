@@ -34,11 +34,8 @@ class GPXBounds(BaseModel):
     south: float
     east: float
     west: float
-
-
-class GPXElevationStats(BaseModel):
-    min: float
-    max: float
+    min_elevation: float
+    max_elevation: float
 
 
 class GPXData(BaseModel):
@@ -47,7 +44,6 @@ class GPXData(BaseModel):
     points: list[GPXPoint]
     total_stats: GPXTotalStats
     bounds: GPXBounds
-    elevation_stats: GPXElevationStats
 
 
 def extract_from_gpx_file(gpx: gpxpy.gpx.GPX, file_id: str) -> GPXData:
@@ -77,14 +73,13 @@ def extract_from_gpx_file(gpx: gpxpy.gpx.GPX, file_id: str) -> GPXData:
             - total_elevation_gain (float): Total elevation gain in meters
             - total_elevation_loss (float): Total elevation loss in meters
             - total_points (int): Number of points
-        - bounds (GPXBounds): Geographic bounds with:
+        - bounds (GPXBounds): Geographic and elevation bounds with:
             - north (float): Northernmost latitude
             - south (float): Southernmost latitude
             - east (float): Easternmost longitude
             - west (float): Westernmost longitude
-        - elevation_stats (GPXElevationStats): Elevation statistics with:
-            - min (float): Minimum elevation in meters
-            - max (float): Maximum elevation in meters
+            - min_elevation (float): Minimum elevation in meters
+            - max_elevation (float): Maximum elevation in meters
 
     Examples
     --------
@@ -144,11 +139,8 @@ def extract_from_gpx_file(gpx: gpxpy.gpx.GPX, file_id: str) -> GPXData:
         south=min_latitude,
         east=max_longitude,
         west=min_longitude,
-    )
-
-    elevation_stats = GPXElevationStats(
-        min=min_elevation,
-        max=max_elevation,
+        min_elevation=min_elevation,
+        max_elevation=max_elevation,
     )
 
     total_stats = GPXTotalStats(
@@ -164,7 +156,6 @@ def extract_from_gpx_file(gpx: gpxpy.gpx.GPX, file_id: str) -> GPXData:
         points=points,
         total_stats=total_stats,
         bounds=bounds,
-        elevation_stats=elevation_stats,
     )
 
 

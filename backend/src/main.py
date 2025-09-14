@@ -122,7 +122,22 @@ async def root():
 
 @app.post("/api/upload-gpx", response_model=GPXData)
 async def upload_gpx(file: UploadFile = File(...)):
-    """Upload a GPX file temporarily and return track information"""
+    """Upload a GPX file from the client to the server in a temporary directory.
+
+    We return a `GPXData` object which contains the GPS points
+    (latitude, longitude, elevation, time), the aggregated statistics and the bounds
+    of the track.
+
+    Parameters
+    ----------
+    file: UploadFile
+        The GPX file to upload.
+
+    Returns
+    -------
+    GPXData
+        The track information of the uploaded GPX file.
+    """
     global temp_dir
 
     if not file.filename.endswith(".gpx"):
@@ -192,7 +207,6 @@ async def create_segment(
     if tire_dry not in allowed or tire_wet not in allowed:
         raise HTTPException(status_code=422, detail="Invalid tire types")
 
-    # Find the uploaded file
     global temp_dir
 
     if not temp_dir:
@@ -207,11 +221,9 @@ async def create_segment(
         logger.warning(f"Uploaded file not found: {original_file_path}")
         raise HTTPException(status_code=404, detail="Uploaded file not found")
 
-    # Ensure destination directory exists
     dest_dir = Path("../scratch/mock_gpx")
     dest_dir.mkdir(exist_ok=True)
 
-    # Process the GPX file with the given indices
     try:
         logger.info(
             f"Processing segment '{name}' from indices {start_index} to {end_index}"

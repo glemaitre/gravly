@@ -23,7 +23,6 @@ def test_extract_from_gpx_file_with_data_file():
     assert hasattr(result, "points")
     assert hasattr(result, "total_stats")
     assert hasattr(result, "bounds")
-    assert hasattr(result, "elevation_stats")
 
     assert isinstance(result.file_id, str)
     assert result.file_id == "test_file"
@@ -36,8 +35,8 @@ def test_extract_from_gpx_file_with_data_file():
     assert isinstance(result.bounds.south, float)
     assert isinstance(result.bounds.east, float)
     assert isinstance(result.bounds.west, float)
-    assert isinstance(result.elevation_stats.min, float)
-    assert isinstance(result.elevation_stats.max, float)
+    assert isinstance(result.bounds.min_elevation, float)
+    assert isinstance(result.bounds.max_elevation, float)
 
     assert result.bounds.north >= result.bounds.south
     assert result.bounds.east >= result.bounds.west

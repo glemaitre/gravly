@@ -1,15 +1,12 @@
 """Tests for FastAPI main endpoints."""
 
 import json
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from src.main import app, lifespan
+from src.main import app
 
 
 @pytest.fixture
@@ -50,7 +47,6 @@ def test_upload_gpx_success(client, sample_gpx_file):
     assert "points" in data
     assert "total_stats" in data
     assert "bounds" in data
-    assert "elevation_stats" in data
 
     # Check specific values
     assert data["track_name"] == "Test chemin Gravel autour du Puit"
