@@ -31,36 +31,93 @@ pytest = "*"
 pytest-cov = "*"
 moto = "*"
 
-[tasks]
-start-backend-local = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend", env = { ENVIRONMENT = "local" } }
-start-backend-s3 = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend", env = { ENVIRONMENT = "s3" } }
-start-backend-staging = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend", env = { ENVIRONMENT = "staging" } }
-start-backend-production = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend", env = { ENVIRONMENT = "production" } }
-start-frontend = { cmd = "npm run dev", cwd = "frontend", depends-on = ["frontend-install"] }
-frontend-install = { cmd = "npm install", cwd = "frontend" }
-frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
+[tasks.start-backend-local]
+cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+cwd = "backend"
+env = { ENVIRONMENT = "local" }
 
-[feature.lint.tasks]
-install-pre-commit = { cmd = "pre-commit install" }
-pre-commit = { cmd = "pre-commit run --all-files" }
-pre-commit-update = { cmd = "pre-commit autoupdate" }
-lint-backend = { cmd = "ruff check backend/src/ backend/tests/ --fix" }
-lint-frontend = { cmd = "npm run lint", cwd = "frontend", depends-on = ["frontend-install"] }
-format-backend = { cmd = "ruff format backend/src/ backend/tests/ " }
-format-frontend = { cmd = "npm run format", cwd = "frontend", depends-on = ["frontend-install"] }
-lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
-format-all = { depends-on = ["format-backend", "format-frontend"] }
-type-check-frontend = { cmd = "npm run type-check", cwd = "frontend", depends-on = ["frontend-install"] }
+[tasks.start-backend-s3]
+cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+cwd = "backend"
+env = { ENVIRONMENT = "s3" }
 
-[feature.tests.tasks]
-test-backend = { cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing" }
-test-frontend = { cmd = "npm install --no-audit --no-fund && npm run test:cov", cwd = "frontend" }
+[tasks.start-backend-staging]
+cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+cwd = "backend"
+env = { ENVIRONMENT = "staging" }
+
+[tasks.start-backend-production]
+cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+cwd = "backend"
+env = { ENVIRONMENT = "production" }
+
+[tasks.start-frontend]
+cmd = "npm run dev"
+cwd = "frontend"
+depends-on = ["frontend-install"]
+
+[tasks.frontend-install]
+cmd = "npm install"
+cwd = "frontend"
+
+[tasks.frontend-build]
+cmd = "npm run build"
+cwd = "frontend"
+depends-on = ["frontend-install"]
+
+[feature.lint.tasks.install-pre-commit]
+cmd = "pre-commit install"
+
+[feature.lint.tasks.pre-commit]
+cmd = "pre-commit run --all-files"
+
+[feature.lint.tasks.pre-commit-update]
+cmd = "pre-commit autoupdate"
+
+[feature.lint.tasks.lint-backend]
+cmd = "ruff check backend/src/ backend/tests/ --fix"
+
+[feature.lint.tasks.lint-frontend]
+cmd = "npm run lint"
+cwd = "frontend"
+depends-on = ["frontend-install"]
+
+[feature.lint.tasks.format-backend]
+cmd = "ruff format backend/src/ backend/tests/ "
+
+[feature.lint.tasks.format-frontend]
+cmd = "npm run format"
+cwd = "frontend"
+depends-on = ["frontend-install"]
+
+[feature.lint.tasks.lint-all]
+depends-on = ["lint-backend", "lint-frontend"]
+
+[feature.lint.tasks.format-all]
+depends-on = ["format-backend", "format-frontend"]
+
+[feature.lint.tasks.type-check-frontend]
+cmd = "npm run type-check"
+cwd = "frontend"
+depends-on = ["frontend-install"]
+
+[feature.tests.tasks.test-backend]
+cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing"
+
+[feature.tests.tasks.test-frontend]
+cmd = "npm install --no-audit --no-fund && npm run test:cov"
+cwd = "frontend"
 
 # Local Postgres via Docker
-pg-up = { cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cycling -p 5432:5432 -d postgres:16" }
-pg-down = { cmd = "docker rm -f cycling-pg" }
+[feature.tests.tasks.pg-up]
+cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cycling -p 5432:5432 -d postgres:16"
+
+[feature.tests.tasks.pg-down]
+cmd = "docker rm -f cycling-pg"
+
 # Export DATABASE_URL for backend tasks (example for local Docker)
-env-dev = { cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling" }
+[feature.tests.tasks.env-dev]
+cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling"
 
 
 [environments]
