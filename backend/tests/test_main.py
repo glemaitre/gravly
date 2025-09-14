@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from moto import mock_aws
 from src.main import app, lifespan
 from src.utils.gpx import generate_gpx_segment
-from src.utils.s3 import S3Manager, cleanup_local_file
+from src.utils.storage import S3Manager, cleanup_local_file
 
 
 @pytest.fixture

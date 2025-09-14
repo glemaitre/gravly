@@ -250,7 +250,7 @@ def test_get_storage_manager_local():
 def test_get_storage_manager_s3():
     """Test storage factory returns S3Manager for s3 type."""
     with patch.dict(os.environ, {"STORAGE_TYPE": "s3"}):
-        with patch("src.utils.s3.S3Manager") as mock_s3_manager_class:
+        with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
             mock_instance = mock_s3_manager_class.return_value
             manager = get_storage_manager()
             mock_s3_manager_class.assert_called_once()

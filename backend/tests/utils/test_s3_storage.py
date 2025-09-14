@@ -13,7 +13,7 @@ import boto3
 import pytest
 from botocore.exceptions import ClientError, NoCredentialsError
 from moto import mock_aws
-from src.utils.s3 import S3Manager, cleanup_local_file
+from src.utils.storage import S3Manager, cleanup_local_file
 
 
 @pytest.fixture
@@ -262,7 +262,7 @@ def test_cleanup_file_with_mocked_exception(tmp_dir):
 
 def test_s3_manager_no_credentials_error():
     """Test S3Manager initialization when AWS credentials are not found."""
-    with patch("src.utils.s3.boto3.client", side_effect=NoCredentialsError()):
+    with patch("src.utils.storage.boto3.client", side_effect=NoCredentialsError()):
         with pytest.raises(NoCredentialsError, match="Unable to locate credentials"):
             S3Manager(bucket_name="test-bucket")
 
