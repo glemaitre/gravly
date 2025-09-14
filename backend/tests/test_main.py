@@ -860,3 +860,19 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
         # File path should start with either s3:// or local:// depending on storage type
         # Note: The actual format might be local:/ instead of local://
         assert data["file_path"].startswith(("s3://", "local://", "local:/"))
+
+
+def test_serve_storage_file_storage_manager_not_initialized(client):
+    """Test serving storage file when storage manager is not initialized."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        src.main.storage_manager = None
+
+        response = client.get("/storage/test-file.gpx")
+
+        assert response.status_code == 500
+        assert response.json()["detail"] == "Storage manager not initialized"
+
+    finally:
+        src.main.storage_manager = original_storage_manager

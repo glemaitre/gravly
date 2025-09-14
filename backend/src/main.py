@@ -161,13 +161,11 @@ async def serve_storage_file(file_path: str):
     if not storage_manager:
         raise HTTPException(status_code=500, detail="Storage manager not initialized")
 
-    # Check if we're using local storage
     if not isinstance(storage_manager, LocalStorageManager):
         raise HTTPException(
             status_code=404, detail="File serving only available in local mode"
         )
 
-    # Get the local file path
     if hasattr(storage_manager, "get_file_path"):
         local_file_path = storage_manager.get_file_path(file_path)
     else:
