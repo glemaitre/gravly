@@ -360,6 +360,32 @@ def test_upload_gpx_no_temp_directory(client, sample_gpx_file):
     assert "Temporary directory not initialized" in response.json()["detail"]
 
 
+@patch("src.main.open", side_effect=OSError("Permission denied"))
+def test_upload_gpx_file_save_failure(mock_open, client, sample_gpx_file):
+    """Test upload when file saving fails due to filesystem error."""
+    with open(sample_gpx_file, "rb") as f:
+        response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert response.status_code == 500
+    assert "Failed to save file" in response.json()["detail"]
+    assert "Permission denied" in response.json()["detail"]
+
+
+@patch("src.main.open", side_effect=OSError("Disk full"))
+def test_upload_gpx_disk_full_failure(mock_open, client, sample_gpx_file):
+    """Test upload when file saving fails due to disk space issues."""
+    with open(sample_gpx_file, "rb") as f:
+        response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert response.status_code == 500
+    assert "Failed to save file" in response.json()["detail"]
+    assert "Disk full" in response.json()["detail"]
+
+
 @patch("src.main.temp_dir", None)
 def test_create_segment_no_temp_directory(client):
     """Test segment creation when temporary directory is not initialized."""

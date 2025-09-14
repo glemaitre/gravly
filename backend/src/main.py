@@ -23,11 +23,9 @@ from .utils.gpx import (
     generate_gpx_segment,
 )
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global temporary directory for the session
 temp_dir: TemporaryDirectory | None = None
 
 
@@ -108,9 +106,6 @@ class Segment(Base):
 
 engine = create_async_engine(DATABASE_URL, echo=False, future=True)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-
-# Pydantic models - using GPXData directly from gpx.py
 
 
 class SegmentCreateResponse(BaseModel):
