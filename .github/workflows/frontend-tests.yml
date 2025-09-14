@@ -26,7 +26,7 @@ jobs:
         run: pixi --version
 
       - name: Run frontend unit tests with coverage
-        run: pixi run -e default -- test-frontend
+        run: pixi run -e dev -- test-frontend
 
       - name: Upload coverage summary
         if: always()

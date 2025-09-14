@@ -29,7 +29,7 @@ jobs:
         run: cp .env/.env.local.example .env/local
 
       - name: Run backend tests with coverage
-        run: pixi run -e default -- test-backend
+        run: pixi run -e dev -- test-backend
 
       - name: Upload coverage summary
         if: always()
