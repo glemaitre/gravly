@@ -359,3 +359,9 @@ def test_list_files_exception_handling(local_storage_manager, real_gpx_file):
         mock_logger.error.assert_called_once_with(
             "Failed to list files: Mocked filesystem error"
         )
+
+
+def test_get_storage_root_prefix(local_storage_manager):
+    """Test getting storage root prefix for local storage."""
+    result = local_storage_manager.get_storage_root_prefix()
+    assert result == "local://"

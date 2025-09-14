@@ -164,6 +164,10 @@ class MockStorageManager:
         self.bucket_calls.append(())
         return True
 
+    def get_storage_root_prefix(self) -> str:
+        """Mock storage root prefix implementation."""
+        return "mock://test-bucket"
+
 
 def test_storage_manager_protocol_interface():
     """Test that StorageManager Protocol defines the correct interface."""
@@ -171,6 +175,7 @@ def test_storage_manager_protocol_interface():
     assert hasattr(StorageManager, "delete_gpx_segment")
     assert hasattr(StorageManager, "get_gpx_segment_url")
     assert hasattr(StorageManager, "bucket_exists")
+    assert hasattr(StorageManager, "get_storage_root_prefix")
 
     upload_method = StorageManager.__dict__["upload_gpx_segment"]
     assert upload_method.__annotations__["return"] is str
@@ -183,6 +188,9 @@ def test_storage_manager_protocol_interface():
 
     bucket_method = StorageManager.__dict__["bucket_exists"]
     assert bucket_method.__annotations__["return"] is bool
+
+    prefix_method = StorageManager.__dict__["get_storage_root_prefix"]
+    assert prefix_method.__annotations__["return"] is str
 
 
 def test_storage_manager_protocol_implementation():
@@ -205,6 +213,10 @@ def test_storage_manager_protocol_implementation():
     result = manager.bucket_exists()
     assert result is True
     assert manager.bucket_calls == [()]
+
+    # Test get_storage_root_prefix
+    result = manager.get_storage_root_prefix()
+    assert result == "mock://test-bucket"
 
 
 def test_storage_manager_protocol_type_checking():

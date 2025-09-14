@@ -311,15 +311,9 @@ async def create_segment(
             else:
                 logger.warning(f"Failed to clean up local file: {segment_file_path}")
 
-            # Generate appropriate file path based on storage type
-            if hasattr(storage_manager, "bucket_name"):
-                # S3Manager
-                processed_file_path = (
-                    f"s3://{storage_manager.bucket_name}/{storage_key}"
-                )
-            else:
-                # LocalStorageManager
-                processed_file_path = f"local://{storage_key}"
+            processed_file_path = (
+                f"{storage_manager.get_storage_root_prefix()}/{storage_key}"
+            )
 
         except Exception as storage_error:
             logger.error(f"Failed to upload to storage: {str(storage_error)}")

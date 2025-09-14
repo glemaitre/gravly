@@ -327,3 +327,9 @@ def test_get_gpx_segment_url_client_error(mock_s3_manager):
     ):
         result = mock_s3_manager.get_gpx_segment_url(s3_key)
         assert result is None
+
+
+def test_get_storage_root_prefix(mock_s3_manager):
+    """Test getting storage root prefix for S3 storage."""
+    result = mock_s3_manager.get_storage_root_prefix()
+    assert result == "s3://test-cycling-gpx-bucket"

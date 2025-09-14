@@ -41,6 +41,10 @@ class StorageManager(Protocol):
         """Check if the storage bucket/container exists and is accessible."""
         ...
 
+    def get_storage_root_prefix(self) -> str:
+        """Get the storage root prefix for file paths (e.g., 's3://bucket' or 'local://')."""
+        ...
+
 
 class S3Manager:
     """Manages S3 operations for GPX file storage."""
@@ -216,6 +220,16 @@ class S3Manager:
             return True
         except ClientError:
             return False
+
+    def get_storage_root_prefix(self) -> str:
+        """Get the S3 storage root prefix for file paths.
+
+        Returns
+        -------
+        str
+            S3 storage root prefix in the format 's3://bucket_name'.
+        """
+        return f"s3://{self.bucket_name}"
 
 
 class LocalStorageManager:
@@ -417,6 +431,16 @@ original-path: {local_file_path}
         except Exception as e:
             logger.error(f"Failed to list files: {str(e)}")
             return []
+
+    def get_storage_root_prefix(self) -> str:
+        """Get the local storage root prefix for file paths.
+
+        Returns
+        -------
+        str
+            Local storage root prefix in the format 'local://'.
+        """
+        return "local://"
 
 
 def get_storage_manager(
