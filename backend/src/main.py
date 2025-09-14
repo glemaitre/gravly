@@ -221,9 +221,7 @@ async def create_segment(
         )
 
     if not s3_manager:
-        raise HTTPException(
-            status_code=500, detail="S3 manager not initialized"
-        )
+        raise HTTPException(status_code=500, detail="S3 manager not initialized")
 
     original_file_path = Path(temp_dir.name) / f"{file_id}.gpx"
     logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
@@ -231,9 +229,6 @@ async def create_segment(
     if not original_file_path.exists():
         logger.warning(f"Uploaded file not found: {original_file_path}")
         raise HTTPException(status_code=404, detail="Uploaded file not found")
-
-    if temp_dir is None:
-        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
 
     frontend_temp_dir = Path(temp_dir.name) / "gpx_segments"
     frontend_temp_dir.mkdir(parents=True, exist_ok=True)

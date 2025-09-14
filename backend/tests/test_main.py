@@ -768,3 +768,37 @@ def test_s3_manager_initialization_exception_handling():
 
     finally:
         src.main.s3_manager = original_s3_manager
+
+
+def test_create_segment_s3_manager_not_initialized(client, sample_gpx_file):
+    """Test segment creation when S3 manager is not initialized."""
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    original_s3_manager = src.main.s3_manager
+
+    try:
+        src.main.s3_manager = None
+
+        response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "100",
+            },
+        )
+
+        assert response.status_code == 500
+        assert "S3 manager not initialized" in response.json()["detail"]
+
+    finally:
+        src.main.s3_manager = original_s3_manager
