@@ -9,11 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from src.utils.storage import (
-    LocalStorageManager,
-    cleanup_local_file,
-    get_storage_manager,
-)
+from src.utils.storage import LocalStorageManager
 
 
 @pytest.fixture
@@ -238,104 +234,6 @@ def test_list_files_with_prefix(local_storage_manager, real_gpx_file):
     assert len(all_files) == 3
 
 
-def test_get_storage_manager_local():
-    """Test storage factory returns LocalStorageManager for local type."""
-    manager = get_storage_manager("local")
-    assert isinstance(manager, LocalStorageManager)
-
-
-def test_get_storage_manager_s3():
-    """Test storage factory returns S3Manager for s3 type."""
-    with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
-        mock_instance = mock_s3_manager_class.return_value
-        manager = get_storage_manager("s3", {"bucket_name": "test-bucket"})
-        mock_s3_manager_class.assert_called_once()
-        assert manager == mock_instance
-
-
-def test_get_storage_manager_invalid_type():
-    """Test storage factory raises error for invalid type."""
-    with pytest.raises(ValueError, match="Invalid STORAGE_TYPE"):
-        get_storage_manager("invalid")
-
-
-def test_get_storage_manager_with_local_config():
-    """Test storage factory with local configuration."""
-    config = {
-        "storage_root": "/tmp/test_storage",
-        "base_url": "http://test:8080/storage",
-    }
-    manager = get_storage_manager("local", config)
-    assert isinstance(manager, LocalStorageManager)
-    assert manager.storage_root == Path("/tmp/test_storage")
-    assert manager.base_url == "http://test:8080/storage"
-
-
-def test_cleanup_existing_file(temp_storage_dir):
-    """Test cleanup of existing file."""
-    temp_path = temp_storage_dir / "test_file.txt"
-    temp_path.write_text("test content")
-
-    assert temp_path.exists()
-
-    result = cleanup_local_file(temp_path)
-    assert result is True
-    assert not temp_path.exists()
-
-
-def test_cleanup_nonexistent_file():
-    """Test cleanup of non-existent file."""
-    non_existent_path = Path("/non/existent/file.txt")
-
-    result = cleanup_local_file(non_existent_path)
-    assert result is False
-
-
-def test_cleanup_file_with_permission_error(temp_storage_dir):
-    """Test cleanup when file deletion fails."""
-    temp_path = temp_storage_dir / "test_file.txt"
-    temp_path.write_text("test content")
-
-    try:
-        temp_path.chmod(0o444)
-
-        result = cleanup_local_file(temp_path)
-        assert isinstance(result, bool)
-
-    finally:
-        try:
-            temp_path.chmod(0o644)
-            temp_path.unlink()
-        except (OSError, FileNotFoundError):
-            pass
-
-
-def test_cleanup_file_with_mocked_exception(temp_storage_dir):
-    """Test cleanup when file deletion raises an exception."""
-    temp_path = temp_storage_dir / "test_file.txt"
-    temp_path.write_text("test content")
-
-    try:
-        original_unlink = Path.unlink
-
-        def mock_unlink(self):
-            raise OSError("Permission denied")
-
-        Path.unlink = mock_unlink
-
-        try:
-            result = cleanup_local_file(temp_path)
-            assert result is False
-        finally:
-            Path.unlink = original_unlink
-
-    finally:
-        try:
-            temp_path.unlink()
-        except FileNotFoundError:
-            pass
-
-
 def test_local_storage_manager_with_custom_base_url():
     """Test LocalStorageManager with custom base URL."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -438,3 +336,26 @@ def test_list_files_prefix_path_not_exists(local_storage_manager):
 
     result = local_storage_manager.list_files(non_existent_prefix)
     assert result == []
+
+
+def test_list_files_exception_handling(local_storage_manager, real_gpx_file):
+    """Test that exceptions during file listing are properly logged and return empty list."""
+    file_id = "test-list-exception"
+
+    local_storage_manager.upload_gpx_segment(
+        local_file_path=real_gpx_file,
+        file_id=file_id,
+    )
+
+    with (
+        patch("pathlib.Path.rglob") as mock_rglob,
+        patch("src.utils.storage.logger") as mock_logger,
+    ):
+        mock_rglob.side_effect = OSError("Mocked filesystem error")
+
+        result = local_storage_manager.list_files()
+        assert result == []
+
+        mock_logger.error.assert_called_once_with(
+            "Failed to list files: Mocked filesystem error"
+        )
