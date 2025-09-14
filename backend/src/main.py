@@ -17,12 +17,19 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-from .utils.config import load_environment_config
+from .utils.config import (
+    DatabaseConfig,
+    LocalStorageConfig,
+    S3StorageConfig,
+    StorageConfig,
+    load_environment_config,
+)
 from .utils.gpx import (
     GPXData,
     extract_from_gpx_file,
     generate_gpx_segment,
 )
+from .utils.postgres import get_database_url
 from .utils.storage import (
     LocalStorageManager,
     StorageManager,
@@ -30,13 +37,20 @@ from .utils.storage import (
     get_storage_manager,
 )
 
-load_environment_config()
+db_config, storage_config = load_environment_config()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
+DATABASE_URL = get_database_url(
+    host=db_config.host,
+    port=db_config.port,
+    database=db_config.name,
+    username=db_config.user,
+    password=db_config.password,
+)
 engine = None
 SessionLocal = None
 
@@ -62,27 +76,10 @@ async def lifespan(app: FastAPI):
         SessionLocal = None
 
     try:
-        storage_type = os.getenv("STORAGE_TYPE", "local").lower()
-
-        if storage_type == "s3":
-            config = {
-                "bucket_name": os.getenv("AWS_S3_BUCKET"),
-                "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
-                "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
-                "aws_region": os.getenv("AWS_REGION", "us-east-1"),
-            }
-            # Filter out None values for S3
-            config = {k: v for k, v in config.items() if v is not None}
-        else:
-            config = {
-                "storage_root": os.getenv("LOCAL_STORAGE_ROOT"),
-                "base_url": os.getenv("LOCAL_STORAGE_BASE_URL"),
-            }
-            # Filter out None values for local storage
-            config = {k: v for k, v in config.items() if v is not None}
-
-        storage_manager = get_storage_manager(storage_type, config)
-        logger.info(f"Storage manager initialized successfully (type: {storage_type})")
+        storage_manager = get_storage_manager(storage_config)
+        logger.info(
+            f"Storage manager initialized successfully (type: {storage_config.storage_type})"
+        )
     except Exception as e:
         logger.warning(f"Failed to initialize storage manager: {str(e)}")
         storage_manager = None
@@ -121,26 +118,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-# Database setup (PostgreSQL via SQLAlchemy async)
-def get_database_url() -> str:
-    """Construct database URL from environment variables or use DATABASE_URL directly."""
-    # If DATABASE_URL is provided, use it directly
-    if database_url := os.getenv("DATABASE_URL"):
-        return database_url
-
-    # Otherwise, construct from individual components
-    db_host = os.getenv("DB_HOST", "localhost")
-    db_port = os.getenv("DB_PORT", "5432")
-    db_name = os.getenv("DB_NAME", "cycling")
-    db_user = os.getenv("DB_USER", "postgres")
-    db_password = os.getenv("DB_PASSWORD", "postgres")
-
-    return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-
-
-DATABASE_URL = get_database_url()
 
 
 class Base(DeclarativeBase):

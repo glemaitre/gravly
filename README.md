@@ -76,13 +76,23 @@ The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, ma
 
 1. **Copy the example files** for your desired environment:
    ```bash
-   cp .env/.env.local.example .env/local      # For local development
-   cp .env/.env.s3.example .env/s3            # For S3 testing
-   cp .env/.env.staging.example .env/staging  # For staging
-   cp .env/.env.production.example .env/production  # For production
+   cp .env/local.example .env/local      # For local development
+   cp .env/s3.example .env/s3            # For S3 testing
+   cp .env/staging.example .env/staging  # For staging
+   cp .env/production.example .env/production  # For production
    ```
 
-2. **Edit the copied files** with your actual configuration values.
+2. **Edit the copied files** with your actual configuration values:
+   ```bash
+   # For local development, edit .env/local and update:
+   DB_PASSWORD=your_secure_password_here
+   
+   # Optionally customize other database settings:
+   # DB_HOST=localhost
+   # DB_PORT=5432
+   # DB_NAME=cycling
+   # DB_USER=postgres
+   ```
 
 3. **Never commit actual `.env` files** - they contain sensitive information and are already in `.gitignore`. Only the example files in the `.env/` folder are tracked in git.
 
@@ -95,19 +105,15 @@ The storage backend is controlled by the `STORAGE_TYPE` environment variable:
 
 ### Database Configuration
 
-The application uses PostgreSQL for persistent storage. Database connection is configured through environment variables:
+The application uses PostgreSQL for persistent storage. Database connection is configured through individual environment variables:
 
-**Primary configuration (recommended):**
-- `DATABASE_URL` - Complete PostgreSQL connection string
-  - Format: `postgresql+asyncpg://username:password@host:port/database_name`
-  - Example: `postgresql+asyncpg://postgres:mypassword@localhost:5432/cycling`
-
-**Alternative configuration (individual components):**
 - `DB_HOST` - Database host (default: localhost)
 - `DB_PORT` - Database port (default: 5432)
 - `DB_NAME` - Database name (default: cycling)
 - `DB_USER` - Database username (default: postgres)
 - `DB_PASSWORD` - Database password (default: postgres)
+
+The application automatically constructs the PostgreSQL connection string from these individual components.
 
 ### PostgreSQL Setup
 

@@ -12,16 +12,11 @@ AWS_S3_BUCKET=your_production_bucket_name
 AWS_REGION=us-east-1
 
 # Database Configuration
-# PostgreSQL connection string for production environment
-# Format: postgresql+asyncpg://username:password@host:port/database_name
-DATABASE_URL=postgresql+asyncpg://prod_user:your_production_password_here@prod-db-host:5432/cycling_production
-
-# Database connection details (alternative to DATABASE_URL)
-# DB_HOST=prod-db-host
-# DB_PORT=5432
-# DB_NAME=cycling_production
-# DB_USER=prod_user
-# DB_PASSWORD=your_production_password_here
+DB_HOST=prod-db-host
+DB_PORT=5432
+DB_NAME=cycling_production
+DB_USER=prod_user
+DB_PASSWORD=your_production_password_here
 
 # Logging
 LOG_LEVEL=WARNING

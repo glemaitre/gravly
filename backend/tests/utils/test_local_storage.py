@@ -11,6 +11,8 @@ from unittest.mock import patch
 import pytest
 from src.utils.storage import LocalStorageManager
 
+from backend.src.utils.config import LocalStorageConfig
+
 
 @pytest.fixture
 def temp_storage_dir():
@@ -22,7 +24,12 @@ def temp_storage_dir():
 @pytest.fixture
 def local_storage_manager(temp_storage_dir):
     """Create a LocalStorageManager instance for testing."""
-    return LocalStorageManager(storage_root=str(temp_storage_dir))
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root=str(temp_storage_dir),
+        base_url="http://localhost:8000/storage",
+    )
+    return LocalStorageManager(config)
 
 
 @pytest.fixture
@@ -35,7 +42,12 @@ def real_gpx_file():
 
 def test_local_storage_manager_initialization(temp_storage_dir):
     """Test LocalStorageManager initialization."""
-    manager = LocalStorageManager(storage_root=str(temp_storage_dir))
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root=str(temp_storage_dir),
+        base_url="http://localhost:8000/storage",
+    )
+    manager = LocalStorageManager(config)
     assert manager.storage_root == temp_storage_dir
     assert manager.storage_root.exists()
     assert manager.storage_root.is_dir()
@@ -44,13 +56,23 @@ def test_local_storage_manager_initialization(temp_storage_dir):
 def test_local_storage_manager_initialization_with_explicit_params():
     """Test LocalStorageManager initialization using explicit parameters."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        manager = LocalStorageManager(storage_root=temp_dir)
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=temp_dir,
+            base_url="http://localhost:8000/storage",
+        )
+        manager = LocalStorageManager(config)
         assert manager.storage_root == Path(temp_dir)
 
 
 def test_local_storage_manager_default_initialization():
     """Test LocalStorageManager initialization with default values."""
-    manager = LocalStorageManager()
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root="../scratch/local_storage",
+        base_url="http://localhost:8000/storage",
+    )
+    manager = LocalStorageManager(config)
     assert manager.storage_root == Path("../scratch/local_storage")
     assert manager.base_url == "http://localhost:8000/storage"
 
@@ -237,15 +259,23 @@ def test_list_files_with_prefix(local_storage_manager, real_gpx_file):
 def test_local_storage_manager_with_custom_base_url():
     """Test LocalStorageManager with custom base URL."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        manager = LocalStorageManager(
-            storage_root=temp_dir, base_url="http://custom:8080/storage"
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=temp_dir,
+            base_url="http://custom:8080/storage",
         )
+        manager = LocalStorageManager(config)
         assert manager.base_url == "http://custom:8080/storage"
 
 
 def test_local_storage_manager_default_base_url():
     """Test LocalStorageManager with default base URL."""
-    manager = LocalStorageManager()
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root="../scratch/local_storage",
+        base_url="http://localhost:8000/storage",
+    )
+    manager = LocalStorageManager(config)
     assert manager.base_url == "http://localhost:8000/storage"
 
 

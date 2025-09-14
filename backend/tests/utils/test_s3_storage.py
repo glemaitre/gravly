@@ -15,6 +15,8 @@ from botocore.exceptions import ClientError, NoCredentialsError
 from moto import mock_aws
 from src.utils.storage import S3Manager, cleanup_local_file
 
+from backend.src.utils.config import S3StorageConfig
+
 
 @pytest.fixture
 def mock_bucket_name():
@@ -29,12 +31,14 @@ def mock_s3_manager(mock_bucket_name):
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_bucket_name)
 
-        manager = S3Manager(
-            bucket_name=mock_bucket_name,
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
-            aws_region="us-east-1",
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket=mock_bucket_name,
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
         )
+        manager = S3Manager(config)
         yield manager
 
 
@@ -60,7 +64,14 @@ def test_s3_manager_initialization_with_env_vars(mock_bucket_name):
             s3_client = boto3.client("s3", region_name="us-east-1")
             s3_client.create_bucket(Bucket=mock_bucket_name)
 
-            manager = S3Manager(bucket_name=mock_bucket_name)
+            config = S3StorageConfig(
+                storage_type="s3",
+                bucket=mock_bucket_name,
+                access_key_id="test-key",
+                secret_access_key="test-secret",
+                region="us-east-1",
+            )
+            manager = S3Manager(config)
             assert manager.bucket_name == mock_bucket_name
             assert manager.aws_region == "us-east-1"
 
@@ -68,7 +79,14 @@ def test_s3_manager_initialization_with_env_vars(mock_bucket_name):
 def test_s3_manager_initialization_without_bucket_name():
     """Test S3Manager initialization fails without bucket name."""
     with pytest.raises(ValueError, match="S3 bucket name must be provided"):
-        S3Manager(bucket_name="")
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket="",
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
+        )
+        S3Manager(config)
 
 
 def test_upload_gpx_segment_success(mock_s3_manager, real_gpx_file):
@@ -185,11 +203,14 @@ def test_bucket_exists_true(mock_s3_manager):
 def test_bucket_exists_false(mock_bucket_name):
     """Test bucket existence check when bucket doesn't exist."""
     with mock_aws():
-        manager = S3Manager(
-            bucket_name="nonexistent-bucket",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket="nonexistent-bucket",
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
         )
+        manager = S3Manager(config)
         result = manager.bucket_exists()
         assert result is False
 
@@ -263,7 +284,14 @@ def test_s3_manager_no_credentials_error():
     """Test S3Manager initialization when AWS credentials are not found."""
     with patch("src.utils.storage.boto3.client", side_effect=NoCredentialsError()):
         with pytest.raises(NoCredentialsError, match="Unable to locate credentials"):
-            S3Manager(bucket_name="test-bucket")
+            config = S3StorageConfig(
+                storage_type="s3",
+                bucket="test-bucket",
+                access_key_id="test-key",
+                secret_access_key="test-secret",
+                region="us-east-1",
+            )
+            S3Manager(config)
 
 
 @mock_aws

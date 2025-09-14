@@ -8,16 +8,61 @@ from unittest.mock import patch
 
 import boto3
 import pytest
-import src.main
 from fastapi.testclient import TestClient
 from moto import mock_aws
-from src.main import app, lifespan
 from src.utils.gpx import generate_gpx_segment
 from src.utils.storage import LocalStorageManager, S3Manager, cleanup_local_file
 
+from backend.src.utils.config import LocalStorageConfig, S3StorageConfig
+
+
+@pytest.fixture(autouse=True)
+def setup_test_database_config():
+    """Set up database and storage configuration for tests."""
+    test_config = {
+        "DB_HOST": "localhost",
+        "DB_PORT": "5432",
+        "DB_NAME": "test_cycling",
+        "DB_USER": "test_postgres",
+        "DB_PASSWORD": "test_password",
+        "STORAGE_TYPE": "local",
+        "LOCAL_STORAGE_ROOT": "./test_storage",
+        "LOCAL_STORAGE_BASE_URL": "http://localhost:8000/storage",
+    }
+
+    with patch.dict(os.environ, test_config, clear=False):
+        # Import main module after setting up environment variables
+        import src.main as main_module
+
+        # Make main_module available globally for tests as 'src'
+        globals()["src"] = type("MockSrc", (), {"main": main_module})()
+        yield
+
 
 @pytest.fixture
-def client(tmp_path):
+def main_module():
+    """Get access to the main module for testing."""
+    return src.main
+
+
+@pytest.fixture
+def app():
+    """Get the FastAPI app instance."""
+    from src.main import app as fastapi_app
+
+    return fastapi_app
+
+
+@pytest.fixture
+def lifespan():
+    """Get the lifespan context manager."""
+    from src.main import lifespan as lifespan_cm
+
+    return lifespan_cm
+
+
+@pytest.fixture
+def client(tmp_path, app):
     """Create a test client with temporary directory."""
     with TestClient(app) as test_client:
         yield test_client
@@ -535,7 +580,7 @@ def test_cors_headers(client):
     assert response.status_code in [200, 405]  # Depends on CORS configuration
 
 
-def test_app_lifespan():
+def test_app_lifespan(app):
     """Test that the app is properly configured."""
     assert app is not None
     assert app.title == "Cycling GPX API"
@@ -553,7 +598,14 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
 
-        s3_manager = S3Manager(bucket_name=mock_s3_environment)
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket=mock_s3_environment,
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
+        )
+        s3_manager = S3Manager(config)
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
@@ -594,11 +646,14 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
 def test_s3_upload_failure_cleanup(mock_s3_environment, sample_gpx_file, tmp_path):
     """Test that local file is cleaned up even if S3 upload fails."""
     with mock_aws():
-        s3_manager = S3Manager(
-            bucket_name="nonexistent-bucket",
-            aws_access_key_id="test-key",
-            aws_secret_access_key="test-secret",
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket="nonexistent-bucket",
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
         )
+        s3_manager = S3Manager(config)
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
@@ -633,7 +688,14 @@ def test_multiple_segments_from_same_file(
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
 
-        s3_manager = S3Manager(bucket_name=mock_s3_environment)
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket=mock_s3_environment,
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
+        )
+        s3_manager = S3Manager(config)
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
@@ -731,10 +793,10 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
         assert segment_response.status_code in [200, 500]
 
 
-def test_storage_manager_initialization_failure_handling():
+def test_storage_manager_initialization_failure_handling(app, lifespan, main_module):
     """Test that the app handles storage manager initialization failure gracefully."""
 
-    original_storage_manager = src.main.storage_manager
+    original_storage_manager = main_module.storage_manager
 
     try:
         with patch.dict(os.environ, {}, clear=True):
@@ -752,10 +814,10 @@ def test_storage_manager_initialization_failure_handling():
                 assert result is True
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
-def test_storage_manager_initialization_exception_handling():
+def test_storage_manager_initialization_exception_handling(app, lifespan):
     """Test that storage manager initialization exceptions are properly caught
     and logged."""
 
@@ -781,7 +843,7 @@ def test_storage_manager_initialization_exception_handling():
                 assert result is True
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_create_segment_storage_manager_not_initialized(client, sample_gpx_file):
@@ -815,7 +877,7 @@ def test_create_segment_storage_manager_not_initialized(client, sample_gpx_file)
         assert "Storage manager not initialized" in response.json()["detail"]
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 @mock_aws
@@ -873,7 +935,7 @@ def test_serve_storage_file_storage_manager_not_initialized(client):
         assert response.json()["detail"] == "Storage manager not initialized"
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
@@ -881,7 +943,14 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
     original_storage_manager = src.main.storage_manager
 
     try:
-        s3_manager = S3Manager(bucket_name="test-bucket")
+        config = S3StorageConfig(
+            storage_type="s3",
+            bucket="test-bucket",
+            access_key_id="test-key",
+            secret_access_key="test-secret",
+            region="us-east-1",
+        )
+        s3_manager = S3Manager(config)
         src.main.storage_manager = s3_manager
 
         response = client.get("/storage/test-file.gpx")
@@ -890,7 +959,7 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
         assert response.json()["detail"] == "File serving only available in local mode"
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path):
@@ -898,7 +967,12 @@ def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_path))
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=str(tmp_path),
+            base_url="http://localhost:8000/storage",
+        )
+        local_manager = LocalStorageManager(config)
         src.main.storage_manager = local_manager
 
         test_file_path = tmp_path / "test-file.gpx"
@@ -915,7 +989,7 @@ def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path
         assert response.content == sample_gpx_file.read_bytes()
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_file_not_found(client, tmp_path):
@@ -923,7 +997,12 @@ def test_serve_storage_file_file_not_found(client, tmp_path):
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_path))
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=str(tmp_path),
+            base_url="http://localhost:8000/storage",
+        )
+        local_manager = LocalStorageManager(config)
         src.main.storage_manager = local_manager
 
         response = client.get("/storage/nonexistent-file.gpx")
@@ -932,7 +1011,7 @@ def test_serve_storage_file_file_not_found(client, tmp_path):
         assert response.json()["detail"] == "File not found"
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path):
@@ -940,7 +1019,12 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path)
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_path))
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=str(tmp_path),
+            base_url="http://localhost:8000/storage",
+        )
+        local_manager = LocalStorageManager(config)
         src.main.storage_manager = local_manager
 
         subdir = tmp_path / "gpx-segments"
@@ -959,7 +1043,7 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path)
         assert response.content == sample_gpx_file.read_bytes()
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_local_storage_not_available(client, tmp_path):
@@ -968,7 +1052,12 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path):
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_path))
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=str(tmp_path),
+            base_url="http://localhost:8000/storage",
+        )
+        local_manager = LocalStorageManager(config)
         src.main.storage_manager = local_manager
 
         with patch("src.main.hasattr") as mock_hasattr:
@@ -986,7 +1075,7 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path):
             assert response.json()["detail"] == "Local storage not available"
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager
 
 
 def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path):
@@ -994,7 +1083,12 @@ def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_path))
+        config = LocalStorageConfig(
+            storage_type="local",
+            storage_root=str(tmp_path),
+            base_url="http://localhost:8000/storage",
+        )
+        local_manager = LocalStorageManager(config)
         src.main.storage_manager = local_manager
 
         with open(sample_gpx_file, "rb") as f:
@@ -1037,4 +1131,4 @@ def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path
         assert "Storage upload failed" in response.json()["detail"]
 
     finally:
-        src.main.storage_manager = original_storage_manager
+        main_module.storage_manager = original_storage_manager

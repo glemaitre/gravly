@@ -15,6 +15,8 @@ from urllib.parse import urljoin
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
+from .config import LocalStorageConfig, S3StorageConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -49,28 +51,16 @@ class StorageManager(Protocol):
 class S3Manager:
     """Manages S3 operations for GPX file storage."""
 
-    def __init__(
-        self,
-        bucket_name: str,
-        aws_access_key_id: str | None = None,
-        aws_secret_access_key: str | None = None,
-        aws_region: str = "us-east-1",
-    ):
-        """Initialize S3 manager with credentials and configuration.
+    def __init__(self, config: S3StorageConfig):
+        """Initialize S3 manager with configuration.
 
         Parameters
         ----------
-        bucket_name : str
-            S3 bucket name. Must be provided.
-        aws_access_key_id : Optional[str]
-            AWS access key ID. If None, will use AWS credentials from environment.
-        aws_secret_access_key : Optional[str]
-            AWS secret access key. If None, will use AWS credentials from environment.
-        aws_region : str
-            AWS region name. Defaults to "us-east-1".
+        config : S3StorageConfig
+            S3 storage configuration containing bucket, credentials, and region.
         """
-        self.bucket_name = bucket_name
-        self.aws_region = aws_region
+        self.bucket_name = config.bucket
+        self.aws_region = config.region
 
         if not self.bucket_name:
             raise ValueError("S3 bucket name must be provided")
@@ -78,9 +68,9 @@ class S3Manager:
         try:
             self.s3_client = boto3.client(
                 "s3",
-                aws_access_key_id=aws_access_key_id,
-                aws_secret_access_key=aws_secret_access_key,
-                region_name=aws_region,
+                aws_access_key_id=config.access_key_id,
+                aws_secret_access_key=config.secret_access_key,
+                region_name=config.region,
             )
             logger.info(f"S3 client initialized for bucket: {self.bucket_name}")
         except NoCredentialsError:
@@ -235,25 +225,17 @@ class S3Manager:
 class LocalStorageManager:
     """Local filesystem storage manager that mimics S3 API."""
 
-    def __init__(
-        self,
-        storage_root: str = "../scratch/local_storage",
-        base_url: str = "http://localhost:8000/storage",
-    ):
+    def __init__(self, config: LocalStorageConfig):
         """Initialize local storage manager.
 
         Parameters
         ----------
-        storage_root : Optional[str]
-            Root directory for local storage. If None, defaults to
-            `../scratch/local_storage`.
-        base_url : Optional[str]
-            Base URL for serving files. If None, defaults to
-            http://localhost:8000/storage.
+        config : LocalStorageConfig
+            Local storage configuration containing storage root and base URL.
         """
-        self.storage_root = Path(storage_root)
+        self.storage_root = Path(config.storage_root)
         self.storage_root.mkdir(parents=True, exist_ok=True)
-        self.base_url = base_url
+        self.base_url = config.base_url
 
         logger.info(f"Local storage manager initialized with root: {self.storage_root}")
 
@@ -443,29 +425,13 @@ original-path: {local_file_path}
         return "local://"
 
 
-def get_storage_manager(
-    storage_type: str, config: dict | None = None
-) -> StorageManager:
+def get_storage_manager(config: S3StorageConfig | LocalStorageConfig) -> StorageManager:
     """Get the appropriate storage manager based on provided configuration.
 
     Parameters
     ----------
-    storage_type : str
-        Type of storage manager to create ("s3" or "local").
-    config : Optional[dict]
-        Configuration dictionary to pass to the storage manager constructor.
-
-        For S3Manager, should contain:
-
-        - bucket_name: str (required)
-        - aws_access_key_id: str (optional)
-        - aws_secret_access_key: str (optional)
-        - aws_region: str (optional, defaults to "us-east-1")
-
-        For LocalStorageManager, should contain:
-
-        - storage_root: str (optional)
-        - base_url: str (optional)
+    config : S3StorageConfig | LocalStorageConfig
+        Storage configuration containing all necessary parameters for the storage type.
 
     Returns
     -------
@@ -477,16 +443,13 @@ def get_storage_manager(
     ValueError
         If storage configuration is invalid.
     """
-    storage_type = storage_type.lower()
-    config = config or {}
-
-    if storage_type == "s3":
-        return S3Manager(**config)
-    elif storage_type == "local":
-        return LocalStorageManager(**config)
+    if config.storage_type == "s3":
+        return S3Manager(config)
+    elif config.storage_type == "local":
+        return LocalStorageManager(config)
     else:
         raise ValueError(
-            f"Invalid STORAGE_TYPE: {storage_type}. Must be 's3' or 'local'"
+            f"Invalid STORAGE_TYPE: {config.storage_type}. Must be 's3' or 'local'"
         )
 
 

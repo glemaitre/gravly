@@ -15,6 +15,8 @@ from src.utils.storage import (
     get_storage_manager,
 )
 
+from backend.src.utils.config import LocalStorageConfig, S3StorageConfig
+
 
 def test_cleanup_existing_file(tmp_path):
     """Test cleanup of existing file."""
@@ -83,7 +85,12 @@ def test_cleanup_file_with_mocked_exception(tmp_path):
 
 def test_get_storage_manager_local():
     """Test storage factory returns LocalStorageManager for local type."""
-    manager = get_storage_manager("local")
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root="/tmp/test_storage",
+        base_url="http://test:8080/storage",
+    )
+    manager = get_storage_manager(config)
     from src.utils.storage import LocalStorageManager
 
     assert isinstance(manager, LocalStorageManager)
@@ -91,26 +98,39 @@ def test_get_storage_manager_local():
 
 def test_get_storage_manager_s3():
     """Test storage factory returns S3Manager for s3 type."""
+    config = S3StorageConfig(
+        storage_type="s3",
+        bucket="test-bucket",
+        access_key_id="test-key",
+        secret_access_key="test-secret",
+        region="us-west-2",
+    )
     with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
         mock_instance = mock_s3_manager_class.return_value
-        manager = get_storage_manager("s3", {"bucket_name": "test-bucket"})
-        mock_s3_manager_class.assert_called_once()
+        manager = get_storage_manager(config)
+        mock_s3_manager_class.assert_called_once_with(config)
         assert manager == mock_instance
 
 
 def test_get_storage_manager_invalid_type():
     """Test storage factory raises error for invalid type."""
+
+    # Create a mock config with invalid storage type
+    class InvalidStorageConfig:
+        storage_type = "invalid"
+
     with pytest.raises(ValueError, match="Invalid STORAGE_TYPE"):
-        get_storage_manager("invalid")
+        get_storage_manager(InvalidStorageConfig())
 
 
 def test_get_storage_manager_with_local_config():
     """Test storage factory with local configuration."""
-    config = {
-        "storage_root": "/tmp/test_storage",
-        "base_url": "http://test:8080/storage",
-    }
-    manager = get_storage_manager("local", config)
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root="/tmp/test_storage",
+        base_url="http://test:8080/storage",
+    )
+    manager = get_storage_manager(config)
     from src.utils.storage import LocalStorageManager
 
     assert isinstance(manager, LocalStorageManager)
@@ -120,14 +140,17 @@ def test_get_storage_manager_with_local_config():
 
 def test_get_storage_manager_with_s3_config():
     """Test storage factory with S3 configuration."""
-    config = {
-        "bucket_name": "test-bucket",
-        "region_name": "us-west-2",
-    }
+    config = S3StorageConfig(
+        storage_type="s3",
+        bucket="test-bucket",
+        access_key_id="test-key",
+        secret_access_key="test-secret",
+        region="us-west-2",
+    )
     with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
         mock_instance = mock_s3_manager_class.return_value
-        manager = get_storage_manager("s3", config)
-        mock_s3_manager_class.assert_called_once_with(**config)
+        manager = get_storage_manager(config)
+        mock_s3_manager_class.assert_called_once_with(config)
         assert manager == mock_instance
 
 
