@@ -349,3 +349,28 @@ def test_local_storage_manager_default_base_url():
     """Test LocalStorageManager with default base URL."""
     manager = LocalStorageManager()
     assert manager.base_url == "http://localhost:8000/storage"
+
+
+def test_upload_gpx_segment_exception_handling(local_storage_manager, real_gpx_file):
+    """Test that exceptions during upload are properly logged and re-raised."""
+    file_id = "test-exception"
+    prefix = "gpx-segments"
+
+    with (
+        patch("src.utils.storage.shutil.copy2") as mock_copy2,
+        patch("src.utils.storage.logger") as mock_logger,
+    ):
+        mock_copy2.side_effect = OSError("Mocked file system error")
+
+        with pytest.raises(OSError, match="Mocked file system error"):
+            local_storage_manager.upload_gpx_segment(
+                local_file_path=real_gpx_file,
+                file_id=file_id,
+                prefix=prefix,
+            )
+
+        mock_copy2.assert_called_once()
+
+        mock_logger.error.assert_called_once_with(
+            "Failed to upload to local storage: Mocked file system error"
+        )
