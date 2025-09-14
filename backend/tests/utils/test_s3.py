@@ -314,7 +314,8 @@ def test_delete_gpx_segment_client_error(mock_s3_manager):
 
 @mock_aws
 def test_get_gpx_segment_url_client_error(mock_s3_manager):
-    """Test get_gpx_segment_url when S3 presigned URL generation raises a ClientError."""
+    """Test get_gpx_segment_url when S3 presigned URL generation raises a
+    ClientError."""
     s3_key = "test-segment/file.gpx"
 
     client_error = ClientError(
