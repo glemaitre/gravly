@@ -43,11 +43,9 @@ jobs:
       - name: Setup database
         run: pixi run pg-setup
 
-      - name: Debug
-        run: pixi run -e dev -- psql -l
-
       - name: Start backend
-        run: pixi run start-backend
+        run: pixi run start-backend &&
+
       - name: Run backend tests with coverage
         run: |
           pixi run -e dev -- test-backend
