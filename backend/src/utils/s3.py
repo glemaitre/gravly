@@ -34,7 +34,8 @@ class S3Manager:
         aws_access_key_id : Optional[str]
             AWS access key ID. If None, will use AWS_ACCESS_KEY_ID environment variable.
         aws_secret_access_key : Optional[str]
-            AWS secret access key. If None, will use AWS_SECRET_ACCESS_KEY environment variable.
+            AWS secret access key. If None, will use AWS_SECRET_ACCESS_KEY
+            environment variable.
         aws_region : str
             AWS region name. Defaults to "us-east-1".
         """
@@ -43,11 +44,11 @@ class S3Manager:
 
         if not self.bucket_name:
             raise ValueError(
-                "S3 bucket name must be provided or set in AWS_S3_BUCKET environment variable"
+                "S3 bucket name must be provided or set in AWS_S3_BUCKET environment"
+                "variable"
             )
 
         try:
-            # Initialize S3 client
             self.s3_client = boto3.client(
                 "s3",
                 aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
@@ -92,7 +93,6 @@ class S3Manager:
         if not local_file_path.exists():
             raise FileNotFoundError(f"Local file not found: {local_file_path}")
 
-        # Construct S3 key with prefix
         s3_key = f"{prefix}/{file_id}.gpx"
 
         try:
@@ -100,7 +100,6 @@ class S3Manager:
                 f"Uploading {local_file_path} to s3://{self.bucket_name}/{s3_key}"
             )
 
-            # Upload file to S3
             self.s3_client.upload_file(
                 str(local_file_path),
                 self.bucket_name,

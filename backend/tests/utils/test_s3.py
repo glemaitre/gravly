@@ -232,3 +232,29 @@ def test_cleanup_file_with_permission_error():
             temp_path.unlink()
         except (OSError, FileNotFoundError):
             pass
+
+
+def test_cleanup_file_with_mocked_exception():
+    """Test cleanup when file deletion raises an exception."""
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        temp_path = Path(f.name)
+
+    try:
+        original_unlink = Path.unlink
+
+        def mock_unlink(self):
+            raise OSError("Permission denied")
+
+        Path.unlink = mock_unlink
+
+        try:
+            result = cleanup_local_file(temp_path)
+            assert result is False
+        finally:
+            Path.unlink = original_unlink
+
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
