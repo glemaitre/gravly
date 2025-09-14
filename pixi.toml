@@ -107,10 +107,10 @@ cmd = "pg_ctl -D $PWD/postgres_data stop"
 cmd = "pg_ctl -D $PWD/postgres_data status"
 
 [tasks.pg-create-db]
-cmd = "createdb $DB_NAME"
+cmd = "bash -c 'source .env/database && createdb $DB_NAME'"
 
 [tasks.pg-drop-db]
-cmd = "dropdb $DB_NAME"
+cmd = "bash -c 'source .env/database && dropdb $DB_NAME'"
 
 [tasks.pg-cleanup]
 depends-on = ["pg-stop", "pg-drop-db"]
