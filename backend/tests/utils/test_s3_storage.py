@@ -194,9 +194,9 @@ def test_bucket_exists_false(mock_bucket_name):
         assert result is False
 
 
-def test_cleanup_existing_file(tmp_dir):
+def test_cleanup_existing_file(tmp_path):
     """Test cleanup of existing file."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     assert temp_path.exists()
@@ -214,9 +214,9 @@ def test_cleanup_nonexistent_file():
     assert result is False
 
 
-def test_cleanup_file_with_permission_error(tmp_dir):
+def test_cleanup_file_with_permission_error(tmp_path):
     """Test cleanup when file deletion fails."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     try:
@@ -233,9 +233,9 @@ def test_cleanup_file_with_permission_error(tmp_dir):
             pass
 
 
-def test_cleanup_file_with_mocked_exception(tmp_dir):
+def test_cleanup_file_with_mocked_exception(tmp_path):
     """Test cleanup when file deletion raises an exception."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     try:
@@ -267,9 +267,9 @@ def test_s3_manager_no_credentials_error():
 
 
 @mock_aws
-def test_upload_gpx_segment_client_error(mock_s3_manager, real_gpx_file, tmp_dir):
+def test_upload_gpx_segment_client_error(mock_s3_manager, real_gpx_file, tmp_path):
     """Test upload_gpx_segment when S3 upload raises a ClientError."""
-    temp_file = tmp_dir / "test_file.gpx"
+    temp_file = tmp_path / "test_file.gpx"
     temp_file.write_text(real_gpx_file.read_text())
 
     client_error = ClientError(

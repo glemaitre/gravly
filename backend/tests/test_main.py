@@ -893,15 +893,15 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
         src.main.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_dir):
+def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_path):
     """Test successfully serving a file from local storage."""
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        local_manager = LocalStorageManager(storage_root=str(tmp_path))
         src.main.storage_manager = local_manager
 
-        test_file_path = tmp_dir / "test-file.gpx"
+        test_file_path = tmp_path / "test-file.gpx"
         test_file_path.write_text(sample_gpx_file.read_text())
 
         response = client.get("/storage/test-file.gpx")
@@ -918,12 +918,12 @@ def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_dir)
         src.main.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_file_not_found(client, tmp_dir):
+def test_serve_storage_file_file_not_found(client, tmp_path):
     """Test serving storage file when file doesn't exist."""
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        local_manager = LocalStorageManager(storage_root=str(tmp_path))
         src.main.storage_manager = local_manager
 
         response = client.get("/storage/nonexistent-file.gpx")
@@ -935,15 +935,15 @@ def test_serve_storage_file_file_not_found(client, tmp_dir):
         src.main.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_dir):
+def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path):
     """Test serving a file from a subdirectory."""
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        local_manager = LocalStorageManager(storage_root=str(tmp_path))
         src.main.storage_manager = local_manager
 
-        subdir = tmp_dir / "gpx-segments"
+        subdir = tmp_path / "gpx-segments"
         subdir.mkdir()
         test_file_path = subdir / "test-file.gpx"
         test_file_path.write_text(sample_gpx_file.read_text())
@@ -962,12 +962,12 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_dir):
         src.main.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_local_storage_not_available(client, tmp_dir):
+def test_serve_storage_file_local_storage_not_available(client, tmp_path):
     """Test serving storage file when local storage manager doesn't have get_file_path method."""
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        local_manager = LocalStorageManager(storage_root=str(tmp_path))
         src.main.storage_manager = local_manager
 
         with patch("src.main.hasattr") as mock_hasattr:
@@ -988,12 +988,12 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_dir):
         src.main.storage_manager = original_storage_manager
 
 
-def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_dir):
+def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_path):
     """Test create segment when storage upload fails."""
     original_storage_manager = src.main.storage_manager
 
     try:
-        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        local_manager = LocalStorageManager(storage_root=str(tmp_path))
         src.main.storage_manager = local_manager
 
         with open(sample_gpx_file, "rb") as f:

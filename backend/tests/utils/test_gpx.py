@@ -57,7 +57,7 @@ def test_extract_from_gpx_file_with_data_file():
     assert isinstance(point.time, str)
 
 
-def test_generate_gpx_segment(tmp_dir):
+def test_generate_gpx_segment(tmp_path):
     """Test generate_gpx_segment function with the file.gpx from data folder."""
     data_dir = Path(__file__).parent.parent / "data"
     input_file_path = data_dir / "file.gpx"
@@ -71,7 +71,7 @@ def test_generate_gpx_segment(tmp_dir):
         start_index=start_index,
         end_index=end_index,
         segment_name=segment_name,
-        output_dir=tmp_dir,
+        output_dir=tmp_path,
     )
 
     assert isinstance(file_id, str)

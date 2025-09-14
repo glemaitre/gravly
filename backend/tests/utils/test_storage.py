@@ -16,9 +16,9 @@ from src.utils.storage import (
 )
 
 
-def test_cleanup_existing_file(tmp_dir):
+def test_cleanup_existing_file(tmp_path):
     """Test cleanup of existing file."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     assert temp_path.exists()
@@ -36,9 +36,9 @@ def test_cleanup_nonexistent_file():
     assert result is False
 
 
-def test_cleanup_file_with_permission_error(tmp_dir):
+def test_cleanup_file_with_permission_error(tmp_path):
     """Test cleanup when file deletion fails."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     try:
@@ -55,9 +55,9 @@ def test_cleanup_file_with_permission_error(tmp_dir):
             pass
 
 
-def test_cleanup_file_with_mocked_exception(tmp_dir):
+def test_cleanup_file_with_mocked_exception(tmp_path):
     """Test cleanup when file deletion raises an exception."""
-    temp_path = tmp_dir / "test_file.txt"
+    temp_path = tmp_path / "test_file.txt"
     temp_path.write_text("test content")
 
     try:

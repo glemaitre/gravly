@@ -25,6 +25,9 @@ jobs:
       - name: Show pixi version
         run: pixi --version
 
+      - name: Create environment file
+        run: cp .env/.env.local.example .env/local
+
       - name: Run backend tests with coverage
         run: pixi run -e default -- test-backend
 
