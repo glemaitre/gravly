@@ -60,16 +60,15 @@ def test_s3_manager_initialization_with_env_vars(mock_bucket_name):
             s3_client = boto3.client("s3", region_name="us-east-1")
             s3_client.create_bucket(Bucket=mock_bucket_name)
 
-            manager = S3Manager()
+            manager = S3Manager(bucket_name=mock_bucket_name)
             assert manager.bucket_name == mock_bucket_name
             assert manager.aws_region == "us-east-1"
 
 
 def test_s3_manager_initialization_without_bucket_name():
     """Test S3Manager initialization fails without bucket name."""
-    with patch.dict(os.environ, {}, clear=True):
-        with pytest.raises(ValueError, match="S3 bucket name must be provided"):
-            S3Manager()
+    with pytest.raises(ValueError, match="S3 bucket name must be provided"):
+        S3Manager(bucket_name="")
 
 
 def test_upload_gpx_segment_success(mock_s3_manager, real_gpx_file):

@@ -7,7 +7,7 @@ and local development environments.
 """
 
 import logging
-import os
+import shutil
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import urljoin
@@ -47,7 +47,7 @@ class S3Manager:
 
     def __init__(
         self,
-        bucket_name: str | None = None,
+        bucket_name: str,
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,
         aws_region: str = "us-east-1",
@@ -56,31 +56,26 @@ class S3Manager:
 
         Parameters
         ----------
-        bucket_name : Optional[str]
-            S3 bucket name. If None, will use AWS_S3_BUCKET environment variable.
+        bucket_name : str
+            S3 bucket name. Must be provided.
         aws_access_key_id : Optional[str]
-            AWS access key ID. If None, will use AWS_ACCESS_KEY_ID environment variable.
+            AWS access key ID. If None, will use AWS credentials from environment.
         aws_secret_access_key : Optional[str]
-            AWS secret access key. If None, will use AWS_SECRET_ACCESS_KEY
-            environment variable.
+            AWS secret access key. If None, will use AWS credentials from environment.
         aws_region : str
             AWS region name. Defaults to "us-east-1".
         """
-        self.bucket_name = bucket_name or os.getenv("AWS_S3_BUCKET")
+        self.bucket_name = bucket_name
         self.aws_region = aws_region
 
         if not self.bucket_name:
-            raise ValueError(
-                "S3 bucket name must be provided or set in AWS_S3_BUCKET environment"
-                "variable"
-            )
+            raise ValueError("S3 bucket name must be provided")
 
         try:
             self.s3_client = boto3.client(
                 "s3",
-                aws_access_key_id=aws_access_key_id or os.getenv("AWS_ACCESS_KEY_ID"),
-                aws_secret_access_key=aws_secret_access_key
-                or os.getenv("AWS_SECRET_ACCESS_KEY"),
+                aws_access_key_id=aws_access_key_id,
+                aws_secret_access_key=aws_secret_access_key,
                 region_name=aws_region,
             )
             logger.info(f"S3 client initialized for bucket: {self.bucket_name}")
@@ -226,22 +221,19 @@ class S3Manager:
 class LocalStorageManager:
     """Local filesystem storage manager that mimics S3 API."""
 
-    def __init__(self, storage_root: str | None = None):
+    def __init__(self, storage_root: str | None = None, base_url: str | None = None):
         """Initialize local storage manager.
 
         Parameters
         ----------
         storage_root : Optional[str]
-            Root directory for local storage. If None, will use LOCAL_STORAGE_ROOT
-            environment variable or default to "../scratch/local_storage".
+            Root directory for local storage. If None, defaults to "../scratch/local_storage".
+        base_url : Optional[str]
+            Base URL for serving files. If None, defaults to "http://localhost:8000/storage".
         """
-        self.storage_root = Path(
-            storage_root or os.getenv("LOCAL_STORAGE_ROOT", "../scratch/local_storage")
-        )
+        self.storage_root = Path(storage_root or "../scratch/local_storage")
         self.storage_root.mkdir(parents=True, exist_ok=True)
-        self.base_url = os.getenv(
-            "LOCAL_STORAGE_BASE_URL", "http://localhost:8000/storage"
-        )
+        self.base_url = base_url or "http://localhost:8000/storage"
 
         logger.info(f"Local storage manager initialized with root: {self.storage_root}")
 
@@ -282,12 +274,8 @@ class LocalStorageManager:
         try:
             logger.info(f"Uploading {local_file_path} to local storage: {target_path}")
 
-            # Copy the file to local storage
-            import shutil
-
             shutil.copy2(local_file_path, target_path)
 
-            # Create metadata file
             metadata_path = target_path.with_suffix(".gpx.metadata")
             metadata_content = f"""file-id: {file_id}
 file-type: gpx-segment
@@ -324,11 +312,9 @@ original-path: {local_file_path}
 
             logger.info(f"Deleting from local storage: {target_path}")
 
-            # Delete the main file
             if target_path.exists():
                 target_path.unlink()
 
-            # Delete the metadata file
             if metadata_path.exists():
                 metadata_path.unlink()
 
@@ -362,7 +348,6 @@ original-path: {local_file_path}
                 logger.warning(f"File not found in local storage: {target_path}")
                 return None
 
-            # Generate a URL that points to the local storage endpoint
             url = urljoin(self.base_url + "/", storage_key)
             logger.info(f"Generated local storage URL: {url}")
             return url
@@ -428,8 +413,29 @@ original-path: {local_file_path}
             return []
 
 
-def get_storage_manager() -> StorageManager:
-    """Get the appropriate storage manager based on environment configuration.
+def get_storage_manager(
+    storage_type: str, config: dict | None = None
+) -> StorageManager:
+    """Get the appropriate storage manager based on provided configuration.
+
+    Parameters
+    ----------
+    storage_type : str
+        Type of storage manager to create ("s3" or "local").
+    config : Optional[dict]
+        Configuration dictionary to pass to the storage manager constructor.
+
+        For S3Manager, should contain:
+
+        - bucket_name: str (required)
+        - aws_access_key_id: str (optional)
+        - aws_secret_access_key: str (optional)
+        - aws_region: str (optional, defaults to "us-east-1")
+
+        For LocalStorageManager, should contain:
+
+        - storage_root: str (optional)
+        - base_url: str (optional)
 
     Returns
     -------
@@ -441,12 +447,13 @@ def get_storage_manager() -> StorageManager:
     ValueError
         If storage configuration is invalid.
     """
-    storage_type = os.getenv("STORAGE_TYPE", "local").lower()
+    storage_type = storage_type.lower()
+    config = config or {}
 
     if storage_type == "s3":
-        return S3Manager()
+        return S3Manager(**config)
     elif storage_type == "local":
-        return LocalStorageManager()
+        return LocalStorageManager(**config)
     else:
         raise ValueError(
             f"Invalid STORAGE_TYPE: {storage_type}. Must be 's3' or 'local'"

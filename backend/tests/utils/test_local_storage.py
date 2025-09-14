@@ -4,7 +4,6 @@ Tests for storage module.
 These tests cover both the storage factory and the LocalStorageManager implementation.
 """
 
-import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
@@ -46,19 +45,18 @@ def test_local_storage_manager_initialization(temp_storage_dir):
     assert manager.storage_root.is_dir()
 
 
-def test_local_storage_manager_initialization_with_env_var():
-    """Test LocalStorageManager initialization using environment variable."""
+def test_local_storage_manager_initialization_with_explicit_params():
+    """Test LocalStorageManager initialization using explicit parameters."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with patch.dict(os.environ, {"LOCAL_STORAGE_ROOT": temp_dir}):
-            manager = LocalStorageManager()
-            assert manager.storage_root == Path(temp_dir)
+        manager = LocalStorageManager(storage_root=temp_dir)
+        assert manager.storage_root == Path(temp_dir)
 
 
 def test_local_storage_manager_default_initialization():
     """Test LocalStorageManager initialization with default values."""
-    with patch.dict(os.environ, {}, clear=True):
-        manager = LocalStorageManager()
-        assert manager.storage_root == Path("../scratch/local_storage")
+    manager = LocalStorageManager()
+    assert manager.storage_root == Path("../scratch/local_storage")
+    assert manager.base_url == "http://localhost:8000/storage"
 
 
 def test_upload_gpx_segment_success(local_storage_manager, real_gpx_file):
@@ -242,33 +240,35 @@ def test_list_files_with_prefix(local_storage_manager, real_gpx_file):
 
 def test_get_storage_manager_local():
     """Test storage factory returns LocalStorageManager for local type."""
-    with patch.dict(os.environ, {"STORAGE_TYPE": "local"}):
-        manager = get_storage_manager()
-        assert isinstance(manager, LocalStorageManager)
+    manager = get_storage_manager("local")
+    assert isinstance(manager, LocalStorageManager)
 
 
 def test_get_storage_manager_s3():
     """Test storage factory returns S3Manager for s3 type."""
-    with patch.dict(os.environ, {"STORAGE_TYPE": "s3"}):
-        with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
-            mock_instance = mock_s3_manager_class.return_value
-            manager = get_storage_manager()
-            mock_s3_manager_class.assert_called_once()
-            assert manager == mock_instance
+    with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
+        mock_instance = mock_s3_manager_class.return_value
+        manager = get_storage_manager("s3", {"bucket_name": "test-bucket"})
+        mock_s3_manager_class.assert_called_once()
+        assert manager == mock_instance
 
 
 def test_get_storage_manager_invalid_type():
     """Test storage factory raises error for invalid type."""
-    with patch.dict(os.environ, {"STORAGE_TYPE": "invalid"}):
-        with pytest.raises(ValueError, match="Invalid STORAGE_TYPE"):
-            get_storage_manager()
+    with pytest.raises(ValueError, match="Invalid STORAGE_TYPE"):
+        get_storage_manager("invalid")
 
 
-def test_get_storage_manager_default_local():
-    """Test storage factory defaults to local when no type specified."""
-    with patch.dict(os.environ, {}, clear=True):
-        manager = get_storage_manager()
-        assert isinstance(manager, LocalStorageManager)
+def test_get_storage_manager_with_local_config():
+    """Test storage factory with local configuration."""
+    config = {
+        "storage_root": "/tmp/test_storage",
+        "base_url": "http://test:8080/storage",
+    }
+    manager = get_storage_manager("local", config)
+    assert isinstance(manager, LocalStorageManager)
+    assert manager.storage_root == Path("/tmp/test_storage")
+    assert manager.base_url == "http://test:8080/storage"
 
 
 def test_cleanup_existing_file(temp_storage_dir):
@@ -339,15 +339,13 @@ def test_cleanup_file_with_mocked_exception(temp_storage_dir):
 def test_local_storage_manager_with_custom_base_url():
     """Test LocalStorageManager with custom base URL."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with patch.dict(
-            os.environ, {"LOCAL_STORAGE_BASE_URL": "http://custom:8080/storage"}
-        ):
-            manager = LocalStorageManager(storage_root=temp_dir)
-            assert manager.base_url == "http://custom:8080/storage"
+        manager = LocalStorageManager(
+            storage_root=temp_dir, base_url="http://custom:8080/storage"
+        )
+        assert manager.base_url == "http://custom:8080/storage"
 
 
 def test_local_storage_manager_default_base_url():
     """Test LocalStorageManager with default base URL."""
-    with patch.dict(os.environ, {}, clear=True):
-        manager = LocalStorageManager()
-        assert manager.base_url == "http://localhost:8000/storage"
+    manager = LocalStorageManager()
+    assert manager.base_url == "http://localhost:8000/storage"

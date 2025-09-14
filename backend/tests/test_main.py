@@ -553,7 +553,7 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
 
-        s3_manager = S3Manager()
+        s3_manager = S3Manager(bucket_name=mock_s3_environment)
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
@@ -632,7 +632,7 @@ def test_multiple_segments_from_same_file(
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
 
-        s3_manager = S3Manager()
+        s3_manager = S3Manager(bucket_name=mock_s3_environment)
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
@@ -675,7 +675,7 @@ def test_frontend_temp_directory_creation(
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
 
-        s3_manager = S3Manager()
+        s3_manager = S3Manager(bucket_name=mock_s3_environment)
 
         frontend_temp_dir = tmp_path / "nonexistent" / "temp_gpx_segments"
 

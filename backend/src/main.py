@@ -22,7 +22,12 @@ from .utils.gpx import (
     extract_from_gpx_file,
     generate_gpx_segment,
 )
-from .utils.storage import StorageManager, cleanup_local_file, get_storage_manager
+from .utils.storage import (
+    LocalStorageManager,
+    StorageManager,
+    cleanup_local_file,
+    get_storage_manager,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,8 +45,22 @@ async def lifespan(app: FastAPI):
     logger.info(f"Created temporary directory: {temp_dir.name}")
 
     try:
-        storage_manager = get_storage_manager()
-        storage_type = os.getenv("STORAGE_TYPE", "local")
+        storage_type = os.getenv("STORAGE_TYPE", "local").lower()
+
+        if storage_type == "s3":
+            config = {
+                "bucket_name": os.getenv("AWS_S3_BUCKET"),
+                "aws_access_key_id": os.getenv("AWS_ACCESS_KEY_ID"),
+                "aws_secret_access_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
+                "aws_region": os.getenv("AWS_REGION", "us-east-1"),
+            }
+        else:
+            config = {
+                "storage_root": os.getenv("LOCAL_STORAGE_ROOT"),
+                "base_url": os.getenv("LOCAL_STORAGE_BASE_URL"),
+            }
+
+        storage_manager = get_storage_manager(storage_type, config)
         logger.info(f"Storage manager initialized successfully (type: {storage_type})")
     except Exception as e:
         logger.warning(f"Failed to initialize storage manager: {str(e)}")
@@ -139,8 +158,7 @@ async def serve_storage_file(file_path: str):
         raise HTTPException(status_code=500, detail="Storage manager not initialized")
 
     # Check if we're using local storage
-    storage_type = os.getenv("STORAGE_TYPE", "local")
-    if storage_type != "local":
+    if not isinstance(storage_manager, LocalStorageManager):
         raise HTTPException(
             status_code=404, detail="File serving only available in local mode"
         )
@@ -292,12 +310,13 @@ async def create_segment(
                 logger.warning(f"Failed to clean up local file: {segment_file_path}")
 
             # Generate appropriate file path based on storage type
-            storage_type = os.getenv("STORAGE_TYPE", "local")
-            if storage_type == "s3":
+            if hasattr(storage_manager, "bucket_name"):
+                # S3Manager
                 processed_file_path = (
                     f"s3://{storage_manager.bucket_name}/{storage_key}"
                 )
             else:
+                # LocalStorageManager
                 processed_file_path = f"local://{storage_key}"
 
         except Exception as storage_error:
