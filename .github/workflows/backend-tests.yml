@@ -31,26 +31,25 @@ jobs:
       - name: Create environment file for CI
         run: |
           mkdir -p .env
-          cat > .env/database << EOF
-          DB_HOST=${{ vars.DB_HOST }}
-          DB_PORT=${{ vars.DB_PORT }}
-          DB_NAME=${{ vars.DB_NAME }}
-          DB_USER=${{ vars.DB_USER }}
-          DB_PASSWORD=${{ vars.DB_PASSWORD  }}
-          EOF
-          cat > .env/storage << EOF
-          STORAGE_TYPE=${{ vars.STORAGE_TYPE }}
-          LOCAL_STORAGE_ROOT=${{ vars.LOCAL_STORAGE_ROOT }}
-          LOCAL_STORAGE_BASE_URL=${{ vars.LOCAL_STORAGE_BASE_URL }}
-          EOF
+          echo "DB_HOST=${{ vars.DB_HOST }}" >> .env/database
+          echo "DB_PORT=${{ vars.DB_PORT }}" >> .env/database
+          echo "DB_NAME=${{ vars.DB_NAME }}" >> .env/database
+          echo "DB_USER=${{ vars.DB_USER }}" >> .env/database
+          echo "DB_PASSWORD=${{ vars.DB_PASSWORD }}" >> .env/database
+          echo "STORAGE_TYPE=${{ vars.STORAGE_TYPE }}" >> .env/storage
+          echo "LOCAL_STORAGE_ROOT=${{ vars.LOCAL_STORAGE_ROOT }}" >> .env/storage
+          echo "LOCAL_STORAGE_BASE_URL=${{ vars.LOCAL_STORAGE_BASE_URL }}" >> .env/storage
 
+      - name: Setup database
+        run: pixi run pg-setup
       - name: Run backend tests with coverage
         run: |
-          export ENVIRONMENT=local
           pixi run -e dev -- test-backend
-
       - name: Upload coverage summary
         if: always()
         run: |
           echo "Coverage summary:" >> $GITHUB_STEP_SUMMARY
           pixi run -e dev -- test-backend | sed -n '/^=============================== tests coverage/,/^[0-9].*passed/p' >> $GITHUB_STEP_SUMMARY
+
+      - name: Cleanup database
+        run: pixi run pg-cleanup
