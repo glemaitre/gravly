@@ -65,6 +65,8 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 This project uses environment-specific `.env` files to manage configuration for different deployment environments. The backend automatically loads environment variables from `.env` files based on the `ENVIRONMENT` variable.
 
+The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, making it easy to switch between different environments. You can also override the environment variable from the shell when needed.
+
 ### Setup Environment Files
 
 1. **Copy the example files** for your desired environment:
@@ -106,7 +108,7 @@ When using S3 storage, configure these environment variables:
 
 #### Local Development (with local storage)
 ```bash
-# Using pixi (loads from .env.local)
+# Using pixi (loads from .env/local)
 pixi run start-backend-local
 
 # Or manually with environment variables
@@ -115,7 +117,7 @@ ENVIRONMENT=local uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 80
 
 #### S3 Testing/Development
 ```bash
-# Using pixi (loads from .env.s3)
+# Using pixi (loads from .env/s3)
 pixi run start-backend-s3
 
 # Or manually with environment variables
@@ -124,7 +126,7 @@ ENVIRONMENT=s3 uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 
 #### Staging Environment
 ```bash
-# Using pixi (loads from .env.staging)
+# Using pixi (loads from .env/staging)
 pixi run start-backend-staging
 
 # Or manually with environment variables
@@ -133,11 +135,22 @@ ENVIRONMENT=staging uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 
 
 #### Production Environment
 ```bash
-# Using pixi (loads from .env.production)
+# Using pixi (loads from .env/production)
 pixi run start-backend-production
 
 # Or manually with environment variables
 ENVIRONMENT=production uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Override Environment from Shell
+You can also override the environment variable from the shell, which will take precedence over the pixi task configuration:
+
+```bash
+# Override to use s3 environment even when running local task
+ENVIRONMENT=s3 pixi run start-backend-local
+
+# Override to use production environment
+ENVIRONMENT=production pixi run start-backend-s3
 ```
 
 ### File Access
@@ -219,11 +232,11 @@ The application uses Pixi for environment management, which provides:
 ### Common tasks (Pixi)
 
 ```bash
-# Start development servers
-pixi run start-backend-local      # Backend with local storage (.env.local)
-pixi run start-backend-s3         # Backend with S3 storage (.env.s3)
-pixi run start-backend-staging    # Backend with staging config (.env.staging)
-pixi run start-backend-production # Backend with production config (.env.production)
+# Start development servers (using Pixi env configuration)
+pixi run start-backend-local      # Backend with local storage (.env/local)
+pixi run start-backend-s3         # Backend with S3 storage (.env/s3)
+pixi run start-backend-staging    # Backend with staging config (.env/staging)
+pixi run start-backend-production # Backend with production config (.env/production)
 pixi run start-frontend           # Frontend development server
 
 # Lint & format
