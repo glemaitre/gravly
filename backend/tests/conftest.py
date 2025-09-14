@@ -1,6 +1,8 @@
+import os
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -17,3 +19,14 @@ def tmp_dir():
     """Create a temporary directory for testing."""
     with tempfile.TemporaryDirectory() as tmp_dir:
         yield Path(tmp_dir)
+
+
+@pytest.fixture(autouse=True)
+def mock_aws_environment():
+    """Mock AWS environment variables for testing."""
+    with patch.dict(os.environ, {
+        "AWS_S3_BUCKET": "test-bucket",
+        "AWS_ACCESS_KEY_ID": "test-key",
+        "AWS_SECRET_ACCESS_KEY": "test-secret",
+    }):
+        yield

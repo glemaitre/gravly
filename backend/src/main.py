@@ -21,21 +21,29 @@ from .utils.gpx import (
     extract_from_gpx_file,
     generate_gpx_segment,
 )
+from .utils.s3 import S3Manager, cleanup_local_file
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 temp_dir: TemporaryDirectory | None = None
+s3_manager: S3Manager | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and clean up on shutdown."""
-    global temp_dir
+    global temp_dir, s3_manager
 
-    # Create temporary directory for the session
     temp_dir = TemporaryDirectory(prefix="cycling_gpx_")
     logger.info(f"Created temporary directory: {temp_dir.name}")
+
+    try:
+        s3_manager = S3Manager()
+        logger.info("S3 manager initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to initialize S3 manager: {str(e)}")
+        s3_manager = None
 
     # Initialize database (create tables if not exist)
     # TODO: Uncomment when database is needed
@@ -198,20 +206,23 @@ async def create_segment(
     commentary_text: str = Form(""),
     video_links: str = Form("[]"),
 ):
-    """Create a new segment: process uploaded GPX file with indices, store
-    locally and metadata in DB.
-
-    Note: Files are saved under `mock_gpx/` for now; later this should target S3.
+    """Create a new segment: process uploaded GPX file with indices, upload to S3,
+    and store metadata in DB.
     """
     allowed = {"slick", "semi-slick", "knobs"}
     if tire_dry not in allowed or tire_wet not in allowed:
         raise HTTPException(status_code=422, detail="Invalid tire types")
 
-    global temp_dir
+    global temp_dir, s3_manager
 
     if not temp_dir:
         raise HTTPException(
             status_code=500, detail="Temporary directory not initialized"
+        )
+
+    if not s3_manager:
+        raise HTTPException(
+            status_code=500, detail="S3 manager not initialized"
         )
 
     original_file_path = Path(temp_dir.name) / f"{file_id}.gpx"
@@ -221,22 +232,47 @@ async def create_segment(
         logger.warning(f"Uploaded file not found: {original_file_path}")
         raise HTTPException(status_code=404, detail="Uploaded file not found")
 
-    dest_dir = Path("../scratch/mock_gpx")
-    dest_dir.mkdir(exist_ok=True)
+    if temp_dir is None:
+        raise HTTPException(status_code=500, detail="Temporary directory not initialized")
+
+    frontend_temp_dir = Path(temp_dir.name) / "gpx_segments"
+    frontend_temp_dir.mkdir(parents=True, exist_ok=True)
 
     try:
         logger.info(
             f"Processing segment '{name}' from indices {start_index} to {end_index}"
         )
-        file_id = generate_gpx_segment(
+        segment_file_id, segment_file_path = generate_gpx_segment(
             input_file_path=original_file_path,
             start_index=start_index,
             end_index=end_index,
             segment_name=name,
-            output_dir=dest_dir,
+            output_dir=frontend_temp_dir,
         )
-        processed_file_path = str(dest_dir / f"{file_id}.gpx")
-        logger.info(f"Successfully created segment file: {processed_file_path}")
+        logger.info(f"Successfully created segment file: {segment_file_path}")
+
+        try:
+            s3_key = s3_manager.upload_gpx_segment(
+                local_file_path=segment_file_path,
+                file_id=segment_file_id,
+                prefix="gpx-segments",
+            )
+            logger.info(f"Successfully uploaded segment to S3: {s3_key}")
+
+            cleanup_success = cleanup_local_file(segment_file_path)
+            if cleanup_success:
+                logger.info(f"Successfully cleaned up local file: {segment_file_path}")
+            else:
+                logger.warning(f"Failed to clean up local file: {segment_file_path}")
+
+            processed_file_path = f"s3://{s3_manager.bucket_name}/{s3_key}"
+
+        except Exception as s3_error:
+            logger.error(f"Failed to upload to S3: {str(s3_error)}")
+            cleanup_local_file(segment_file_path)
+            raise HTTPException(
+                status_code=500, detail=f"Failed to upload to S3: {str(s3_error)}"
+            )
 
     except Exception as e:
         logger.error(f"Failed to process GPX file for segment '{name}': {str(e)}")
@@ -244,7 +280,7 @@ async def create_segment(
             status_code=500, detail=f"Failed to process GPX file: {str(e)}"
         )
 
-    # Store metadata in DB (using the processed file path)
+    # Store metadata in DB (using the S3 path)
     # TODO: Uncomment when database is needed
     # async with SessionLocal() as session:
     #     seg = Segment(
@@ -260,9 +296,6 @@ async def create_segment(
     #         tire_wet=seg.tire_wet,
     #         file_path=seg.file_path,
     #     )
-
-    # Note: Not cleaning up temporary file to allow multiple segment creations from same GPX
-    # File will be cleaned up when the session ends (lifespan cleanup)
 
     # For now, return a mock response since we're not using the database
     return SegmentCreateResponse(

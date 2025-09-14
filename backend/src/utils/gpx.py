@@ -165,7 +165,7 @@ def generate_gpx_segment(
     end_index: int,
     segment_name: str,
     output_dir: Path,
-) -> str:
+) -> tuple[str, Path]:
     """Generate a GPX segment from a given GPX file.
 
     Parameters
@@ -183,8 +183,10 @@ def generate_gpx_segment(
 
     Returns
     -------
-    file_id: str
-        The ID of the generated GPX segment.
+    tuple[str, Path]
+        A tuple containing:
+        - file_id: The ID of the generated GPX segment.
+        - output_file_path: The full path to the generated GPX file.
     """
     file_id = str(uuid.uuid4())
     new_gpx = gpxpy.gpx.GPX()
@@ -206,7 +208,9 @@ def generate_gpx_segment(
             )
             new_segment.points.append(new_point)
 
-    with open(output_dir / f"{file_id}.gpx", "w") as gpx_file:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file_path = output_dir / f"{file_id}.gpx"
+    with open(output_file_path, "w") as gpx_file:
         gpx_file.write(new_gpx.to_xml())
 
-    return file_id
+    return file_id, output_file_path

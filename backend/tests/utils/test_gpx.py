@@ -66,7 +66,7 @@ def test_generate_gpx_segment(tmp_dir):
     end_index = 50
     segment_name = "Test Segment"
 
-    file_id = generate_gpx_segment(
+    file_id, output_file_path = generate_gpx_segment(
         input_file_path=input_file_path,
         start_index=start_index,
         end_index=end_index,
@@ -76,8 +76,8 @@ def test_generate_gpx_segment(tmp_dir):
 
     assert isinstance(file_id, str)
     assert len(file_id) > 0  # UUID should not be empty
-
-    output_file_path = tmp_dir / f"{file_id}.gpx"
+    
+    assert isinstance(output_file_path, Path)
     assert output_file_path.exists()
 
     with open(output_file_path, encoding="utf-8") as gpx_file:
