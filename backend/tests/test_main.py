@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from moto import mock_aws
 from src.main import app, lifespan
 from src.utils.gpx import generate_gpx_segment
-from src.utils.storage import S3Manager, cleanup_local_file
+from src.utils.storage import LocalStorageManager, S3Manager, cleanup_local_file
 
 
 @pytest.fixture
@@ -857,8 +857,6 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Test Segment"
-        # File path should start with either s3:// or local:// depending on storage type
-        # Note: The actual format might be local:/ instead of local://
         assert data["file_path"].startswith(("s3://", "local://", "local:/"))
 
 
@@ -873,6 +871,92 @@ def test_serve_storage_file_storage_manager_not_initialized(client):
 
         assert response.status_code == 500
         assert response.json()["detail"] == "Storage manager not initialized"
+
+    finally:
+        src.main.storage_manager = original_storage_manager
+
+
+def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file):
+    """Test serving storage file when in S3 mode (not available)."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        s3_manager = S3Manager(bucket_name="test-bucket")
+        src.main.storage_manager = s3_manager
+
+        response = client.get("/storage/test-file.gpx")
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "File serving only available in local mode"
+
+    finally:
+        src.main.storage_manager = original_storage_manager
+
+
+def test_serve_storage_file_local_mode_success(client, sample_gpx_file, tmp_dir):
+    """Test successfully serving a file from local storage."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        src.main.storage_manager = local_manager
+
+        test_file_path = tmp_dir / "test-file.gpx"
+        test_file_path.write_text(sample_gpx_file.read_text())
+
+        response = client.get("/storage/test-file.gpx")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/gpx+xml"
+        assert (
+            response.headers["content-disposition"]
+            == 'attachment; filename="test-file.gpx"'
+        )
+        assert response.content == sample_gpx_file.read_bytes()
+
+    finally:
+        src.main.storage_manager = original_storage_manager
+
+
+def test_serve_storage_file_file_not_found(client, tmp_dir):
+    """Test serving storage file when file doesn't exist."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        src.main.storage_manager = local_manager
+
+        response = client.get("/storage/nonexistent-file.gpx")
+
+        assert response.status_code == 404
+        assert response.json()["detail"] == "File not found"
+
+    finally:
+        src.main.storage_manager = original_storage_manager
+
+
+def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_dir):
+    """Test serving a file from a subdirectory."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        src.main.storage_manager = local_manager
+
+        subdir = tmp_dir / "gpx-segments"
+        subdir.mkdir()
+        test_file_path = subdir / "test-file.gpx"
+        test_file_path.write_text(sample_gpx_file.read_text())
+
+        response = client.get("/storage/gpx-segments/test-file.gpx")
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/gpx+xml"
+        assert (
+            response.headers["content-disposition"]
+            == 'attachment; filename="test-file.gpx"'
+        )
+        assert response.content == sample_gpx_file.read_bytes()
 
     finally:
         src.main.storage_manager = original_storage_manager
