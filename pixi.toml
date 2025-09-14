@@ -50,7 +50,6 @@ format-backend = { cmd = "ruff format backend/src/ backend/tests/ " }
 format-frontend = { cmd = "npm run format", cwd = "frontend", depends-on = ["frontend-install"] }
 lint-all = { depends-on = ["lint-backend", "lint-frontend"] }
 format-all = { depends-on = ["format-backend", "format-frontend"] }
-type-check = { depends-on = ["type-check-frontend"] }
 type-check-frontend = { cmd = "npm run type-check", cwd = "frontend", depends-on = ["frontend-install"] }
 
 [feature.tests.tasks]

@@ -28,6 +28,9 @@ jobs:
       - name: Run lint
         run: pixi run -e dev lint-frontend
 
+      - name: Run type check
+        run: pixi run -e dev type-check-frontend
+
       - name: Run frontend unit tests with coverage
         run: pixi run -e dev -- test-frontend
 

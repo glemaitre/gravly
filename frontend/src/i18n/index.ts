@@ -39,12 +39,12 @@ export const i18n = createI18n<[MessageSchema], MessageLanguages>({
 // Initialize language after app is mounted
 export function initializeLanguage() {
   const savedLang = getSavedLanguage()
-  i18n.global.locale.value = savedLang
+  ;(i18n.global.locale as any).value = savedLang
 }
 
 // Helper function to save language preference
 export function setLanguage(lang: MessageLanguages) {
-  i18n.global.locale.value = lang
+  ;(i18n.global.locale as any).value = lang
   if (typeof localStorage !== 'undefined') {
     try {
       localStorage.setItem('cycling-editor-lang', lang)

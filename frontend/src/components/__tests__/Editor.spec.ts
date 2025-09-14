@@ -322,7 +322,7 @@ describe('Editor', () => {
     })
 
     // Test that the component has the moveSlider method
-    expect(typeof wrapper.vm.moveSlider).toBe('function')
+    expect(typeof (wrapper.vm as any).moveSlider).toBe('function')
   })
 
   it('handles form field updates correctly', async () => {
@@ -336,14 +336,14 @@ describe('Editor', () => {
     const nameInput = wrapper.find('input[name="segment-name"]')
     if (nameInput.exists()) {
       await nameInput.setValue('Test Segment')
-      expect(nameInput.element.value).toBe('Test Segment')
+      expect((nameInput.element as any).value).toBe('Test Segment')
     }
 
     // Test commentary text input
     const commentaryTextarea = wrapper.find('textarea[name="commentary-text"]')
     if (commentaryTextarea.exists()) {
       await commentaryTextarea.setValue('This is a test commentary')
-      expect(commentaryTextarea.element.value).toBe('This is a test commentary')
+      expect((commentaryTextarea.element as any).value).toBe('This is a test commentary')
     }
   })
 
@@ -358,14 +358,14 @@ describe('Editor', () => {
     const surfaceSelect = wrapper.find('select[name="surface-type"]')
     if (surfaceSelect.exists()) {
       await surfaceSelect.setValue('forest-trail')
-      expect(surfaceSelect.element.value).toBe('forest-trail')
+      expect((surfaceSelect.element as any).value).toBe('forest-trail')
     }
 
     // Test difficulty level
     const difficultySlider = wrapper.find('input[name="difficulty-level"]')
     if (difficultySlider.exists()) {
       await difficultySlider.setValue('4')
-      expect(difficultySlider.element.value).toBe('4')
+      expect((difficultySlider.element as any).value).toBe('4')
     }
   })
 
@@ -380,14 +380,14 @@ describe('Editor', () => {
     const dryTireSelect = wrapper.find('select[name="tire-dry"]')
     if (dryTireSelect.exists()) {
       await dryTireSelect.setValue('semi-slick')
-      expect(dryTireSelect.element.value).toBe('semi-slick')
+      expect((dryTireSelect.element as any).value).toBe('semi-slick')
     }
 
     // Test wet tire selection
     const wetTireSelect = wrapper.find('select[name="tire-wet"]')
     if (wetTireSelect.exists()) {
       await wetTireSelect.setValue('knobs')
-      expect(wetTireSelect.element.value).toBe('knobs')
+      expect((wetTireSelect.element as any).value).toBe('knobs')
     }
   })
 
@@ -411,7 +411,7 @@ describe('Editor', () => {
         const videoTitleInput = wrapper.find('input[placeholder*="Video title"]')
         if (videoTitleInput.exists()) {
           await videoTitleInput.setValue('Test Video')
-          expect(videoTitleInput.element.value).toBe('Test Video')
+          expect((videoTitleInput.element as any).value).toBe('Test Video')
         }
       }
     }
@@ -595,8 +595,8 @@ describe('Editor', () => {
     expect(fileInput.exists()).toBe(true)
 
     // Test that the file input exists and can be interacted with
-    expect(fileInput.element.type).toBe('file')
-    expect(fileInput.element.accept).toContain('.gpx')
+    expect((fileInput.element as any).type).toBe('file')
+    expect((fileInput.element as any).accept).toContain('.gpx')
   })
 
   it('handles difficulty level setting', async () => {

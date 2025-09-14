@@ -178,7 +178,7 @@ describe('App', () => {
     })
 
     // Should default to English
-    expect(wrapper.vm.currentLanguage).toBe('en')
+    expect((wrapper.vm as any).currentLanguage).toBe('en')
   })
 
   it('prevents event propagation on dropdown toggle', async () => {
