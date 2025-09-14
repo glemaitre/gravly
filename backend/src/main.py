@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 import gpxpy
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -28,6 +29,21 @@ from .utils.storage import (
     cleanup_local_file,
     get_storage_manager,
 )
+
+env_file = (
+    Path(__file__).parent.parent.parent / f".env.{os.getenv('ENVIRONMENT', 'local')}"
+)
+if env_file.exists():
+    load_dotenv(env_file)
+    logging.info(f"Loaded environment variables from {env_file}")
+else:  # fallback to .env file
+    fallback_env = Path(__file__).parent.parent.parent / ".env"
+    if fallback_env.exists():
+        load_dotenv(fallback_env)
+        logging.info(f"Loaded environment variables from {fallback_env}")
+    else:
+        logging.info("No .env file found, using system environment variables")
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

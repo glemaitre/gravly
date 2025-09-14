@@ -312,3 +312,7 @@ dist/
 # scratch files
 scratch/
 mock_gpx/
+
+# Environment files (keep example files for documentation)
+!.env.example
+!.env.*.example

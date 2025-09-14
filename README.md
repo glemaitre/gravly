@@ -61,12 +61,23 @@ A modern web application for discovering and viewing cycling routes stored as GP
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
 
-## Storage Configuration
+## Environment Configuration
 
-This project supports two storage backends for GPX files:
+This project uses environment-specific `.env` files to manage configuration for different deployment environments. The backend automatically loads environment variables from `.env` files based on the `ENVIRONMENT` variable.
 
-1. **Local Storage** (default for development)
-2. **AWS S3** (for production)
+### Setup Environment Files
+
+1. **Copy the example files** for your desired environment:
+   ```bash
+   cp .env.local.example .env.local      # For local development
+   cp .env.s3.example .env.s3            # For S3 testing
+   cp .env.staging.example .env.staging  # For staging
+   cp .env.production.example .env.production  # For production
+   ```
+
+2. **Edit the copied files** with your actual configuration values.
+
+3. **Never commit `.env` files** - they contain sensitive information and are already in `.gitignore`.
 
 ### Environment Variables
 
@@ -91,24 +102,42 @@ When using S3 storage, configure these environment variables:
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
 - `AWS_DEFAULT_REGION` - AWS region (optional, defaults to `us-east-1`)
 
-### Running with Different Storage Backends
+### Running with Different Environments
 
 #### Local Development (with local storage)
 ```bash
-# Using pixi
+# Using pixi (loads from .env.local)
 pixi run start-backend-local
 
-# Or manually
-STORAGE_TYPE=local uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+# Or manually with environment variables
+ENVIRONMENT=local uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### Production (with S3)
+#### S3 Testing/Development
 ```bash
-# Using pixi
+# Using pixi (loads from .env.s3)
 pixi run start-backend-s3
 
-# Or manually
-STORAGE_TYPE=s3 uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+# Or manually with environment variables
+ENVIRONMENT=s3 uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Staging Environment
+```bash
+# Using pixi (loads from .env.staging)
+pixi run start-backend-staging
+
+# Or manually with environment variables
+ENVIRONMENT=staging uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+#### Production Environment
+```bash
+# Using pixi (loads from .env.production)
+pixi run start-backend-production
+
+# Or manually with environment variables
+ENVIRONMENT=production uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### File Access
@@ -185,9 +214,11 @@ The application uses Pixi for environment management, which provides:
 
 ```bash
 # Start development servers
-pixi run start-backend-local    # Backend with local storage
-pixi run start-backend-s3       # Backend with S3 storage
-pixi run start-frontend         # Frontend development server
+pixi run start-backend-local      # Backend with local storage (.env.local)
+pixi run start-backend-s3         # Backend with S3 storage (.env.s3)
+pixi run start-backend-staging    # Backend with staging config (.env.staging)
+pixi run start-backend-production # Backend with production config (.env.production)
+pixi run start-frontend           # Frontend development server
 
 # Lint & format
 pixi run lint-all
