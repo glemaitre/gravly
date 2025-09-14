@@ -55,8 +55,8 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 4. **Start the application**:
    ```bash
-   # Terminal 1: Start backend (with local storage)
-   pixi run start-backend-local
+   # Terminal 1: Start backend
+   pixi run start-backend
 
    # Terminal 2: Start frontend
    pixi run start-frontend
@@ -69,56 +69,62 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 ## Environment Configuration
 
-This project uses environment-specific `.env` files to manage configuration for
-different deployment environments. The backend automatically loads environment variables
-from `.env` files based on the `ENVIRONMENT` variable.
-
-The Pixi tasks use the `env` configuration to set the `ENVIRONMENT` variable, making it
-easy to switch between different environments. You can also override the environment
-variable from the shell when needed.
+This project uses separate `.env` files for database and storage configuration. The backend automatically loads environment variables from `.env/storage` and `.env/database` files.
 
 ### Setup Environment Files
 
-1. **Copy the example files** for your desired environment:
+1. **Create the environment files** in the `.env/` directory:
    ```bash
-   cp .env/local.example .env/local      # For local development
-   cp .env/s3.example .env/s3            # For S3 testing
-   cp .env/staging.example .env/staging  # For staging
-   cp .env/production.example .env/production  # For production
+   mkdir -p .env
    ```
 
-2. **Edit the copied files** with your actual configuration values:
+2. **Create the database configuration file** (`.env/database`):
    ```bash
-   # For local development, edit .env/local and update:
+   # Database configuration
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=cycling
+   DB_USER=postgres
    DB_PASSWORD=your_secure_password_here
-
-   # Optionally customize other database settings:
-   # DB_HOST=localhost
-   # DB_PORT=5432
-   # DB_NAME=cycling
-   # DB_USER=postgres
    ```
 
-3. **Never commit actual `.env` files** - they contain sensitive information and are
-   already in `.gitignore`. Only the example files in the `.env/` folder are tracked in
-   git.
+3. **Create the storage configuration file** (`.env/storage`):
+   ```bash
+   # For local storage (development)
+   STORAGE_TYPE=local
+   LOCAL_STORAGE_ROOT=../scratch/local_storage
+   LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage
+   ```
+   
+   Or for S3 storage:
+   ```bash
+   # For S3 storage (production/testing)
+   STORAGE_TYPE=s3
+   AWS_S3_BUCKET=your-bucket-name
+   AWS_ACCESS_KEY_ID=your-access-key
+   AWS_SECRET_ACCESS_KEY=your-secret-key
+   AWS_REGION=us-east-1
+   ```
 
-### Environment Variables
+4. **Never commit actual `.env` files** - they contain sensitive information and are
+   already in `.gitignore`.
 
-The storage backend is controlled by the `STORAGE_TYPE` environment variable:
+### Storage Configuration
+
+The storage backend is controlled by the `STORAGE_TYPE` variable in `.env/storage`:
 
 - `STORAGE_TYPE=local` - Use local filesystem storage
 - `STORAGE_TYPE=s3` - Use AWS S3 storage
 
 ### Database Configuration
 
-The application uses PostgreSQL for persistent storage. Database connection is configured through individual environment variables:
+The application uses PostgreSQL for persistent storage. Database connection is configured through environment variables in `.env/database`:
 
-- `DB_HOST` - Database host (default: localhost)
-- `DB_PORT` - Database port (default: 5432)
-- `DB_NAME` - Database name (default: cycling)
-- `DB_USER` - Database username (default: postgres)
-- `DB_PASSWORD` - Database password (default: postgres)
+- `DB_HOST` - Database host (required)
+- `DB_PORT` - Database port (required)
+- `DB_NAME` - Database name (required)
+- `DB_USER` - Database username (required)
+- `DB_PASSWORD` - Database password (required)
 
 The application automatically constructs the PostgreSQL connection string from these individual components.
 
@@ -149,69 +155,38 @@ project root. This directory should be added to `.gitignore` (which it already i
 
 ### Local Storage Configuration
 
-When using local storage, you can configure:
+When using local storage, configure these variables in `.env/storage`:
 
-- `LOCAL_STORAGE_ROOT` - Root directory for storing files (default: `../scratch/local_storage`)
-- `LOCAL_STORAGE_BASE_URL` - Base URL for serving files (default:
-  `http://localhost:8000/storage`)
+- `LOCAL_STORAGE_ROOT` - Root directory for storing files
+- `LOCAL_STORAGE_BASE_URL` - Base URL for serving files
 
 ### AWS S3 Configuration
 
-When using S3 storage, configure these environment variables:
+When using S3 storage, configure these variables in `.env/storage`:
 
 - `AWS_S3_BUCKET` - S3 bucket name
 - `AWS_ACCESS_KEY_ID` - AWS access key
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
-- `AWS_DEFAULT_REGION` - AWS region (optional, defaults to `us-east-1`)
+- `AWS_REGION` - AWS region (optional, defaults to `us-east-1`)
 
-### Running with Different Environments
+### Running the Application
 
-#### Local Development (with local storage)
+#### Start the Backend
 ```bash
-# Using pixi (loads from .env/local)
-pixi run start-backend-local
+# Using pixi (loads from .env/storage and .env/database)
+pixi run start-backend
 
-# Or manually with environment variables
-ENVIRONMENT=local uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+# Or manually
+uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-#### S3 Testing/Development
+#### Start the Frontend
 ```bash
-# Using pixi (loads from .env/s3)
-pixi run start-backend-s3
+# Using pixi
+pixi run start-frontend
 
-# Or manually with environment variables
-ENVIRONMENT=s3 uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Staging Environment
-```bash
-# Using pixi (loads from .env/staging)
-pixi run start-backend-staging
-
-# Or manually with environment variables
-ENVIRONMENT=staging uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Production Environment
-```bash
-# Using pixi (loads from .env/production)
-pixi run start-backend-production
-
-# Or manually with environment variables
-ENVIRONMENT=production uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-#### Override Environment from Shell
-You can also override the environment variable from the shell, which will take
-precedence over the pixi task configuration:
-
-```bash
-# Override to use s3 environment even when running local task
-ENVIRONMENT=s3 pixi run start-backend-local
-
-# Override to use production environment
-ENVIRONMENT=production pixi run start-backend-s3
+# Or manually
+cd frontend && npm run dev
 ```
 
 ### File Access
@@ -267,10 +242,8 @@ website_cycling/
 │   ├── package.json        # Frontend dependencies
 │   └── vite.config.js      # Vite configuration
 ├── .env/                   # Environment configuration files
-│   ├── local.example       # Local development template
-│   ├── s3.example          # S3 testing template
-│   ├── staging.example     # Staging template
-│   └── production.example  # Production template
+│   ├── database            # Database configuration
+│   └── storage             # Storage configuration
 ├── mock_gpx/               # Sample GPX files for testing
 ├── scripts/                # Setup and utility scripts
 │   └── setup_elasticsearch.py
@@ -295,11 +268,8 @@ The application uses Pixi for environment management, which provides:
 ### Common tasks (Pixi)
 
 ```bash
-# Start development servers (using Pixi env configuration)
-pixi run start-backend-local      # Backend with local storage (.env/local)
-pixi run start-backend-s3         # Backend with S3 storage (.env/s3)
-pixi run start-backend-staging    # Backend with staging config (.env/staging)
-pixi run start-backend-production # Backend with production config (.env/production)
+# Start development servers
+pixi run start-backend            # Backend server
 pixi run start-frontend           # Frontend development server
 
 # Database management
@@ -313,7 +283,7 @@ pixi run lint-all
 pixi run format-all
 
 # Type-check frontend
-pixi run type-check
+pixi run type-check-frontend
 
 # Run tests with coverage
 pixi run test-backend
