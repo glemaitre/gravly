@@ -386,6 +386,32 @@ def test_upload_gpx_disk_full_failure(mock_open, client, sample_gpx_file):
     assert "Disk full" in response.json()["detail"]
 
 
+@patch("src.main.extract_from_gpx_file", side_effect=Exception("GPX processing failed"))
+def test_upload_gpx_processing_failure(mock_extract, client, sample_gpx_file):
+    """Test upload when GPX processing fails after successful file save."""
+    with open(sample_gpx_file, "rb") as f:
+        response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert response.status_code == 400
+    assert "Invalid GPX file" in response.json()["detail"]
+    assert "GPX processing failed" in response.json()["detail"]
+
+
+@patch("src.main.extract_from_gpx_file", side_effect=ValueError("Invalid track data"))
+def test_upload_gpx_invalid_track_data(mock_extract, client, sample_gpx_file):
+    """Test upload when GPX file has invalid track data."""
+    with open(sample_gpx_file, "rb") as f:
+        response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert response.status_code == 400
+    assert "Invalid GPX file" in response.json()["detail"]
+    assert "Invalid track data" in response.json()["detail"]
+
+
 @patch("src.main.temp_dir", None)
 def test_create_segment_no_temp_directory(client):
     """Test segment creation when temporary directory is not initialized."""
