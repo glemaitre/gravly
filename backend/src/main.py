@@ -20,7 +20,7 @@ from .utils.gpx import (
     GPXData,
     GPXProcessingError,
     extract_from_gpx_file,
-    process_gpx_for_segment_creation,
+    generate_gpx_segment,
 )
 
 # Configure logging
@@ -118,7 +118,7 @@ class SegmentCreateResponse(BaseModel):
     name: str
     tire_dry: str
     tire_wet: str
-    file_path: str
+    file_path: Path
 
 
 @app.get("/")
@@ -216,14 +216,14 @@ async def create_segment(
         logger.info(
             f"Processing segment '{name}' from indices {start_index} to {end_index}"
         )
-        processing_result = process_gpx_for_segment_creation(
+        file_id = generate_gpx_segment(
             input_file_path=original_file_path,
             start_index=start_index,
             end_index=end_index,
             segment_name=name,
             output_dir=dest_dir,
         )
-        processed_file_path = processing_result["processed_file"]
+        processed_file_path = str(dest_dir / f"{file_id}.gpx")
         logger.info(f"Successfully created segment file: {processed_file_path}")
 
     except GPXProcessingError as gpx_e:
@@ -246,6 +246,13 @@ async def create_segment(
     #     session.add(seg)
     #     await session.commit()
     #     await session.refresh(seg)
+    #     return SegmentCreateResponse(
+    #         id=seg.id,
+    #         name=seg.name,
+    #         tire_dry=seg.tire_dry,
+    #         tire_wet=seg.tire_wet,
+    #         file_path=seg.file_path,
+    #     )
 
     # Clean up temporary file
     try:

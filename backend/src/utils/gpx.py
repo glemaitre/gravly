@@ -180,7 +180,7 @@ def generate_gpx_segment(
     end_index: int,
     segment_name: str,
     output_dir: Path,
-):
+) -> str:
     """Generate a GPX segment from a given GPX file.
 
     Parameters
