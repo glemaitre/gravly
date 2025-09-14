@@ -960,3 +960,80 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_dir):
 
     finally:
         src.main.storage_manager = original_storage_manager
+
+
+def test_serve_storage_file_local_storage_not_available(client, tmp_dir):
+    """Test serving storage file when local storage manager doesn't have get_file_path method."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        src.main.storage_manager = local_manager
+
+        with patch("src.main.hasattr") as mock_hasattr:
+
+            def mock_hasattr_func(obj, attr):
+                if attr == "get_file_path":
+                    return False
+                return hasattr(obj, attr)
+
+            mock_hasattr.side_effect = mock_hasattr_func
+
+            response = client.get("/storage/test-file.gpx")
+
+            assert response.status_code == 500
+            assert response.json()["detail"] == "Local storage not available"
+
+    finally:
+        src.main.storage_manager = original_storage_manager
+
+
+def test_create_segment_storage_upload_failure(client, sample_gpx_file, tmp_dir):
+    """Test create segment when storage upload fails."""
+    original_storage_manager = src.main.storage_manager
+
+    try:
+        local_manager = LocalStorageManager(storage_root=str(tmp_dir))
+        src.main.storage_manager = local_manager
+
+        with open(sample_gpx_file, "rb") as f:
+            upload_response = client.post(
+                "/api/upload-gpx",
+                files={"file": ("test.gpx", f, "application/gpx+xml")},
+            )
+        if upload_response.status_code != 200:
+            print(
+                f"Upload failed: {upload_response.status_code} - {upload_response.text}"
+            )
+        assert upload_response.status_code == 200
+        file_id = upload_response.json()["file_id"]
+
+        class MockStorageManager:
+            def upload_gpx_segment(self, local_file_path, file_id, prefix):
+                raise Exception("Storage upload failed")
+
+            def get_storage_root_prefix(self):
+                return "mock://test-bucket"
+
+        mock_storage_manager = MockStorageManager()
+        src.main.storage_manager = mock_storage_manager
+
+        segment_data = {
+            "file_id": file_id,
+            "name": "Test Segment",
+            "start_index": "0",
+            "end_index": "10",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+        }
+
+        response = client.post("/api/segments", data=segment_data)
+
+        if response.status_code != 500:
+            print(f"Create segment failed: {response.status_code} - {response.text}")
+        assert response.status_code == 500
+        assert "Failed to upload to storage" in response.json()["detail"]
+        assert "Storage upload failed" in response.json()["detail"]
+
+    finally:
+        src.main.storage_manager = original_storage_manager
