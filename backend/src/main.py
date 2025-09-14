@@ -10,6 +10,7 @@ import gpxpy
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy import Enum as SAEnum
@@ -21,29 +22,30 @@ from .utils.gpx import (
     extract_from_gpx_file,
     generate_gpx_segment,
 )
-from .utils.s3 import S3Manager, cleanup_local_file
+from .utils.storage import StorageManager, cleanup_local_file, get_storage_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 temp_dir: TemporaryDirectory | None = None
-s3_manager: S3Manager | None = None
+storage_manager: StorageManager | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and clean up on shutdown."""
-    global temp_dir, s3_manager
+    global temp_dir, storage_manager
 
     temp_dir = TemporaryDirectory(prefix="cycling_gpx_")
     logger.info(f"Created temporary directory: {temp_dir.name}")
 
     try:
-        s3_manager = S3Manager()
-        logger.info("S3 manager initialized successfully")
+        storage_manager = get_storage_manager()
+        storage_type = os.getenv("STORAGE_TYPE", "local")
+        logger.info(f"Storage manager initialized successfully (type: {storage_type})")
     except Exception as e:
-        logger.warning(f"Failed to initialize S3 manager: {str(e)}")
-        s3_manager = None
+        logger.warning(f"Failed to initialize storage manager: {str(e)}")
+        storage_manager = None
 
     # Initialize database (create tables if not exist)
     # TODO: Uncomment when database is needed
@@ -128,6 +130,35 @@ async def root():
     return {"message": "Cycling GPX API"}
 
 
+@app.get("/storage/{file_path:path}")
+async def serve_storage_file(file_path: str):
+    """Serve files from local storage for development."""
+    global storage_manager
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
+
+    # Check if we're using local storage
+    storage_type = os.getenv("STORAGE_TYPE", "local")
+    if storage_type != "local":
+        raise HTTPException(
+            status_code=404, detail="File serving only available in local mode"
+        )
+
+    # Get the local file path
+    if hasattr(storage_manager, "get_file_path"):
+        local_file_path = storage_manager.get_file_path(file_path)
+    else:
+        raise HTTPException(status_code=500, detail="Local storage not available")
+
+    if not local_file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        local_file_path, media_type="application/gpx+xml", filename=local_file_path.name
+    )
+
+
 @app.post("/api/upload-gpx", response_model=GPXData)
 async def upload_gpx(file: UploadFile = File(...)):
     """Upload a GPX file from the client to the server in a temporary directory.
@@ -206,22 +237,22 @@ async def create_segment(
     commentary_text: str = Form(""),
     video_links: str = Form("[]"),
 ):
-    """Create a new segment: process uploaded GPX file with indices, upload to S3,
+    """Create a new segment: process uploaded GPX file with indices, upload to storage,
     and store metadata in DB.
     """
     allowed = {"slick", "semi-slick", "knobs"}
     if tire_dry not in allowed or tire_wet not in allowed:
         raise HTTPException(status_code=422, detail="Invalid tire types")
 
-    global temp_dir, s3_manager
+    global temp_dir, storage_manager
 
     if not temp_dir:
         raise HTTPException(
             status_code=500, detail="Temporary directory not initialized"
         )
 
-    if not s3_manager:
-        raise HTTPException(status_code=500, detail="S3 manager not initialized")
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
 
     original_file_path = Path(temp_dir.name) / f"{file_id}.gpx"
     logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
@@ -247,12 +278,12 @@ async def create_segment(
         logger.info(f"Successfully created segment file: {segment_file_path}")
 
         try:
-            s3_key = s3_manager.upload_gpx_segment(
+            storage_key = storage_manager.upload_gpx_segment(
                 local_file_path=segment_file_path,
                 file_id=segment_file_id,
                 prefix="gpx-segments",
             )
-            logger.info(f"Successfully uploaded segment to S3: {s3_key}")
+            logger.info(f"Successfully uploaded segment to storage: {storage_key}")
 
             cleanup_success = cleanup_local_file(segment_file_path)
             if cleanup_success:
@@ -260,13 +291,21 @@ async def create_segment(
             else:
                 logger.warning(f"Failed to clean up local file: {segment_file_path}")
 
-            processed_file_path = f"s3://{s3_manager.bucket_name}/{s3_key}"
+            # Generate appropriate file path based on storage type
+            storage_type = os.getenv("STORAGE_TYPE", "local")
+            if storage_type == "s3":
+                processed_file_path = (
+                    f"s3://{storage_manager.bucket_name}/{storage_key}"
+                )
+            else:
+                processed_file_path = f"local://{storage_key}"
 
-        except Exception as s3_error:
-            logger.error(f"Failed to upload to S3: {str(s3_error)}")
+        except Exception as storage_error:
+            logger.error(f"Failed to upload to storage: {str(storage_error)}")
             cleanup_local_file(segment_file_path)
             raise HTTPException(
-                status_code=500, detail=f"Failed to upload to S3: {str(s3_error)}"
+                status_code=500,
+                detail=f"Failed to upload to storage: {str(storage_error)}",
             )
 
     except Exception as e:

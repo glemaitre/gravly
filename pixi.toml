@@ -31,7 +31,8 @@ pytest-cov = "*"
 moto = "*"
 
 [tasks]
-start-backend = { cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
+start-backend-local = { cmd = "STORAGE_TYPE=local uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
+start-backend-s3 = { cmd = "STORAGE_TYPE=s3 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000", cwd = "backend" }
 start-frontend = { cmd = "npm run dev", cwd = "frontend", depends-on = ["frontend-install"] }
 frontend-install = { cmd = "npm install", cwd = "frontend" }
 frontend-build = { cmd = "npm run build", cwd = "frontend", depends-on = ["frontend-install"] }
@@ -58,6 +59,7 @@ pg-up = { cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e P
 pg-down = { cmd = "docker rm -f cycling-pg" }
 # Export DATABASE_URL for backend tasks (example for local Docker)
 env-dev = { cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling" }
+
 
 [environments]
 dev = { features = ["dev", "tests", "lint"] }
