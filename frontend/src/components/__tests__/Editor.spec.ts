@@ -343,7 +343,9 @@ describe('Editor', () => {
     const commentaryTextarea = wrapper.find('textarea[name="commentary-text"]')
     if (commentaryTextarea.exists()) {
       await commentaryTextarea.setValue('This is a test commentary')
-      expect((commentaryTextarea.element as any).value).toBe('This is a test commentary')
+      expect((commentaryTextarea.element as any).value).toBe(
+        'This is a test commentary'
+      )
     }
   })
 

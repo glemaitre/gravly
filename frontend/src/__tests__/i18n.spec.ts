@@ -156,9 +156,10 @@ describe('i18n', () => {
       expect((i18n.global.locale as any).value).toBe('en')
       expect((i18n.global.fallbackLocale as any).value).toBe('en')
       // Legacy property might not be available in all versions
-      expect((i18n.global as any).legacy === false || (i18n.global as any).legacy === undefined).toBe(
-        true
-      )
+      expect(
+        (i18n.global as any).legacy === false ||
+          (i18n.global as any).legacy === undefined
+      ).toBe(true)
     })
 
     it('has English messages', () => {
