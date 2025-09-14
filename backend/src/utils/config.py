@@ -43,10 +43,10 @@ StorageConfig = S3StorageConfig | LocalStorageConfig
 def load_environment_config(
     project_root: Path | None = None,
 ) -> tuple[DatabaseConfig, StorageConfig]:
-    """Load environment variables from the appropriate .env file.
+    """Load environment variables from separate storage and database .env files.
 
-    This function looks for environment-specific .env files in the .env folder
-    and provides helpful error messages if no configuration is found.
+    This function loads environment variables from .env/storage and .env/database files
+    in the .env folder and provides helpful error messages if no configuration is found.
 
     Parameters
     ----------
@@ -57,41 +57,55 @@ def load_environment_config(
     Raises
     ------
     FileNotFoundError
-        If no environment file is found and no examples are available.
+        If required environment files are not found.
     """
     if project_root is None:
         # Default to the project root (4 levels up from this file:
         # config.py -> utils -> src -> backend -> project_root)
         project_root = Path(__file__).parent.parent.parent.parent
 
-    environment = os.getenv("ENVIRONMENT", "local")
-    env_file = project_root / ".env" / environment
+    env_folder = project_root / ".env"
 
-    if env_file.exists():
-        load_dotenv(env_file, override=True)
-        logging.info(f"Loaded environment variables from {env_file}")
+    # Load storage configuration
+    storage_file = env_folder / "storage"
+    if storage_file.exists():
+        load_dotenv(storage_file, override=True)
+        logging.info(f"Loaded storage environment variables from {storage_file}")
     else:
-        # Check if .env folder exists and contains example files
-        env_folder = project_root / ".env"
-        if env_folder.exists() and env_folder.is_dir():
-            example_files = list(env_folder.glob("*.example"))
-            if example_files:
-                example_list = ", ".join([f.name for f in example_files])
-                raise FileNotFoundError(
-                    f"No environment file found for environment "
-                    f"'{environment}'. "
-                    f"Please create a .env file in the .env folder. "
-                    f"Example files available: {example_list}. "
-                    f"Copy one of the example files and rename it to match your "
-                    f"environment."
-                )
+        # Check if example file exists
+        storage_example = env_folder / "storage.example"
+        if storage_example.exists():
+            raise FileNotFoundError(
+                f"Storage configuration file not found at {storage_file}. "
+                f"Please create a storage configuration file based on "
+                f"{storage_example}. Copy the example file and rename it to 'storage'."
+            )
+        else:
+            raise FileNotFoundError(
+                f"Storage configuration file not found at {storage_file} "
+                f"and no example file available."
+            )
 
-        raise FileNotFoundError(
-            f"No environment file found for environment "
-            f"'{environment}' "
-            f"and no .env folder with examples found. "
-            f"Please create a .env file or set up environment variables."
-        )
+    # Load database configuration
+    database_file = env_folder / "database"
+    if database_file.exists():
+        load_dotenv(database_file, override=True)
+        logging.info(f"Loaded database environment variables from {database_file}")
+    else:
+        # Check if example file exists
+        database_example = env_folder / "database.example"
+        if database_example.exists():
+            raise FileNotFoundError(
+                f"Database configuration file not found at {database_file}. "
+                f"Please create a database configuration file based on "
+                f"{database_example}. Copy the example file and rename it to "
+                f"'database'."
+            )
+        else:
+            raise FileNotFoundError(
+                f"Database configuration file not found at {database_file} "
+                f"and no example file available."
+            )
 
     # Extract database configuration from environment variables
     # All database parameters are required - no defaults

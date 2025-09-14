@@ -123,7 +123,13 @@ cmd = "pg_ctl -D $PWD/postgres_data stop"
 cmd = "pg_ctl -D $PWD/postgres_data status"
 
 [tasks.pg-create-db]
-cmd = "createdb cycling"
+cmd = "createdb $DB_NAME"
+
+[tasks.pg-drop-db]
+cmd = "dropdb $DB_NAME"
+
+[tasks.pg-cleanup]
+depends-on = ["pg-stop", "pg-drop-db"]
 
 [tasks.pg-setup]
 depends-on = ["pg-init", "pg-start", "pg-create-db"]
