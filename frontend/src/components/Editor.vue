@@ -53,21 +53,6 @@
             <input ref="fileInput" type="file" accept=".gpx" @change="onFileChange" hidden />
           </div>
 
-          <!-- Upload Progress Bar in Menu -->
-          <div v-if="isUploading" class="menu-section upload-progress-section">
-            <div class="upload-progress-container">
-              <div class="upload-progress-bar">
-                <div
-                  class="upload-progress-fill"
-                  :style="{ width: uploadProgress + '%' }"
-                ></div>
-              </div>
-              <div class="upload-progress-text">
-                {{ t('message.uploading') }} {{ Math.round(uploadProgress) }}%
-              </div>
-            </div>
-          </div>
-
           <div class="menu-section">
             <div class="menu-section-title">{{ t('menu.segments') }}</div>
             <ul class="menu-list">
@@ -82,6 +67,77 @@
                 <span class="text">{{ t('menu.saveInDb') }}</span>
               </li>
             </ul>
+          </div>
+
+          <!-- Info Feed Section -->
+          <div class="menu-section info-feed-section">
+            <div class="menu-section-title">{{ t('menu.infoFeed') }}</div>
+
+            <!-- Upload Progress -->
+            <div v-if="isUploading" class="info-feed-item upload-progress-item">
+              <div class="info-feed-icon">
+                <i class="fa-solid fa-upload"></i>
+              </div>
+              <div class="info-feed-content">
+                <div class="upload-progress-bar">
+                  <div
+                    class="upload-progress-fill"
+                    :style="{ width: uploadProgress + '%' }"
+                  ></div>
+                </div>
+                <div class="info-feed-text">
+                  {{ t('message.uploading') }} {{ Math.round(uploadProgress) }}%
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Success -->
+            <div v-if="showUploadSuccess" class="info-feed-item upload-success-item">
+              <div class="info-feed-icon">
+                <i class="fa-solid fa-check-circle"></i>
+              </div>
+              <div class="info-feed-content">
+                <div class="info-feed-text">
+                  {{ t('message.uploadSuccess') }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Segment Success -->
+            <div v-if="showSegmentSuccess" class="info-feed-item upload-success-item">
+              <div class="info-feed-icon">
+                <i class="fa-solid fa-check-circle"></i>
+              </div>
+              <div class="info-feed-content">
+                <div class="info-feed-text">
+                  {{ t('message.segmentCreated') }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Error Messages -->
+            <div v-if="showError" class="info-feed-item error-item">
+              <div class="info-feed-icon">
+                <i class="fa-solid fa-exclamation-circle"></i>
+              </div>
+              <div class="info-feed-content">
+                <div class="info-feed-text">
+                  {{ currentErrorMessage }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div v-if="!isUploading && !showUploadSuccess && !showSegmentSuccess && !showError" class="info-feed-item empty-item">
+              <div class="info-feed-icon">
+                <i class="fa-solid fa-info-circle"></i>
+              </div>
+              <div class="info-feed-content">
+                <div class="info-feed-text">
+                  {{ t('message.noActivity') }}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -577,6 +633,10 @@ const xMode = ref<'distance' | 'time'>('distance')
 const uploadedFileId = ref<string | null>(null)
 const uploadProgress = ref<number>(0)
 const isUploading = ref<boolean>(false)
+const showUploadSuccess = ref<boolean>(false)
+const showSegmentSuccess = ref<boolean>(false)
+const showError = ref<boolean>(false)
+const currentErrorMessage = ref<string>('')
 
 const controlsCard = ref<HTMLElement | null>(null)
 
@@ -690,6 +750,8 @@ async function onFileChange(ev: Event) {
 
   isUploading.value = true
   uploadProgress.value = 0
+  showError.value = false
+  currentErrorMessage.value = ''
   message.value = ''
 
   try {
@@ -728,6 +790,10 @@ async function onFileChange(ev: Event) {
     }))
 
     if (actualPoints.length < 2) {
+      showError.value = true
+      currentErrorMessage.value = t('message.insufficientPoints')
+      showUploadSuccess.value = false
+      showSegmentSuccess.value = false
       message.value = t('message.insufficientPoints')
       return
     }
@@ -742,10 +808,14 @@ async function onFileChange(ev: Event) {
     loaded.value = true
     message.value = ''
 
-    // Reset upload state after a short delay to show completion
+    // Keep progress bar visible for 1 second after completion
     setTimeout(() => {
       isUploading.value = false
       uploadProgress.value = 0
+      showUploadSuccess.value = true
+      showError.value = false
+      currentErrorMessage.value = ''
+      showSegmentSuccess.value = false
     }, 1000)
 
     await nextTick()
@@ -754,7 +824,17 @@ async function onFileChange(ev: Event) {
   } catch (err: any) {
     isUploading.value = false
     uploadProgress.value = 0
+    showError.value = true
+    currentErrorMessage.value = err.message || t('message.uploadError')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
     message.value = err.message || t('message.uploadError')
+
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      showError.value = false
+      currentErrorMessage.value = ''
+    }, 5000)
   }
 }
 
@@ -1290,10 +1370,16 @@ function escapeXml(s: string): string {
 
 async function onSubmit() {
   if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
+    showError.value = true
+    currentErrorMessage.value = t('message.loadGpxFirst')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
     message.value = t('message.loadGpxFirst')
     return
   }
   submitting.value = true
+  showError.value = false
+  currentErrorMessage.value = ''
   message.value = ''
   try {
     const formData = new FormData()
@@ -1326,18 +1412,37 @@ async function onSubmit() {
       throw new Error(detail || 'Failed to create segment')
     }
 
+    // Reset only form fields to original state
     name.value = ''
     trailConditions.value = { tire_dry: 'slick', tire_wet: 'slick', surface_type: 'forest-trail', difficulty_level: 3 }
-    loaded.value = false
-    points.value = []
-    uploadedFileId.value = null
     commentary.value = { text: '', video_links: [], images: [] }
-    chart?.destroy(); chart = null
-    if (fullLine) { fullLine.remove(); fullLine = null }
-    if (selectedLine) { selectedLine.remove(); selectedLine = null }
-    message.value = t('message.segmentCreated')
+
+    // Reset selection markers to start and end of file (preserve loaded state)
+    startIndex.value = 0
+    endIndex.value = points.value.length - 1
+
+    // Update map and chart with new selection
+    await nextTick()
+    renderMap()
+    renderChart()
+
+    // Show success message in info feed
+    showSegmentSuccess.value = true
+    showError.value = false
+    currentErrorMessage.value = ''
+    showUploadSuccess.value = false
   } catch (err: any) {
+    showError.value = true
+    currentErrorMessage.value = err.message || t('message.createError')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
     message.value = err.message || t('message.createError')
+
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      showError.value = false
+      currentErrorMessage.value = ''
+    }, 5000)
   } finally {
     submitting.value = false
   }
@@ -1876,19 +1981,51 @@ async function onSubmit() {
 .empty { padding: 2rem; text-align: center; color: #666; }
 .message { margin-top: 1rem; }
 
-/* Upload Progress Bar Styles - Integrated in Menu */
-.upload-progress-section {
+/* Info Feed Styles - Integrated in Menu */
+.info-feed-section {
   margin-top: 0.5rem;
   padding-top: 0.5rem;
   border-top: 1px solid #f1f5f9;
 }
 
-.upload-progress-container {
+.info-feed-item {
   padding: 0.75rem;
-  background: #f8fafc;
   border-radius: 6px;
+  margin: 0 0.25rem 0.5rem 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.info-feed-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.info-feed-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.info-feed-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Upload Progress Item */
+.upload-progress-item {
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  margin: 0 0.25rem;
+}
+
+.upload-progress-item .info-feed-icon {
+  color: #ff6600;
+}
+
+.upload-progress-item .info-feed-text {
+  color: #475569;
 }
 
 .upload-progress-bar {
@@ -1908,12 +2045,60 @@ async function onSubmit() {
   box-shadow: 0 1px 2px rgba(255, 102, 0, 0.2);
 }
 
-.upload-progress-text {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #475569;
-  font-weight: 500;
-  line-height: 1.2;
+/* Success Item */
+.success-item {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.success-item .info-feed-icon {
+  color: #16a34a;
+}
+
+.success-item .info-feed-text {
+  color: #15803d;
+}
+
+/* Upload Success Item (Blue) */
+.upload-success-item {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.upload-success-item .info-feed-icon {
+  color: #2563eb;
+}
+
+.upload-success-item .info-feed-text {
+  color: #1d4ed8;
+}
+
+/* Error Item */
+.error-item {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.error-item .info-feed-icon {
+  color: #dc2626;
+}
+
+.error-item .info-feed-text {
+  color: #b91c1c;
+}
+
+/* Empty Item */
+.empty-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.empty-item .info-feed-icon {
+  color: #64748b;
+}
+
+.empty-item .info-feed-text {
+  color: #64748b;
 }
 
 @media (max-width: 1200px) {

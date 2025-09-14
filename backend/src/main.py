@@ -208,7 +208,7 @@ async def create_segment(
         raise HTTPException(status_code=404, detail="Uploaded file not found")
 
     # Ensure destination directory exists
-    dest_dir = Path("mock_gpx")
+    dest_dir = Path("../scratch/mock_gpx")
     dest_dir.mkdir(exist_ok=True)
 
     # Process the GPX file with the given indices

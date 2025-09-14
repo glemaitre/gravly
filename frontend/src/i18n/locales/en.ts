@@ -4,7 +4,8 @@ export default {
     import: 'Import from ...',
     segments: 'Segments',
     gpxFile: 'GPX file',
-    saveInDb: 'Save in DB'
+    saveInDb: 'Save in DB',
+    infoFeed: 'Information feed'
   },
 
   // Chart and controls
@@ -77,13 +78,15 @@ export default {
 
   // Messages
   message: {
-    loadGpxFirst: 'Load a GPX first.',
-    insufficientPoints: 'GPX has insufficient points.',
-    useFileLoad: 'Use "Import from ..." → "GPX file" to begin.',
-    segmentCreated: 'Segment created successfully.',
-    createError: 'Error while creating segment.',
+    loadGpxFirst: 'Load a GPX first',
+    insufficientPoints: 'GPX has insufficient points',
+    useFileLoad: 'Use "Import from ..." → "GPX file" to begin',
+    segmentCreated: 'Segment created successfully',
+    createError: 'Error while creating segment',
     uploading: 'Uploading GPX file...',
-    uploadError: 'Error uploading GPX file.'
+    uploadError: 'Error uploading GPX file',
+    uploadSuccess: 'GPX file uploaded successfully',
+    noActivity: 'No recent activity'
   },
 
   // Language selector
