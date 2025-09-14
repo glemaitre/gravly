@@ -16,6 +16,7 @@ asyncpg = "*"
 boto3 = "*"
 python-dotenv = "*"
 pre-commit = "*"
+postgresql = "*"
 
 [feature.dev.dependencies]
 ipykernel = "*"
@@ -23,7 +24,7 @@ ipython = "*"
 jupyterlab = "*"
 
 [feature.lint.dependencies]
-ruff = "*" # Python linter and formatter
+ruff = "*"       # Python linter and formatter
 pre-commit = "*" # Git hooks framework
 
 [feature.tests.dependencies]
@@ -108,17 +109,24 @@ cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-mi
 cmd = "npm install --no-audit --no-fund && npm run test:cov"
 cwd = "frontend"
 
-# Local Postgres via Docker
-[feature.tests.tasks.pg-up]
-cmd = "docker run --name cycling-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=cycling -p 5432:5432 -d postgres:16"
+# PostgreSQL database management tasks
+[tasks.pg-init]
+cmd = "initdb -D $PWD/postgres_data"
 
-[feature.tests.tasks.pg-down]
-cmd = "docker rm -f cycling-pg"
+[tasks.pg-start]
+cmd = "pg_ctl -D $PWD/postgres_data -l $PWD/postgres.log start"
 
-# Export DATABASE_URL for backend tasks (example for local Docker)
-[feature.tests.tasks.env-dev]
-cmd = "export DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/cycling"
+[tasks.pg-stop]
+cmd = "pg_ctl -D $PWD/postgres_data stop"
 
+[tasks.pg-status]
+cmd = "pg_ctl -D $PWD/postgres_data status"
+
+[tasks.pg-create-db]
+cmd = "createdb cycling"
+
+[tasks.pg-setup]
+depends-on = ["pg-init", "pg-start", "pg-create-db"]
 
 [environments]
 dev = { features = ["dev", "tests", "lint"] }

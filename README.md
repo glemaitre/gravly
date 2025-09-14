@@ -14,6 +14,7 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 - **Frontend**: Vue.js 3, Leaflet, Chart.js
 - **Backend**: FastAPI, Python
+- **Database**: PostgreSQL (via conda-forge)
 - **Search**: Elasticsearch
 - **Storage**: Local filesystem (development) or AWS S3 (production)
 - **Environment**: Pixi (conda-based environment management)
@@ -22,6 +23,7 @@ A modern web application for discovering and viewing cycling routes stored as GP
 
 - Pixi (for environment management)
 - Elasticsearch (running on localhost:9200)
+- PostgreSQL (installed via Pixi - see setup instructions)
 
 ## Setup Instructions
 
@@ -42,6 +44,9 @@ A modern web application for discovering and viewing cycling routes stored as GP
    ```bash
    # Install frontend dependencies
    pixi run frontend-install
+
+   # Setup PostgreSQL database
+   pixi run pg-setup
 
    # Setup Elasticsearch index and load mock data
    pixi run setup-elasticsearch
@@ -87,6 +92,46 @@ The storage backend is controlled by the `STORAGE_TYPE` environment variable:
 
 - `STORAGE_TYPE=local` - Use local filesystem storage
 - `STORAGE_TYPE=s3` - Use AWS S3 storage
+
+### Database Configuration
+
+The application uses PostgreSQL for persistent storage. Database connection is configured through environment variables:
+
+**Primary configuration (recommended):**
+- `DATABASE_URL` - Complete PostgreSQL connection string
+  - Format: `postgresql+asyncpg://username:password@host:port/database_name`
+  - Example: `postgresql+asyncpg://postgres:mypassword@localhost:5432/cycling`
+
+**Alternative configuration (individual components):**
+- `DB_HOST` - Database host (default: localhost)
+- `DB_PORT` - Database port (default: 5432)
+- `DB_NAME` - Database name (default: cycling)
+- `DB_USER` - Database username (default: postgres)
+- `DB_PASSWORD` - Database password (default: postgres)
+
+### PostgreSQL Setup
+
+1. **Initialize and start PostgreSQL** (first time only):
+   ```bash
+   pixi run pg-setup
+   ```
+
+2. **Start PostgreSQL** (for subsequent sessions):
+   ```bash
+   pixi run pg-start
+   ```
+
+3. **Stop PostgreSQL**:
+   ```bash
+   pixi run pg-stop
+   ```
+
+4. **Check PostgreSQL status**:
+   ```bash
+   pixi run pg-status
+   ```
+
+**Note**: The database will be initialized in a `postgres_data` directory in your project root. This directory should be added to `.gitignore` (which it already is).
 
 ### Local Storage Configuration
 
@@ -204,14 +249,14 @@ website_cycling/
 │   ├── package.json        # Frontend dependencies
 │   └── vite.config.js      # Vite configuration
 ├── .env/                   # Environment configuration files
-│   ├── .env.example        # Main template
-│   ├── .env.local.example  # Local development template
-│   ├── .env.s3.example     # S3 testing template
-│   ├── .env.staging.example # Staging template
-│   └── .env.production.example # Production template
+│   ├── local.example       # Local development template
+│   ├── s3.example          # S3 testing template
+│   ├── staging.example     # Staging template
+│   └── production.example  # Production template
 ├── mock_gpx/               # Sample GPX files for testing
 ├── scripts/                # Setup and utility scripts
 │   └── setup_elasticsearch.py
+├── postgres_data/          # PostgreSQL data directory (created by pg-setup)
 ├── pixi.toml              # Pixi environment configuration
 └── README.md
 ```
@@ -238,6 +283,12 @@ pixi run start-backend-s3         # Backend with S3 storage (.env/s3)
 pixi run start-backend-staging    # Backend with staging config (.env/staging)
 pixi run start-backend-production # Backend with production config (.env/production)
 pixi run start-frontend           # Frontend development server
+
+# Database management
+pixi run pg-setup                 # Initialize PostgreSQL database (first time)
+pixi run pg-start                 # Start PostgreSQL server
+pixi run pg-stop                  # Stop PostgreSQL server
+pixi run pg-status                # Check PostgreSQL server status
 
 # Lint & format
 pixi run lint-all

@@ -302,6 +302,10 @@ dist/
 scratch/
 mock_gpx/
 
+# PostgreSQL data directory
+postgres_data/
+postgres.log
+
 # Environment files (keep example files for documentation)
 .env/*
 !.env/.env.example

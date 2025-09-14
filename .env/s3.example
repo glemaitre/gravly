@@ -1,0 +1,27 @@
+# S3 Storage Environment Configuration
+# Copy this file to .env/s3 and update the values as needed
+
+# Environment
+ENVIRONMENT=s3
+
+# Storage Configuration
+STORAGE_TYPE=s3
+AWS_ACCESS_KEY_ID=your_access_key_here
+AWS_SECRET_ACCESS_KEY=your_secret_key_here
+AWS_S3_BUCKET=your_bucket_name
+AWS_REGION=us-east-1
+
+# Database Configuration
+# PostgreSQL connection string
+# Format: postgresql+asyncpg://username:password@host:port/database_name
+DATABASE_URL=postgresql+asyncpg://postgres:your_password_here@localhost:5432/cycling
+
+# Database connection details (alternative to DATABASE_URL)
+# DB_HOST=localhost
+# DB_PORT=5432
+# DB_NAME=cycling
+# DB_USER=postgres
+# DB_PASSWORD=your_password_here
+
+# Logging
+LOG_LEVEL=INFO

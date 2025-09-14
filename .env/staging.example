@@ -1,0 +1,27 @@
+# Staging Environment Configuration
+# Copy this file to .env/staging and update the values as needed
+
+# Environment
+ENVIRONMENT=staging
+
+# Storage Configuration
+STORAGE_TYPE=s3
+AWS_ACCESS_KEY_ID=your_staging_access_key_here
+AWS_SECRET_ACCESS_KEY=your_staging_secret_key_here
+AWS_S3_BUCKET=your_staging_bucket_name
+AWS_REGION=us-east-1
+
+# Database Configuration
+# PostgreSQL connection string for staging environment
+# Format: postgresql+asyncpg://username:password@host:port/database_name
+DATABASE_URL=postgresql+asyncpg://staging_user:your_staging_password_here@staging-db-host:5432/cycling_staging
+
+# Database connection details (alternative to DATABASE_URL)
+# DB_HOST=staging-db-host
+# DB_PORT=5432
+# DB_NAME=cycling_staging
+# DB_USER=staging_user
+# DB_PASSWORD=your_staging_password_here
+
+# Logging
+LOG_LEVEL=INFO

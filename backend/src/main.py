@@ -37,15 +37,29 @@ logger = logging.getLogger(__name__)
 
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
+engine = None
+SessionLocal = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize resources on startup and clean up on shutdown."""
-    global temp_dir, storage_manager
+    global temp_dir, storage_manager, engine, SessionLocal
 
     temp_dir = TemporaryDirectory(prefix="cycling_gpx_")
     logger.info(f"Created temporary directory: {temp_dir.name}")
+
+    # Initialize database engine and session
+    try:
+        engine = create_async_engine(DATABASE_URL, echo=False, future=True)
+        SessionLocal = async_sessionmaker(
+            engine, expire_on_commit=False, class_=AsyncSession
+        )
+        logger.info("Database engine and session initialized")
+    except Exception as db_init_e:
+        logger.warning(f"Failed to initialize database engine: {db_init_e}")
+        engine = None
+        SessionLocal = None
 
     try:
         storage_type = os.getenv("STORAGE_TYPE", "local").lower()
@@ -74,21 +88,27 @@ async def lifespan(app: FastAPI):
         storage_manager = None
 
     # Initialize database (create tables if not exist)
-    # TODO: Uncomment when database is needed
-    # try:
-    #     async with engine.begin() as conn:
-    #         await conn.run_sync(Base.metadata.create_all)
-    #     print("Database tables ensured")
-    # except Exception as db_e:
-    #     print(f"Warning: Could not initialize database: {db_e}")
+    if engine is not None:
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            logger.info("Database tables ensured")
+        except Exception as db_e:
+            logger.warning(f"Could not initialize database: {db_e}")
+    else:
+        logger.warning("Skipping database initialization - engine not available")
 
     # Yield control to the application
     yield
 
-    # Clean up temporary directory on shutdown
+    # Clean up resources on shutdown
     if temp_dir:
         logger.info(f"Cleaning up temporary directory: {temp_dir.name}")
         temp_dir.cleanup()
+
+    if engine:
+        logger.info("Closing database engine")
+        await engine.dispose()
 
 
 app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
@@ -102,13 +122,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Database setup (PostgreSQL via SQLAlchemy async)
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    # Fallback to local development URL.
-    # Example: postgresql+asyncpg://user:pass@localhost/db
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/cycling",
-)
+def get_database_url() -> str:
+    """Construct database URL from environment variables or use DATABASE_URL directly."""
+    # If DATABASE_URL is provided, use it directly
+    if database_url := os.getenv("DATABASE_URL"):
+        return database_url
+
+    # Otherwise, construct from individual components
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "cycling")
+    db_user = os.getenv("DB_USER", "postgres")
+    db_password = os.getenv("DB_PASSWORD", "postgres")
+
+    return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+
+DATABASE_URL = get_database_url()
 
 
 class Base(DeclarativeBase):
@@ -140,8 +172,7 @@ class Segment(Base):
     )
 
 
-engine = create_async_engine(DATABASE_URL, echo=False, future=True)
-SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+# Database engine and session will be initialized in lifespan function
 
 
 class SegmentCreateResponse(BaseModel):
@@ -333,29 +364,33 @@ async def create_segment(
             status_code=500, detail=f"Failed to process GPX file: {str(e)}"
         )
 
-    # Store metadata in DB (using the S3 path)
-    # TODO: Uncomment when database is needed
-    # async with SessionLocal() as session:
-    #     seg = Segment(
-    #         name=name,
-    #         tire_dry=tire_dry,
-    #         tire_wet=tire_wet,
-    #         file_path=processed_file_path,
-    #     )
-    #     session.add(seg)
-    #     await session.commit()
-    #     await session.refresh(seg)
-    #     return SegmentCreateResponse(
-    #         id=seg.id,
-    #         name=seg.name,
-    #         tire_dry=seg.tire_dry,
-    #         tire_wet=seg.tire_wet,
-    #         file_path=seg.file_path,
-    #     )
+    # Store metadata in DB (using the processed file path)
+    if SessionLocal is not None:
+        try:
+            async with SessionLocal() as session:
+                seg = Segment(
+                    name=name,
+                    tire_dry=tire_dry,
+                    tire_wet=tire_wet,
+                    file_path=processed_file_path,
+                )
+                session.add(seg)
+                await session.commit()
+                await session.refresh(seg)
+                return SegmentCreateResponse(
+                    id=seg.id,
+                    name=seg.name,
+                    tire_dry=seg.tire_dry,
+                    tire_wet=seg.tire_wet,
+                    file_path=seg.file_path,
+                )
+        except Exception as db_e:
+            logger.warning(f"Failed to store segment in database: {db_e}")
+            # Continue without database storage
 
-    # For now, return a mock response since we're not using the database
+    # Return response without database ID if database is not available
     return SegmentCreateResponse(
-        id=1,  # Mock ID
+        id=0,  # Placeholder ID when database is not available
         name=name,
         tire_dry=tire_dry,
         tire_wet=tire_wet,
