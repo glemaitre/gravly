@@ -8,7 +8,7 @@ from src.utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
 
 def test_extract_from_gpx_file_with_data_file():
     """Test extract_from_gpx_file function with the file.gpx from data folder."""
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent.parent / "data"
     gpx_file_path = data_dir / "file.gpx"
 
     with open(gpx_file_path, encoding="utf-8") as gpx_file:
@@ -60,7 +60,7 @@ def test_extract_from_gpx_file_with_data_file():
 
 def test_generate_gpx_segment(tmp_dir):
     """Test generate_gpx_segment function with the file.gpx from data folder."""
-    data_dir = Path(__file__).parent / "data"
+    data_dir = Path(__file__).parent.parent / "data"
     input_file_path = data_dir / "file.gpx"
 
     start_index = 10

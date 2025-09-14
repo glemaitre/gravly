@@ -152,8 +152,14 @@ async def upload_gpx(file: UploadFile = File(...)):
         logger.error(f"Failed to save file {file.filename}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
-    with open(file_path) as gpx_file:
-        gpx = gpxpy.parse(gpx_file)
+    try:
+        with open(file_path) as gpx_file:
+            gpx = gpxpy.parse(gpx_file)
+    except Exception as e:
+        if file_path.exists():
+            file_path.unlink()
+        logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
 
     try:
         gpx_data = extract_from_gpx_file(gpx, file_id)
@@ -164,7 +170,7 @@ async def upload_gpx(file: UploadFile = File(...)):
     except Exception as e:
         if file_path.exists():
             file_path.unlink()
-        logger.error(f"Failed to parse GPX file {file_id}.gpx: {str(e)}")
+        logger.error(f"Failed to process GPX file {file_id}.gpx: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Invalid GPX file: {str(e)}")
 
     return gpx_data
