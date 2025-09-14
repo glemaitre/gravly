@@ -80,67 +80,16 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-// Create i18n instance for testing
+// Import real locale files
+import en from '../../i18n/locales/en'
+import fr from '../../i18n/locales/fr'
+
+// Create i18n instance for testing using real locale files
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
   fallbackLocale: 'en',
-  messages: {
-    en: {
-      menu: {
-        import: 'Import',
-        gpxFile: 'GPX File',
-        segments: 'Segments',
-        saveInDb: 'Save in Database'
-      },
-      tooltip: {
-        loadGpxFile: 'Load GPX file',
-        moveStartBack: 'Move start back',
-        moveStartForward: 'Move start forward',
-        moveEndBack: 'Move end back',
-        moveEndForward: 'Move end forward'
-      },
-      form: {
-        name: 'Name',
-        uploadImages: 'Upload Images',
-        uploadHint: 'Drag and drop or click to select',
-        comments: 'Comments',
-        commentaryText: 'Commentary Text',
-        commentaryPlaceholder: 'Add your commentary here...'
-      },
-      message: {
-        useFileLoad: 'Please load a GPX file to get started',
-        createError: 'Error creating segment'
-      }
-    },
-    fr: {
-      menu: {
-        import: 'Importer',
-        gpxFile: 'Fichier GPX',
-        segments: 'Segments',
-        saveInDb: 'Sauvegarder en base'
-      },
-      tooltip: {
-        loadGpxFile: 'Charger un fichier GPX',
-        moveStartBack: 'Déplacer le début vers l\'arrière',
-        moveStartForward: 'Déplacer le début vers l\'avant',
-        moveEndBack: 'Déplacer la fin vers l\'arrière',
-        moveEndForward: 'Déplacer la fin vers l\'avant'
-      },
-      form: {
-        name: 'Nom',
-        uploadImages: 'Télécharger des images',
-        uploadHint: 'Glisser-déposer ou cliquer pour sélectionner',
-        comments: 'Commentaires',
-        commentaryText: 'Texte de commentaire',
-        commentaryPlaceholder: 'Ajoutez votre commentaire ici...'
-      },
-      message: {
-        useFileLoad: 'Veuillez charger un fichier GPX pour commencer',
-        createError: 'Erreur lors de la création du segment'
-      }
-    }
-  }
+  messages: { en, fr }
 })
 
 describe('Editor', () => {
@@ -174,7 +123,7 @@ describe('Editor', () => {
     })
 
     expect(wrapper.find('.empty').exists()).toBe(true)
-    expect(wrapper.find('.empty').text()).toContain('Please load a GPX file to get started')
+    expect(wrapper.find('.empty').text()).toContain('Use "Import from ..." → "GPX file" to begin')
   })
 
   it('displays language dropdown with correct options', () => {

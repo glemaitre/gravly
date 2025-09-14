@@ -24,23 +24,16 @@ const router = createRouter({
   ]
 })
 
-// Create i18n instance for testing
+// Import real locale files
+import en from '../i18n/locales/en'
+import fr from '../i18n/locales/fr'
+
+// Create i18n instance for testing using real locale files
 const i18n = createI18n({
   legacy: false,
   locale: 'en',
   fallbackLocale: 'en',
-  messages: {
-    en: {
-      app: {
-        title: 'Cycling Routes'
-      }
-    },
-    fr: {
-      app: {
-        title: 'Parcours Vélo'
-      }
-    }
-  }
+  messages: { en, fr }
 })
 
 describe('App', () => {
