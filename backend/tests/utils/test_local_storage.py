@@ -374,3 +374,67 @@ def test_upload_gpx_segment_exception_handling(local_storage_manager, real_gpx_f
         mock_logger.error.assert_called_once_with(
             "Failed to upload to local storage: Mocked file system error"
         )
+
+
+def test_delete_gpx_segment_exception_handling(local_storage_manager, real_gpx_file):
+    """Test that exceptions during deletion are properly logged and return False."""
+    file_id = "test-delete-exception"
+
+    storage_key = local_storage_manager.upload_gpx_segment(
+        local_file_path=real_gpx_file,
+        file_id=file_id,
+    )
+
+    with (
+        patch("pathlib.Path.unlink") as mock_unlink,
+        patch("src.utils.storage.logger") as mock_logger,
+    ):
+        mock_unlink.side_effect = OSError("Mocked file deletion error")
+
+        result = local_storage_manager.delete_gpx_segment(storage_key)
+        assert result is False
+
+        mock_logger.error.assert_called_once_with(
+            "Failed to delete from local storage: Mocked file deletion error"
+        )
+
+
+def test_get_gpx_segment_url_exception_handling(local_storage_manager, real_gpx_file):
+    """Test that exceptions during URL generation are properly logged and return
+    None."""
+    file_id = "test-url-exception"
+
+    storage_key = local_storage_manager.upload_gpx_segment(
+        local_file_path=real_gpx_file,
+        file_id=file_id,
+    )
+
+    with (
+        patch("src.utils.storage.urljoin") as mock_urljoin,
+        patch("src.utils.storage.logger") as mock_logger,
+    ):
+        mock_urljoin.side_effect = Exception("Mocked URL generation error")
+
+        result = local_storage_manager.get_gpx_segment_url(storage_key)
+        assert result is None
+
+        mock_logger.error.assert_called_once_with(
+            "Failed to generate local storage URL: Mocked URL generation error"
+        )
+
+
+def test_bucket_exists_exception_handling(local_storage_manager):
+    """Test that exceptions during bucket existence check return False."""
+    with patch("pathlib.Path.exists") as mock_exists:
+        mock_exists.side_effect = OSError("Mocked filesystem error")
+
+        result = local_storage_manager.bucket_exists()
+        assert result is False
+
+
+def test_list_files_prefix_path_not_exists(local_storage_manager):
+    """Test that list_files returns empty list when prefix path doesn't exist."""
+    non_existent_prefix = "non-existent-prefix"
+
+    result = local_storage_manager.list_files(non_existent_prefix)
+    assert result == []
