@@ -38,13 +38,25 @@ env_file = (
 if env_file.exists():
     load_dotenv(env_file)
     logging.info(f"Loaded environment variables from {env_file}")
-else:  # fallback to .env file in root
-    fallback_env = Path(__file__).parent.parent.parent / ".env"
-    if fallback_env.exists():
-        load_dotenv(fallback_env)
-        logging.info(f"Loaded environment variables from {fallback_env}")
-    else:
-        logging.info("No .env file found, using system environment variables")
+else:
+    # Check if .env folder exists and contains example files
+    env_folder = Path(__file__).parent.parent.parent / ".env"
+    if env_folder.exists() and env_folder.is_dir():
+        example_files = list(env_folder.glob("*.example"))
+        if example_files:
+            example_list = ", ".join([f.name for f in example_files])
+            raise FileNotFoundError(
+                f"No environment file found for environment '{os.getenv('ENVIRONMENT', 'local')}'. "
+                f"Please create a .env file in the .env folder. "
+                f"Example files available: {example_list}. "
+                f"Copy one of the example files and rename it to match your environment."
+            )
+
+    raise FileNotFoundError(
+        f"No environment file found for environment '{os.getenv('ENVIRONMENT', 'local')}' "
+        f"and no .env folder with examples found. "
+        f"Please create a .env file or set up environment variables."
+    )
 
 
 logging.basicConfig(level=logging.INFO)
