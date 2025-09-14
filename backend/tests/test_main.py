@@ -1,5 +1,6 @@
 """Tests for FastAPI main endpoints."""
 
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -7,9 +8,10 @@ from unittest.mock import patch
 
 import boto3
 import pytest
+import src.main
 from fastapi.testclient import TestClient
 from moto import mock_aws
-from src.main import app
+from src.main import app, lifespan
 from src.utils.gpx import generate_gpx_segment
 from src.utils.s3 import S3Manager, cleanup_local_file
 
@@ -116,7 +118,6 @@ def test_upload_gpx_no_file(client):
 @mock_aws
 def test_create_segment_success(client, sample_gpx_file, tmp_path):
     """Test successful segment creation."""
-    import boto3
 
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
@@ -264,7 +265,6 @@ def test_create_segment_invalid_indices(client, sample_gpx_file, tmp_path):
 @mock_aws
 def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_path):
     """Test segment creation with commentary and media."""
-    import boto3
 
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
@@ -311,7 +311,6 @@ def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_p
 @mock_aws
 def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
     """Test creating multiple segments from the same uploaded file."""
-    import boto3
 
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
@@ -731,12 +730,41 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
         assert segment_response.status_code in [200, 500]
 
 
-def test_s3_manager_initialization_failure_handling(client):
+def test_s3_manager_initialization_failure_handling():
     """Test that the app handles S3 manager initialization failure gracefully."""
-    with patch.dict(os.environ, {}, clear=True):
-        # This should cause S3 manager initialization to fail
-        response = client.get("/")
-        assert response.status_code == 200
 
-        # The app should still be running even if S3 is not configured
-        # This tests the graceful degradation in the lifespan function
+    original_s3_manager = src.main.s3_manager
+
+    try:
+        with patch.dict(os.environ, {}, clear=True):
+
+            async def run_lifespan():
+                async with lifespan(app):
+                    assert src.main.s3_manager is None
+                    return True
+
+            result = asyncio.run(run_lifespan())
+            assert result is True
+
+    finally:
+        src.main.s3_manager = original_s3_manager
+
+
+def test_s3_manager_initialization_exception_handling():
+    """Test that S3 manager initialization exceptions are properly caught and logged."""
+
+    original_s3_manager = src.main.s3_manager
+
+    try:
+        with patch("src.main.S3Manager", side_effect=Exception("S3 connection failed")):
+
+            async def run_lifespan():
+                async with lifespan(app):
+                    assert src.main.s3_manager is None
+                    return True
+
+            result = asyncio.run(run_lifespan())
+            assert result is True
+
+    finally:
+        src.main.s3_manager = original_s3_manager
