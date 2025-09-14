@@ -58,7 +58,6 @@ async def lifespan(app: FastAPI):
     temp_dir = TemporaryDirectory(prefix="cycling_gpx_")
     logger.info(f"Created temporary directory: {temp_dir.name}")
 
-    # Initialize database engine and session
     try:
         engine = create_async_engine(DATABASE_URL, echo=False, future=True)
         SessionLocal = async_sessionmaker(
