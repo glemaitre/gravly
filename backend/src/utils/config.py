@@ -3,12 +3,11 @@
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
 
-def load_environment_config(project_root: Optional[Path] = None) -> None:
+def load_environment_config(project_root: Path | None = None) -> None:
     """Load environment variables from the appropriate .env file.
 
     This function looks for environment-specific .env files in the .env folder

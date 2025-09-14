@@ -612,12 +612,13 @@ def test_s3_upload_failure_cleanup(mock_s3_environment, sample_gpx_file, tmp_pat
 
         assert segment_file_path.exists()
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception) as exc_info:
             s3_manager.upload_gpx_segment(
                 local_file_path=segment_file_path,
                 file_id=file_id,
                 prefix="gpx-segments",
             )
+        assert exc_info.value is not None
 
         cleanup_success = cleanup_local_file(segment_file_path)
         assert cleanup_success is True
@@ -664,7 +665,7 @@ def test_multiple_segments_from_same_file(
             assert response["Metadata"]["file-id"] == file_id
 
         for file_path in frontend_temp_dir.glob("*.gpx"):
-            assert False, f"Local file should have been cleaned up: {file_path}"
+            raise AssertionError(f"Local file should have been cleaned up: {file_path}")
 
 
 def test_frontend_temp_directory_creation(
@@ -674,8 +675,6 @@ def test_frontend_temp_directory_creation(
     with mock_aws():
         s3_client = boto3.client("s3", region_name="us-east-1")
         s3_client.create_bucket(Bucket=mock_s3_environment)
-
-        s3_manager = S3Manager(bucket_name=mock_s3_environment)
 
         frontend_temp_dir = tmp_path / "nonexistent" / "temp_gpx_segments"
 
