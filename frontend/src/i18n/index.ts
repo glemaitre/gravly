@@ -18,7 +18,9 @@ export function getSavedLanguage(): MessageLanguages {
   if (typeof localStorage === 'undefined') return getDefaultLanguage()
   try {
     const saved = localStorage.getItem('cycling-editor-lang')
-    return saved && ['en', 'fr'].includes(saved) ? (saved as MessageLanguages) : getDefaultLanguage()
+    return saved && ['en', 'fr'].includes(saved)
+      ? (saved as MessageLanguages)
+      : getDefaultLanguage()
   } catch {
     return getDefaultLanguage()
   }

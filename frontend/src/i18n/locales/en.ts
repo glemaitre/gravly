@@ -112,7 +112,7 @@ export default {
     'small-stone-road': 'Small stone road',
     'big-stone-road': 'Big stone road',
     'field-trail': 'Field trail',
-    'forest-trail': 'Forest trail',
+    'forest-trail': 'Forest trail'
   },
 
   // Difficulty levels

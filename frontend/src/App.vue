@@ -2,7 +2,9 @@
   <div id="app">
     <nav class="navbar">
       <div class="nav-container">
-        <h1 class="nav-title"><i class="fa-solid fa-person-biking" aria-hidden="true"></i> Cycling Routes</h1>
+        <h1 class="nav-title">
+          <i class="fa-solid fa-person-biking" aria-hidden="true"></i> Cycling Routes
+        </h1>
         <div class="nav-right">
           <div class="language-dropdown" ref="languageDropdown">
             <button
@@ -10,19 +12,34 @@
               @click="toggleLanguageDropdown"
               :class="{ active: languageDropdownOpen }"
             >
-              <span class="language-flag">{{ languageOptions[currentLanguage].flag }}</span>
-              <span class="language-name">{{ languageOptions[currentLanguage].name }}</span>
+              <span class="language-flag">{{
+                languageOptions[currentLanguage].flag
+              }}</span>
+              <span class="language-name">{{
+                languageOptions[currentLanguage].name
+              }}</span>
               <span class="dropdown-arrow">
-                <i class="fa-solid fa-chevron-down" :class="{ rotated: languageDropdownOpen }"></i>
+                <i
+                  class="fa-solid fa-chevron-down"
+                  :class="{ rotated: languageDropdownOpen }"
+                ></i>
               </span>
             </button>
-            <div class="language-dropdown-menu navbar-menu" :class="{ open: languageDropdownOpen }">
+            <div
+              class="language-dropdown-menu navbar-menu"
+              :class="{ open: languageDropdownOpen }"
+            >
               <button
                 v-for="(option, lang) in languageOptions"
                 :key="lang"
                 class="language-option"
                 :class="{ active: currentLanguage === lang }"
-                @click="(e) => { e.stopPropagation(); changeLanguage(lang as MessageLanguages) }"
+                @click="
+                  (e) => {
+                    e.stopPropagation()
+                    changeLanguage(lang as MessageLanguages)
+                  }
+                "
               >
                 <span class="language-flag">{{ option.flag }}</span>
                 <span class="language-name">{{ option.name }}</span>
@@ -51,9 +68,13 @@ const { locale } = useI18n()
 const currentLanguage = ref<MessageLanguages>('en')
 
 // Watch for locale changes to update currentLanguage
-watch(locale, (newLocale) => {
-  currentLanguage.value = newLocale as MessageLanguages
-}, { immediate: true })
+watch(
+  locale,
+  (newLocale) => {
+    currentLanguage.value = newLocale as MessageLanguages
+  },
+  { immediate: true }
+)
 
 // Language dropdown state
 const languageDropdownOpen = ref(false)
@@ -68,7 +89,10 @@ const languageOptions = {
 const languageDropdown = ref<HTMLElement | null>(null)
 
 function closeLanguageDropdown(event: MouseEvent) {
-  if (languageDropdown.value && !languageDropdown.value.contains(event.target as Node)) {
+  if (
+    languageDropdown.value &&
+    !languageDropdown.value.contains(event.target as Node)
+  ) {
     languageDropdownOpen.value = false
   }
 }
@@ -105,7 +129,14 @@ onUnmounted(() => {
   --brand-400: #ff7f2aff;
   --brand-500: #ff6600ff;
 
-  --brand-gradient: linear-gradient(135deg, var(--brand-500) 0%, var(--brand-400) 20%, var(--brand-300) 45%, var(--brand-200) 70%, var(--brand-100) 100%);
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--brand-500) 0%,
+    var(--brand-400) 20%,
+    var(--brand-300) 45%,
+    var(--brand-200) 70%,
+    var(--brand-100) 100%
+  );
 
   /* Common brand aliases */
   --brand-bg: var(--brand-gradient);
@@ -119,7 +150,8 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   overflow-x: hidden;
   max-width: 100vw;
 }
@@ -131,11 +163,22 @@ html, body {
 }
 
 /* Reusable brand utilities */
-.bg-brand-gradient { background: var(--brand-gradient); }
-.text-brand { color: var(--brand-primary); }
-.border-brand { border-color: var(--brand-primary); }
-.btn-brand { background: var(--brand-primary); color: #fff; }
-.btn-brand:hover { background: var(--brand-primary-hover); }
+.bg-brand-gradient {
+  background: var(--brand-gradient);
+}
+.text-brand {
+  color: var(--brand-primary);
+}
+.border-brand {
+  border-color: var(--brand-primary);
+}
+.btn-brand {
+  background: var(--brand-primary);
+  color: #fff;
+}
+.btn-brand:hover {
+  background: var(--brand-primary-hover);
+}
 
 .navbar {
   background: rgba(255, 255, 255, 0.95);

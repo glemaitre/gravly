@@ -4,9 +4,7 @@ import { i18n, initializeLanguage } from './i18n'
 import App from './App.vue'
 import Editor from './components/Editor.vue'
 
-const routes: RouteRecordRaw[] = [
-  { path: '/', component: Editor }
-]
+const routes: RouteRecordRaw[] = [{ path: '/', component: Editor }]
 
 const router = createRouter({
   history: createWebHistory(),

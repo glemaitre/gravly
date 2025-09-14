@@ -5,7 +5,7 @@ import path from 'node:path'
 export default defineConfig({
   plugins: [vue()],
   resolve: {
-    alias: { '@': path.resolve(__dirname, 'src') },
+    alias: { '@': path.resolve(__dirname, 'src') }
   },
   test: {
     environment: 'jsdom',
@@ -15,7 +15,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       include: ['src/**/*.{ts,vue}'],
-      exclude: ['src/main.ts', 'src/vite-env.d.ts'],
-    },
-  },
+      exclude: ['src/main.ts', 'src/vite-env.d.ts']
+    }
+  }
 })

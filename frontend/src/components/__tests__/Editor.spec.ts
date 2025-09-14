@@ -123,7 +123,9 @@ describe('Editor', () => {
     })
 
     expect(wrapper.find('.empty').exists()).toBe(true)
-    expect(wrapper.find('.empty').text()).toContain('Use "Import from ..." → "GPX file" to begin')
+    expect(wrapper.find('.empty').text()).toContain(
+      'Use "Import from ..." → "GPX file" to begin'
+    )
   })
 
   it('displays language dropdown with correct options', () => {
@@ -466,7 +468,9 @@ describe('Editor', () => {
       await moveStartBackButton.trigger('click')
     }
 
-    const moveStartForwardButton = wrapper.find('button[title*="Move start marker forward"]')
+    const moveStartForwardButton = wrapper.find(
+      'button[title*="Move start marker forward"]'
+    )
     if (moveStartForwardButton.exists()) {
       await moveStartForwardButton.trigger('click')
     }
@@ -477,7 +481,9 @@ describe('Editor', () => {
       await moveEndBackButton.trigger('click')
     }
 
-    const moveEndForwardButton = wrapper.find('button[title*="Move end marker forward"]')
+    const moveEndForwardButton = wrapper.find(
+      'button[title*="Move end marker forward"]'
+    )
     if (moveEndForwardButton.exists()) {
       await moveEndForwardButton.trigger('click')
     }

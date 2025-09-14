@@ -19,9 +19,7 @@ Object.defineProperty(window, 'localStorage', {
 // Create router for testing
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    { path: '/', component: Editor }
-  ]
+  routes: [{ path: '/', component: Editor }]
 })
 
 // Import real locale files
@@ -147,9 +145,9 @@ describe('App', () => {
     const trigger = wrapper.find('.language-dropdown-trigger')
     await trigger.trigger('click')
 
-    const frenchOption = wrapper.findAll('.language-option').find(option =>
-      option.text().includes('🇫🇷')
-    )
+    const frenchOption = wrapper
+      .findAll('.language-option')
+      .find((option) => option.text().includes('🇫🇷'))
 
     if (frenchOption) {
       await frenchOption.trigger('click')
@@ -212,9 +210,9 @@ describe('App', () => {
     const trigger = wrapper.find('.language-dropdown-trigger')
     await trigger.trigger('click')
 
-    const englishOption = wrapper.findAll('.language-option').find(option =>
-      option.text().includes('🇺🇸')
-    )
+    const englishOption = wrapper
+      .findAll('.language-option')
+      .find((option) => option.text().includes('🇺🇸'))
 
     if (englishOption) {
       expect(englishOption.classes()).toContain('active')

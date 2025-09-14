@@ -7,27 +7,28 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
-    'plugin:vue/vue3-essential'
+    'plugin:vue/vue3-essential',
+    '@vue/eslint-config-prettier'
   ],
+  parser: 'vue-eslint-parser',
+  parserOptions: {
+    parser: '@typescript-eslint/parser',
+    ecmaVersion: 2022,
+    sourceType: 'module',
+    extraFileExtensions: ['.vue']
+  },
+  plugins: ['@typescript-eslint'],
   overrides: [
     {
-      files: ['*.ts', '*.tsx', '*.vue'],
-      parser: '@typescript-eslint/parser',
-      parserOptions: {
-        ecmaVersion: 2022,
-        sourceType: 'module',
-        extraFileExtensions: ['.vue']
-      },
-      plugins: ['@typescript-eslint'],
+      files: ['*.ts', '*.tsx'],
       rules: {
-        '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+        '@typescript-eslint/no-unused-vars': [
+          'error',
+          { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+        ]
       }
     }
   ],
-  parserOptions: {
-    ecmaVersion: 2022,
-    sourceType: 'module'
-  },
   rules: {
     'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',

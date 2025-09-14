@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { i18n, initializeLanguage, setLanguage, getDefaultLanguage, getSavedLanguage, type MessageLanguages } from '../i18n'
+import {
+  i18n,
+  initializeLanguage,
+  setLanguage,
+  getDefaultLanguage,
+  getSavedLanguage,
+  type MessageLanguages
+} from '../i18n'
 
 // Mock localStorage
 const localStorageMock = {
@@ -148,7 +155,9 @@ describe('i18n', () => {
       expect(i18n.global.locale.value).toBe('en')
       expect(i18n.global.fallbackLocale.value).toBe('en')
       // Legacy property might not be available in all versions
-      expect(i18n.global.legacy === false || i18n.global.legacy === undefined).toBe(true)
+      expect(i18n.global.legacy === false || i18n.global.legacy === undefined).toBe(
+        true
+      )
     })
 
     it('has English messages', () => {
@@ -173,7 +182,7 @@ describe('i18n', () => {
   describe('MessageLanguages type', () => {
     it('accepts valid language codes', () => {
       const validLanguages: MessageLanguages[] = ['en', 'fr']
-      validLanguages.forEach(lang => {
+      validLanguages.forEach((lang) => {
         expect(['en', 'fr']).toContain(lang)
       })
     })

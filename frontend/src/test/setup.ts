@@ -40,7 +40,7 @@ Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     textAlign: 'start',
     textBaseline: 'alphabetic',
     globalAlpha: 1,
-    globalCompositeOperation: 'source-over',
+    globalCompositeOperation: 'source-over'
   })),
   writable: true
 })

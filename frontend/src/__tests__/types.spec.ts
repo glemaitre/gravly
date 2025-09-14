@@ -144,9 +144,13 @@ describe('Types', () => {
     })
 
     it('should accept all valid platforms', () => {
-      const platforms: Array<'youtube' | 'vimeo' | 'other'> = ['youtube', 'vimeo', 'other']
+      const platforms: Array<'youtube' | 'vimeo' | 'other'> = [
+        'youtube',
+        'vimeo',
+        'other'
+      ]
 
-      platforms.forEach(platform => {
+      platforms.forEach((platform) => {
         const videoLink: VideoLink = {
           id: `video-${platform}`,
           url: `https://${platform}.com/test`,
@@ -247,9 +251,13 @@ describe('Types', () => {
     })
 
     it('should accept all valid tire types', () => {
-      const tireTypes: Array<'slick' | 'semi-slick' | 'knobs'> = ['slick', 'semi-slick', 'knobs']
+      const tireTypes: Array<'slick' | 'semi-slick' | 'knobs'> = [
+        'slick',
+        'semi-slick',
+        'knobs'
+      ]
 
-      tireTypes.forEach(tireType => {
+      tireTypes.forEach((tireType) => {
         const trailConditions: TrailConditions = {
           tire_dry: tireType,
           tire_wet: tireType,
@@ -262,7 +270,14 @@ describe('Types', () => {
     })
 
     it('should accept all valid surface types', () => {
-      const surfaceTypes: Array<'big-stone-road' | 'broken-paved-road' | 'dirty-road' | 'field-trail' | 'forest-trail' | 'small-stone-road'> = [
+      const surfaceTypes: Array<
+        | 'big-stone-road'
+        | 'broken-paved-road'
+        | 'dirty-road'
+        | 'field-trail'
+        | 'forest-trail'
+        | 'small-stone-road'
+      > = [
         'big-stone-road',
         'broken-paved-road',
         'dirty-road',
@@ -271,7 +286,7 @@ describe('Types', () => {
         'small-stone-road'
       ]
 
-      surfaceTypes.forEach(surfaceType => {
+      surfaceTypes.forEach((surfaceType) => {
         const trailConditions: TrailConditions = {
           tire_dry: 'slick',
           tire_wet: 'slick',
@@ -285,7 +300,7 @@ describe('Types', () => {
     it('should accept valid difficulty levels', () => {
       const validDifficulties = [1, 2, 3, 4, 5]
 
-      validDifficulties.forEach(difficulty => {
+      validDifficulties.forEach((difficulty) => {
         const trailConditions: TrailConditions = {
           tire_dry: 'slick',
           tire_wet: 'slick',
