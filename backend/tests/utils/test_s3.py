@@ -6,13 +6,12 @@ the S3 functionality without requiring actual AWS credentials or resources.
 """
 
 import os
-import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import boto3
 import pytest
-from botocore.exceptions import NoCredentialsError
+from botocore.exceptions import ClientError, NoCredentialsError
 from moto import mock_aws
 from src.utils.s3 import S3Manager, cleanup_local_file
 
@@ -196,10 +195,10 @@ def test_bucket_exists_false(mock_bucket_name):
         assert result is False
 
 
-def test_cleanup_existing_file():
+def test_cleanup_existing_file(tmp_dir):
     """Test cleanup of existing file."""
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        temp_path = Path(f.name)
+    temp_path = tmp_dir / "test_file.txt"
+    temp_path.write_text("test content")
 
     assert temp_path.exists()
 
@@ -216,10 +215,10 @@ def test_cleanup_nonexistent_file():
     assert result is False
 
 
-def test_cleanup_file_with_permission_error():
+def test_cleanup_file_with_permission_error(tmp_dir):
     """Test cleanup when file deletion fails."""
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        temp_path = Path(f.name)
+    temp_path = tmp_dir / "test_file.txt"
+    temp_path.write_text("test content")
 
     try:
         temp_path.chmod(0o444)
@@ -235,10 +234,10 @@ def test_cleanup_file_with_permission_error():
             pass
 
 
-def test_cleanup_file_with_mocked_exception():
+def test_cleanup_file_with_mocked_exception(tmp_dir):
     """Test cleanup when file deletion raises an exception."""
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        temp_path = Path(f.name)
+    temp_path = tmp_dir / "test_file.txt"
+    temp_path.write_text("test content")
 
     try:
         original_unlink = Path.unlink
@@ -266,3 +265,26 @@ def test_s3_manager_no_credentials_error():
     with patch("src.utils.s3.boto3.client", side_effect=NoCredentialsError()):
         with pytest.raises(NoCredentialsError, match="Unable to locate credentials"):
             S3Manager(bucket_name="test-bucket")
+
+
+@mock_aws
+def test_upload_gpx_segment_client_error(mock_s3_manager, real_gpx_file, tmp_dir):
+    """Test upload_gpx_segment when S3 upload raises a ClientError."""
+    temp_file = tmp_dir / "test_file.gpx"
+    temp_file.write_text(real_gpx_file.read_text())
+
+    client_error = ClientError(
+        error_response={"Error": {"Code": "AccessDenied", "Message": "Access Denied"}},
+        operation_name="PutObject",
+    )
+
+    with patch.object(
+        mock_s3_manager.s3_client, "upload_file", side_effect=client_error
+    ):
+        with pytest.raises(ClientError) as exc_info:
+            mock_s3_manager.upload_gpx_segment(
+                local_file_path=temp_file, file_id="test-file-id"
+            )
+
+        assert exc_info.value.response["Error"]["Code"] == "AccessDenied"
+        assert exc_info.value.response["Error"]["Message"] == "Access Denied"
