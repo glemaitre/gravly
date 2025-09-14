@@ -288,3 +288,42 @@ def test_upload_gpx_segment_client_error(mock_s3_manager, real_gpx_file, tmp_dir
 
         assert exc_info.value.response["Error"]["Code"] == "AccessDenied"
         assert exc_info.value.response["Error"]["Message"] == "Access Denied"
+
+
+@mock_aws
+def test_delete_gpx_segment_client_error(mock_s3_manager):
+    """Test delete_gpx_segment when S3 deletion raises a ClientError."""
+    s3_key = "test-segment/file.gpx"
+
+    client_error = ClientError(
+        error_response={
+            "Error": {
+                "Code": "NoSuchKey",
+                "Message": "The specified key does not exist",
+            }
+        },
+        operation_name="DeleteObject",
+    )
+
+    with patch.object(
+        mock_s3_manager.s3_client, "delete_object", side_effect=client_error
+    ):
+        result = mock_s3_manager.delete_gpx_segment(s3_key)
+        assert result is False
+
+
+@mock_aws
+def test_get_gpx_segment_url_client_error(mock_s3_manager):
+    """Test get_gpx_segment_url when S3 presigned URL generation raises a ClientError."""
+    s3_key = "test-segment/file.gpx"
+
+    client_error = ClientError(
+        error_response={"Error": {"Code": "AccessDenied", "Message": "Access Denied"}},
+        operation_name="GetObject",
+    )
+
+    with patch.object(
+        mock_s3_manager.s3_client, "generate_presigned_url", side_effect=client_error
+    ):
+        result = mock_s3_manager.get_gpx_segment_url(s3_key)
+        assert result is None
