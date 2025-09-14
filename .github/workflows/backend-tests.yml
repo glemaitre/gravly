@@ -44,7 +44,7 @@ jobs:
         run: pixi run pg-setup
 
       - name: Start backend
-        run: pixi run start-backend &&
+        run: pixi run start-backend &
 
       - name: Run backend tests with coverage
         run: |
