@@ -339,7 +339,8 @@ def test_list_files_prefix_path_not_exists(local_storage_manager):
 
 
 def test_list_files_exception_handling(local_storage_manager, real_gpx_file):
-    """Test that exceptions during file listing are properly logged and return empty list."""
+    """Test that exceptions during file listing are properly logged and return
+    empty list."""
     file_id = "test-list-exception"
 
     local_storage_manager.upload_gpx_segment(

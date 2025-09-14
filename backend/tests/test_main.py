@@ -756,7 +756,8 @@ def test_storage_manager_initialization_failure_handling():
 
 
 def test_storage_manager_initialization_exception_handling():
-    """Test that storage manager initialization exceptions are properly caught and logged."""
+    """Test that storage manager initialization exceptions are properly caught
+    and logged."""
 
     original_storage_manager = src.main.storage_manager
 
@@ -962,7 +963,8 @@ def test_serve_storage_file_with_subdirectory(client, sample_gpx_file, tmp_path)
 
 
 def test_serve_storage_file_local_storage_not_available(client, tmp_path):
-    """Test serving storage file when local storage manager doesn't have get_file_path method."""
+    """Test serving storage file when local storage manager doesn't have
+    get_file_path method."""
     original_storage_manager = src.main.storage_manager
 
     try:

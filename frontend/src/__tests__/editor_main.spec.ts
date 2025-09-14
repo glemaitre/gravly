@@ -143,7 +143,7 @@ describe('editor_main.ts', () => {
 
   it('should work with different component configurations', () => {
     // Test that the function works with the mocked components
-     executeEditorMain()
+    executeEditorMain()
 
     // Should not throw any errors
     expect(() => executeEditorMain()).not.toThrow()

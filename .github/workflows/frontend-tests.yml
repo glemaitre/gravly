@@ -25,6 +25,9 @@ jobs:
       - name: Show pixi version
         run: pixi --version
 
+      - name: Run lint
+        run: pixi run -e dev lint-frontend
+
       - name: Run frontend unit tests with coverage
         run: pixi run -e dev -- test-frontend
 

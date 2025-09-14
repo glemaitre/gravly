@@ -25,7 +25,8 @@ def load_environment_config(project_root: Path | None = None) -> None:
         If no environment file is found and no examples are available.
     """
     if project_root is None:
-        # Default to the project root (4 levels up from this file: config.py -> utils -> src -> backend -> project_root)
+        # Default to the project root (4 levels up from this file:
+        # config.py -> utils -> src -> backend -> project_root)
         project_root = Path(__file__).parent.parent.parent.parent
 
     environment = os.getenv("ENVIRONMENT", "local")

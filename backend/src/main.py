@@ -105,7 +105,8 @@ app.add_middleware(
 # Database setup (PostgreSQL via SQLAlchemy async)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    # Fallback to local development URL. Example: postgresql+asyncpg://user:pass@localhost/db
+    # Fallback to local development URL.
+    # Example: postgresql+asyncpg://user:pass@localhost/db
     "postgresql+asyncpg://postgres:postgres@localhost:5432/cycling",
 )
 
@@ -336,7 +337,10 @@ async def create_segment(
     # TODO: Uncomment when database is needed
     # async with SessionLocal() as session:
     #     seg = Segment(
-    #         name=name, tire_dry=tire_dry, tire_wet=tire_wet, file_path=processed_file_path
+    #         name=name,
+    #         tire_dry=tire_dry,
+    #         tire_wet=tire_wet,
+    #         file_path=processed_file_path,
     #     )
     #     session.add(seg)
     #     await session.commit()
