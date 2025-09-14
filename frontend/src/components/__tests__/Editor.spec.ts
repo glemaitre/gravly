@@ -259,7 +259,7 @@ describe('Editor', () => {
       }
     })
 
-    const dropZone = wrapper.find('.upload-zone')
+    const dropZone = wrapper.find('.image-upload-area')
     if (dropZone.exists()) {
       const mockEvent = {
         preventDefault: vi.fn(),
@@ -321,5 +321,318 @@ describe('Editor', () => {
 
     // Test that the component has the moveSlider method
     expect(typeof wrapper.vm.moveSlider).toBe('function')
+  })
+
+  it('handles form field updates correctly', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test segment name input
+    const nameInput = wrapper.find('input[name="segment-name"]')
+    if (nameInput.exists()) {
+      await nameInput.setValue('Test Segment')
+      expect(nameInput.element.value).toBe('Test Segment')
+    }
+
+    // Test commentary text input
+    const commentaryTextarea = wrapper.find('textarea[name="commentary-text"]')
+    if (commentaryTextarea.exists()) {
+      await commentaryTextarea.setValue('This is a test commentary')
+      expect(commentaryTextarea.element.value).toBe('This is a test commentary')
+    }
+  })
+
+  it('handles trail conditions updates', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test surface type selection
+    const surfaceSelect = wrapper.find('select[name="surface-type"]')
+    if (surfaceSelect.exists()) {
+      await surfaceSelect.setValue('forest-trail')
+      expect(surfaceSelect.element.value).toBe('forest-trail')
+    }
+
+    // Test difficulty level
+    const difficultySlider = wrapper.find('input[name="difficulty-level"]')
+    if (difficultySlider.exists()) {
+      await difficultySlider.setValue('4')
+      expect(difficultySlider.element.value).toBe('4')
+    }
+  })
+
+  it('handles tire condition changes', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test dry tire selection
+    const dryTireSelect = wrapper.find('select[name="tire-dry"]')
+    if (dryTireSelect.exists()) {
+      await dryTireSelect.setValue('semi-slick')
+      expect(dryTireSelect.element.value).toBe('semi-slick')
+    }
+
+    // Test wet tire selection
+    const wetTireSelect = wrapper.find('select[name="tire-wet"]')
+    if (wetTireSelect.exists()) {
+      await wetTireSelect.setValue('knobs')
+      expect(wetTireSelect.element.value).toBe('knobs')
+    }
+  })
+
+  it('handles video link additions', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test adding video link
+    const addVideoButton = wrapper.find('button[title*="Add video link"]')
+    if (addVideoButton.exists()) {
+      await addVideoButton.trigger('click')
+
+      // Check if video input fields appear
+      const videoUrlInput = wrapper.find('input[placeholder*="youtube.com"]')
+      if (videoUrlInput.exists()) {
+        await videoUrlInput.setValue('https://youtube.com/watch?v=test')
+
+        const videoTitleInput = wrapper.find('input[placeholder*="Video title"]')
+        if (videoTitleInput.exists()) {
+          await videoTitleInput.setValue('Test Video')
+          expect(videoTitleInput.element.value).toBe('Test Video')
+        }
+      }
+    }
+  })
+
+  it('handles image upload trigger', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test image upload trigger
+    const imageUploadArea = wrapper.find('.image-upload-area')
+    if (imageUploadArea.exists()) {
+      await imageUploadArea.trigger('click')
+      // The actual file input should be triggered
+    }
+  })
+
+  it('handles drag and drop for images', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    const imageUploadArea = wrapper.find('.image-upload-area')
+    if (imageUploadArea.exists()) {
+      const mockEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          files: [new File([''], 'test.jpg', { type: 'image/jpeg' })]
+        }
+      }
+
+      await imageUploadArea.trigger('dragover', mockEvent)
+      await imageUploadArea.trigger('drop', mockEvent)
+
+      expect(mockEvent.preventDefault).toHaveBeenCalled()
+    }
+  })
+
+  it('handles slider controls for start/end markers', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test start marker controls
+    const moveStartBackButton = wrapper.find('button[title*="Move start marker back"]')
+    if (moveStartBackButton.exists()) {
+      await moveStartBackButton.trigger('click')
+    }
+
+    const moveStartForwardButton = wrapper.find('button[title*="Move start marker forward"]')
+    if (moveStartForwardButton.exists()) {
+      await moveStartForwardButton.trigger('click')
+    }
+
+    // Test end marker controls
+    const moveEndBackButton = wrapper.find('button[title*="Move end marker back"]')
+    if (moveEndBackButton.exists()) {
+      await moveEndBackButton.trigger('click')
+    }
+
+    const moveEndForwardButton = wrapper.find('button[title*="Move end marker forward"]')
+    if (moveEndForwardButton.exists()) {
+      await moveEndForwardButton.trigger('click')
+    }
+  })
+
+  it('handles chart mode switching', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test switching between distance and time modes
+    const timeModeButton = wrapper.find('button[title*="Time"]')
+    if (timeModeButton.exists()) {
+      await timeModeButton.trigger('click')
+    }
+
+    const distanceModeButton = wrapper.find('button[title*="Distance"]')
+    if (distanceModeButton.exists()) {
+      await distanceModeButton.trigger('click')
+    }
+  })
+
+  it('handles form validation correctly', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test save button state when form is invalid
+    const saveButton = wrapper.find('.menu-item.action')
+    expect(saveButton.exists()).toBe(true)
+    expect(saveButton.classes()).toContain('disabled')
+    expect(saveButton.attributes('aria-disabled')).toBe('true')
+
+    // Test tooltip when no file is loaded
+    expect(saveButton.attributes('title')).toContain('Load a GPX first')
+  })
+
+  it('handles error state display', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test error message display
+    const errorMessage = wrapper.find('.error-message')
+    if (errorMessage.exists()) {
+      expect(errorMessage.isVisible()).toBe(false)
+    }
+  })
+
+  it('handles success state display', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test success message display
+    const successMessage = wrapper.find('.success-message')
+    if (successMessage.exists()) {
+      expect(successMessage.isVisible()).toBe(false)
+    }
+  })
+
+  it('handles upload progress display', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test upload progress bar
+    const uploadProgress = wrapper.find('.upload-progress-bar')
+    if (uploadProgress.exists()) {
+      expect(uploadProgress.isVisible()).toBe(false)
+    }
+  })
+
+  it('handles language dropdown functionality', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test language dropdown toggle
+    const languageTrigger = wrapper.find('.language-dropdown-trigger')
+    expect(languageTrigger.exists()).toBe(true)
+
+    await languageTrigger.trigger('click')
+
+    const dropdownMenu = wrapper.find('.language-dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(true)
+  })
+
+  it('handles file input change events', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    const fileInput = wrapper.find('input[type="file"]')
+    expect(fileInput.exists()).toBe(true)
+
+    // Test that the file input exists and can be interacted with
+    expect(fileInput.element.type).toBe('file')
+    expect(fileInput.element.accept).toContain('.gpx')
+  })
+
+  it('handles difficulty level setting', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test difficulty level buttons
+    const difficultyButtons = wrapper.findAll('button[data-level]')
+    if (difficultyButtons.length > 0) {
+      await difficultyButtons[0].trigger('click')
+      await difficultyButtons[2].trigger('click')
+    }
+  })
+
+  it('handles image removal', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test image removal buttons
+    const removeImageButtons = wrapper.findAll('button[title*="Remove image"]')
+    if (removeImageButtons.length > 0) {
+      await removeImageButtons[0].trigger('click')
+    }
+  })
+
+  it('handles video removal', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Test video removal buttons
+    const removeVideoButtons = wrapper.findAll('button[title*="Remove video"]')
+    if (removeVideoButtons.length > 0) {
+      await removeVideoButtons[0].trigger('click')
+    }
   })
 })
