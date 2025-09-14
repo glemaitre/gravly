@@ -35,4 +35,4 @@ jobs:
         if: always()
         run: |
           echo "Coverage summary:" >> $GITHUB_STEP_SUMMARY
-          pixi run -e default -- test-backend | sed -n '/^=============================== tests coverage/,/^[0-9].*passed/p' >> $GITHUB_STEP_SUMMARY
+          pixi run -e dev -- test-backend | sed -n '/^=============================== tests coverage/,/^[0-9].*passed/p' >> $GITHUB_STEP_SUMMARY
