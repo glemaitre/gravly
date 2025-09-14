@@ -112,8 +112,11 @@ cmd = "bash -c 'source .env/database && createdb $DB_NAME'"
 [tasks.pg-drop-db]
 cmd = "bash -c 'source .env/database && dropdb $DB_NAME'"
 
+[tasks.pg-erase]
+cmd = "rm -rf $PWD/postgres_data && rm $PWD/postgres.log"
+
 [tasks.pg-cleanup]
-depends-on = ["pg-stop", "pg-drop-db"]
+depends-on = ["pg-drop-db", "pg-stop", "pg-erase"]
 
 [tasks.pg-setup]
 depends-on = ["pg-init", "pg-start", "pg-create-db"]
