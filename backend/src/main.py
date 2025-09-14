@@ -46,14 +46,17 @@ else:
         if example_files:
             example_list = ", ".join([f.name for f in example_files])
             raise FileNotFoundError(
-                f"No environment file found for environment '{os.getenv('ENVIRONMENT', 'local')}'. "
+                f"No environment file found for environment "
+                f"'{os.getenv('ENVIRONMENT', 'local')}'. "
                 f"Please create a .env file in the .env folder. "
                 f"Example files available: {example_list}. "
-                f"Copy one of the example files and rename it to match your environment."
+                f"Copy one of the example files and rename it to match your "
+                f"environment."
             )
 
     raise FileNotFoundError(
-        f"No environment file found for environment '{os.getenv('ENVIRONMENT', 'local')}' "
+        f"No environment file found for environment "
+        f"'{os.getenv('ENVIRONMENT', 'local')}' "
         f"and no .env folder with examples found. "
         f"Please create a .env file or set up environment variables."
     )
