@@ -254,11 +254,8 @@ async def create_segment(
     #         file_path=seg.file_path,
     #     )
 
-    # Clean up temporary file
-    try:
-        original_file_path.unlink()
-    except Exception:
-        pass  # Don't fail if cleanup fails
+    # Note: Not cleaning up temporary file to allow multiple segment creations from same GPX
+    # File will be cleaned up when the session ends (lifespan cleanup)
 
     # For now, return a mock response since we're not using the database
     return SegmentCreateResponse(

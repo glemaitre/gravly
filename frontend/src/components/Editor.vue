@@ -794,7 +794,6 @@ async function onFileChange(ev: Event) {
       currentErrorMessage.value = t('message.insufficientPoints')
       showUploadSuccess.value = false
       showSegmentSuccess.value = false
-      message.value = t('message.insufficientPoints')
       return
     }
 
@@ -828,7 +827,6 @@ async function onFileChange(ev: Event) {
     currentErrorMessage.value = err.message || t('message.uploadError')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
-    message.value = err.message || t('message.uploadError')
 
     // Hide error after 5 seconds
     setTimeout(() => {
@@ -1374,7 +1372,6 @@ async function onSubmit() {
     currentErrorMessage.value = t('message.loadGpxFirst')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
-    message.value = t('message.loadGpxFirst')
     return
   }
   submitting.value = true
@@ -1436,7 +1433,6 @@ async function onSubmit() {
     currentErrorMessage.value = err.message || t('message.createError')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
-    message.value = err.message || t('message.createError')
 
     // Hide error after 5 seconds
     setTimeout(() => {
