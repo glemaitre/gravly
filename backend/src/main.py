@@ -8,7 +8,6 @@ from tempfile import TemporaryDirectory
 
 import gpxpy
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,6 +17,7 @@ from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from .utils.config import load_environment_config
 from .utils.gpx import (
     GPXData,
     extract_from_gpx_file,
@@ -30,37 +30,7 @@ from .utils.storage import (
     get_storage_manager,
 )
 
-env_file = (
-    Path(__file__).parent.parent.parent
-    / ".env"
-    / f"{os.getenv('ENVIRONMENT', 'local')}"
-)
-if env_file.exists():
-    load_dotenv(env_file)
-    logging.info(f"Loaded environment variables from {env_file}")
-else:
-    # Check if .env folder exists and contains example files
-    env_folder = Path(__file__).parent.parent.parent / ".env"
-    if env_folder.exists() and env_folder.is_dir():
-        example_files = list(env_folder.glob("*.example"))
-        if example_files:
-            example_list = ", ".join([f.name for f in example_files])
-            raise FileNotFoundError(
-                f"No environment file found for environment "
-                f"'{os.getenv('ENVIRONMENT', 'local')}'. "
-                f"Please create a .env file in the .env folder. "
-                f"Example files available: {example_list}. "
-                f"Copy one of the example files and rename it to match your "
-                f"environment."
-            )
-
-    raise FileNotFoundError(
-        f"No environment file found for environment "
-        f"'{os.getenv('ENVIRONMENT', 'local')}' "
-        f"and no .env folder with examples found. "
-        f"Please create a .env file or set up environment variables."
-    )
-
+load_environment_config()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
