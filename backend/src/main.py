@@ -399,22 +399,22 @@ async def create_segment(
             logger.warning(f"Failed to store segment in database: {db_e}")
             # Continue without database storage
 
-        # Return response without database ID if database is not available
-        return TrackCreateResponse(
-            id=0,  # Placeholder ID when database is not available
-            file_path=processed_file_path,
-            bound_north=bounds.north,
-            bound_south=bounds.south,
-            bound_east=bounds.east,
-            bound_west=bounds.west,
-            name=name,
-            track_type=track_type,
-            difficulty_level=difficulty_level,
-            surface_type=surface_type,
-            tire_dry=tire_dry,
-            tire_wet=tire_wet,
-            comments=commentary_text,
-        )
+    # Return response without database ID if database is not available
+    return TrackCreateResponse(
+        id=0,  # Placeholder ID when database is not available
+        file_path=processed_file_path,
+        bound_north=bounds.north,
+        bound_south=bounds.south,
+        bound_east=bounds.east,
+        bound_west=bounds.west,
+        name=name,
+        track_type=track_type,
+        difficulty_level=difficulty_level,
+        surface_type=surface_type,
+        tire_dry=tire_dry,
+        tire_wet=tire_wet,
+        comments=commentary_text,
+    )
 
 
 if __name__ == "__main__":

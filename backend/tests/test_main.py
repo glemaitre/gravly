@@ -1360,3 +1360,242 @@ def test_database_initialization_exception_handling(app, lifespan, main_module):
     finally:
         main_module.engine = original_engine
         main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_create_segment_database_exception_handling(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test create segment when database operations fail but storage succeeds."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        with patch("src.main.SessionLocal") as mock_session_local:
+
+            async def mock_session_context():
+                mock_session = mock_session_local.return_value
+                mock_session.add = lambda x: None
+
+                # Make commit raise an exception
+                async def mock_commit():
+                    raise Exception("Database commit failed")
+
+                mock_session.commit = mock_commit
+                return mock_session
+
+            mock_session_local.return_value.__aenter__ = mock_session_context
+
+            response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Test commentary",
+                    "video_links": "[]",
+                },
+            )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["id"] == 0  # Placeholder ID when database is not available
+    assert data["name"] == "Test Segment"
+    assert data["file_path"].startswith(("s3://", "local://", "local:/"))
+    assert data["file_path"].endswith(".gpx")
+
+
+@mock_aws
+def test_create_segment_database_unavailable(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test create segment when database is not available (SessionLocal is None)."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        original_session_local = main_module.SessionLocal
+        try:
+            main_module.SessionLocal = None
+
+            response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Test commentary",
+                    "video_links": "[]",
+                },
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            assert data["id"] == 0  # Placeholder ID when database is not available
+            assert data["name"] == "Test Segment"
+            assert data["file_path"].startswith(("s3://", "local://", "local:/"))
+            assert data["file_path"].endswith(".gpx")
+
+        finally:
+            main_module.SessionLocal = original_session_local
+
+
+def test_database_initialization_exception_in_lifespan(app, lifespan, main_module):
+    """Test database initialization exception handling in lifespan function."""
+    original_engine = main_module.engine
+    original_session_local = main_module.SessionLocal
+
+    try:
+        mock_engine = type("MockEngine", (), {})()
+        main_module.engine = mock_engine
+
+        with patch(
+            "src.main.Base.metadata.create_all",
+            side_effect=Exception("Table creation failed"),
+        ):
+
+            async def run_lifespan():
+                async with lifespan(app):
+                    return True
+
+            result = asyncio.run(run_lifespan())
+            assert result is True
+
+    finally:
+        main_module.engine = original_engine
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_create_segment_successful_database_operations(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test create segment with successful database operations to cover the successful path."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        mock_session = type("MockSession", (), {})()
+        mock_session.add = lambda x: None
+
+        async def mock_commit():
+            pass
+
+        async def mock_refresh(track):
+            track.id = 123
+
+        mock_session.commit = mock_commit
+        mock_session.refresh = mock_refresh
+
+        with patch("src.main.SessionLocal") as mock_session_local:
+
+            class MockAsyncContextManager:
+                async def __aenter__(self):
+                    return mock_session
+
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    pass
+
+            mock_session_local.return_value = MockAsyncContextManager()
+
+            response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Test commentary",
+                    "video_links": "[]",
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["id"] == 123  # Database ID
+        assert data["name"] == "Test Segment"
+        assert data["file_path"].startswith(("s3://", "local://", "local:/"))
+        assert data["file_path"].endswith(".gpx")
+
+
+def test_main_module_execution():
+    """Test the if __name__ == '__main__' block by importing and checking it exists."""
+    import src.main
+
+    assert hasattr(src.main, "app")
+    assert hasattr(src.main, "uvicorn")
+
+    # The if __name__ == "__main__" block is not executed during import,
+    # but we can verify the structure exists by checking the file content
+    with open(src.main.__file__, "r") as f:
+        content = f.read()
+        assert 'if __name__ == "__main__":' in content
+        assert 'uvicorn.run(app, host="0.0.0.0", port=8000)' in content
