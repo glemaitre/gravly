@@ -2844,12 +2844,18 @@ async function onSubmit() {
 @media (max-width: 649px) {
   .difficulty-marks {
     gap: 0.25rem;
+    width: 100%;
+    max-width: 100%;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .difficulty-mark {
-    min-width: 28px;
+    min-width: 0;
     padding: 0.25rem 0.125rem;
     margin: 0;
+    flex: 1;
+    max-width: calc(20% - 0.1rem);
   }
 
   .difficulty-text {
