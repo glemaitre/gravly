@@ -19,7 +19,10 @@ Object.defineProperty(window, 'localStorage', {
 // Create router for testing
 const router = createRouter({
   history: createWebHistory(),
-  routes: [{ path: '/', component: Editor }]
+  routes: [
+    { path: '/', component: Editor },
+    { path: '/editor', component: Editor }
+  ]
 })
 
 // Import real locale files
@@ -284,5 +287,114 @@ describe('App', () => {
 
     const routerView = wrapper.findComponent({ name: 'RouterView' })
     expect(routerView.exists()).toBe(true)
+  })
+
+  // Non-regression tests to prevent duplicate navbars
+  describe('Non-regression tests', () => {
+    it('should only have one navbar in the entire app', () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router, i18n]
+        }
+      })
+
+      // Should have exactly one navbar
+      const navbars = wrapper.findAll('.navbar')
+      expect(navbars).toHaveLength(1)
+
+      // Should have exactly one Navbar component
+      const navbarComponents = wrapper.findAllComponents({ name: 'Navbar' })
+      expect(navbarComponents).toHaveLength(1)
+    })
+
+    it('should not have duplicate navbars when navigating to editor', async () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router, i18n]
+        }
+      })
+
+      // Navigate to editor
+      await router.push('/editor')
+      await wrapper.vm.$nextTick()
+
+      // Should still have exactly one navbar
+      const navbars = wrapper.findAll('.navbar')
+      expect(navbars).toHaveLength(1)
+
+      // Should still have exactly one Navbar component
+      const navbarComponents = wrapper.findAllComponents({ name: 'Navbar' })
+      expect(navbarComponents).toHaveLength(1)
+    })
+
+    it('should not have duplicate navbars when navigating back to home', async () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router, i18n]
+        }
+      })
+
+      // Navigate to editor first
+      await router.push('/editor')
+      await wrapper.vm.$nextTick()
+
+      // Navigate back to home
+      await router.push('/')
+      await wrapper.vm.$nextTick()
+
+      // Should still have exactly one navbar
+      const navbars = wrapper.findAll('.navbar')
+      expect(navbars).toHaveLength(1)
+
+      // Should still have exactly one Navbar component
+      const navbarComponents = wrapper.findAllComponents({ name: 'Navbar' })
+      expect(navbarComponents).toHaveLength(1)
+    })
+
+    it('should have navbar at the app level, not in individual components', () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router, i18n]
+        }
+      })
+
+      // The navbar should be directly under the app div, not nested in router-view
+      const appDiv = wrapper.find('#app')
+      const navbar = appDiv.find('.navbar')
+      expect(navbar.exists()).toBe(true)
+
+      // The navbar should be a direct child of #app
+      expect(navbar.element.parentElement).toBe(appDiv.element)
+    })
+
+    it('should maintain navbar state across route changes', async () => {
+      const wrapper = mount(App, {
+        global: {
+          plugins: [router, i18n]
+        }
+      })
+
+      // Get initial navbar state
+      const initialNavbar = wrapper.find('.navbar')
+      expect(initialNavbar.exists()).toBe(true)
+
+      // Navigate to editor
+      await router.push('/editor')
+      await wrapper.vm.$nextTick()
+
+      // Navbar should still exist and be the same instance
+      const navbarAfterNavigation = wrapper.find('.navbar')
+      expect(navbarAfterNavigation.exists()).toBe(true)
+      expect(navbarAfterNavigation.element).toBe(initialNavbar.element)
+
+      // Navigate back to home
+      await router.push('/')
+      await wrapper.vm.$nextTick()
+
+      // Navbar should still exist and be the same instance
+      const navbarAfterReturn = wrapper.find('.navbar')
+      expect(navbarAfterReturn.exists()).toBe(true)
+      expect(navbarAfterReturn.element).toBe(initialNavbar.element)
+    })
   })
 })

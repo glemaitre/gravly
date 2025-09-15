@@ -1,0 +1,230 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { createRouter, createWebHistory } from 'vue-router'
+import { createI18n } from 'vue-i18n'
+import Navbar from '../Navbar.vue'
+import LandingPage from '../LandingPage.vue'
+import Editor from '../Editor.vue'
+
+// Mock the logo import
+vi.mock('../../assets/images/logo.svg', () => ({
+  default: 'mocked-logo.svg'
+}))
+
+// Import real locale files
+import en from '../../i18n/locales/en'
+import fr from '../../i18n/locales/fr'
+
+describe('Navbar', () => {
+  let wrapper: VueWrapper<any>
+  let router: any
+  let i18n: any
+
+  beforeEach(() => {
+    // Create router
+    router = createRouter({
+      history: createWebHistory(),
+      routes: [
+        { path: '/', component: LandingPage },
+        { path: '/editor', component: Editor }
+      ]
+    })
+
+    // Create i18n instance using real locale files
+    i18n = createI18n({
+      legacy: false,
+      locale: 'en',
+      fallbackLocale: 'en',
+      messages: { en, fr }
+    })
+
+    wrapper = mount(Navbar, {
+      global: {
+        plugins: [router, i18n],
+        stubs: {
+          'router-link': {
+            template: '<a :href="to" :class="activeClass"><slot /></a>',
+            props: ['to', 'activeClass']
+          }
+        }
+      }
+    })
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+  })
+
+  describe('Component Structure', () => {
+    it('renders correctly', () => {
+      expect(wrapper.find('.navbar').exists()).toBe(true)
+      expect(wrapper.find('.navbar-container').exists()).toBe(true)
+      expect(wrapper.find('.navbar-brand').exists()).toBe(true)
+      expect(wrapper.find('.navbar-nav').exists()).toBe(true)
+    })
+
+    it('displays the logo', () => {
+      const logo = wrapper.find('.navbar-logo')
+      expect(logo.exists()).toBe(true)
+      expect(logo.attributes('src')).toBe('mocked-logo.svg')
+      expect(logo.attributes('alt')).toBe('Cycling Segments')
+    })
+  })
+
+  describe('Navigation Menu', () => {
+    it('renders navigation menu in brand section', () => {
+      const navMenu = wrapper.find('.nav-menu')
+      expect(navMenu.exists()).toBe(true)
+      expect(navMenu.element.parentElement?.classList.contains('navbar-brand')).toBe(
+        true
+      )
+    })
+
+    it('displays Home and Editor links', () => {
+      const navLinks = wrapper.findAll('.nav-link')
+      expect(navLinks).toHaveLength(2)
+
+      const homeLink = navLinks.find((link) => link.text().includes('Home'))
+      const editorLink = navLinks.find((link) => link.text().includes('Editor'))
+
+      expect(homeLink?.exists()).toBe(true)
+      expect(editorLink?.exists()).toBe(true)
+    })
+
+    it('has correct router-link attributes', () => {
+      const homeLink = wrapper.find('a[href="/"]')
+      const editorLink = wrapper.find('a[href="/editor"]')
+
+      expect(homeLink.exists()).toBe(true)
+      expect(editorLink.exists()).toBe(true)
+    })
+
+    it('displays icons for navigation links', () => {
+      const homeIcon = wrapper.find('.fa-home')
+      const editorIcon = wrapper.find('.fa-edit')
+
+      expect(homeIcon.exists()).toBe(true)
+      expect(editorIcon.exists()).toBe(true)
+    })
+  })
+
+  describe('Language Dropdown', () => {
+    it('renders language dropdown in navbar-nav section', () => {
+      const languageDropdown = wrapper.find('.language-dropdown')
+      expect(languageDropdown.exists()).toBe(true)
+      expect(
+        languageDropdown.element.parentElement?.classList.contains('navbar-nav')
+      ).toBe(true)
+    })
+
+    it('displays language trigger button', () => {
+      const trigger = wrapper.find('.language-dropdown-trigger')
+      expect(trigger.exists()).toBe(true)
+    })
+
+    it('shows current language flag and name', () => {
+      const flag = wrapper.find('.language-flag')
+      const name = wrapper.find('.language-name')
+
+      expect(flag.exists()).toBe(true)
+      expect(name.exists()).toBe(true)
+    })
+  })
+
+  describe('Internationalization', () => {
+    it('displays English text by default', () => {
+      expect(wrapper.text()).toContain('Home')
+      expect(wrapper.text()).toContain('Editor')
+      expect(wrapper.text()).toContain('English')
+    })
+
+    it('uses translation keys correctly', () => {
+      const homeText = wrapper.find('.nav-link').text()
+      expect(homeText).toContain('Home')
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('has proper semantic HTML structure', () => {
+      expect(wrapper.find('header').exists()).toBe(true)
+      expect(wrapper.find('nav').exists()).toBe(true)
+    })
+
+    it('has proper alt text for logo', () => {
+      const logo = wrapper.find('.navbar-logo')
+      expect(logo.attributes('alt')).toBe('Cycling Segments')
+    })
+
+    it('uses proper button elements for interactive elements', () => {
+      const trigger = wrapper.find('.language-dropdown-trigger')
+      expect(trigger.element.tagName).toBe('BUTTON')
+    })
+  })
+
+  describe('Component Lifecycle', () => {
+    it('mounts without errors', () => {
+      expect(wrapper.vm).toBeDefined()
+    })
+
+    it('unmounts without errors', () => {
+      expect(() => wrapper.unmount()).not.toThrow()
+    })
+  })
+
+  describe('Non-regression tests', () => {
+    it('should be a standalone component that can be used independently', () => {
+      // Navbar should work when mounted independently
+      expect(wrapper.find('.navbar').exists()).toBe(true)
+      expect(wrapper.find('.navbar-container').exists()).toBe(true)
+      expect(wrapper.find('.navbar-brand').exists()).toBe(true)
+      expect(wrapper.find('.navbar-nav').exists()).toBe(true)
+    })
+
+    it('should not contain any nested navbar elements', () => {
+      // Navbar should not have nested navbars
+      const nestedNavbars = wrapper.findAll('.navbar .navbar')
+      expect(nestedNavbars).toHaveLength(0)
+    })
+
+    it('should maintain consistent structure across multiple mounts', () => {
+      // Mount a second instance
+      const wrapper2 = mount(Navbar, {
+        global: {
+          plugins: [router, i18n],
+          stubs: {
+            'router-link': {
+              template: '<a :href="to" :class="activeClass"><slot /></a>',
+              props: ['to', 'activeClass']
+            }
+          }
+        }
+      })
+
+      // Both instances should have the same structure
+      expect(wrapper.find('.navbar').exists()).toBe(true)
+      expect(wrapper2.find('.navbar').exists()).toBe(true)
+
+      // Clean up
+      wrapper2.unmount()
+    })
+  })
+
+  describe('CSS Classes and Styling', () => {
+    it('applies correct CSS classes', () => {
+      expect(wrapper.find('.navbar').classes()).toContain('navbar')
+      expect(wrapper.find('.navbar-container').classes()).toContain('navbar-container')
+      expect(wrapper.find('.navbar-brand').classes()).toContain('navbar-brand')
+      expect(wrapper.find('.navbar-nav').classes()).toContain('navbar-nav')
+      expect(wrapper.find('.nav-menu').classes()).toContain('nav-menu')
+    })
+
+    it('has proper nav-link styling classes', () => {
+      const navLinks = wrapper.findAll('.nav-link')
+      navLinks.forEach((link) => {
+        expect(link.classes()).toContain('nav-link')
+      })
+    })
+  })
+})

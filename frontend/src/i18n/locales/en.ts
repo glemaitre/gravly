@@ -98,6 +98,12 @@ export default {
     noActivity: 'No recent activity'
   },
 
+  // Navbar
+  navbar: {
+    home: 'Home',
+    editor: 'Editor'
+  },
+
   // Language selector
   language: {
     title: 'Language',

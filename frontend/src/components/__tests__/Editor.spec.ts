@@ -93,6 +93,22 @@ const i18n = createI18n({
   messages: { en, fr }
 })
 
+// Helper function to mount Editor with proper stubs
+const mountEditor = (options = {}) => {
+  return mount(Editor, {
+    global: {
+      plugins: [i18n],
+      stubs: {
+        'router-link': {
+          template: '<a :href="to" :class="activeClass"><slot /></a>',
+          props: ['to', 'activeClass']
+        }
+      }
+    },
+    ...options
+  })
+}
+
 describe('Editor', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -104,24 +120,24 @@ describe('Editor', () => {
   })
 
   it('renders correctly', () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     expect(wrapper.find('.editor').exists()).toBe(true)
     expect(wrapper.find('.sidebar').exists()).toBe(true)
     expect(wrapper.find('.content').exists()).toBe(true)
-    expect(wrapper.find('.navbar').exists()).toBe(true)
+  })
+
+  // Non-regression test to ensure Editor doesn't have its own navbar
+  it('should not have its own navbar component', () => {
+    const wrapper = mountEditor()
+
+    // Editor should not contain a navbar
+    expect(wrapper.find('.navbar').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'Navbar' }).exists()).toBe(false)
   })
 
   it('shows empty state when no file is loaded', () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     expect(wrapper.find('.empty').exists()).toBe(true)
     expect(wrapper.find('.empty').text()).toContain(
@@ -129,91 +145,8 @@ describe('Editor', () => {
     )
   })
 
-  it('displays language dropdown with correct options', () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
-
-    const languageDropdown = wrapper.find('.language-dropdown')
-    expect(languageDropdown.exists()).toBe(true)
-
-    const trigger = languageDropdown.find('.language-dropdown-trigger')
-    expect(trigger.exists()).toBe(true)
-    expect(trigger.text()).toContain('🇺🇸')
-    expect(trigger.text()).toContain('English')
-  })
-
-  it('toggles language dropdown when clicked', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
-
-    const trigger = wrapper.find('.language-dropdown-trigger')
-    expect(wrapper.find('.language-dropdown-menu').classes()).not.toContain('open')
-
-    await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).toContain('open')
-
-    await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).not.toContain('open')
-  })
-
-  it('changes language when option is selected', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
-
-    const trigger = wrapper.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
-
-    const frenchOption = wrapper.find('.language-option[data-lang="fr"]')
-    if (frenchOption.exists()) {
-      await frenchOption.trigger('click')
-      expect(i18n.global.locale.value).toBe('fr')
-    }
-  })
-
-  it('ensures dropdown menu is visible when open class is applied (non-regression test)', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
-
-    const dropdownMenu = wrapper.find('.language-dropdown-menu')
-
-    // Initially should not have open class
-    expect(dropdownMenu.classes()).not.toContain('open')
-
-    // Click to open dropdown
-    const trigger = wrapper.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
-
-    // Should have open class
-    expect(dropdownMenu.classes()).toContain('open')
-
-    // Verify the element has the correct CSS classes for visibility
-    // This ensures the CSS selector bug doesn't happen again
-    expect(dropdownMenu.classes()).toContain('navbar-menu')
-    expect(dropdownMenu.classes()).toContain('open')
-
-    // Verify the dropdown menu element exists and is in the DOM
-    expect(dropdownMenu.exists()).toBe(true)
-    expect(dropdownMenu.element).toBeDefined()
-  })
-
   it('displays save button as disabled when no file is loaded', () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     const saveButton = wrapper.find('.menu-item.action')
     expect(saveButton.exists()).toBe(true)
@@ -222,11 +155,7 @@ describe('Editor', () => {
   })
 
   it('triggers file input when GPX file menu item is clicked', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     const gpxMenuItem = wrapper.find('.menu-item')
     if (gpxMenuItem.exists()) {
@@ -237,11 +166,7 @@ describe('Editor', () => {
   })
 
   it('handles file selection correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the file input exists and can be found
     const fileInput = wrapper.find('input[type="file"]')
@@ -250,11 +175,7 @@ describe('Editor', () => {
   })
 
   it('shows form fields when file is loaded', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the basic structure exists in the template
     expect(wrapper.find('.editor').exists()).toBe(true)
@@ -263,33 +184,21 @@ describe('Editor', () => {
   })
 
   it('updates form fields correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the component renders without errors
     expect(wrapper.find('.editor').exists()).toBe(true)
   })
 
   it('handles commentary text input', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the component renders without errors
     expect(wrapper.find('.editor').exists()).toBe(true)
   })
 
   it('handles image drag and drop events', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     const dropZone = wrapper.find('.image-upload-area')
     if (dropZone.exists()) {
@@ -309,11 +218,7 @@ describe('Editor', () => {
   })
 
   it('shows error messages correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the message container exists
     const messageContainer = wrapper.find('.message')
@@ -321,22 +226,14 @@ describe('Editor', () => {
   })
 
   it('shows success messages correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the component renders without errors
     expect(wrapper.find('.editor').exists()).toBe(true)
   })
 
   it('validates required fields before saving', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the save button exists and is initially disabled
     const saveButton = wrapper.find('.menu-item.action')
@@ -345,22 +242,14 @@ describe('Editor', () => {
   })
 
   it('handles slider movement correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test that the component has the moveSlider method
     expect(typeof (wrapper.vm as any).moveSlider).toBe('function')
   })
 
   it('handles form field updates correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test segment name input
     const nameInput = wrapper.find('input[name="segment-name"]')
@@ -380,11 +269,7 @@ describe('Editor', () => {
   })
 
   it('renders track type tabs correctly when file is loaded', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Simulate file loaded state
     const vm = wrapper.vm as any
@@ -408,11 +293,7 @@ describe('Editor', () => {
   })
 
   it('switches between segment and route tabs', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Simulate file loaded state
     const vm = wrapper.vm as any
@@ -445,11 +326,7 @@ describe('Editor', () => {
   })
 
   it('updates form labels based on track type', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Simulate file loaded state
     const vm = wrapper.vm as any
@@ -486,11 +363,7 @@ describe('Editor', () => {
   })
 
   it('includes track_type in form submission', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Mock fetch to capture form data
     const mockFetch = vi.fn().mockResolvedValue({
@@ -533,11 +406,7 @@ describe('Editor', () => {
   })
 
   it('handles trail conditions updates', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test surface type selection
     const surfaceSelect = wrapper.find('select[name="surface-type"]')
@@ -555,11 +424,7 @@ describe('Editor', () => {
   })
 
   it('handles tire condition changes', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test dry tire selection
     const dryTireSelect = wrapper.find('select[name="tire-dry"]')
@@ -577,11 +442,7 @@ describe('Editor', () => {
   })
 
   it('handles video link additions', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test adding video link
     const addVideoButton = wrapper.find('button[title*="Add video link"]')
@@ -603,11 +464,7 @@ describe('Editor', () => {
   })
 
   it('handles image upload trigger', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test image upload trigger
     const imageUploadArea = wrapper.find('.image-upload-area')
@@ -618,11 +475,7 @@ describe('Editor', () => {
   })
 
   it('handles drag and drop for images', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     const imageUploadArea = wrapper.find('.image-upload-area')
     if (imageUploadArea.exists()) {
@@ -641,11 +494,7 @@ describe('Editor', () => {
   })
 
   it('handles slider controls for start/end markers', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test start marker controls
     const moveStartBackButton = wrapper.find('button[title*="Move start marker back"]')
@@ -675,11 +524,7 @@ describe('Editor', () => {
   })
 
   it('handles chart mode switching', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test switching between distance and time modes
     const timeModeButton = wrapper.find('button[title*="Time"]')
@@ -694,11 +539,7 @@ describe('Editor', () => {
   })
 
   it('handles form validation correctly', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test save button state when form is invalid
     const saveButton = wrapper.find('.menu-item.action')
@@ -711,11 +552,7 @@ describe('Editor', () => {
   })
 
   it('handles error state display', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test error message display
     const errorMessage = wrapper.find('.error-message')
@@ -725,11 +562,7 @@ describe('Editor', () => {
   })
 
   it('handles success state display', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test success message display
     const successMessage = wrapper.find('.success-message')
@@ -739,11 +572,7 @@ describe('Editor', () => {
   })
 
   it('handles upload progress display', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test upload progress bar
     const uploadProgress = wrapper.find('.upload-progress-bar')
@@ -752,29 +581,8 @@ describe('Editor', () => {
     }
   })
 
-  it('handles language dropdown functionality', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
-
-    // Test language dropdown toggle
-    const languageTrigger = wrapper.find('.language-dropdown-trigger')
-    expect(languageTrigger.exists()).toBe(true)
-
-    await languageTrigger.trigger('click')
-
-    const dropdownMenu = wrapper.find('.language-dropdown-menu')
-    expect(dropdownMenu.exists()).toBe(true)
-  })
-
   it('handles file input change events', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     const fileInput = wrapper.find('input[type="file"]')
     expect(fileInput.exists()).toBe(true)
@@ -785,11 +593,7 @@ describe('Editor', () => {
   })
 
   it('handles difficulty level setting', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test difficulty level buttons
     const difficultyButtons = wrapper.findAll('button[data-level]')
@@ -800,11 +604,7 @@ describe('Editor', () => {
   })
 
   it('handles image removal', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test image removal buttons
     const removeImageButtons = wrapper.findAll('button[title*="Remove image"]')
@@ -814,11 +614,7 @@ describe('Editor', () => {
   })
 
   it('handles video removal', async () => {
-    const wrapper = mount(Editor, {
-      global: {
-        plugins: [i18n]
-      }
-    })
+    const wrapper = mountEditor()
 
     // Test video removal buttons
     const removeVideoButtons = wrapper.findAll('button[title*="Remove video"]')
@@ -831,11 +627,7 @@ describe('Editor', () => {
     it('has resize event listener attached on mount', async () => {
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
 
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       await wrapper.vm.$nextTick()
 
@@ -848,11 +640,7 @@ describe('Editor', () => {
     it('removes resize event listener on unmount', async () => {
       const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
 
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       await wrapper.vm.$nextTick()
       wrapper.unmount()
@@ -867,11 +655,7 @@ describe('Editor', () => {
     })
 
     it('has checkSidebarMode function available', async () => {
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       const vm = wrapper.vm as any
 
@@ -880,11 +664,7 @@ describe('Editor', () => {
     })
 
     it('has resize handler function that can be called directly', async () => {
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       const vm = wrapper.vm as any
 
@@ -955,11 +735,7 @@ describe('Editor', () => {
     })
 
     it('does not update chart when no chart is present', async () => {
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       const vm = wrapper.vm as any
       vm.chart = null
@@ -980,11 +756,7 @@ describe('Editor', () => {
     })
 
     it('does not update chart when no points are loaded', async () => {
-      const wrapper = mount(Editor, {
-        global: {
-          plugins: [i18n]
-        }
-      })
+      const wrapper = mountEditor()
 
       const vm = wrapper.vm as any
       vm.chart = { resize: vi.fn() }

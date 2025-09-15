@@ -1,5 +1,4 @@
 <template>
-  <Navbar />
   <div class="editor">
     <div
       class="sidebar"
@@ -720,7 +719,6 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Navbar from './Navbar.vue'
 import L from 'leaflet'
 import {
   Chart,

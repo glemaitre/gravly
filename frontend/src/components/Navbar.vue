@@ -1,12 +1,24 @@
 <template>
   <header class="navbar">
     <div class="navbar-container">
-      <!-- Brand/Logo Section -->
+      <!-- Brand/Logo Section with Navigation -->
       <div class="navbar-brand">
         <img :src="logoUrl" alt="Cycling Segments" class="navbar-logo" />
+
+        <!-- Navigation Menu -->
+        <div class="nav-menu">
+          <router-link to="/" class="nav-link" active-class="active">
+            <i class="fa-solid fa-home"></i>
+            <span>{{ $t('navbar.home') }}</span>
+          </router-link>
+          <router-link to="/editor" class="nav-link" active-class="active">
+            <i class="fa-solid fa-edit"></i>
+            <span>{{ $t('navbar.editor') }}</span>
+          </router-link>
+        </div>
       </div>
 
-      <!-- Navigation Section -->
+      <!-- Right Section -->
       <nav class="navbar-nav">
         <div class="language-dropdown" ref="languageDropdown">
           <button
@@ -153,6 +165,7 @@ onUnmounted(() => {
   align-items: center;
   flex-shrink: 0;
   margin-right: 1rem;
+  gap: 2rem;
 }
 
 .navbar-logo {
@@ -167,6 +180,41 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   margin-left: auto;
+}
+
+.nav-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: #f9fafb;
+  color: var(--brand-primary);
+}
+
+.nav-link.active {
+  background: var(--brand-50);
+  color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+}
+
+.nav-link i {
+  font-size: 0.875rem;
 }
 
 .nav .language-dropdown {
@@ -316,6 +364,10 @@ onUnmounted(() => {
   .navbar-logo {
     max-width: 180px;
   }
+
+  .navbar-brand {
+    gap: 1.5rem;
+  }
 }
 
 @media (max-width: 768px) {
@@ -326,6 +378,18 @@ onUnmounted(() => {
   .navbar-logo {
     max-width: 150px;
     height: 28px;
+  }
+
+  .navbar-brand {
+    gap: 1rem;
+  }
+
+  .nav-link span {
+    display: none;
+  }
+
+  .nav-link {
+    padding: 0.4rem 0.6rem;
   }
 
   .navbar-nav .language-dropdown-trigger.navbar-trigger {
@@ -344,6 +408,10 @@ onUnmounted(() => {
     height: 24px;
   }
 
+  .navbar-brand {
+    gap: 0.75rem;
+  }
+
   .navbar-nav .language-dropdown-trigger.navbar-trigger {
     padding: 0.3rem 0.5rem;
     font-size: 0.8rem;
@@ -358,6 +426,10 @@ onUnmounted(() => {
   .navbar-logo {
     max-width: 100px;
     height: 22px;
+  }
+
+  .navbar-brand {
+    gap: 0.5rem;
   }
 }
 </style>
