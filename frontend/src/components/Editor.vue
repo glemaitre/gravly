@@ -2510,7 +2510,8 @@ async function onSubmit() {
 
 /* Track Type Tabs */
 .track-type-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 0.5rem;
@@ -2519,8 +2520,15 @@ async function onSubmit() {
   border: 1px solid #e5e7eb;
 }
 
+/* Responsive track-type-tabs for small devices */
+@media (max-width: 450px) {
+  .track-type-tabs {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
 .tab-button {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2534,6 +2542,8 @@ async function onSubmit() {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .tab-button:hover {
