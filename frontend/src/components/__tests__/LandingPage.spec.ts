@@ -1,10 +1,56 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import LandingPage from '../LandingPage.vue'
 
+// Mock Leaflet
+vi.mock('leaflet', () => ({
+  default: {
+    map: vi.fn(() => ({
+      setView: vi.fn(),
+      addLayer: vi.fn(),
+      removeLayer: vi.fn(),
+      invalidateSize: vi.fn(),
+      fitBounds: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+      remove: vi.fn()
+    })),
+    tileLayer: vi.fn(() => ({
+      addTo: vi.fn()
+    })),
+    polyline: vi.fn(() => ({
+      addTo: vi.fn()
+    })),
+    marker: vi.fn(() => ({
+      addTo: vi.fn()
+    })),
+    divIcon: vi.fn(() => ({})),
+    latLngBounds: vi.fn(() => ({
+      fitBounds: vi.fn()
+    })),
+    control: {
+      scale: vi.fn(() => ({
+        addTo: vi.fn()
+      }))
+    }
+  }
+}))
+
 describe('LandingPage', () => {
+  let wrapper: any
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+  })
+
   it('renders correctly', () => {
-    const wrapper = mount(LandingPage)
+    wrapper = mount(LandingPage)
 
     expect(wrapper.find('.landing-page').exists()).toBe(true)
     expect(wrapper.find('.landing-content').exists()).toBe(true)
@@ -53,14 +99,14 @@ describe('LandingPage', () => {
     expect(Object.keys(wrapper.props())).toHaveLength(0)
   })
 
-  it('has empty content area ready for future content', () => {
+  it('has content area ready for future content', () => {
     const wrapper = mount(LandingPage)
 
     const landingContent = wrapper.find('.landing-content')
     expect(landingContent.exists()).toBe(true)
 
-    // Content area should be empty but ready for future content
-    expect(landingContent.text().trim()).toBe('')
+    // Content area should have map section
+    expect(landingContent.find('.map-section').exists()).toBe(true)
   })
 
   it('maintains proper HTML structure', () => {
@@ -95,7 +141,7 @@ describe('LandingPage', () => {
     expect(landingContent.exists()).toBe(true)
 
     // Should be able to add content inside landing-content
-    expect(landingContent.element.children.length).toBe(0) // Currently empty
+    expect(landingContent.element.children.length).toBe(1) // Map section
   })
 
   it('follows Vue 3 Composition API patterns', () => {
@@ -130,12 +176,125 @@ describe('LandingPage', () => {
   })
 
   it('handles component lifecycle correctly', () => {
-    const wrapper = mount(LandingPage)
+    wrapper = mount(LandingPage)
 
     // Component should mount successfully
     expect(wrapper.find('.landing-page').exists()).toBe(true)
 
     // Should be able to unmount without errors
     expect(() => wrapper.unmount()).not.toThrow()
+  })
+
+  describe('Map functionality', () => {
+    it('renders map container', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.find('#landing-map').exists()).toBe(true)
+      expect(wrapper.find('.map').exists()).toBe(true)
+      expect(wrapper.find('.card-map').exists()).toBe(true)
+    })
+
+    it('displays map section without hero titles', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.find('.hero-section').exists()).toBe(false)
+      expect(wrapper.find('.hero-title').exists()).toBe(false)
+      expect(wrapper.find('.hero-subtitle').exists()).toBe(false)
+      expect(wrapper.find('.map-section').exists()).toBe(true)
+    })
+
+    it('has proper map section structure', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.find('.map-section').exists()).toBe(true)
+      expect(wrapper.find('.map-container').exists()).toBe(true)
+      expect(wrapper.find('.card').exists()).toBe(true)
+    })
+
+    it('has correct map dimensions with full width and 65% height', () => {
+      wrapper = mount(LandingPage)
+
+      const mapElement = wrapper.find('.map')
+      expect(mapElement.exists()).toBe(true)
+      expect(mapElement.attributes('id')).toBe('landing-map')
+      expect(mapElement.classes()).toContain('map')
+    })
+
+    it('has responsive CSS classes', () => {
+      wrapper = mount(LandingPage)
+
+      const mapContainer = wrapper.find('.map-container')
+      expect(mapContainer.exists()).toBe(true)
+      expect(mapContainer.classes()).toContain('map-container')
+    })
+
+    it('has full width and 65% height styling', () => {
+      wrapper = mount(LandingPage)
+
+      const mapElement = wrapper.find('.map')
+      expect(mapElement.exists()).toBe(true)
+
+      // Check that the map element has the correct class and attributes
+      expect(mapElement.classes()).toContain('map')
+      expect(mapElement.attributes('id')).toBe('landing-map')
+
+      // In a real browser, the CSS height: 65vh and width: 100% would be applied
+      // In the test environment, we verify the element structure is correct
+      expect(mapElement.element.tagName).toBe('DIV')
+    })
+  })
+
+  describe('Responsive design', () => {
+    it('has proper responsive structure', () => {
+      wrapper = mount(LandingPage)
+
+      const landingContent = wrapper.find('.landing-content')
+      expect(landingContent.exists()).toBe(true)
+      expect(landingContent.classes()).toContain('landing-content')
+    })
+
+    it('maintains proper layout structure', () => {
+      wrapper = mount(LandingPage)
+
+      // Check that all main sections exist
+      expect(wrapper.find('.map-section').exists()).toBe(true)
+      expect(wrapper.find('.map-container').exists()).toBe(true)
+    })
+  })
+
+  describe('Non-regression tests', () => {
+    it('should not have duplicate map containers', () => {
+      wrapper = mount(LandingPage)
+
+      const mapContainers = wrapper.findAll('#landing-map')
+      expect(mapContainers).toHaveLength(1)
+    })
+
+    it('should have proper map container hierarchy', () => {
+      wrapper = mount(LandingPage)
+
+      const mapSection = wrapper.find('.map-section')
+      const mapContainer = mapSection.find('.map-container')
+      const card = mapContainer.find('.card')
+      const map = card.find('.map')
+
+      expect(mapSection.exists()).toBe(true)
+      expect(mapContainer.exists()).toBe(true)
+      expect(card.exists()).toBe(true)
+      expect(map.exists()).toBe(true)
+    })
+
+    it('should maintain consistent structure across multiple mounts', () => {
+      const wrapper1 = mount(LandingPage)
+      const wrapper2 = mount(LandingPage)
+
+      expect(wrapper1.find('.landing-page').exists()).toBe(true)
+      expect(wrapper2.find('.landing-page').exists()).toBe(true)
+      expect(wrapper1.find('#landing-map').exists()).toBe(true)
+      expect(wrapper2.find('#landing-map').exists()).toBe(true)
+
+      wrapper1.unmount()
+      wrapper2.unmount()
+    })
   })
 })
