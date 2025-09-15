@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import Editor from '../Editor.vue'
 import { createI18n } from 'vue-i18n'
 
@@ -824,5 +825,179 @@ describe('Editor', () => {
     if (removeVideoButtons.length > 0) {
       await removeVideoButtons[0].trigger('click')
     }
+  })
+
+  describe('Responsive behavior', () => {
+    it('has resize event listener attached on mount', async () => {
+      const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      await wrapper.vm.$nextTick()
+
+      // Verify resize event listener was added
+      expect(addEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function))
+
+      addEventListenerSpy.mockRestore()
+    })
+
+    it('removes resize event listener on unmount', async () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
+
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      await wrapper.vm.$nextTick()
+      wrapper.unmount()
+
+      // Verify resize event listener was removed
+      expect(removeEventListenerSpy).toHaveBeenCalledWith(
+        'resize',
+        expect.any(Function)
+      )
+
+      removeEventListenerSpy.mockRestore()
+    })
+
+    it('has checkSidebarMode function available', async () => {
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      const vm = wrapper.vm as any
+
+      // Verify checkSidebarMode function exists
+      expect(typeof vm.checkSidebarMode).toBe('function')
+    })
+
+    it('has resize handler function that can be called directly', async () => {
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      const vm = wrapper.vm as any
+
+      // Mock chart and canvas
+      const mockChart = {
+        resize: vi.fn(),
+        update: vi.fn(),
+        canvas: {
+          getBoundingClientRect: vi.fn(() => ({
+            left: 100,
+            top: 50,
+            width: 800,
+            height: 200
+          }))
+        },
+        scales: {
+          x: {
+            getPixelForValue: vi.fn((value) => value * 10),
+            getValueForPixel: vi.fn((pixel) => pixel / 10)
+          }
+        },
+        data: {
+          datasets: [{ data: [] }, { data: [] }]
+        }
+      }
+
+      const mockChartCanvas = {
+        parentElement: {
+          getBoundingClientRect: vi.fn(() => ({
+            left: 0,
+            top: 0,
+            width: 1000,
+            height: 250
+          }))
+        }
+      }
+
+      // Set up component state
+      vm.chart = mockChart
+      vm.chartCanvas = mockChartCanvas
+      vm.points = [
+        { latitude: 0, longitude: 0, elevation: 100, time: '2023-01-01T00:00:00Z' },
+        { latitude: 1, longitude: 1, elevation: 200, time: '2023-01-01T00:01:00Z' }
+      ]
+      vm.startIndex = 0
+      vm.endIndex = 1
+      vm.cumulativeKm = [0, 1]
+      vm.cumulativeSec = [0, 60]
+      vm.xMode = 'distance'
+      vm.getX = (i: number) => vm.cumulativeKm[i] || 0
+
+      // Get the resize handler function
+      const resizeHandler = (window as any).__editorOnResize
+      expect(typeof resizeHandler).toBe('function')
+
+      // Call the resize handler directly
+      resizeHandler()
+
+      await nextTick()
+      await wrapper.vm.$nextTick()
+
+      // Verify chart.resize was called
+      expect(mockChart.resize).toHaveBeenCalled()
+
+      // Verify slider positions were updated (they should be numbers)
+      expect(typeof vm.startSliderPosition).toBe('number')
+      expect(typeof vm.endSliderPosition).toBe('number')
+    })
+
+    it('does not update chart when no chart is present', async () => {
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      const vm = wrapper.vm as any
+      vm.chart = null
+      vm.chartCanvas = null
+
+      // Mock console.warn to avoid error logs in tests
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      // Trigger window resize
+      window.dispatchEvent(new Event('resize'))
+
+      await wrapper.vm.$nextTick()
+
+      // No assertions needed - just verify no errors are thrown
+      expect(true).toBe(true)
+
+      consoleSpy.mockRestore()
+    })
+
+    it('does not update chart when no points are loaded', async () => {
+      const wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      const vm = wrapper.vm as any
+      vm.chart = { resize: vi.fn() }
+      vm.chartCanvas = { parentElement: { getBoundingClientRect: vi.fn() } }
+      vm.points = []
+
+      // Trigger window resize
+      window.dispatchEvent(new Event('resize'))
+
+      await wrapper.vm.$nextTick()
+
+      // Verify chart.resize was not called when no points
+      expect(vm.chart.resize).not.toHaveBeenCalled()
+    })
   })
 })

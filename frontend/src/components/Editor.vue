@@ -1706,6 +1706,34 @@ onMounted(() => {
     }
     // Check sidebar mode on resize
     checkSidebarMode()
+
+    // Update chart and slider positions on resize
+    if (chart && chartCanvas.value && points.value.length > 0) {
+      // Force chart to recalculate its size
+      chart.resize()
+
+      // Recalculate slider positions based on new chart dimensions
+      nextTick(() => {
+        if (chart && chartCanvas.value) {
+          const startX = getX(startIndex.value)
+          const endX = getX(endIndex.value)
+          const canvasRect = chart.canvas.getBoundingClientRect()
+          const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
+          const startPixel = chart.scales.x.getPixelForValue(startX)
+          const endPixel = chart.scales.x.getPixelForValue(endX)
+          const canvasOffsetLeft = canvasRect.left - containerRect.left
+          const startPixelInContainer = startPixel + canvasOffsetLeft
+          const endPixelInContainer = endPixel + canvasOffsetLeft
+          const sliderWidth = 20
+          const startPixelCentered = startPixelInContainer - sliderWidth / 2
+          const endPixelCentered = endPixelInContainer - sliderWidth / 2
+
+          startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
+          endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
+          checkSliderOverlap()
+        }
+      })
+    }
   }
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
