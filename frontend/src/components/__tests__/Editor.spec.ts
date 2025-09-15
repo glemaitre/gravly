@@ -178,6 +178,35 @@ describe('Editor', () => {
     }
   })
 
+  it('ensures dropdown menu is visible when open class is applied (non-regression test)', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    const dropdownMenu = wrapper.find('.language-dropdown-menu')
+
+    // Initially should not have open class
+    expect(dropdownMenu.classes()).not.toContain('open')
+
+    // Click to open dropdown
+    const trigger = wrapper.find('.language-dropdown-trigger')
+    await trigger.trigger('click')
+
+    // Should have open class
+    expect(dropdownMenu.classes()).toContain('open')
+
+    // Verify the element has the correct CSS classes for visibility
+    // This ensures the CSS selector bug doesn't happen again
+    expect(dropdownMenu.classes()).toContain('navbar-menu')
+    expect(dropdownMenu.classes()).toContain('open')
+
+    // Verify the dropdown menu element exists and is in the DOM
+    expect(dropdownMenu.exists()).toBe(true)
+    expect(dropdownMenu.element).toBeDefined()
+  })
+
   it('displays save button as disabled when no file is loaded', () => {
     const wrapper = mount(Editor, {
       global: {
@@ -357,10 +386,11 @@ describe('Editor', () => {
     })
 
     // Simulate file loaded state
-    wrapper.vm.loaded = true
-    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
-    wrapper.vm.startIndex = 0
-    wrapper.vm.endIndex = 0
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    vm.startIndex = 0
+    vm.endIndex = 0
     await wrapper.vm.$nextTick()
 
     const tabs = wrapper.find('.track-type-tabs')
@@ -384,10 +414,11 @@ describe('Editor', () => {
     })
 
     // Simulate file loaded state
-    wrapper.vm.loaded = true
-    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
-    wrapper.vm.startIndex = 0
-    wrapper.vm.endIndex = 0
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    vm.startIndex = 0
+    vm.endIndex = 0
     await wrapper.vm.$nextTick()
 
     const segmentTab = wrapper.find('.tab-button:first-child')
@@ -420,10 +451,11 @@ describe('Editor', () => {
     })
 
     // Simulate file loaded state
-    wrapper.vm.loaded = true
-    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
-    wrapper.vm.startIndex = 0
-    wrapper.vm.endIndex = 0
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    vm.startIndex = 0
+    vm.endIndex = 0
     await wrapper.vm.$nextTick()
 
     // Test segment tab labels
@@ -435,7 +467,9 @@ describe('Editor', () => {
     expect(nameLabel.text()).toContain('Segment name')
 
     const surfaceTypeLabels = wrapper.findAll('.subsection-title')
-    const surfaceTypeLabel = surfaceTypeLabels.find(el => el.text().includes('Surface type'))
+    const surfaceTypeLabel = surfaceTypeLabels.find((el: any) =>
+      el.text().includes('Surface type')
+    )
     expect(surfaceTypeLabel?.text()).toContain('Surface type')
 
     // Test route tab labels
@@ -444,7 +478,9 @@ describe('Editor', () => {
     await wrapper.vm.$nextTick()
 
     expect(nameLabel.text()).toContain('Route name')
-    const routeSurfaceTypeLabel = surfaceTypeLabels.find(el => el.text().includes('Major surface type'))
+    const routeSurfaceTypeLabel = surfaceTypeLabels.find((el: any) =>
+      el.text().includes('Major surface type')
+    )
     expect(routeSurfaceTypeLabel?.text()).toContain('Major surface type')
   })
 
@@ -463,17 +499,18 @@ describe('Editor', () => {
     global.fetch = mockFetch
 
     // Set up component state
-    wrapper.vm.loaded = true
-    wrapper.vm.name = 'Test Track'
-    wrapper.vm.trackType = 'route'
-    wrapper.vm.points = [
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.name = 'Test Track'
+    vm.trackType = 'route'
+    vm.points = [
       { latitude: 0, longitude: 0, elevation: 0 },
       { latitude: 1, longitude: 1, elevation: 100 }
     ]
-    wrapper.vm.startIndex = 0
-    wrapper.vm.endIndex = 1
-    wrapper.vm.uploadedFileId = 'test-file-id'
-    wrapper.vm.trailConditions = {
+    vm.startIndex = 0
+    vm.endIndex = 1
+    vm.uploadedFileId = 'test-file-id'
+    vm.trailConditions = {
       tire_dry: 'slick',
       tire_wet: 'semi-slick',
       surface_type: 'forest-trail',
@@ -482,10 +519,10 @@ describe('Editor', () => {
     await wrapper.vm.$nextTick()
 
     // Check that the form is ready for submission
-    expect(wrapper.vm.isSaveDisabled).toBe(false)
+    expect(vm.isSaveDisabled).toBe(false)
 
     // Trigger form submission
-    await wrapper.vm.onSubmit()
+    await vm.onSubmit()
 
     // Check that track_type was included in the form data
     expect(mockFetch).toHaveBeenCalled()

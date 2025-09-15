@@ -373,8 +373,7 @@
 
               <div>
                 <label for="name"
-                  >{{ nameLabel }}
-                  <span class="req">{{ t('required') }}</span></label
+                  >{{ nameLabel }} <span class="req">{{ t('required') }}</span></label
                 >
                 <input id="name" v-model="name" type="text" required />
               </div>
@@ -900,7 +899,9 @@ const nameLabel = computed(() => {
 })
 
 const surfaceTypeLabel = computed(() => {
-  return trackType.value === 'segment' ? t('form.surfaceType') : t('form.majorSurfaceType')
+  return trackType.value === 'segment'
+    ? t('form.surfaceType')
+    : t('form.majorSurfaceType')
 })
 
 // Difficulty slider progress
@@ -2961,11 +2962,8 @@ async function onSubmit() {
   box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
 }
 
-.navbar-nav .language-dropdown-menu.navbar-menu {
+.navbar-menu {
   position: absolute;
-  top: 100%;
-  right: 0;
-  left: auto;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -2980,7 +2978,13 @@ async function onSubmit() {
   overflow: hidden;
 }
 
-.nav .language-dropdown-menu.navbar-menu.open {
+.navbar-nav .language-dropdown-menu.navbar-menu {
+  top: 100%;
+  right: 0;
+  left: auto;
+}
+
+.navbar-nav .language-dropdown-menu.navbar-menu.open {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);

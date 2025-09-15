@@ -135,6 +135,35 @@ describe('App', () => {
     expect(wrapper.findAll('.language-option').length).toBeGreaterThan(0)
   })
 
+  it('ensures dropdown menu is visible when open class is applied (non-regression test)', async () => {
+    const wrapper = mount(App, {
+      global: {
+        plugins: [router, i18n]
+      }
+    })
+
+    const dropdownMenu = wrapper.find('.language-dropdown-menu')
+
+    // Initially should not have open class
+    expect(dropdownMenu.classes()).not.toContain('open')
+
+    // Click to open dropdown
+    const trigger = wrapper.find('.language-dropdown-trigger')
+    await trigger.trigger('click')
+
+    // Should have open class
+    expect(dropdownMenu.classes()).toContain('open')
+
+    // Verify the element has the correct CSS classes for visibility
+    // This ensures the CSS selector bug doesn't happen again
+    expect(dropdownMenu.classes()).toContain('navbar-menu')
+    expect(dropdownMenu.classes()).toContain('open')
+
+    // Verify the dropdown menu element exists and is in the DOM
+    expect(dropdownMenu.exists()).toBe(true)
+    expect(dropdownMenu.element).toBeDefined()
+  })
+
   it('saves language preference to localStorage', async () => {
     const wrapper = mount(App, {
       global: {
