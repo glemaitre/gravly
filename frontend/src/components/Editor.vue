@@ -332,10 +332,6 @@
                         formatElevation(pointAt(startIndex)?.elevation)
                       }}</span>
                     </div>
-                    <div class="gps-title" :title="t('tooltip.gpsLocation')">
-                      <span class="icon"><i class="fa-solid fa-location-dot"></i></span
-                      ><span class="text">{{ t('chart.gps') }}</span>
-                    </div>
                     <div class="gps-col">
                       <span class="label">{{ t('gps.latitude') }}</span
                       ><span class="value">{{
@@ -368,10 +364,6 @@
                       <span class="value">{{
                         formatElevation(pointAt(endIndex)?.elevation)
                       }}</span>
-                    </div>
-                    <div class="gps-title" :title="t('tooltip.gpsLocation')">
-                      <span class="icon"><i class="fa-solid fa-location-dot"></i></span
-                      ><span class="text">{{ t('chart.gps') }}</span>
                     </div>
                     <div class="gps-col">
                       <span class="label">{{ t('gps.latitude') }}</span
@@ -2251,6 +2243,14 @@ async function onSubmit() {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Responsive controls for narrow devices */
+@media (max-width: 819px) {
+  .controls {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
 .controls .meta-title {
   grid-column: 1 / -1;
   text-align: center;
@@ -2304,16 +2304,20 @@ async function onSubmit() {
   width: 100%;
   box-sizing: border-box;
 }
-.gps-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: #374151;
-  font-weight: 500;
+
+/* Responsive metrics grid for narrow devices */
+@media (max-width: 819px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
 }
-.gps-title .icon {
-  width: 18px;
-  text-align: center;
+
+@media (max-width: 480px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
 }
 .gps-col {
   display: flex;
@@ -2606,6 +2610,14 @@ async function onSubmit() {
   align-items: start;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Responsive tire groups for narrow devices */
+@media (max-width: 819px) {
+  .tire-groups {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 .tire-group {
