@@ -1596,7 +1596,7 @@ def test_main_module_execution():
 
     # The if __name__ == "__main__" block is not executed during import,
     # but we can verify the structure exists by checking the file content
-    with open(src.main.__file__, "r") as f:
+    with open(src.main.__file__) as f:
         content = f.read()
         assert 'if __name__ == "__main__":' in content
         assert 'uvicorn.run(app, host="0.0.0.0", port=8000)' in content
