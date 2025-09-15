@@ -3,7 +3,12 @@
 from pathlib import Path
 
 import gpxpy
-from src.utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
+from src.utils.gpx import (
+    GPXBounds,
+    GPXData,
+    extract_from_gpx_file,
+    generate_gpx_segment,
+)
 
 
 def test_extract_from_gpx_file_with_data_file():
@@ -66,7 +71,7 @@ def test_generate_gpx_segment(tmp_path):
     end_index = 50
     segment_name = "Test Segment"
 
-    file_id, output_file_path = generate_gpx_segment(
+    file_id, output_file_path, bounds = generate_gpx_segment(
         input_file_path=input_file_path,
         start_index=start_index,
         end_index=end_index,
@@ -79,6 +84,17 @@ def test_generate_gpx_segment(tmp_path):
 
     assert isinstance(output_file_path, Path)
     assert output_file_path.exists()
+
+    # Test bounds return value
+    assert isinstance(bounds, GPXBounds)
+    assert isinstance(bounds.north, float)
+    assert isinstance(bounds.south, float)
+    assert isinstance(bounds.east, float)
+    assert isinstance(bounds.west, float)
+    assert isinstance(bounds.min_elevation, float)
+    assert isinstance(bounds.max_elevation, float)
+    assert bounds.south <= bounds.north
+    assert bounds.west <= bounds.east
 
     with open(output_file_path, encoding="utf-8") as gpx_file:
         generated_gpx = gpxpy.parse(gpx_file)
@@ -117,3 +133,14 @@ def test_generate_gpx_segment(tmp_path):
         assert generated_point.longitude == original_point.longitude
         assert generated_point.elevation == original_point.elevation
         assert generated_point.time == original_point.time
+
+    # Test that bounds match the actual min/max values from the segment points
+    actual_min_lat = min(point.latitude for point in segment.points)
+    actual_max_lat = max(point.latitude for point in segment.points)
+    actual_min_lon = min(point.longitude for point in segment.points)
+    actual_max_lon = max(point.longitude for point in segment.points)
+
+    assert bounds.south == actual_min_lat  # min_latitude
+    assert bounds.west == actual_min_lon  # min_longitude
+    assert bounds.north == actual_max_lat  # max_latitude
+    assert bounds.east == actual_max_lon  # max_longitude

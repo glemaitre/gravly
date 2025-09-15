@@ -165,7 +165,7 @@ def generate_gpx_segment(
     end_index: int,
     segment_name: str,
     output_dir: Path,
-) -> tuple[str, Path]:
+) -> tuple[str, Path, GPXBounds]:
     """Generate a GPX segment from a given GPX file.
 
     Parameters
@@ -183,10 +183,12 @@ def generate_gpx_segment(
 
     Returns
     -------
-    tuple[str, Path]
+    tuple[str, Path, GPXBounds]
         A tuple containing:
         - file_id: The ID of the generated GPX segment.
         - output_file_path: The full path to the generated GPX file.
+        - bounds: A `GPXBounds` object containing the minimum and maximum latitude
+          and longitude.
     """
     file_id = str(uuid.uuid4())
     new_gpx = gpxpy.gpx.GPX()
@@ -198,14 +200,23 @@ def generate_gpx_segment(
     with open(input_file_path) as gpx_file:
         original_gpx = gpxpy.parse(gpx_file)
 
+    min_latitude, min_longitude, min_elevation = math.inf, math.inf, math.inf
+    max_latitude, max_longitude, max_elevation = -math.inf, -math.inf, -math.inf
     for point_idx, point in enumerate(original_gpx.tracks[0].segments[0].points):
         if point_idx >= start_index and point_idx <= end_index:
+            latitude, longitude = point.latitude, point.longitude
             new_point = gpxpy.gpx.GPXTrackPoint(
-                latitude=point.latitude,
-                longitude=point.longitude,
+                latitude=latitude,
+                longitude=longitude,
                 elevation=point.elevation,
                 time=point.time,
             )
+            min_latitude = min(min_latitude, latitude)
+            max_latitude = max(max_latitude, latitude)
+            min_longitude = min(min_longitude, longitude)
+            max_longitude = max(max_longitude, longitude)
+            min_elevation = min(min_elevation, point.elevation)
+            max_elevation = max(max_elevation, point.elevation)
             new_segment.points.append(new_point)
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -213,4 +224,15 @@ def generate_gpx_segment(
     with open(output_file_path, "w") as gpx_file:
         gpx_file.write(new_gpx.to_xml())
 
-    return file_id, output_file_path
+    return (
+        file_id,
+        output_file_path,
+        GPXBounds(
+            north=max_latitude,
+            south=min_latitude,
+            east=max_longitude,
+            west=min_longitude,
+            min_elevation=min_elevation,
+            max_elevation=max_elevation,
+        ),
+    )

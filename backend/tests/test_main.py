@@ -10,7 +10,7 @@ import boto3
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
-from src.utils.gpx import generate_gpx_segment
+from src.utils.gpx import GPXBounds, generate_gpx_segment
 from src.utils.storage import LocalStorageManager, S3Manager, cleanup_local_file
 
 from backend.src.utils.config import LocalStorageConfig, S3StorageConfig
@@ -261,6 +261,8 @@ def test_create_segment_invalid_tire_types(client, sample_gpx_file):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "2",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
         },
     )
 
@@ -287,6 +289,8 @@ def test_create_segment_invalid_track_type(client, sample_gpx_file):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "2",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
         },
     )
 
@@ -364,6 +368,8 @@ def test_create_segment_file_not_found(client):
             "file_id": "non-existent-id",
             "start_index": "0",
             "end_index": "2",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
         },
     )
 
@@ -500,6 +506,8 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
             },
         )
 
@@ -515,6 +523,8 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
                 "file_id": file_id,
                 "start_index": "50",
                 "end_index": "100",
+                "surface_type": "field-trail",
+                "difficulty_level": "4",
             },
         )
 
@@ -601,6 +611,8 @@ def test_create_segment_no_temp_directory(client):
             "file_id": "test-id",
             "start_index": "0",
             "end_index": "2",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
         },
     )
 
@@ -641,6 +653,8 @@ def test_create_segment_generation_failure(
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
             },
         )
 
@@ -682,6 +696,8 @@ def test_create_segment_invalid_indices_generation(
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
             },
         )
 
@@ -726,7 +742,7 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
-        file_id, segment_file_path = generate_gpx_segment(
+        file_id, segment_file_path, bounds = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
             end_index=3,
@@ -736,6 +752,17 @@ def test_complete_gpx_segment_flow(mock_s3_environment, sample_gpx_file, tmp_pat
 
         assert segment_file_path.exists()
         assert file_id is not None
+
+        # Test bounds return value
+        assert isinstance(bounds, GPXBounds)
+        assert isinstance(bounds.north, float)
+        assert isinstance(bounds.south, float)
+        assert isinstance(bounds.east, float)
+        assert isinstance(bounds.west, float)
+        assert isinstance(bounds.min_elevation, float)
+        assert isinstance(bounds.max_elevation, float)
+        assert bounds.south <= bounds.north
+        assert bounds.west <= bounds.east
 
         s3_key = s3_manager.upload_gpx_segment(
             local_file_path=segment_file_path,
@@ -774,7 +801,7 @@ def test_s3_upload_failure_cleanup(mock_s3_environment, sample_gpx_file, tmp_pat
 
         frontend_temp_dir = tmp_path / "temp_gpx_segments"
 
-        file_id, segment_file_path = generate_gpx_segment(
+        file_id, segment_file_path, bounds = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
             end_index=2,
@@ -818,7 +845,7 @@ def test_multiple_segments_from_same_file(
 
         segments = []
         for i, (start, end) in enumerate([(0, 1), (1, 3), (3, 4)]):
-            file_id, segment_file_path = generate_gpx_segment(
+            file_id, segment_file_path, bounds = generate_gpx_segment(
                 input_file_path=sample_gpx_file,
                 start_index=start,
                 end_index=end,
@@ -859,7 +886,7 @@ def test_frontend_temp_directory_creation(
 
         assert not frontend_temp_dir.exists()
 
-        file_id, segment_file_path = generate_gpx_segment(
+        file_id, segment_file_path, bounds = generate_gpx_segment(
             input_file_path=sample_gpx_file,
             start_index=1,
             end_index=2,
@@ -901,6 +928,8 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
                 "file_id": file_id,
                 "start_index": 1,
                 "end_index": 2,
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
             },
         )
 
@@ -991,6 +1020,8 @@ def test_create_segment_storage_manager_not_initialized(
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
             },
         )
 
@@ -1035,6 +1066,8 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
                 },
             )
 
@@ -1249,6 +1282,8 @@ def test_create_segment_storage_upload_failure(
             "end_index": "10",
             "tire_dry": "slick",
             "tire_wet": "semi-slick",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
         }
 
         response = client.post("/api/segments", data=segment_data)

@@ -1,7 +1,8 @@
+import enum
 import logging
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -11,8 +12,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from sqlalchemy import DateTime, Integer, String, Text
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import DateTime, Enum, Float, Integer, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -116,51 +116,61 @@ class Base(DeclarativeBase):
     pass
 
 
-class TireType(str):
+class TrackType(enum.Enum):
+    SEGMENT = "segment"
+    ROUTE = "route"
+
+
+class SurfaceType(enum.Enum):
+    BIG_STONE_ROAD = "big-stone-road"
+    BROKEN_PAVED_ROAD = "broken-paved-road"
+    DIRTY_ROAD = "dirty-road"
+    FIELD_TRAIL = "field-trail"
+    FOREST_TRAIL = "forest-trail"
+    SMALL_STONE_ROAD = "small-stone-road"
+
+
+class TireType(enum.Enum):
     SLICK = "slick"
     SEMI_SLICK = "semi-slick"
     KNOBS = "knobs"
 
 
-class TrackType(str):
-    SEGMENT = "segment"
-    ROUTE = "route"
-
-
-class Segment(Base):
-    __tablename__ = "segments"
+class Track(Base):
+    __tablename__ = "tracks"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
-    track_type: Mapped[str] = mapped_column(
-        SAEnum(TrackType.SEGMENT, TrackType.ROUTE, name="track_type"),
-        nullable=False,
-        default=TrackType.SEGMENT,
-    )
-    tire_dry: Mapped[str] = mapped_column(
-        SAEnum(TireType.SLICK, TireType.SEMI_SLICK, TireType.KNOBS, name="tire_type"),
-        nullable=False,
-    )
-    tire_wet: Mapped[str] = mapped_column(
-        SAEnum(TireType.SLICK, TireType.SEMI_SLICK, TireType.KNOBS, name="tire_type"),
-        nullable=False,
-    )
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    bound_north: Mapped[float] = mapped_column(Float)
+    bound_south: Mapped[float] = mapped_column(Float)
+    bound_east: Mapped[float] = mapped_column(Float)
+    bound_west: Mapped[float] = mapped_column(Float)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    track_type: Mapped[TrackType] = mapped_column(Enum(TrackType))
+    difficulty_level: Mapped[int] = mapped_column(Integer)
+    surface_type: Mapped[SurfaceType] = mapped_column(Enum(SurfaceType))
+    tire_dry: Mapped[TireType] = mapped_column(Enum(TireType))
+    tire_wet: Mapped[TireType] = mapped_column(Enum(TireType))
+    comments: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
     )
 
 
-# Database engine and session will be initialized in lifespan function
-
-
-class SegmentCreateResponse(BaseModel):
+class TrackCreateResponse(BaseModel):
     id: int
+    file_path: Path
+    bound_north: float
+    bound_south: float
+    bound_east: float
+    bound_west: float
     name: str
     track_type: str
+    difficulty_level: int
+    surface_type: str
     tire_dry: str
     tire_wet: str
-    file_path: Path
+    comments: str
 
 
 @app.get("/")
@@ -259,7 +269,7 @@ async def upload_gpx(file: UploadFile = File(...)):
     return gpx_data
 
 
-@app.post("/api/segments", response_model=SegmentCreateResponse)
+@app.post("/api/segments", response_model=TrackCreateResponse)
 async def create_segment(
     name: str = Form(...),
     track_type: str = Form("segment"),
@@ -268,8 +278,8 @@ async def create_segment(
     file_id: str = Form(...),
     start_index: int = Form(...),
     end_index: int = Form(...),
-    surface_type: str = Form(None),
-    difficulty_level: int = Form(None),
+    surface_type: str = Form(...),
+    difficulty_level: int = Form(...),
     commentary_text: str = Form(""),
     video_links: str = Form("[]"),
 ):
@@ -308,7 +318,7 @@ async def create_segment(
         logger.info(
             f"Processing segment '{name}' from indices {start_index} to {end_index}"
         )
-        segment_file_id, segment_file_path = generate_gpx_segment(
+        segment_file_id, segment_file_path, bounds = generate_gpx_segment(
             input_file_path=original_file_path,
             start_index=start_index,
             end_index=end_index,
@@ -353,37 +363,58 @@ async def create_segment(
     if SessionLocal is not None:
         try:
             async with SessionLocal() as session:
-                seg = Segment(
-                    name=name,
-                    track_type=track_type,
-                    tire_dry=tire_dry,
-                    tire_wet=tire_wet,
+                track = Track(
                     file_path=processed_file_path,
+                    bound_north=bounds.north,
+                    bound_south=bounds.south,
+                    bound_east=bounds.east,
+                    bound_west=bounds.west,
+                    name=name,
+                    track_type=TrackType(track_type),
+                    difficulty_level=difficulty_level,
+                    surface_type=SurfaceType(surface_type),
+                    tire_dry=TireType(tire_dry),
+                    tire_wet=TireType(tire_wet),
+                    comments=commentary_text,
                 )
-                session.add(seg)
+                session.add(track)
                 await session.commit()
-                await session.refresh(seg)
-                return SegmentCreateResponse(
-                    id=seg.id,
-                    name=seg.name,
-                    track_type=seg.track_type,
-                    tire_dry=seg.tire_dry,
-                    tire_wet=seg.tire_wet,
-                    file_path=seg.file_path,
+                await session.refresh(track)
+                return TrackCreateResponse(
+                    id=track.id,
+                    file_path=processed_file_path,
+                    bound_north=track.bound_north,
+                    bound_south=track.bound_south,
+                    bound_east=track.bound_east,
+                    bound_west=track.bound_west,
+                    name=track.name,
+                    track_type=track.track_type,
+                    difficulty_level=int(track.difficulty_level),
+                    surface_type=track.surface_type,
+                    tire_dry=track.tire_dry,
+                    tire_wet=track.tire_wet,
+                    comments=track.comments,
                 )
         except Exception as db_e:
             logger.warning(f"Failed to store segment in database: {db_e}")
             # Continue without database storage
 
-    # Return response without database ID if database is not available
-    return SegmentCreateResponse(
-        id=0,  # Placeholder ID when database is not available
-        name=name,
-        track_type=track_type,
-        tire_dry=tire_dry,
-        tire_wet=tire_wet,
-        file_path=processed_file_path,
-    )
+        # Return response without database ID if database is not available
+        return TrackCreateResponse(
+            id=0,  # Placeholder ID when database is not available
+            file_path=processed_file_path,
+            bound_north=bounds.north,
+            bound_south=bounds.south,
+            bound_east=bounds.east,
+            bound_west=bounds.west,
+            name=name,
+            track_type=track_type,
+            difficulty_level=difficulty_level,
+            surface_type=surface_type,
+            tire_dry=tire_dry,
+            tire_wet=tire_wet,
+            comments=commentary_text,
+        )
 
 
 if __name__ == "__main__":
