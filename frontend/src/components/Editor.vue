@@ -3512,6 +3512,16 @@ async function onSubmit() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive image upload container */
+@media (max-width: 649px) {
+  .image-upload-container {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
 }
 
 .image-item {
@@ -3592,6 +3602,10 @@ async function onSubmit() {
   cursor: pointer;
   transition: all 0.2s;
   grid-column: 1 / -1;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .image-upload-area:hover,
@@ -3606,6 +3620,9 @@ async function onSubmit() {
   align-items: center;
   gap: 0.5rem;
   text-align: center;
+  padding: 0.5rem;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .upload-icon {
@@ -3616,10 +3633,16 @@ async function onSubmit() {
 .upload-text {
   font-weight: 500;
   color: #374151;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 .upload-hint {
   font-size: 0.875rem;
   color: #6b7280;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 </style>
