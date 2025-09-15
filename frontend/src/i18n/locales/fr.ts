@@ -27,7 +27,7 @@ export default {
   // Form labels
   form: {
     segmentName: 'Nom du segment',
-    routeName: 'Nom de la route',
+    routeName: 'Nom de la sortie',
     tire: 'Pneu',
     trailConditions: 'Conditions de piste',
     surfaceType: 'Type de surface',
