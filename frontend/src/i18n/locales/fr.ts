@@ -2,7 +2,7 @@ export default {
   // Menu items
   menu: {
     import: 'Importer depuis ...',
-    segments: 'Segments',
+    segments: 'Piste',
     gpxFile: 'Fichier GPX',
     saveInDb: 'Sauvegarder en BD',
     infoFeed: "Flux d'informations"

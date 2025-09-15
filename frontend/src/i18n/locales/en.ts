@@ -2,7 +2,7 @@ export default {
   // Menu items
   menu: {
     import: 'Import from ...',
-    segments: 'Segments',
+    segments: 'Track',
     gpxFile: 'GPX file',
     saveInDb: 'Save in DB',
     infoFeed: 'Information feed'
