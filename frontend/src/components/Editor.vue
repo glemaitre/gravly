@@ -1771,6 +1771,8 @@ async function onSubmit() {
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
 }
 .page {
   max-width: 1000px;
@@ -1796,12 +1798,13 @@ async function onSubmit() {
   margin: 0;
   box-sizing: border-box;
   position: fixed;
-  top: var(--navbar-height, 56px);
+  top: var(--navbar-height, 64px);
   left: calc(50% - 500px - var(--sidebar-w));
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--navbar-height, 56px));
+  height: calc(100vh - var(--navbar-height, 64px));
   z-index: 100;
+  transition: left 0.3s ease;
 }
 .sidebar-scroll {
   display: flex;
@@ -2785,6 +2788,25 @@ async function onSubmit() {
   }
 }
 
+/* Responsive content to ensure sidebar visibility */
+@media (max-width: 1450px) {
+  .content {
+    margin-left: var(--sidebar-w, 230px);
+    max-width: calc(100% - var(--sidebar-w, 230px));
+  }
+
+  .sidebar {
+    left: 0;
+  }
+}
+
+/* For very large screens, ensure sidebar is positioned relative to content */
+@media (min-width: 1451px) {
+  .sidebar {
+    left: calc(50% - 500px - var(--sidebar-w, 230px));
+  }
+}
+
 /* Bootstrap-style navbar */
 :root {
   --navbar-height: 64px;
@@ -2796,7 +2818,8 @@ async function onSubmit() {
   z-index: 9999;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+  box-shadow:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1),
     0 1px 2px 0 rgba(0, 0, 0, 0.06);
   min-height: var(--navbar-height);
 }
