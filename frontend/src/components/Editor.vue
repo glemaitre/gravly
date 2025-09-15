@@ -2789,6 +2789,48 @@ async function onSubmit() {
 .difficulty-mark.active .difficulty-text {
   color: var(--brand-600);
 }
+
+/* Mobile difficulty marks - show only numbers */
+@media (max-width: 649px) {
+  .difficulty-marks {
+    gap: 0.25rem;
+  }
+
+  .difficulty-mark {
+    min-width: 28px;
+    padding: 0.25rem 0.125rem;
+    margin: 0;
+  }
+
+  .difficulty-text {
+    display: none;
+  }
+
+  .difficulty-number {
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .difficulty-mark:hover .difficulty-text {
+    display: block;
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .difficulty-mark {
+    position: relative;
+  }
+}
 .tire-group-header {
   display: flex;
   align-items: center;
