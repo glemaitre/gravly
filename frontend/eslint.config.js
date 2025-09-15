@@ -8,6 +8,9 @@ export default [
   js.configs.recommended,
   ...vue.configs['flat/essential'],
   {
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**']
+  },
+  {
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -34,7 +37,6 @@ export default [
       vue: vue
     },
     files: ['src/**/*.{js,ts,vue}', '*.{js,ts,vue}'],
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**'],
     rules: {
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
       'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
