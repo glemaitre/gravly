@@ -1,12 +1,13 @@
 <template>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="nav-left">
-        <div class="logo">
-          <img :src="logoUrl" alt="Cycling Segments" class="logo-img" />
-        </div>
+  <header class="navbar">
+    <div class="navbar-container">
+      <!-- Brand/Logo Section -->
+      <div class="navbar-brand">
+        <img :src="logoUrl" alt="Cycling Segments" class="navbar-logo" />
       </div>
-      <nav class="nav">
+
+      <!-- Navigation Section -->
+      <nav class="navbar-nav">
         <div class="language-dropdown" ref="languageDropdown">
           <button
             class="language-dropdown-trigger navbar-trigger"
@@ -1795,11 +1796,11 @@ async function onSubmit() {
   margin: 0;
   box-sizing: border-box;
   position: fixed;
-  top: var(--topbar-h, 48px);
+  top: var(--navbar-height, 56px);
   left: calc(50% - 500px - var(--sidebar-w));
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--topbar-h, 48px));
+  height: calc(100vh - var(--navbar-height, 56px));
   z-index: 100;
 }
 .sidebar-scroll {
@@ -1807,7 +1808,7 @@ async function onSubmit() {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.75rem;
-  max-height: calc(100vh - var(--topbar-h, 48px));
+  max-height: calc(100vh - var(--navbar-height, 56px));
   overflow-y: auto;
   overflow-x: hidden;
   padding: 1rem;
@@ -2723,122 +2724,121 @@ async function onSubmit() {
   color: #64748b;
 }
 
+/* Responsive breakpoints following Bootstrap conventions */
 @media (max-width: 1200px) {
-  .topbar-inner {
+  .navbar-container {
     max-width: 100%;
-    padding: 0 1rem;
+    padding: 0.75rem 1.25rem;
   }
 }
 
-@media (max-width: 960px) {
-  .nav-left {
-    left: calc(50% - 500px - 172px + 1rem);
-    gap: 1rem;
+@media (max-width: 992px) {
+  .navbar-container {
+    padding: 0.75rem 1rem;
   }
 
-  .topbar .logo {
-    width: 172px;
-  }
-
-  .nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.8rem;
+  .navbar-logo {
+    max-width: 180px;
   }
 }
 
 @media (max-width: 768px) {
-  .nav-left {
-    left: calc(50% - 500px - 138px + 1rem);
+  .navbar-container {
+    padding: 0.75rem 0.75rem;
   }
 
-  .topbar .logo {
-    width: 138px;
+  .navbar-logo {
+    max-width: 150px;
+    height: 28px;
+  }
+
+  .navbar-nav .language-dropdown-trigger.navbar-trigger {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar-container {
+    padding: 0.75rem 0.75rem;
+  }
+
+  .navbar-logo {
+    max-width: 120px;
+    height: 24px;
+  }
+
+  .navbar-nav .language-dropdown-trigger.navbar-trigger {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .language-name {
+    display: none;
   }
 }
 
 @media (max-width: 480px) {
-  .topbar-inner {
-    padding: 0 0.75rem;
-  }
-
-  .nav-left {
-    left: calc(50% - 500px - 115px + 0.75rem);
-  }
-
-  .topbar .logo {
-    width: 115px;
-  }
-
-  .nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.75rem;
-  }
-
-  .language-name {
-    display: none; /* Hide language name on very small screens */
+  .navbar-logo {
+    max-width: 100px;
+    height: 22px;
   }
 }
 
+/* Bootstrap-style navbar */
 :root {
-  --topbar-h: 48px;
+  --navbar-height: 64px;
 }
-.topbar {
+
+.navbar {
   position: sticky;
   top: 0;
   z-index: 9999;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
-  height: var(--topbar-h, 48px);
-  width: 100%;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1),
+    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  min-height: var(--navbar-height);
 }
 
-.topbar-inner {
-  max-width: none;
-  margin: 0;
-  padding: 0 1.5rem;
-  height: var(--topbar-h, 48px);
+.navbar-container {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  min-height: var(--navbar-height);
   box-sizing: border-box;
-  gap: 2rem;
-  position: relative;
 }
 
-.nav-left {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  position: absolute;
-  left: calc(50% - 500px - 230px + 1.5rem);
-}
-
-.topbar .logo {
+.navbar-brand {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  width: 230px;
+  margin-right: 1rem;
 }
 
-.topbar .logo-img {
+.navbar-logo {
   height: 32px;
   width: auto;
-  display: block;
+  max-width: 200px;
   object-fit: contain;
+  display: block;
 }
 
-.topbar .nav {
+.navbar-nav {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  flex: 1;
+  margin-left: auto;
 }
 
 .nav .language-dropdown {
   position: relative;
 }
 
-.nav .language-dropdown-trigger.navbar-trigger {
+.navbar-nav .language-dropdown-trigger.navbar-trigger {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -2855,19 +2855,19 @@ async function onSubmit() {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.nav .language-dropdown-trigger.navbar-trigger:hover {
+.navbar-nav .language-dropdown-trigger.navbar-trigger:hover {
   background: #f9fafb;
   border-color: #d1d5db;
 }
 
-.nav .language-dropdown-trigger.navbar-trigger.active {
+.navbar-nav .language-dropdown-trigger.navbar-trigger.active {
   background: var(--brand-50);
   border-color: var(--brand-300);
   color: var(--brand-600);
   box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
 }
 
-.nav .language-dropdown-menu.navbar-menu {
+.navbar-nav .language-dropdown-menu.navbar-menu {
   position: absolute;
   top: 100%;
   right: 0;
