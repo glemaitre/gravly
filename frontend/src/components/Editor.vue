@@ -55,22 +55,26 @@
     </div>
   </header>
   <div class="editor">
-    <div class="sidebar">
+    <div class="sidebar" :class="{ compact: isCompactSidebar }">
       <div class="sidebar-scroll">
         <div class="card menu-card">
           <div class="menu-section">
-            <div class="menu-section-title">{{ t('menu.import') }}</div>
+            <div v-if="!isCompactSidebar" class="menu-section-title">
+              {{ t('menu.import') }}
+            </div>
             <ul class="menu-list">
               <li
                 class="menu-item"
                 @click="triggerFileOpen"
-                :title="t('tooltip.loadGpxFile')"
+                :title="isCompactSidebar ? t('menu.gpxFile') : t('tooltip.loadGpxFile')"
                 role="button"
               >
                 <span class="icon" aria-hidden="true"
                   ><i class="fa-solid fa-file-lines"></i
                 ></span>
-                <span class="text">{{ t('menu.gpxFile') }}</span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.gpxFile')
+                }}</span>
               </li>
             </ul>
             <input
@@ -83,33 +87,45 @@
           </div>
 
           <div class="menu-section">
-            <div class="menu-section-title">{{ t('menu.segments') }}</div>
+            <div v-if="!isCompactSidebar" class="menu-section-title">
+              {{ t('menu.segments') }}
+            </div>
             <ul class="menu-list">
               <li
                 class="menu-item action"
                 :class="{ disabled: isSaveDisabled }"
                 :aria-disabled="isSaveDisabled"
-                :title="isSaveDisabled ? saveDisabledTitle : t('menu.saveInDb')"
+                :title="
+                  isCompactSidebar
+                    ? t('menu.saveInDb')
+                    : isSaveDisabled
+                      ? saveDisabledTitle
+                      : t('menu.saveInDb')
+                "
                 @click="!isSaveDisabled && onSubmit()"
               >
                 <span class="icon" aria-hidden="true"
                   ><i class="fa-solid fa-database"></i
                 ></span>
-                <span class="text">{{ t('menu.saveInDb') }}</span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.saveInDb')
+                }}</span>
               </li>
             </ul>
           </div>
 
           <!-- Info Feed Section -->
           <div class="menu-section info-feed-section">
-            <div class="menu-section-title">{{ t('menu.infoFeed') }}</div>
+            <div v-if="!isCompactSidebar" class="menu-section-title">
+              {{ t('menu.infoFeed') }}
+            </div>
 
             <!-- Upload Progress -->
             <div v-if="isUploading" class="info-feed-item upload-progress-item">
               <div class="info-feed-icon">
                 <i class="fa-solid fa-upload"></i>
               </div>
-              <div class="info-feed-content">
+              <div v-if="!isCompactSidebar" class="info-feed-content">
                 <div class="upload-progress-bar">
                   <div
                     class="upload-progress-fill"
@@ -120,6 +136,9 @@
                   {{ t('message.uploading') }} {{ Math.round(uploadProgress) }}%
                 </div>
               </div>
+              <div v-else class="info-feed-content">
+                <div class="info-feed-text">{{ Math.round(uploadProgress) }}%</div>
+              </div>
             </div>
 
             <!-- Upload Success -->
@@ -127,7 +146,7 @@
               <div class="info-feed-icon">
                 <i class="fa-solid fa-check-circle"></i>
               </div>
-              <div class="info-feed-content">
+              <div v-if="!isCompactSidebar" class="info-feed-content">
                 <div class="info-feed-text">
                   {{ t('message.uploadSuccess') }}
                 </div>
@@ -139,7 +158,7 @@
               <div class="info-feed-icon">
                 <i class="fa-solid fa-check-circle"></i>
               </div>
-              <div class="info-feed-content">
+              <div v-if="!isCompactSidebar" class="info-feed-content">
                 <div class="info-feed-text">
                   {{ t('message.segmentCreated') }}
                 </div>
@@ -151,7 +170,7 @@
               <div class="info-feed-icon">
                 <i class="fa-solid fa-exclamation-circle"></i>
               </div>
-              <div class="info-feed-content">
+              <div v-if="!isCompactSidebar" class="info-feed-content">
                 <div class="info-feed-text">
                   {{ currentErrorMessage }}
                 </div>
@@ -168,7 +187,7 @@
               <div class="info-feed-icon">
                 <i class="fa-solid fa-info-circle"></i>
               </div>
-              <div class="info-feed-content">
+              <div v-if="!isCompactSidebar" class="info-feed-content">
                 <div class="info-feed-text">
                   {{ t('message.noActivity') }}
                 </div>
@@ -856,6 +875,9 @@ const commentary = ref<Commentary>({
   images: []
 })
 const isDragOver = ref(false)
+
+// Responsive sidebar state
+const isCompactSidebar = ref(false)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -1648,11 +1670,21 @@ watch(loaded, async () => {
   await nextTick()
 })
 
+// Function to check if sidebar should be compact
+function checkSidebarMode() {
+  isCompactSidebar.value = window.innerWidth < 1100
+}
+
 onMounted(() => {
+  // Check initial sidebar mode
+  checkSidebarMode()
+
   const onResize = () => {
     if (map) {
       setTimeout(() => map!.invalidateSize(), 0)
     }
+    // Check sidebar mode on resize
+    checkSidebarMode()
   }
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
@@ -1799,7 +1831,7 @@ async function onSubmit() {
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
-  margin-left: 0;
+  margin-left: var(--sidebar-w, 230px);
   transition: margin-left 0.3s ease;
 }
 .page {
@@ -1819,6 +1851,7 @@ async function onSubmit() {
 
 .sidebar {
   --sidebar-w: 230px;
+  --sidebar-w-compact: 120px;
   width: var(--sidebar-w);
   background: transparent;
   border-right: none;
@@ -1832,7 +1865,14 @@ async function onSubmit() {
   flex-direction: column;
   height: calc(100vh - var(--navbar-height, 64px));
   z-index: 100;
-  transition: left 0.3s ease;
+  transition:
+    left 0.3s ease,
+    width 0.3s ease;
+}
+
+.sidebar.compact {
+  --sidebar-w: var(--sidebar-w-compact);
+  width: var(--sidebar-w-compact);
 }
 .sidebar-scroll {
   display: flex;
@@ -1918,6 +1958,58 @@ async function onSubmit() {
 }
 .menu-item.active:hover {
   background: var(--brand-100);
+}
+
+/* Compact sidebar styles */
+.sidebar.compact .menu-item {
+  justify-content: center;
+  padding: 0.5rem;
+  margin: 0.1rem 0.25rem;
+  min-height: 36px;
+  aspect-ratio: 1;
+}
+
+.sidebar.compact .menu-item .icon {
+  width: 20px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.sidebar.compact .menu-item .text {
+  display: none;
+}
+
+.sidebar.compact .menu-section {
+  margin-top: 0.25rem;
+}
+
+.sidebar.compact .menu-section + .menu-section {
+  margin-top: 0.1rem;
+  padding-top: 0.1rem;
+}
+
+.sidebar.compact .menu-section-title {
+  display: none;
+}
+
+.sidebar.compact .menu-list {
+  padding: 0.1rem 0;
+}
+
+.sidebar.compact .info-feed-item {
+  justify-content: center;
+  padding: 0.5rem;
+  margin: 0.1rem 0.25rem;
+  min-height: 36px;
+  aspect-ratio: 1;
+}
+
+.sidebar.compact .info-feed-content {
+  display: none;
+}
+
+.sidebar.compact .info-feed-icon {
+  font-size: 1.2rem;
 }
 
 .language-dropdown {
@@ -2863,8 +2955,8 @@ async function onSubmit() {
 /* Responsive content to ensure sidebar visibility */
 @media (max-width: 1450px) {
   .content {
-    margin-left: var(--sidebar-w, 230px);
-    max-width: calc(100% - var(--sidebar-w, 230px));
+    margin-left: 210px;
+    max-width: calc(100% - 210px);
   }
 
   .sidebar {
@@ -2872,10 +2964,27 @@ async function onSubmit() {
   }
 }
 
+/* Compact sidebar for screens under 1100px */
+@media (max-width: 1099px) {
+  .sidebar {
+    --sidebar-w: 120px;
+    width: 120px;
+  }
+
+  .content {
+    margin-left: 100px;
+    max-width: calc(100% - 100px);
+  }
+}
+
 /* For very large screens, ensure sidebar is positioned relative to content */
 @media (min-width: 1451px) {
   .sidebar {
-    left: calc(50% - 500px - var(--sidebar-w, 230px));
+    left: calc(50% - 500px - 230px);
+  }
+
+  .content {
+    margin-left: 0;
   }
 }
 
