@@ -65,10 +65,13 @@ describe('App', () => {
       }
     })
 
-    const title = wrapper.find('.nav-title')
-    expect(title.exists()).toBe(true)
-    expect(title.text()).toContain('Cycling Routes')
-    expect(title.html()).toContain('fa-person-biking')
+    // The navbar component should contain the logo
+    const navbar = wrapper.findComponent({ name: 'Navbar' })
+    expect(navbar.exists()).toBe(true)
+
+    const logo = wrapper.find('.navbar-logo')
+    expect(logo.exists()).toBe(true)
+    expect(logo.attributes('alt')).toBe('Cycling Segments')
   })
 
   it('shows language dropdown with correct options', () => {
@@ -206,8 +209,15 @@ describe('App', () => {
       }
     })
 
-    // Should default to English
-    expect((wrapper.vm as any).currentLanguage).toBe('en')
+    // The navbar component should exist and handle missing localStorage
+    const navbar = wrapper.findComponent({ name: 'Navbar' })
+    expect(navbar.exists()).toBe(true)
+
+    // The navbar component should default to English when localStorage is null
+    const languageTrigger = wrapper.find('.language-dropdown-trigger')
+    expect(languageTrigger.exists()).toBe(true)
+    expect(languageTrigger.text()).toContain('🇺🇸')
+    expect(languageTrigger.text()).toContain('English')
   })
 
   it('prevents event propagation on dropdown toggle', async () => {
@@ -258,8 +268,8 @@ describe('App', () => {
 
     expect(wrapper.find('#app').exists()).toBe(true)
     expect(wrapper.find('.navbar').exists()).toBe(true)
-    expect(wrapper.find('.nav-container').exists()).toBe(true)
-    expect(wrapper.find('.nav-right').exists()).toBe(true)
+    expect(wrapper.find('.navbar-container').exists()).toBe(true)
+    expect(wrapper.find('.navbar-nav').exists()).toBe(true)
     expect(wrapper.find('.main-content').exists()).toBe(true)
   })
 

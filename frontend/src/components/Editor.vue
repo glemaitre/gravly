@@ -1,59 +1,5 @@
 <template>
-  <header class="navbar">
-    <div class="navbar-container">
-      <!-- Brand/Logo Section -->
-      <div class="navbar-brand">
-        <img :src="logoUrl" alt="Cycling Segments" class="navbar-logo" />
-      </div>
-
-      <!-- Navigation Section -->
-      <nav class="navbar-nav">
-        <div class="language-dropdown" ref="languageDropdown">
-          <button
-            class="language-dropdown-trigger navbar-trigger"
-            @click="toggleLanguageDropdown"
-            :class="{ active: languageDropdownOpen }"
-          >
-            <span class="language-flag">{{
-              languageOptions[currentLanguage].flag
-            }}</span>
-            <span class="language-name">{{
-              languageOptions[currentLanguage].name
-            }}</span>
-            <span class="dropdown-arrow">
-              <i
-                class="fa-solid fa-chevron-down"
-                :class="{ rotated: languageDropdownOpen }"
-              ></i>
-            </span>
-          </button>
-          <div
-            class="language-dropdown-menu navbar-menu"
-            :class="{ open: languageDropdownOpen }"
-          >
-            <button
-              v-for="(option, lang) in languageOptions"
-              :key="lang"
-              class="language-option"
-              :class="{ active: currentLanguage === lang }"
-              @click="
-                (e) => {
-                  e.stopPropagation()
-                  changeLanguage(lang as MessageLanguages)
-                }
-              "
-            >
-              <span class="language-flag">{{ option.flag }}</span>
-              <span class="language-name">{{ option.name }}</span>
-              <span v-if="currentLanguage === lang" class="checkmark">
-                <i class="fa-solid fa-check"></i>
-              </span>
-            </button>
-          </div>
-        </div>
-      </nav>
-    </div>
-  </header>
+  <Navbar />
   <div class="editor">
     <div
       class="sidebar"
@@ -774,8 +720,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { setLanguage, type MessageLanguages } from '../i18n'
-import logoUrl from '../assets/images/logo.svg'
+import Navbar from './Navbar.vue'
 import L from 'leaflet'
 import {
   Chart,
@@ -836,40 +781,11 @@ type TrackPoint = {
   time?: string
 }
 
-const { t, locale } = useI18n()
-const currentLanguage = ref<MessageLanguages>('en')
-watch(
-  locale,
-  (newLocale) => {
-    currentLanguage.value = newLocale as MessageLanguages
-  },
-  { immediate: true }
-)
+const { t } = useI18n()
 
-const languageDropdownOpen = ref(false)
-const languageOptions = {
-  en: { flag: '🇺🇸', name: 'English' },
-  fr: { flag: '🇫🇷', name: 'Français' }
-}
+onMounted(() => {})
 
-const languageDropdown = ref<HTMLElement | null>(null)
-
-function closeLanguageDropdown(event: MouseEvent) {
-  if (
-    languageDropdown.value &&
-    !languageDropdown.value.contains(event.target as Node)
-  ) {
-    languageDropdownOpen.value = false
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', closeLanguageDropdown)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeLanguageDropdown)
-})
+onUnmounted(() => {})
 
 const loaded = ref(false)
 const name = ref('')
@@ -912,16 +828,6 @@ const showError = ref<boolean>(false)
 const currentErrorMessage = ref<string>('')
 
 const controlsCard = ref<HTMLElement | null>(null)
-
-function changeLanguage(lang: MessageLanguages) {
-  currentLanguage.value = lang
-  setLanguage(lang)
-  languageDropdownOpen.value = false
-}
-function toggleLanguageDropdown(event: Event) {
-  event.stopPropagation()
-  languageDropdownOpen.value = !languageDropdownOpen.value
-}
 
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
 const saveDisabledTitle = computed(() => {
@@ -1869,7 +1775,7 @@ async function onSubmit() {
 <style scoped>
 .editor {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh - 80px);
   background: #f8fafc;
   overflow-x: hidden;
   position: relative;
@@ -1884,7 +1790,7 @@ async function onSubmit() {
   transition: margin-left 0.3s ease;
 }
 .page {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -3089,72 +2995,10 @@ async function onSubmit() {
   color: #64748b;
 }
 
-/* Responsive breakpoints following Bootstrap conventions */
-@media (max-width: 1200px) {
-  .navbar-container {
-    max-width: 100%;
-    padding: 0.75rem 1.25rem;
-  }
-}
-
-@media (max-width: 992px) {
-  .navbar-container {
-    padding: 0.75rem 1rem;
-  }
-
-  .navbar-logo {
-    max-width: 180px;
-  }
-}
-
-@media (max-width: 768px) {
-  .navbar-container {
-    padding: 0.75rem 0.75rem;
-  }
-
-  .navbar-logo {
-    max-width: 150px;
-    height: 28px;
-  }
-
-  .navbar-nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .navbar-container {
-    padding: 0.75rem 0.75rem;
-  }
-
-  .navbar-logo {
-    max-width: 120px;
-    height: 24px;
-  }
-
-  .navbar-nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.8rem;
-  }
-
-  .language-name {
-    display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .navbar-logo {
-    max-width: 100px;
-    height: 22px;
-  }
-}
-
 /* Responsive content to ensure sidebar visibility */
 @media (max-width: 1450px) {
   .content {
     margin-left: 210px;
-    max-width: calc(100% - 210px);
   }
 
   .sidebar {
@@ -3171,7 +3015,6 @@ async function onSubmit() {
 
   .content {
     margin-left: 100px;
-    max-width: calc(100% - 100px);
   }
 
   .sidebar.collapsed {
@@ -3201,117 +3044,6 @@ async function onSubmit() {
   .content {
     margin-left: 0;
   }
-}
-
-/* Bootstrap-style navbar */
-:root {
-  --navbar-height: 64px;
-}
-
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 9999;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  min-height: var(--navbar-height);
-}
-
-.navbar-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.75rem 1.5rem;
-  min-height: var(--navbar-height);
-  box-sizing: border-box;
-}
-
-.navbar-brand {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-right: 1rem;
-}
-
-.navbar-logo {
-  height: 32px;
-  width: auto;
-  max-width: 200px;
-  object-fit: contain;
-  display: block;
-}
-
-.navbar-nav {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-}
-
-.nav .language-dropdown {
-  position: relative;
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger.active {
-  background: var(--brand-50);
-  border-color: var(--brand-300);
-  color: var(--brand-600);
-  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
-}
-
-.navbar-menu {
-  position: absolute;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-8px);
-  transition: all 0.2s ease;
-  margin-top: 6px;
-  min-width: 160px;
-  overflow: hidden;
-}
-
-.navbar-nav .language-dropdown-menu.navbar-menu {
-  top: 100%;
-  right: 0;
-  left: auto;
-}
-
-.navbar-nav .language-dropdown-menu.navbar-menu.open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
 }
 
 .end-slider .slider-handle {
