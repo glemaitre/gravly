@@ -1516,7 +1516,8 @@ def test_database_initialization_exception_in_lifespan(app, lifespan, main_modul
 def test_create_segment_successful_database_operations(
     client, sample_gpx_file, tmp_path, main_module
 ):
-    """Test create segment with successful database operations to cover the successful path."""
+    """Test create segment with successful database operations to cover the successful
+    path."""
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
 
