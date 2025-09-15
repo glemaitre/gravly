@@ -122,11 +122,21 @@ class TireType(str):
     KNOBS = "knobs"
 
 
+class TrackType(str):
+    SEGMENT = "segment"
+    ROUTE = "route"
+
+
 class Segment(Base):
     __tablename__ = "segments"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    track_type: Mapped[str] = mapped_column(
+        SAEnum(TrackType.SEGMENT, TrackType.ROUTE, name="track_type"),
+        nullable=False,
+        default=TrackType.SEGMENT,
+    )
     tire_dry: Mapped[str] = mapped_column(
         SAEnum(TireType.SLICK, TireType.SEMI_SLICK, TireType.KNOBS, name="tire_type"),
         nullable=False,
@@ -147,6 +157,7 @@ class Segment(Base):
 class SegmentCreateResponse(BaseModel):
     id: int
     name: str
+    track_type: str
     tire_dry: str
     tire_wet: str
     file_path: Path
@@ -251,6 +262,7 @@ async def upload_gpx(file: UploadFile = File(...)):
 @app.post("/api/segments", response_model=SegmentCreateResponse)
 async def create_segment(
     name: str = Form(...),
+    track_type: str = Form("segment"),
     tire_dry: str = Form(...),
     tire_wet: str = Form(...),
     file_id: str = Form(...),
@@ -264,9 +276,13 @@ async def create_segment(
     """Create a new segment: process uploaded GPX file with indices, upload to storage,
     and store metadata in DB.
     """
-    allowed = {"slick", "semi-slick", "knobs"}
-    if tire_dry not in allowed or tire_wet not in allowed:
+    allowed_tire_types = {"slick", "semi-slick", "knobs"}
+    if tire_dry not in allowed_tire_types or tire_wet not in allowed_tire_types:
         raise HTTPException(status_code=422, detail="Invalid tire types")
+
+    allowed_track_types = {"segment", "route"}
+    if track_type not in allowed_track_types:
+        raise HTTPException(status_code=422, detail="Invalid track type")
 
     global temp_dir, storage_manager
 
@@ -339,6 +355,7 @@ async def create_segment(
             async with SessionLocal() as session:
                 seg = Segment(
                     name=name,
+                    track_type=track_type,
                     tire_dry=tire_dry,
                     tire_wet=tire_wet,
                     file_path=processed_file_path,
@@ -349,6 +366,7 @@ async def create_segment(
                 return SegmentCreateResponse(
                     id=seg.id,
                     name=seg.name,
+                    track_type=seg.track_type,
                     tire_dry=seg.tire_dry,
                     tire_wet=seg.tire_wet,
                     file_path=seg.file_path,
@@ -361,6 +379,7 @@ async def create_segment(
     return SegmentCreateResponse(
         id=0,  # Placeholder ID when database is not available
         name=name,
+        track_type=track_type,
         tire_dry=tire_dry,
         tire_wet=tire_wet,
         file_path=processed_file_path,

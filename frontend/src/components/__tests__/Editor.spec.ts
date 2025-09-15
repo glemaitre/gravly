@@ -112,7 +112,7 @@ describe('Editor', () => {
     expect(wrapper.find('.editor').exists()).toBe(true)
     expect(wrapper.find('.sidebar').exists()).toBe(true)
     expect(wrapper.find('.content').exists()).toBe(true)
-    expect(wrapper.find('.topbar').exists()).toBe(true)
+    expect(wrapper.find('.navbar').exists()).toBe(true)
   })
 
   it('shows empty state when no file is loaded', () => {
@@ -347,6 +347,151 @@ describe('Editor', () => {
         'This is a test commentary'
       )
     }
+  })
+
+  it('renders track type tabs correctly when file is loaded', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Simulate file loaded state
+    wrapper.vm.loaded = true
+    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    wrapper.vm.startIndex = 0
+    wrapper.vm.endIndex = 0
+    await wrapper.vm.$nextTick()
+
+    const tabs = wrapper.find('.track-type-tabs')
+    expect(tabs.exists()).toBe(true)
+
+    const segmentTab = tabs.find('.tab-button:first-child')
+    const routeTab = tabs.find('.tab-button:last-child')
+
+    expect(segmentTab.exists()).toBe(true)
+    expect(routeTab.exists()).toBe(true)
+
+    expect(segmentTab.text()).toContain('Segment')
+    expect(routeTab.text()).toContain('Route')
+  })
+
+  it('switches between segment and route tabs', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Simulate file loaded state
+    wrapper.vm.loaded = true
+    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    wrapper.vm.startIndex = 0
+    wrapper.vm.endIndex = 0
+    await wrapper.vm.$nextTick()
+
+    const segmentTab = wrapper.find('.tab-button:first-child')
+    const routeTab = wrapper.find('.tab-button:last-child')
+
+    // Initially segment tab should be active
+    expect(segmentTab.classes()).toContain('active')
+    expect(routeTab.classes()).not.toContain('active')
+
+    // Click route tab
+    await routeTab.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(routeTab.classes()).toContain('active')
+    expect(segmentTab.classes()).not.toContain('active')
+
+    // Click segment tab
+    await segmentTab.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(segmentTab.classes()).toContain('active')
+    expect(routeTab.classes()).not.toContain('active')
+  })
+
+  it('updates form labels based on track type', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Simulate file loaded state
+    wrapper.vm.loaded = true
+    wrapper.vm.points = [{ latitude: 0, longitude: 0, elevation: 0 }]
+    wrapper.vm.startIndex = 0
+    wrapper.vm.endIndex = 0
+    await wrapper.vm.$nextTick()
+
+    // Test segment tab labels
+    const segmentTab = wrapper.find('.tab-button:first-child')
+    await segmentTab.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const nameLabel = wrapper.find('label[for="name"]')
+    expect(nameLabel.text()).toContain('Segment name')
+
+    const surfaceTypeLabels = wrapper.findAll('.subsection-title')
+    const surfaceTypeLabel = surfaceTypeLabels.find(el => el.text().includes('Surface type'))
+    expect(surfaceTypeLabel?.text()).toContain('Surface type')
+
+    // Test route tab labels
+    const routeTab = wrapper.find('.tab-button:last-child')
+    await routeTab.trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(nameLabel.text()).toContain('Route name')
+    const routeSurfaceTypeLabel = surfaceTypeLabels.find(el => el.text().includes('Major surface type'))
+    expect(routeSurfaceTypeLabel?.text()).toContain('Major surface type')
+  })
+
+  it('includes track_type in form submission', async () => {
+    const wrapper = mount(Editor, {
+      global: {
+        plugins: [i18n]
+      }
+    })
+
+    // Mock fetch to capture form data
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 1, name: 'Test' })
+    })
+    global.fetch = mockFetch
+
+    // Set up component state
+    wrapper.vm.loaded = true
+    wrapper.vm.name = 'Test Track'
+    wrapper.vm.trackType = 'route'
+    wrapper.vm.points = [
+      { latitude: 0, longitude: 0, elevation: 0 },
+      { latitude: 1, longitude: 1, elevation: 100 }
+    ]
+    wrapper.vm.startIndex = 0
+    wrapper.vm.endIndex = 1
+    wrapper.vm.uploadedFileId = 'test-file-id'
+    wrapper.vm.trailConditions = {
+      tire_dry: 'slick',
+      tire_wet: 'semi-slick',
+      surface_type: 'forest-trail',
+      difficulty_level: 3
+    }
+    await wrapper.vm.$nextTick()
+
+    // Check that the form is ready for submission
+    expect(wrapper.vm.isSaveDisabled).toBe(false)
+
+    // Trigger form submission
+    await wrapper.vm.onSubmit()
+
+    // Check that track_type was included in the form data
+    expect(mockFetch).toHaveBeenCalled()
+    const formData = mockFetch.mock.calls[0][1].body
+    expect(formData).toBeInstanceOf(FormData)
+    expect(formData.get('track_type')).toBe('route')
   })
 
   it('handles trail conditions updates', async () => {

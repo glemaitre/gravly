@@ -348,16 +348,32 @@
               </div>
             </div>
 
-            <div class="section-indicator">
-              <span class="icon" aria-hidden="true"
-                ><i class="fa-solid fa-circle-info"></i
-              ></span>
-              <span class="label">{{ t('form.segmentInfo') }}</span>
-            </div>
             <form class="card meta" @submit.prevent="onSubmit">
+              <!-- Track Type Tabs -->
+              <div class="track-type-tabs">
+                <button
+                  type="button"
+                  class="tab-button"
+                  :class="{ active: trackType === 'segment' }"
+                  @click="trackType = 'segment'"
+                >
+                  <i class="fa-solid fa-route"></i>
+                  {{ t('trackType.segment') }}
+                </button>
+                <button
+                  type="button"
+                  class="tab-button"
+                  :class="{ active: trackType === 'route' }"
+                  @click="trackType = 'route'"
+                >
+                  <i class="fa-solid fa-map"></i>
+                  {{ t('trackType.route') }}
+                </button>
+              </div>
+
               <div>
                 <label for="name"
-                  >{{ t('form.segmentName') }}
+                  >{{ nameLabel }}
                   <span class="req">{{ t('required') }}</span></label
                 >
                 <input id="name" v-model="name" type="text" required />
@@ -421,7 +437,7 @@
                     <span class="icon" aria-hidden="true"
                       ><i class="fa-solid fa-road"></i
                     ></span>
-                    <span class="subsection-title">{{ t('form.surfaceType') }}</span>
+                    <span class="subsection-title">{{ surfaceTypeLabel }}</span>
                   </div>
 
                   <div class="surface-options">
@@ -824,6 +840,7 @@ onUnmounted(() => {
 
 const loaded = ref(false)
 const name = ref('')
+const trackType = ref<'segment' | 'route'>('segment')
 const trailConditions = ref<TrailConditions>({
   tire_dry: 'slick',
   tire_wet: 'slick',
@@ -875,6 +892,15 @@ const saveDisabledTitle = computed(() => {
   if (!name.value) return t('tooltip.enterSegmentName')
   if (submitting.value) return t('tooltip.submitting')
   return ''
+})
+
+// Dynamic labels based on track type
+const nameLabel = computed(() => {
+  return trackType.value === 'segment' ? t('form.segmentName') : t('form.routeName')
+})
+
+const surfaceTypeLabel = computed(() => {
+  return trackType.value === 'segment' ? t('form.surfaceType') : t('form.majorSurfaceType')
 })
 
 // Difficulty slider progress
@@ -1661,6 +1687,7 @@ async function onSubmit() {
   try {
     const formData = new FormData()
     formData.append('name', name.value)
+    formData.append('track_type', trackType.value)
     formData.append('tire_dry', trailConditions.value.tire_dry)
     formData.append('tire_wet', trailConditions.value.tire_wet)
     formData.append('surface_type', trailConditions.value.surface_type)
@@ -2254,6 +2281,50 @@ async function onSubmit() {
   margin-top: 1rem;
   margin-bottom: 1rem;
   display: block;
+}
+
+/* Track Type Tabs */
+.track-type-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.tab-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: var(--brand-600);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--brand-200);
+}
+
+.tab-button i {
+  font-size: 1rem;
 }
 .meta-title {
   text-align: center;

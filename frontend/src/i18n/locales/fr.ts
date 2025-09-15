@@ -27,10 +27,11 @@ export default {
   // Form labels
   form: {
     segmentName: 'Nom du segment',
+    routeName: 'Nom de la route',
     tire: 'Pneu',
-    segmentInfo: 'Informations du segment',
     trailConditions: 'Conditions de piste',
     surfaceType: 'Type de surface',
+    majorSurfaceType: 'Type de surface principal',
     difficultyLevel: 'Niveau de difficulté',
     comments: 'Commentaires',
     commentaryText: 'Description',
@@ -47,6 +48,12 @@ export default {
     imageAlt: 'Image du segment',
     imageCaptionPlaceholder: "Légende de l'image (optionnel)",
     removeImage: "Supprimer l'image"
+  },
+
+  // Track type tabs
+  trackType: {
+    segment: 'Segment',
+    route: 'Route'
   },
 
   // Tire conditions

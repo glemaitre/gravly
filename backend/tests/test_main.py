@@ -209,6 +209,7 @@ def test_create_segment_success(client, sample_gpx_file, tmp_path):
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -226,11 +227,13 @@ def test_create_segment_success(client, sample_gpx_file, tmp_path):
 
     assert "id" in data
     assert "name" in data
+    assert "track_type" in data
     assert "tire_dry" in data
     assert "tire_wet" in data
     assert "file_path" in data
 
     assert data["name"] == "Test Segment"
+    assert data["track_type"] == "segment"
     assert data["tire_dry"] == "slick"
     assert data["tire_wet"] == "semi-slick"
     # File path should start with either s3:// or local:// depending on storage type
@@ -252,6 +255,7 @@ def test_create_segment_invalid_tire_types(client, sample_gpx_file):
         "/api/segments",
         data={
             "name": "Test Segment",
+            "track_type": "segment",
             "tire_dry": "invalid",
             "tire_wet": "semi-slick",
             "file_id": file_id,
@@ -264,12 +268,97 @@ def test_create_segment_invalid_tire_types(client, sample_gpx_file):
     assert "Invalid tire types" in response.json()["detail"]
 
 
+def test_create_segment_invalid_track_type(client, sample_gpx_file):
+    """Test segment creation with invalid track type."""
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    file_id = upload_response.json()["file_id"]
+
+    response = client.post(
+        "/api/segments",
+        data={
+            "name": "Test Segment",
+            "track_type": "invalid",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "2",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid track type" in response.json()["detail"]
+
+
+@mock_aws
+def test_create_route_success(client, sample_gpx_file, tmp_path):
+    """Test successful route creation."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Route",
+                "track_type": "route",
+                "tire_dry": "knobs",
+                "tire_wet": "knobs",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
+                "commentary_text": "Test route commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "id" in data
+    assert "name" in data
+    assert "track_type" in data
+    assert "tire_dry" in data
+    assert "tire_wet" in data
+    assert "file_path" in data
+
+    assert data["name"] == "Test Route"
+    assert data["track_type"] == "route"
+    assert data["tire_dry"] == "knobs"
+    assert data["tire_wet"] == "knobs"
+    assert data["file_path"].startswith(("s3://", "local://", "local:/"))
+    assert data["file_path"].endswith(".gpx")
+
+
 def test_create_segment_file_not_found(client):
     """Test segment creation with non-existent file ID."""
     response = client.post(
         "/api/segments",
         data={
             "name": "Test Segment",
+            "track_type": "segment",
             "tire_dry": "slick",
             "tire_wet": "semi-slick",
             "file_id": "non-existent-id",
@@ -317,6 +406,7 @@ def test_create_segment_invalid_indices(client, sample_gpx_file, tmp_path):
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -357,6 +447,7 @@ def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_p
             "/api/segments",
             data={
                 "name": "Test Segment with Media",
+                "track_type": "segment",
                 "tire_dry": "knobs",
                 "tire_wet": "knobs",
                 "file_id": file_id,
@@ -403,6 +494,7 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
             "/api/segments",
             data={
                 "name": "First Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -417,6 +509,7 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
             "/api/segments",
             data={
                 "name": "Second Segment",
+                "track_type": "route",
                 "tire_dry": "knobs",
                 "tire_wet": "knobs",
                 "file_id": file_id,
@@ -502,6 +595,7 @@ def test_create_segment_no_temp_directory(client):
         "/api/segments",
         data={
             "name": "Test Segment",
+            "track_type": "segment",
             "tire_dry": "slick",
             "tire_wet": "semi-slick",
             "file_id": "test-id",
@@ -541,6 +635,7 @@ def test_create_segment_generation_failure(
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -581,6 +676,7 @@ def test_create_segment_invalid_indices_generation(
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -799,6 +895,7 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "slick",
                 "file_id": file_id,
@@ -888,6 +985,7 @@ def test_create_segment_storage_manager_not_initialized(
             "/api/segments",
             data={
                 "name": "Test Segment",
+                "track_type": "segment",
                 "tire_dry": "slick",
                 "tire_wet": "semi-slick",
                 "file_id": file_id,
@@ -931,6 +1029,7 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
                 "/api/segments",
                 data={
                     "name": "Test Segment",
+                    "track_type": "segment",
                     "tire_dry": "slick",
                     "tire_wet": "semi-slick",
                     "file_id": file_id,
@@ -1145,6 +1244,7 @@ def test_create_segment_storage_upload_failure(
         segment_data = {
             "file_id": file_id,
             "name": "Test Segment",
+            "track_type": "segment",
             "start_index": "0",
             "end_index": "10",
             "tire_dry": "slick",
