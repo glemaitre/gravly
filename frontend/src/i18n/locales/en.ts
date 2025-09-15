@@ -5,7 +5,9 @@ export default {
     segments: 'Track',
     gpxFile: 'GPX file',
     saveInDb: 'Save in DB',
-    infoFeed: 'Information feed'
+    infoFeed: 'Information feed',
+    collapseSidebar: 'Collapse sidebar',
+    expandSidebar: 'Expand sidebar'
   },
 
   // Chart and controls

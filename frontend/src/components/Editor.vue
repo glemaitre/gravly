@@ -55,8 +55,11 @@
     </div>
   </header>
   <div class="editor">
-    <div class="sidebar" :class="{ compact: isCompactSidebar }">
-      <div class="sidebar-scroll">
+    <div
+      class="sidebar"
+      :class="{ compact: isCompactSidebar, collapsed: isSidebarCollapsed }"
+    >
+      <div v-if="!isSidebarCollapsed" class="sidebar-scroll">
         <div class="card menu-card">
           <div class="menu-section">
             <div v-if="!isCompactSidebar" class="menu-section-title">
@@ -195,6 +198,26 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Collapse/Expand Button - Only visible on compact sidebar -->
+      <div v-if="isCompactSidebar" class="sidebar-toggle">
+        <button
+          @click="toggleSidebarCollapse"
+          class="toggle-btn"
+          :class="{ collapsed: isSidebarCollapsed }"
+          :title="
+            isSidebarCollapsed ? t('menu.expandSidebar') : t('menu.collapseSidebar')
+          "
+        >
+          <i
+            :class="
+              isSidebarCollapsed
+                ? 'fa-solid fa-chevron-right'
+                : 'fa-solid fa-chevron-left'
+            "
+          ></i>
+        </button>
       </div>
     </div>
 
@@ -878,6 +901,7 @@ const isDragOver = ref(false)
 
 // Responsive sidebar state
 const isCompactSidebar = ref(false)
+const isSidebarCollapsed = ref(false)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -1675,6 +1699,11 @@ function checkSidebarMode() {
   isCompactSidebar.value = window.innerWidth < 1100
 }
 
+// Function to toggle sidebar collapse
+function toggleSidebarCollapse() {
+  isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
+
 onMounted(() => {
   // Check initial sidebar mode
   checkSidebarMode()
@@ -1874,6 +1903,11 @@ async function onSubmit() {
   --sidebar-w: var(--sidebar-w-compact);
   width: var(--sidebar-w-compact);
 }
+
+.sidebar.collapsed {
+  --sidebar-w: 50px;
+  width: 50px;
+}
 .sidebar-scroll {
   display: flex;
   flex-direction: column;
@@ -2010,6 +2044,72 @@ async function onSubmit() {
 
 .sidebar.compact .info-feed-icon {
   font-size: 1.2rem;
+}
+
+/* Sidebar Toggle Button - Only visible on compact sidebar */
+.sidebar-toggle {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+}
+
+.toggle-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: var(--brand-500);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.toggle-btn:hover {
+  background: var(--brand-600);
+  transform: scale(1.05);
+}
+
+.toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Collapsed sidebar styles */
+.sidebar.collapsed .sidebar-scroll {
+  display: none;
+}
+
+.sidebar.collapsed {
+  --sidebar-w: 40px;
+  width: 40px;
+  z-index: 1000;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1001;
+}
+
+.sidebar.collapsed .toggle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Content adjustment for collapsed sidebar */
+.sidebar.collapsed + .content {
+  margin-left: 0;
+  max-width: 100%;
 }
 
 .language-dropdown {
@@ -2974,6 +3074,23 @@ async function onSubmit() {
   .content {
     margin-left: 100px;
     max-width: calc(100% - 100px);
+  }
+
+  .sidebar.collapsed {
+    --sidebar-w: 40px;
+    width: 40px;
+  }
+
+  .sidebar.collapsed + .content {
+    margin-left: 0;
+    max-width: 100%;
+  }
+}
+
+/* Hide toggle button on larger screens */
+@media (min-width: 1100px) {
+  .sidebar-toggle {
+    display: none;
   }
 }
 

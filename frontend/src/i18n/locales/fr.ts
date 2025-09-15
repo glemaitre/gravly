@@ -5,7 +5,9 @@ export default {
     segments: 'Piste',
     gpxFile: 'Fichier GPX',
     saveInDb: 'Sauvegarder en BD',
-    infoFeed: "Flux d'informations"
+    infoFeed: "Flux d'informations",
+    collapseSidebar: 'Réduire la barre latérale',
+    expandSidebar: 'Développer la barre latérale'
   },
 
   // Chart and controls
