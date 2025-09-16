@@ -15,10 +15,10 @@ const router = createRouter({
   routes
 })
 
+// Initialize language before mounting
+initializeLanguage()
+
 const app = createApp(App)
 app.use(router)
 app.use(i18n)
 app.mount('#app')
-
-// Initialize language after mount
-initializeLanguage()

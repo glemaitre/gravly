@@ -35,6 +35,8 @@ import Navbar from './components/Navbar.vue'
   --brand-primary: var(--brand-500);
   --brand-primary-hover: #e65c00;
   --brand-accent: var(--brand-300);
+
+  --navbar-height: 80px;
 }
 
 /* Global styles to prevent horizontal overflow */
@@ -44,13 +46,15 @@ import Navbar from './components/Navbar.vue'
 
 html,
 body {
-  overflow-x: hidden;
-  max-width: 100vw;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
 }
 
 #app {
   min-height: 100vh;
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Reusable brand utilities */
@@ -72,6 +76,8 @@ body {
 }
 
 .main-content {
-  min-height: calc(100vh - 80px);
+  flex: 1;
+  padding-top: var(--navbar-height);
+  min-height: 100vh;
 }
 </style>

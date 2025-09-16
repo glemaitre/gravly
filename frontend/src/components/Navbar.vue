@@ -131,14 +131,13 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* CSS Variables for consistency */
-:root {
-  --navbar-height: 80px;
-}
 
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
   z-index: 9999;
   background: #ffffff;
   border-bottom: 1px solid #e5e7eb;
