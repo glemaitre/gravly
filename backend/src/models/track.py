@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, Enum, Float, Integer, String, Text
+from sqlalchemy import DateTime, Enum, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ..utils.gpx import GPXData
 from .base import Base
 
 
@@ -31,6 +32,15 @@ class TireType(enum.Enum):
 
 class Track(Base):
     __tablename__ = "tracks"
+    __table_args__ = (
+        Index(
+            "idx_track_bounds_intersection",
+            "bound_north",
+            "bound_south",
+            "bound_east",
+            "bound_west",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
@@ -50,9 +60,9 @@ class Track(Base):
     )
 
 
-class TrackCreateResponse(BaseModel):
+class TrackResponse(BaseModel):
     id: int
-    file_path: Path
+    file_path: str
     bound_north: float
     bound_south: float
     bound_east: float
@@ -64,3 +74,7 @@ class TrackCreateResponse(BaseModel):
     tire_dry: str
     tire_wet: str
     comments: str
+
+
+class TrackWithGPXDataResponse(TrackResponse):
+    gpx_data: GPXData | None

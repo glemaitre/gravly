@@ -13,6 +13,7 @@ from typing import Protocol
 from urllib.parse import urljoin
 
 import boto3
+import requests
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from .config import LocalStorageConfig, S3StorageConfig
@@ -45,6 +46,14 @@ class StorageManager(Protocol):
 
     def get_storage_root_prefix(self) -> str:
         """Get the storage root prefix for file paths (e.g., 's3://bucket' or 'local://')."""
+        ...
+
+    def load_gpx_segment(self, url: str) -> bytes | None:
+        """Load a GPX segment from a URL into memory."""
+        ...
+
+    def load_gpx_data(self, storage_key: str) -> bytes | None:
+        """Load GPX data from storage (handles both URLs and storage keys)."""
         ...
 
 
@@ -221,6 +230,52 @@ class S3Manager:
         """
         return f"s3://{self.bucket_name}"
 
+    def load_gpx_segment(self, url: str) -> bytes | None:
+        """Load a GPX segment from a URL into memory.
+
+        Parameters
+        ----------
+        url : str
+            URL of the GPX segment to load.
+
+        Returns
+        -------
+        bytes | None
+            GPX data as bytes if successful, None otherwise.
+        """
+        try:
+            logger.info(f"Loading GPX segment from {url}")
+
+            # Download the file
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            logger.info(f"Successfully loaded GPX segment from {url}")
+            return response.content
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to load GPX segment from {url}: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error loading GPX segment: {str(e)}")
+            return None
+
+    def load_gpx_data(self, storage_key: str) -> bytes | None:
+        """Load GPX data from S3 storage (handles both URLs and storage keys).
+
+        Parameters
+        ----------
+        storage_key : str
+            S3 key or URL of the GPX segment to load.
+
+        Returns
+        -------
+        bytes | None
+            GPX data as bytes if successful, None otherwise.
+        """
+        # For S3, we can use load_gpx_segment for both URLs and storage keys
+        return self.load_gpx_segment(storage_key)
+
 
 class LocalStorageManager:
     """Local filesystem storage manager that mimics S3 API."""
@@ -335,7 +390,7 @@ original-path: {local_file_path}
         Parameters
         ----------
         storage_key : str
-            Storage key (path) of the file.
+            Storage key (path) of the file, or full storage URL.
         expiration : int
             URL expiration time in seconds (ignored for local storage).
 
@@ -345,12 +400,20 @@ original-path: {local_file_path}
             URL for accessing the file.
         """
         try:
-            target_path = self.storage_root / storage_key
+            # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"), extract the key
+            if storage_key.startswith("local:///"):
+                # Remove "local:///" prefix to get the storage key
+                actual_key = storage_key[9:]  # Remove "local:///" (9 characters)
+            else:
+                # It's already a storage key
+                actual_key = storage_key
+
+            target_path = self.storage_root / actual_key
             if not target_path.exists():
                 logger.warning(f"File not found in local storage: {target_path}")
                 return None
 
-            url = urljoin(self.base_url + "/", storage_key)
+            url = urljoin(self.base_url + "/", actual_key)
             logger.info(f"Generated local storage URL: {url}")
             return url
 
@@ -377,14 +440,22 @@ original-path: {local_file_path}
         Parameters
         ----------
         storage_key : str
-            Storage key (path) of the file.
+            Storage key (path) of the file, or full storage URL.
 
         Returns
         -------
         Path
             Local file path.
         """
-        return self.storage_root / storage_key
+        # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"), extract the key
+        if storage_key.startswith("local:///"):
+            # Remove "local:///" prefix to get the storage key
+            actual_key = storage_key[9:]  # Remove "local:///" (9 characters)
+        else:
+            # It's already a storage key
+            actual_key = storage_key
+
+        return self.storage_root / actual_key
 
     def list_files(self, prefix: str = "") -> list[str]:
         """List files in local storage with optional prefix.
@@ -423,6 +494,68 @@ original-path: {local_file_path}
             Local storage root prefix in the format 'local://'.
         """
         return "local://"
+
+    def load_gpx_segment(self, url: str) -> bytes | None:
+        """Load a GPX segment from a URL into memory.
+
+        Parameters
+        ----------
+        url : str
+            URL of the GPX segment to load.
+
+        Returns
+        -------
+        bytes | None
+            GPX data as bytes if successful, None otherwise.
+        """
+        try:
+            logger.info(f"Loading GPX segment from {url}")
+
+            # Download the file
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            logger.info(f"Successfully loaded GPX segment from {url}")
+            return response.content
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to load GPX segment from {url}: {str(e)}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error loading GPX segment: {str(e)}")
+            return None
+
+    def load_gpx_data(self, storage_key: str) -> bytes | None:
+        """Load GPX data from local storage (handles both URLs and storage keys).
+
+        Parameters
+        ----------
+        storage_key : str
+            Storage key or URL of the GPX segment to load.
+
+        Returns
+        -------
+        bytes | None
+            GPX data as bytes if successful, None otherwise.
+        """
+        try:
+            # Get the local file path (handles URL prefix stripping internally)
+            local_file_path = self.get_file_path(storage_key)
+
+            if not local_file_path.exists():
+                logger.warning(f"Local file not found: {local_file_path}")
+                return None
+
+            # Read the file directly from filesystem
+            with open(local_file_path, "rb") as f:
+                gpx_bytes = f.read()
+
+            logger.info(f"Successfully loaded GPX data from {local_file_path}")
+            return gpx_bytes
+
+        except Exception as e:
+            logger.error(f"Failed to load GPX data from {storage_key}: {str(e)}")
+            return None
 
 
 def get_storage_manager(config: S3StorageConfig | LocalStorageConfig) -> StorageManager:

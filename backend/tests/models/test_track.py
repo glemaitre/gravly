@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 from pathlib import Path
 
+from sqlalchemy import Index
 from src.models.track import (
     SurfaceType,
     TireType,
     Track,
-    TrackCreateResponse,
+    TrackResponse,
     TrackType,
 )
 
@@ -94,41 +95,8 @@ def test_track_model_created_at_field():
 
 
 def test_track_create_response_model():
-    """Test TrackCreateResponse Pydantic model."""
-    response = TrackCreateResponse(
-        id=1,
-        file_path=Path("/path/to/track.gpx"),
-        bound_north=45.0,
-        bound_south=44.0,
-        bound_east=2.0,
-        bound_west=1.0,
-        name="Test Track",
-        track_type="segment",
-        difficulty_level=3,
-        surface_type="forest-trail",
-        tire_dry="knobs",
-        tire_wet="knobs",
-        comments="Test track for unit testing",
-    )
-
-    assert response.id == 1
-    assert response.file_path == Path("/path/to/track.gpx")
-    assert response.bound_north == 45.0
-    assert response.bound_south == 44.0
-    assert response.bound_east == 2.0
-    assert response.bound_west == 1.0
-    assert response.name == "Test Track"
-    assert response.track_type == "segment"
-    assert response.difficulty_level == 3
-    assert response.surface_type == "forest-trail"
-    assert response.tire_dry == "knobs"
-    assert response.tire_wet == "knobs"
-    assert response.comments == "Test track for unit testing"
-
-
-def test_track_create_response_with_string_path():
-    """Test TrackCreateResponse accepts string path and converts to Path."""
-    response = TrackCreateResponse(
+    """Test TrackResponse Pydantic model."""
+    response = TrackResponse(
         id=1,
         file_path="/path/to/track.gpx",
         bound_north=45.0,
@@ -144,8 +112,41 @@ def test_track_create_response_with_string_path():
         comments="Test track for unit testing",
     )
 
-    assert isinstance(response.file_path, Path)
-    assert str(response.file_path) == "/path/to/track.gpx"
+    assert response.id == 1
+    assert response.file_path == "/path/to/track.gpx"
+    assert response.bound_north == 45.0
+    assert response.bound_south == 44.0
+    assert response.bound_east == 2.0
+    assert response.bound_west == 1.0
+    assert response.name == "Test Track"
+    assert response.track_type == "segment"
+    assert response.difficulty_level == 3
+    assert response.surface_type == "forest-trail"
+    assert response.tire_dry == "knobs"
+    assert response.tire_wet == "knobs"
+    assert response.comments == "Test track for unit testing"
+
+
+def test_track_create_response_with_string_path():
+    """Test TrackResponse accepts string path and keeps it as string."""
+    response = TrackResponse(
+        id=1,
+        file_path="/path/to/track.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=2.0,
+        bound_west=1.0,
+        name="Test Track",
+        track_type="segment",
+        difficulty_level=3,
+        surface_type="forest-trail",
+        tire_dry="knobs",
+        tire_wet="knobs",
+        comments="Test track for unit testing",
+    )
+
+    assert isinstance(response.file_path, str)
+    assert response.file_path == "/path/to/track.gpx"
 
 
 def test_track_model_with_all_enum_values():
@@ -218,3 +219,233 @@ def test_track_model_long_text_fields():
 
     assert track.file_path == long_path
     assert track.comments == long_comments
+
+
+def test_track_model_table_args_defined():
+    """Test that Track model has __table_args__ defined for database indices."""
+    assert hasattr(Track, "__table_args__")
+    assert Track.__table_args__ is not None
+    assert isinstance(Track.__table_args__, tuple)
+    assert len(Track.__table_args__) > 0
+
+
+def test_track_model_bounds_intersection_index():
+    """Test that Track model has the bounds intersection index defined."""
+    table_args = Track.__table_args__
+
+    bounds_index = None
+    for arg in table_args:
+        if isinstance(arg, Index) and arg.name == "idx_track_bounds_intersection":
+            bounds_index = arg
+            break
+
+    assert bounds_index is not None, "Bounds intersection index not found"
+    assert bounds_index.name == "idx_track_bounds_intersection"
+    assert "bound_north" in bounds_index.columns
+    assert "bound_south" in bounds_index.columns
+    assert "bound_east" in bounds_index.columns
+    assert "bound_west" in bounds_index.columns
+
+
+def test_track_model_index_columns_order():
+    """Test that the bounds intersection index has columns in the correct order for
+    performance."""
+    table_args = Track.__table_args__
+
+    bounds_index = None
+    for arg in table_args:
+        if isinstance(arg, Index) and arg.name == "idx_track_bounds_intersection":
+            bounds_index = arg
+            break
+
+    assert bounds_index is not None
+
+    expected_columns = ["bound_north", "bound_south", "bound_east", "bound_west"]
+    actual_columns = [col.name for col in bounds_index.columns]
+
+    assert actual_columns == expected_columns, (
+        f"Expected columns {expected_columns}, got {actual_columns}"
+    )
+
+
+def test_track_model_index_is_composite():
+    """Test that the bounds intersection index is a composite index with multiple
+    columns."""
+    table_args = Track.__table_args__
+
+    bounds_index = None
+    for arg in table_args:
+        if isinstance(arg, Index) and arg.name == "idx_track_bounds_intersection":
+            bounds_index = arg
+            break
+
+    assert bounds_index is not None
+    assert len(bounds_index.columns) == 4, (
+        "Bounds intersection index should have 4 columns"
+    )
+    assert bounds_index.columns[0].name == "bound_north"
+    assert bounds_index.columns[1].name == "bound_south"
+    assert bounds_index.columns[2].name == "bound_east"
+    assert bounds_index.columns[3].name == "bound_west"
+
+
+def test_track_with_gpx_data_response_creation():
+    """Test that TrackWithGPXDataResponse can be created with GPXData gpx_data."""
+    from src.models.track import TrackWithGPXDataResponse
+    from src.utils.gpx import GPXBounds, GPXData, GPXPoint, GPXTotalStats
+
+    # Create a mock GPXData object
+    gpx_data = GPXData(
+        file_id="test_track",
+        track_name="Test Track",
+        points=[
+            GPXPoint(
+                latitude=45.0,
+                longitude=2.0,
+                elevation=100.0,
+                time="2023-01-01T10:00:00Z",
+            )
+        ],
+        total_stats=GPXTotalStats(
+            total_points=1,
+            total_distance=0.0,
+            total_elevation_gain=0.0,
+            total_elevation_loss=0.0,
+        ),
+        bounds=GPXBounds(
+            north=45.0,
+            south=45.0,
+            east=2.0,
+            west=2.0,
+            min_elevation=100.0,
+            max_elevation=100.0,
+        ),
+    )
+
+    response = TrackWithGPXDataResponse(
+        id=1,
+        file_path="test/path.gpx",
+        name="Test Track",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=2.0,
+        bound_west=1.0,
+        surface_type="forest-trail",
+        difficulty_level=3,
+        track_type="segment",
+        tire_dry="semi-slick",
+        tire_wet="knobs",
+        comments="Test comment",
+        gpx_data=gpx_data,
+    )
+
+    assert response.id == 1
+    assert response.name == "Test Track"
+    assert response.gpx_data == gpx_data
+    assert isinstance(response.gpx_data, GPXData)
+
+
+def test_track_with_gpx_data_response_none_gpx():
+    """Test that TrackWithGPXDataResponse can be created with None gpx_data."""
+    from src.models.track import TrackWithGPXDataResponse
+
+    response = TrackWithGPXDataResponse(
+        id=1,
+        file_path="test/path.gpx",
+        name="Test Track",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=2.0,
+        bound_west=1.0,
+        surface_type="forest-trail",
+        difficulty_level=3,
+        track_type="segment",
+        tire_dry="semi-slick",
+        tire_wet="knobs",
+        comments="Test comment",
+        gpx_data=None,
+    )
+
+    assert response.gpx_data is None
+
+
+def test_uuid_extraction_from_file_path():
+    """Test that UUID can be extracted from file paths correctly."""
+    from pathlib import Path
+
+    # Test local storage path
+    local_path = "local:///gpx-segments/c45c8b1d-4dc0-435c-9238-f75a1e2a9359.gpx"
+    file_id = Path(local_path).stem
+    assert file_id == "c45c8b1d-4dc0-435c-9238-f75a1e2a9359"
+
+    # Test S3 path
+    s3_path = "s3://my-bucket/gpx-segments/another-uuid-1234-5678-9abc.gpx"
+    file_id = Path(s3_path).stem
+    assert file_id == "another-uuid-1234-5678-9abc"
+
+    # Test simple path
+    simple_path = "/path/to/file.gpx"
+    file_id = Path(simple_path).stem
+    assert file_id == "file"
+
+
+def test_local_storage_manager_url_prefix_stripping(tmp_path):
+    """Test that LocalStorageManager correctly strips storage URL prefixes."""
+    from src.utils.storage import LocalStorageManager
+
+    from backend.src.utils.config import LocalStorageConfig
+
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root=str(tmp_path / "storage"),
+        base_url="http://test:8080/storage",
+    )
+
+    manager = LocalStorageManager(config)
+
+    # Test with storage URL
+    storage_url = "local:///gpx-segments/test-file.gpx"
+    file_path = manager.get_file_path(storage_url)
+    expected_path = tmp_path / "storage" / "gpx-segments" / "test-file.gpx"
+    assert file_path == expected_path
+
+    # Test with regular storage key
+    storage_key = "gpx-segments/test-file.gpx"
+    file_path = manager.get_file_path(storage_key)
+    expected_path = tmp_path / "storage" / "gpx-segments" / "test-file.gpx"
+    assert file_path == expected_path
+
+
+def test_local_storage_manager_load_gpx_data(tmp_path):
+    """Test that LocalStorageManager.load_gpx_data works correctly."""
+    from src.utils.storage import LocalStorageManager
+
+    from backend.src.utils.config import LocalStorageConfig
+
+    config = LocalStorageConfig(
+        storage_type="local",
+        storage_root=str(tmp_path / "storage"),
+        base_url="http://test:8080/storage",
+    )
+
+    manager = LocalStorageManager(config)
+
+    # Create a test file
+    test_file_path = tmp_path / "storage" / "gpx-segments" / "test-file.gpx"
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_content = b"<?xml version='1.0'?><gpx><trk><name>Test</name></trk></gpx>"
+    test_file_path.write_bytes(test_content)
+
+    # Test with storage URL
+    storage_url = "local:///gpx-segments/test-file.gpx"
+    result = manager.load_gpx_data(storage_url)
+    assert result == test_content
+
+    # Test with regular storage key
+    storage_key = "gpx-segments/test-file.gpx"
+    result = manager.load_gpx_data(storage_key)
+    assert result == test_content
+
+    # Test with non-existent file
+    result = manager.load_gpx_data("gpx-segments/non-existent.gpx")
+    assert result is None

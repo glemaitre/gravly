@@ -8,11 +8,19 @@ import gpxpy
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from .models.base import Base
-from .models.track import SurfaceType, TireType, Track, TrackCreateResponse, TrackType
+from .models.track import (
+    SurfaceType,
+    TireType,
+    Track,
+    TrackResponse,
+    TrackType,
+    TrackWithGPXDataResponse,
+)
 from .utils.config import load_environment_config
 from .utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
 from .utils.postgres import get_database_url
@@ -134,6 +142,35 @@ async def serve_storage_file(file_path: str):
     )
 
 
+@app.get("/api/load-gpx")
+async def load_gpx_from_url(url: str):
+    """Load GPX data from a URL and return it directly to the client."""
+    global storage_manager
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
+
+    try:
+        # Use the new load_gpx_segment method to load data into memory
+        gpx_data = storage_manager.load_gpx_segment(url)
+
+        if gpx_data is None:
+            raise HTTPException(
+                status_code=404, detail="Failed to load GPX data from URL"
+            )
+
+        # Return the GPX data directly as a response
+        return Response(
+            content=gpx_data,
+            media_type="application/gpx+xml",
+            headers={"Content-Disposition": f"attachment; filename=loaded_segment.gpx"},
+        )
+
+    except Exception as e:
+        logger.error(f"Error loading GPX from URL {url}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error loading GPX data: {str(e)}")
+
+
 @app.post("/api/upload-gpx", response_model=GPXData)
 async def upload_gpx(file: UploadFile = File(...)):
     """Upload a GPX file from the client to the server in a temporary directory.
@@ -199,7 +236,7 @@ async def upload_gpx(file: UploadFile = File(...)):
     return gpx_data
 
 
-@app.post("/api/segments", response_model=TrackCreateResponse)
+@app.post("/api/segments", response_model=TrackResponse)
 async def create_segment(
     name: str = Form(...),
     track_type: str = Form("segment"),
@@ -294,7 +331,7 @@ async def create_segment(
         try:
             async with SessionLocal() as session:
                 track = Track(
-                    file_path=processed_file_path,
+                    file_path=str(processed_file_path),
                     bound_north=bounds.north,
                     bound_south=bounds.south,
                     bound_east=bounds.east,
@@ -310,9 +347,9 @@ async def create_segment(
                 session.add(track)
                 await session.commit()
                 await session.refresh(track)
-                return TrackCreateResponse(
+                return TrackResponse(
                     id=track.id,
-                    file_path=processed_file_path,
+                    file_path=str(processed_file_path),
                     bound_north=track.bound_north,
                     bound_south=track.bound_south,
                     bound_east=track.bound_east,
@@ -330,9 +367,9 @@ async def create_segment(
             # Continue without database storage
 
     # Return response without database ID if database is not available
-    return TrackCreateResponse(
+    return TrackResponse(
         id=0,  # Placeholder ID when database is not available
-        file_path=processed_file_path,
+        file_path=str(processed_file_path),
         bound_north=bounds.north,
         bound_south=bounds.south,
         bound_east=bounds.east,
@@ -345,6 +382,109 @@ async def create_segment(
         tire_wet=tire_wet,
         comments=commentary_text,
     )
+
+
+@app.get("/api/segments/search", response_model=list[TrackWithGPXDataResponse])
+async def search_segments_in_bounds(
+    north: float, south: float, east: float, west: float
+) -> list[TrackWithGPXDataResponse]:
+    """Search for segments that intersect with the given map bounds.
+
+    This uses simple bounding box intersection - a segment is included if its bounding
+    rectangle overlaps with the search area rectangle. Returns ALL matching segments
+    without any limit.
+
+    Parameters
+    ----------
+    north : float
+        Northern boundary of the search area
+    south : float
+        Southern boundary of the search area
+    east : float
+        Eastern boundary of the search area
+    west : float
+        Western boundary of the search area
+
+    Returns
+    -------
+    list
+        List of ALL segments that intersect with the search bounds
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    async with SessionLocal() as session:
+        # Simple bounding box intersection query
+        # A segment intersects if its bounds overlap with search bounds
+        stmt = (
+            select(Track)
+            .filter(
+                and_(
+                    # Rectangle intersection conditions:
+                    Track.bound_north
+                    >= south,  # Segment's north edge is south of search south
+                    Track.bound_south
+                    <= north,  # Segment's south edge is north of search north
+                    Track.bound_east
+                    >= west,  # Segment's east edge is west of search west
+                    Track.bound_west
+                    <= east,  # Segment's west edge is east of search east
+                )
+            )
+            .order_by(Track.created_at.desc())
+        )
+
+        result = await session.execute(stmt)
+        tracks = result.scalars().all()
+
+        # Load and parse GPX data for each track
+        track_responses = []
+        for track in tracks:
+            gpx_data = None
+            if storage_manager:
+                try:
+                    # Extract UUID from file_path (e.g., "local:///gpx-segments/uuid.gpx" -> "uuid")
+                    file_id = Path(
+                        track.file_path
+                    ).stem  # Gets filename without extension
+
+                    # Load GPX data using the storage manager (handles different storage types internally)
+                    gpx_bytes = storage_manager.load_gpx_data(track.file_path)
+
+                    if gpx_bytes:
+                        # Parse the GPX data using gpxpy
+                        gpx = gpxpy.parse(gpx_bytes.decode("utf-8"))
+                        # Extract GPXData using the extracted UUID as file_id
+                        gpx_data = extract_from_gpx_file(gpx, file_id)
+                        logger.info(
+                            f"Successfully loaded and parsed GPX data for track {track.id} with file_id {file_id}"
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to load/parse GPX data for track {track.id}: {str(e)}"
+                    )
+                    # Continue without GPX data rather than failing the entire request
+
+            track_responses.append(
+                TrackWithGPXDataResponse(
+                    id=track.id,
+                    file_path=track.file_path,
+                    name=track.name,
+                    bound_north=track.bound_north,
+                    bound_south=track.bound_south,
+                    bound_east=track.bound_east,
+                    bound_west=track.bound_west,
+                    surface_type=track.surface_type.value,
+                    difficulty_level=track.difficulty_level,
+                    track_type=track.track_type.value,
+                    tire_dry=track.tire_dry.value,
+                    tire_wet=track.tire_wet.value,
+                    comments=track.comments or "",
+                    gpx_data=gpx_data,  # Will be None if loading/parsing failed
+                )
+            )
+
+        return track_responses
 
 
 if __name__ == "__main__":

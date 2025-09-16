@@ -6,6 +6,9 @@
         <div class="map-container">
           <div class="card card-map">
             <div id="landing-map" class="map"></div>
+            <div class="loading-indicator" :class="{ show: loading }">
+              🔍 Searching segments...
+            </div>
           </div>
         </div>
       </div>
@@ -14,13 +17,18 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import L from 'leaflet'
+import type { TrackWithGPXDataResponse } from '../types'
 
 // Map instance
 let map: any = null
 
-// Sample cycling route data for demonstration
+// Segments data from API
+const segments = ref<TrackWithGPXDataResponse[]>([])
+const loading = ref(false)
+
+// Sample cycling route data for demonstration (fallback)
 const sampleRoute = [
   { lat: 45.764, lng: 4.8357 }, // Lyon, France
   { lat: 45.75, lng: 4.85 },
@@ -57,35 +65,8 @@ function initializeMap() {
     maxZoom: 19
   }).addTo(map)
 
-  // Add sample cycling route
-  L.polyline(sampleRoute, {
-    color: '#ff6600',
-    weight: 4,
-    opacity: 0.8,
-    smoothFactor: 1
-  }).addTo(map)
-
-  // Add start and end markers
-  const startIcon = L.divIcon({
-    className: 'custom-div-icon',
-    html: '<div class="marker-icon start-marker">🚴</div>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
-  })
-
-  const endIcon = L.divIcon({
-    className: 'custom-div-icon',
-    html: '<div class="marker-icon end-marker">🏁</div>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
-  })
-
-  L.marker(sampleRoute[0], { icon: startIcon }).addTo(map)
-  L.marker(sampleRoute[sampleRoute.length - 1], { icon: endIcon }).addTo(map)
-
-  // Fit map to route bounds
-  const bounds = L.latLngBounds(sampleRoute)
-  map.fitBounds(bounds, { padding: [20, 20] })
+  // Set initial view to Lyon, France
+  map.setView([45.764, 4.8357], 12)
 
   // Add scale control
   L.control
@@ -95,6 +76,133 @@ function initializeMap() {
       imperial: false
     })
     .addTo(map)
+
+  // Search for segments when map view changes
+  searchSegmentsInView()
+
+  // Add event listeners for map movement
+  map.on('moveend', searchSegmentsInView)
+  map.on('zoomend', searchSegmentsInView)
+}
+
+// Search for segments within current map bounds
+async function searchSegmentsInView() {
+  if (!map) return
+
+  loading.value = true
+
+  try {
+    const bounds = map.getBounds()
+    const params = new URLSearchParams({
+      north: bounds.getNorth().toString(),
+      south: bounds.getSouth().toString(),
+      east: bounds.getEast().toString(),
+      west: bounds.getWest().toString(),
+      limit: '50'
+    })
+
+    const response = await fetch(`/api/segments/search?${params}`)
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`)
+    }
+
+    const data: TrackWithGPXDataResponse[] = await response.json()
+    segments.value = data
+
+    // Clear existing segment layers from map
+    map.eachLayer((layer: any) => {
+      if (layer instanceof L.Rectangle || layer instanceof L.Polyline) {
+        map.removeLayer(layer)
+      }
+    })
+
+    // Add segments to map
+    data.forEach((segment: TrackWithGPXDataResponse) => {
+      if (segment.gpx_data && segment.gpx_data.points.length > 0) {
+        // Display actual GPS track
+        addGPXTrackToMap(segment)
+      } else {
+        // Fallback to bounding box if no GPX data
+        addBoundingBoxToMap(segment)
+      }
+    })
+  } catch (error) {
+    console.error('Search failed:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// Get color based on surface type
+function getSurfaceColor(surfaceType: string): string {
+  const colors: Record<string, string> = {
+    'forest-trail': '#228B22',
+    'dirty-road': '#8B4513',
+    'broken-paved-road': '#696969',
+    'big-stone-road': '#A9A9A9',
+    'small-stone-road': '#D3D3D3',
+    'field-trail': '#9ACD32'
+  }
+  return colors[surfaceType] || '#FF6600'
+}
+
+// Add GPX track to map
+function addGPXTrackToMap(segment: TrackWithGPXDataResponse) {
+  if (!segment.gpx_data || !segment.gpx_data.points.length) return
+
+  // Convert GPX points to Leaflet lat/lng format
+  const trackPoints = segment.gpx_data.points.map((point) => [
+    point.latitude,
+    point.longitude
+  ])
+
+  // Create polyline for the track
+  const polyline = L.polyline(trackPoints, {
+    color: getSurfaceColor(segment.surface_type),
+    weight: 3,
+    opacity: 0.8,
+    className: 'gpx-track'
+  }).addTo(map)
+
+  // Add popup with detailed segment info
+  const popupContent = `
+    <div class="segment-popup">
+      <h3>${segment.name}</h3>
+      <p><strong>Surface:</strong> ${segment.surface_type}</p>
+      <p><strong>Difficulty:</strong> ${segment.difficulty_level}/10</p>
+      <p><strong>Type:</strong> ${segment.track_type}</p>
+      <p><strong>Distance:</strong> ${(segment.gpx_data.total_stats.total_distance / 1000).toFixed(2)} km</p>
+      <p><strong>Elevation Gain:</strong> ${segment.gpx_data.total_stats.total_elevation_gain.toFixed(0)} m</p>
+      <p><strong>Points:</strong> ${segment.gpx_data.total_stats.total_points}</p>
+    </div>
+  `
+  polyline.bindPopup(popupContent)
+}
+
+// Add bounding box to map (fallback when no GPX data)
+function addBoundingBoxToMap(segment: TrackWithGPXDataResponse) {
+  const segmentBounds = L.latLngBounds(
+    [segment.bound_south, segment.bound_west],
+    [segment.bound_north, segment.bound_east]
+  )
+
+  const rectangle = L.rectangle(segmentBounds, {
+    color: getSurfaceColor(segment.surface_type),
+    weight: 2,
+    fillOpacity: 0.1,
+    className: 'segment-rectangle'
+  }).addTo(map)
+
+  // Add popup with segment info
+  rectangle.bindPopup(`
+    <div class="segment-popup">
+      <h3>${segment.name}</h3>
+      <p><strong>Surface:</strong> ${segment.surface_type}</p>
+      <p><strong>Difficulty:</strong> ${segment.difficulty_level}/10</p>
+      <p><strong>Type:</strong> ${segment.track_type}</p>
+      <p><em>GPX data not available</em></p>
+    </div>
+  `)
 }
 
 function cleanupMap() {
@@ -278,5 +386,62 @@ onUnmounted(() => {
   font-size: 11px;
   line-height: 1.2;
   color: #333;
+}
+
+/* Segment rectangle styling */
+:global(.segment-rectangle) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* GPX track styling */
+:global(.gpx-track) {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+:global(.gpx-track:hover) {
+  opacity: 1 !important;
+  stroke-width: 4 !important;
+}
+
+:global(.segment-rectangle:hover) {
+  fill-opacity: 0.2 !important;
+  stroke-width: 3 !important;
+}
+
+/* Segment popup styling */
+:global(.segment-popup) {
+  min-width: 200px;
+}
+
+:global(.segment-popup h3) {
+  margin: 0 0 8px 0;
+  color: #2d3748;
+  font-size: 16px;
+}
+
+:global(.segment-popup p) {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+/* Loading indicator */
+.loading-indicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666;
+  z-index: 1000;
+  display: none;
+}
+
+.loading-indicator.show {
+  display: block;
 }
 </style>

@@ -5,6 +5,57 @@ export interface Bounds {
   west: number
 }
 
+export interface TrackResponse {
+  id: number
+  file_path: string
+  bound_north: number
+  bound_south: number
+  bound_east: number
+  bound_west: number
+  name: string
+  track_type: string
+  difficulty_level: number
+  surface_type: string
+  tire_dry: string
+  tire_wet: string
+  comments: string
+}
+
+export interface GPXPoint {
+  latitude: number
+  longitude: number
+  elevation: number
+  time: string
+}
+
+export interface GPXTotalStats {
+  total_points: number
+  total_distance: number
+  total_elevation_gain: number
+  total_elevation_loss: number
+}
+
+export interface GPXBounds {
+  north: number
+  south: number
+  east: number
+  west: number
+  min_elevation: number
+  max_elevation: number
+}
+
+export interface GPXData {
+  file_id: string
+  track_name: string
+  points: GPXPoint[]
+  total_stats: GPXTotalStats
+  bounds: GPXBounds
+}
+
+export interface TrackWithGPXDataResponse extends TrackResponse {
+  gpx_data: GPXData | null
+}
+
 export interface TrackPoint {
   lat: number
   lon: number

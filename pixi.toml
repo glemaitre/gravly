@@ -17,6 +17,7 @@ boto3 = "*"
 python-dotenv = "*"
 pre-commit = "*"
 postgresql = "*"
+requests = "*"
 
 [feature.dev.dependencies]
 ipykernel = "*"
