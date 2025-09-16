@@ -290,37 +290,17 @@ def test_track_model_index_is_composite():
 
 
 def test_track_with_gpx_data_response_creation():
-    """Test that TrackWithGPXDataResponse can be created with GPXData gpx_data."""
-    from src.models.track import TrackWithGPXDataResponse
-    from src.utils.gpx import GPXBounds, GPXData, GPXPoint, GPXTotalStats
+    """Test that TrackWithGPXDataResponse can be created with GPX XML data from file."""
+    from pathlib import Path
 
-    # Create a mock GPXData object
-    gpx_data = GPXData(
-        file_id="test_track",
-        track_name="Test Track",
-        points=[
-            GPXPoint(
-                latitude=45.0,
-                longitude=2.0,
-                elevation=100.0,
-                time="2023-01-01T10:00:00Z",
-            )
-        ],
-        total_stats=GPXTotalStats(
-            total_points=1,
-            total_distance=0.0,
-            total_elevation_gain=0.0,
-            total_elevation_loss=0.0,
-        ),
-        bounds=GPXBounds(
-            north=45.0,
-            south=45.0,
-            east=2.0,
-            west=2.0,
-            min_elevation=100.0,
-            max_elevation=100.0,
-        ),
-    )
+    from src.models.track import TrackWithGPXDataResponse
+
+    # Read actual GPX file content (equivalent to opening file.gpx directly)
+    test_data_dir = Path(__file__).parent.parent / "data"
+    gpx_file_path = test_data_dir / "file.gpx"
+
+    with open(gpx_file_path, "r", encoding="utf-8") as f:
+        gpx_xml_data = f.read()
 
     response = TrackWithGPXDataResponse(
         id=1,
@@ -336,17 +316,24 @@ def test_track_with_gpx_data_response_creation():
         tire_dry="semi-slick",
         tire_wet="knobs",
         comments="Test comment",
-        gpx_data=gpx_data,
+        gpx_xml_data=gpx_xml_data,
     )
 
     assert response.id == 1
     assert response.name == "Test Track"
-    assert response.gpx_data == gpx_data
-    assert isinstance(response.gpx_data, GPXData)
+    assert response.gpx_xml_data == gpx_xml_data
+    assert isinstance(response.gpx_xml_data, str)
+
+    # Verify the GPX XML content is valid
+    assert response.gpx_xml_data.startswith('<?xml version="1.0" encoding="UTF-8"?>')
+    assert "<gpx" in response.gpx_xml_data
+    assert "<trk>" in response.gpx_xml_data
+    assert "<trkpt" in response.gpx_xml_data
+    assert len(response.gpx_xml_data) > 1000  # Ensure we have substantial content
 
 
 def test_track_with_gpx_data_response_none_gpx():
-    """Test that TrackWithGPXDataResponse can be created with None gpx_data."""
+    """Test that TrackWithGPXDataResponse can be created with None gpx_xml_data."""
     from src.models.track import TrackWithGPXDataResponse
 
     response = TrackWithGPXDataResponse(
@@ -363,10 +350,10 @@ def test_track_with_gpx_data_response_none_gpx():
         tire_dry="semi-slick",
         tire_wet="knobs",
         comments="Test comment",
-        gpx_data=None,
+        gpx_xml_data=None,
     )
 
-    assert response.gpx_data is None
+    assert response.gpx_xml_data is None
 
 
 def test_uuid_extraction_from_file_path():
