@@ -3040,7 +3040,7 @@ async function onSubmit() {
   }
 
   .content {
-    margin-left: 0;
+    margin-left: 230px;
   }
 }
 
