@@ -1,12 +1,10 @@
 import enum
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlalchemy import DateTime, Enum, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ..utils.gpx import GPXData
 from .base import Base
 
 
@@ -56,7 +54,7 @@ class Track(Base):
     tire_wet: Mapped[TireType] = mapped_column(Enum(TireType))
     comments: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), default=datetime.now(UTC), nullable=False
     )
 
 
@@ -77,4 +75,4 @@ class TrackResponse(BaseModel):
 
 
 class TrackWithGPXDataResponse(TrackResponse):
-    gpx_data: GPXData | None
+    gpx_xml_data: str

@@ -371,7 +371,6 @@ def test_track_with_gpx_data_response_none_gpx():
 
 def test_uuid_extraction_from_file_path():
     """Test that UUID can be extracted from file paths correctly."""
-    from pathlib import Path
 
     # Test local storage path
     local_path = "local:///gpx-segments/c45c8b1d-4dc0-435c-9238-f75a1e2a9359.gpx"

@@ -301,7 +301,7 @@ def test_s3_manager_load_gpx_segment_success(mock_get):
         region="us-west-2",
     )
 
-    with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
+    with patch("src.utils.storage.S3Manager"):
         manager = S3Manager(config)
 
         result = manager.load_gpx_segment("https://example.com/test.gpx")
@@ -329,7 +329,7 @@ def test_s3_manager_load_gpx_segment_failure(mock_get):
         region="us-west-2",
     )
 
-    with patch("src.utils.storage.S3Manager") as mock_s3_manager_class:
+    with patch("src.utils.storage.S3Manager"):
         manager = S3Manager(config)
 
         result = manager.load_gpx_segment("https://example.com/test.gpx")

@@ -131,7 +131,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-
 .navbar {
   position: fixed;
   top: 0;

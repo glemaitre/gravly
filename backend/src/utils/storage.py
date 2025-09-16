@@ -400,7 +400,8 @@ original-path: {local_file_path}
             URL for accessing the file.
         """
         try:
-            # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"), extract the key
+            # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"),
+            # extract the key
             if storage_key.startswith("local:///"):
                 # Remove "local:///" prefix to get the storage key
                 actual_key = storage_key[9:]  # Remove "local:///" (9 characters)
@@ -447,7 +448,8 @@ original-path: {local_file_path}
         Path
             Local file path.
         """
-        # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"), extract the key
+        # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"),
+        # extract the key
         if storage_key.startswith("local:///"):
             # Remove "local:///" prefix to get the storage key
             actual_key = storage_key[9:]  # Remove "local:///" (9 characters)

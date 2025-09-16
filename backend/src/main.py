@@ -1,3 +1,4 @@
+import json
 import logging
 import uuid
 from contextlib import asynccontextmanager
@@ -8,7 +9,7 @@ import gpxpy
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -108,6 +109,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -163,7 +165,7 @@ async def load_gpx_from_url(url: str):
         return Response(
             content=gpx_data,
             media_type="application/gpx+xml",
-            headers={"Content-Disposition": f"attachment; filename=loaded_segment.gpx"},
+            headers={"Content-Disposition": "attachment; filename=loaded_segment.gpx"},
         )
 
     except Exception as e:
@@ -384,15 +386,29 @@ async def create_segment(
     )
 
 
-@app.get("/api/segments/search", response_model=list[TrackWithGPXDataResponse])
+@app.options("/api/segments/search")
+async def search_segments_options():
+    """Handle preflight requests for the search endpoint."""
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Max-Age": "86400",
+        },
+    )
+
+
+@app.get("/api/segments/search")
 async def search_segments_in_bounds(
     north: float, south: float, east: float, west: float
-) -> list[TrackWithGPXDataResponse]:
-    """Search for segments that intersect with the given map bounds.
+):
+    """Search for segments that intersect with the given map bounds using streaming.
 
     This uses simple bounding box intersection - a segment is included if its bounding
-    rectangle overlaps with the search area rectangle. Returns ALL matching segments
-    without any limit.
+    rectangle overlaps with the search area rectangle. Streams segments as they are
+    processed, allowing the frontend to start drawing immediately.
 
     Parameters
     ----------
@@ -404,87 +420,80 @@ async def search_segments_in_bounds(
         Eastern boundary of the search area
     west : float
         Western boundary of the search area
-
-    Returns
-    -------
-    list
-        List of ALL segments that intersect with the search bounds
     """
     if not SessionLocal:
         raise HTTPException(status_code=500, detail="Database not available")
 
-    async with SessionLocal() as session:
-        # Simple bounding box intersection query
-        # A segment intersects if its bounds overlap with search bounds
-        stmt = (
-            select(Track)
-            .filter(
-                and_(
-                    # Rectangle intersection conditions:
-                    Track.bound_north
-                    >= south,  # Segment's north edge is south of search south
-                    Track.bound_south
-                    <= north,  # Segment's south edge is north of search north
-                    Track.bound_east
-                    >= west,  # Segment's east edge is west of search west
-                    Track.bound_west
-                    <= east,  # Segment's west edge is east of search east
-                )
-            )
-            .order_by(Track.created_at.desc())
-        )
-
-        result = await session.execute(stmt)
-        tracks = result.scalars().all()
-
-        # Load and parse GPX data for each track
-        track_responses = []
-        for track in tracks:
-            gpx_data = None
-            if storage_manager:
-                try:
-                    # Extract UUID from file_path (e.g., "local:///gpx-segments/uuid.gpx" -> "uuid")
-                    file_id = Path(
-                        track.file_path
-                    ).stem  # Gets filename without extension
-
-                    # Load GPX data using the storage manager (handles different storage types internally)
-                    gpx_bytes = storage_manager.load_gpx_data(track.file_path)
-
-                    if gpx_bytes:
-                        # Parse the GPX data using gpxpy
-                        gpx = gpxpy.parse(gpx_bytes.decode("utf-8"))
-                        # Extract GPXData using the extracted UUID as file_id
-                        gpx_data = extract_from_gpx_file(gpx, file_id)
-                        logger.info(
-                            f"Successfully loaded and parsed GPX data for track {track.id} with file_id {file_id}"
+    async def generate():
+        try:
+            async with SessionLocal() as session:
+                stmt = (
+                    select(Track)
+                    .filter(
+                        and_(
+                            Track.bound_north >= south,
+                            Track.bound_south <= north,
+                            Track.bound_east >= west,
+                            Track.bound_west <= east,
                         )
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to load/parse GPX data for track {track.id}: {str(e)}"
                     )
-                    # Continue without GPX data rather than failing the entire request
-
-            track_responses.append(
-                TrackWithGPXDataResponse(
-                    id=track.id,
-                    file_path=track.file_path,
-                    name=track.name,
-                    bound_north=track.bound_north,
-                    bound_south=track.bound_south,
-                    bound_east=track.bound_east,
-                    bound_west=track.bound_west,
-                    surface_type=track.surface_type.value,
-                    difficulty_level=track.difficulty_level,
-                    track_type=track.track_type.value,
-                    tire_dry=track.tire_dry.value,
-                    tire_wet=track.tire_wet.value,
-                    comments=track.comments or "",
-                    gpx_data=gpx_data,  # Will be None if loading/parsing failed
+                    .order_by(Track.created_at.desc())
                 )
-            )
 
-        return track_responses
+                result = await session.execute(stmt)
+                tracks = result.scalars().all()
+
+                yield f"data: {len(tracks)}\n\n"
+
+                for track in tracks:
+                    if storage_manager:
+                        try:
+                            gpx_bytes = storage_manager.load_gpx_data(track.file_path)
+                            gpx_xml_data = gpx_bytes.decode("utf-8")
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to load GPX data for track {track.id}: "
+                                f"{str(e)}"
+                            )
+
+                    track_response = TrackWithGPXDataResponse(
+                        id=track.id,
+                        file_path=track.file_path,
+                        name=track.name,
+                        bound_north=track.bound_north,
+                        bound_south=track.bound_south,
+                        bound_east=track.bound_east,
+                        bound_west=track.bound_west,
+                        surface_type=track.surface_type.value,
+                        difficulty_level=track.difficulty_level,
+                        track_type=track.track_type.value,
+                        tire_dry=track.tire_dry.value,
+                        tire_wet=track.tire_wet.value,
+                        comments=track.comments or "",
+                        gpx_xml_data=gpx_xml_data,
+                    )
+
+                    track_json = json.dumps(track_response.model_dump())
+                    yield f"data: {track_json}\n\n"
+
+                yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            logger.error(f"Error in streaming endpoint: {str(e)}")
+            yield f"data: {{'error': '{str(e)}'}}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control",
+            "Access-Control-Allow-Methods": "GET, OPTIONS",
+            "Access-Control-Expose-Headers": "*",
+        },
+    )
 
 
 if __name__ == "__main__":

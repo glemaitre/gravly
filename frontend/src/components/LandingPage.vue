@@ -7,7 +7,10 @@
           <div class="card card-map">
             <div id="landing-map" class="map"></div>
             <div class="loading-indicator" :class="{ show: loading }">
-              🔍 Searching segments...
+              <div v-if="totalTracks > 0">
+                🔍 Loading segments... {{ loadedTracks }}/{{ totalTracks }}
+              </div>
+              <div v-else>🔍 Searching segments...</div>
             </div>
           </div>
         </div>
@@ -20,6 +23,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import L from 'leaflet'
 import type { TrackWithGPXDataResponse } from '../types'
+import { parseGPXData } from '../utils/gpxParser'
 
 // Map instance
 let map: any = null
@@ -27,27 +31,26 @@ let map: any = null
 // Segments data from API
 const segments = ref<TrackWithGPXDataResponse[]>([])
 const loading = ref(false)
+const totalTracks = ref(0)
+const loadedTracks = ref(0)
+let eventSource: EventSource | null = null
+let isSearching = false
+let searchTimeout: number | null = null
+let pendingTracks: TrackWithGPXDataResponse[] = []
+let previousMapBounds: any = null
 
-// Sample cycling route data for demonstration (fallback)
-const sampleRoute = [
-  { lat: 45.764, lng: 4.8357 }, // Lyon, France
-  { lat: 45.75, lng: 4.85 },
-  { lat: 45.76, lng: 4.86 },
-  { lat: 45.77, lng: 4.87 },
-  { lat: 45.78, lng: 4.88 },
-  { lat: 45.79, lng: 4.89 },
-  { lat: 45.8, lng: 4.9 },
-  { lat: 45.81, lng: 4.91 },
-  { lat: 45.82, lng: 4.92 },
-  { lat: 45.83, lng: 4.93 }
-]
+// Track currently drawn layers by segment ID to avoid redrawing
+const currentMapLayers = new Map<string, any>()
 
 function initializeMap() {
-  if (map) return
+  if (map) {
+    return
+  }
 
   const container = document.getElementById('landing-map')
-  if (!container) return
-
+  if (!container) {
+    return
+  }
   // Initialize map
   map = L.map(container, {
     zoomControl: true,
@@ -77,139 +80,341 @@ function initializeMap() {
     })
     .addTo(map)
 
+  // Process any pending tracks that arrived before map was ready
+  processPendingTracks()
+
   // Search for segments when map view changes
   searchSegmentsInView()
 
-  // Add event listeners for map movement
-  map.on('moveend', searchSegmentsInView)
-  map.on('zoomend', searchSegmentsInView)
+  // Add event listeners for map movement with debouncing
+  // OPTIMIZATION: Only trigger search when panning (center changes), not when zooming (center stays same)
+  // Initialize previous bounds for comparison
+  previousMapBounds = map.getBounds()
+  map.on('moveend', handleMapMoveEnd)
 }
 
-// Search for segments within current map bounds
-async function searchSegmentsInView() {
+// Process tracks that arrived before map was ready
+function processPendingTracks() {
+  if (pendingTracks.length === 0) return
+
+  for (const track of pendingTracks) {
+    processTrack(track)
+  }
+
+  // Clear the pending tracks
+  pendingTracks = []
+}
+
+// Handle map move end - check if new bounds are within previous bounds (zooming in)
+function handleMapMoveEnd() {
+  if (!map || !previousMapBounds) {
+    debouncedSearchSegments()
+    return
+  }
+
+  const currentBounds = map.getBounds()
+
+  // Check if current bounds are completely within previous bounds (zooming in)
+  const boundsWithinPrevious = previousMapBounds.contains(currentBounds)
+
+  // Only trigger search if bounds expanded beyond previous bounds (zooming out or panning to new area)
+  if (!boundsWithinPrevious) {
+    debouncedSearchSegments()
+  }
+
+  // Update previous bounds for next comparison
+  previousMapBounds = currentBounds
+}
+
+// Debounced search function to prevent too many requests
+function debouncedSearchSegments() {
+  // Clear any existing timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+  }
+
+  // Set a new timeout to search after 200ms of inactivity (optimized from 500ms)
+  searchTimeout = window.setTimeout(() => {
+    searchSegmentsInView()
+  }, 200)
+}
+
+// Search for segments within current map bounds using streaming
+function searchSegmentsInView() {
   if (!map) return
 
+  // Prevent multiple simultaneous searches
+  if (isSearching) {
+    return
+  }
+
+  // Clear any pending search timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+    searchTimeout = null
+  }
+
+  // Close any existing event source
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
+
+  isSearching = true
   loading.value = true
 
-  try {
-    const bounds = map.getBounds()
-    const params = new URLSearchParams({
-      north: bounds.getNorth().toString(),
-      south: bounds.getSouth().toString(),
-      east: bounds.getEast().toString(),
-      west: bounds.getWest().toString(),
-      limit: '50'
-    })
+  // Don't clear segments array - we'll add to it incrementally
+  // segments.value = [] // Commented out for incremental updates
+  totalTracks.value = 0
+  loadedTracks.value = 0
+  pendingTracks = [] // Clear any pending tracks from previous search
 
-    const response = await fetch(`/api/segments/search?${params}`)
-    if (!response.ok) {
-      throw new Error(`Search failed: ${response.status}`)
-    }
+  const bounds = map.getBounds()
 
-    const data: TrackWithGPXDataResponse[] = await response.json()
-    segments.value = data
+  const params = new URLSearchParams({
+    north: bounds.getNorth().toString(),
+    south: bounds.getSouth().toString(),
+    east: bounds.getEast().toString(),
+    west: bounds.getWest().toString()
+  })
 
-    // Clear existing segment layers from map
+  // Only clear layers if this is the first search (no layers drawn yet)
+  if (currentMapLayers.size === 0) {
     map.eachLayer((layer: any) => {
-      if (layer instanceof L.Rectangle || layer instanceof L.Polyline) {
+      if (
+        layer instanceof L.Rectangle ||
+        layer instanceof L.Polyline ||
+        layer instanceof L.CircleMarker
+      ) {
         map.removeLayer(layer)
       }
     })
+  }
 
-    // Add segments to map
-    data.forEach((segment: TrackWithGPXDataResponse) => {
-      if (segment.gpx_data && segment.gpx_data.points.length > 0) {
-        // Display actual GPS track
-        addGPXTrackToMap(segment)
-      } else {
-        // Fallback to bounding box if no GPX data
-        addBoundingBoxToMap(segment)
+  // Create EventSource for streaming
+  const url = `http://localhost:8000/api/segments/search?${params}`
+
+  // Small delay to ensure backend is ready (removed backend connectivity test for performance)
+  setTimeout(() => {
+    eventSource = new EventSource(url)
+
+    eventSource.onopen = () => {
+      // Connection established
+    }
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = event.data
+
+        // Check if this is the total count message
+        if (!isNaN(Number(data))) {
+          totalTracks.value = Number(data)
+          return
+        }
+
+        // Check if this is the completion message
+        if (data === '[DONE]') {
+          // Update bounds after search completes for next optimization check
+          if (map) {
+            previousMapBounds = map.getBounds()
+          }
+
+          loading.value = false
+          isSearching = false
+          eventSource?.close()
+          eventSource = null
+          return
+        }
+
+        // Parse track data
+        try {
+          const track: TrackWithGPXDataResponse = JSON.parse(data)
+
+          segments.value.push(track)
+          loadedTracks.value++
+
+          // Process the track (parse GPX and add to map)
+          processTrack(track)
+        } catch {
+          // Error parsing track data
+        }
+      } catch {
+        // Error parsing streamed data
       }
-    })
-  } catch (error) {
-    console.error('Search failed:', error)
-  } finally {
-    loading.value = false
+    }
+
+    eventSource.onerror = () => {
+      loading.value = false
+      isSearching = false
+      if (eventSource) {
+        eventSource.close()
+        eventSource = null
+      }
+    }
+  }, 100)
+}
+
+// Process a track (parse GPX data and add to map)
+function processTrack(track: TrackWithGPXDataResponse) {
+  // Check if track is already drawn to avoid duplicates
+  const segmentId = track.id.toString()
+  if (currentMapLayers.has(segmentId)) {
+    return
+  }
+
+  if (!map || typeof map.addLayer !== 'function' || typeof map.setView !== 'function') {
+    pendingTracks.push(track)
+    return
+  }
+
+  // Parse GPX data if available
+  let gpxData = track.gpx_data
+  if (!gpxData && track.gpx_xml_data) {
+    const fileId =
+      track.file_path.split('/').pop()?.replace('.gpx', '') || track.id.toString()
+    gpxData = parseGPXData(track.gpx_xml_data, fileId)
+  }
+
+  // Add track to map
+  if (gpxData && gpxData.points && gpxData.points.length > 0) {
+    addGPXTrackToMap(track, gpxData, map)
+  } else {
+    addBoundingBoxToMap(track, map)
   }
 }
 
-// Get color based on surface type
-function getSurfaceColor(surfaceType: string): string {
-  const colors: Record<string, string> = {
-    'forest-trail': '#228B22',
-    'dirty-road': '#8B4513',
-    'broken-paved-road': '#696969',
-    'big-stone-road': '#A9A9A9',
-    'small-stone-road': '#D3D3D3',
-    'field-trail': '#9ACD32'
-  }
-  return colors[surfaceType] || '#FF6600'
-}
 
-// Add GPX track to map
-function addGPXTrackToMap(segment: TrackWithGPXDataResponse) {
-  if (!segment.gpx_data || !segment.gpx_data.points.length) return
+// Add GPX track to map - simplified version
+function addGPXTrackToMap(
+  segment: TrackWithGPXDataResponse,
+  gpxData: any,
+  mapInstance: any
+) {
+  if (!mapInstance) {
+    return
+  }
+
+  // Validate that map is a proper Leaflet map object
+  if (
+    typeof mapInstance.addLayer !== 'function' ||
+    typeof mapInstance.setView !== 'function'
+  ) {
+    return
+  }
+
+  if (!gpxData || !gpxData.points.length) {
+    return
+  }
 
   // Convert GPX points to Leaflet lat/lng format
-  const trackPoints = segment.gpx_data.points.map((point) => [
+  const trackPoints = gpxData.points.map((point: any) => [
     point.latitude,
     point.longitude
   ])
 
-  // Create polyline for the track
+  // Create polyline for the track - simplified orange color
   const polyline = L.polyline(trackPoints, {
-    color: getSurfaceColor(segment.surface_type),
+    color: '#FF6600', // Orange color
     weight: 3,
-    opacity: 0.8,
-    className: 'gpx-track'
-  }).addTo(map)
+    opacity: 0.8
+  }).addTo(mapInstance)
 
-  // Add popup with detailed segment info
-  const popupContent = `
-    <div class="segment-popup">
-      <h3>${segment.name}</h3>
-      <p><strong>Surface:</strong> ${segment.surface_type}</p>
-      <p><strong>Difficulty:</strong> ${segment.difficulty_level}/10</p>
-      <p><strong>Type:</strong> ${segment.track_type}</p>
-      <p><strong>Distance:</strong> ${(segment.gpx_data.total_stats.total_distance / 1000).toFixed(2)} km</p>
-      <p><strong>Elevation Gain:</strong> ${segment.gpx_data.total_stats.total_elevation_gain.toFixed(0)} m</p>
-      <p><strong>Points:</strong> ${segment.gpx_data.total_stats.total_points}</p>
-    </div>
-  `
-  polyline.bindPopup(popupContent)
+  // Add start and end markers
+  let startMarker: any = null
+  let endMarker: any = null
+
+  if (trackPoints.length > 0) {
+    // Start marker (green)
+    startMarker = L.circleMarker(trackPoints[0], {
+      radius: 8,
+      fillColor: '#10b981',
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(mapInstance)
+
+    // Add start marker popup
+    startMarker.bindPopup(
+      `<div class="marker-popup"><strong>Start:</strong> ${segment.name}</div>`
+    )
+
+    // End marker (red)
+    endMarker = L.circleMarker(trackPoints[trackPoints.length - 1], {
+      radius: 8,
+      fillColor: '#ef4444',
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(mapInstance)
+
+    // Add end marker popup
+    endMarker.bindPopup(
+      `<div class="marker-popup"><strong>End:</strong> ${segment.name}</div>`
+    )
+  }
+
+  // Track the drawn layers to avoid duplicates
+  const segmentId = segment.id.toString()
+  currentMapLayers.set(segmentId, {
+    polyline: polyline,
+    startMarker: trackPoints.length > 0 ? startMarker : null,
+    endMarker: trackPoints.length > 0 ? endMarker : null
+  })
 }
 
-// Add bounding box to map (fallback when no GPX data)
-function addBoundingBoxToMap(segment: TrackWithGPXDataResponse) {
+// Add bounding box to map (fallback when no GPX data) - simplified
+function addBoundingBoxToMap(segment: TrackWithGPXDataResponse, mapInstance: any) {
+  if (!mapInstance) {
+    return
+  }
+
+  // Validate that map is a proper Leaflet map object
+  if (
+    typeof mapInstance.addLayer !== 'function' ||
+    typeof mapInstance.setView !== 'function'
+  ) {
+    return
+  }
+
   const segmentBounds = L.latLngBounds(
     [segment.bound_south, segment.bound_west],
     [segment.bound_north, segment.bound_east]
   )
 
   const rectangle = L.rectangle(segmentBounds, {
-    color: getSurfaceColor(segment.surface_type),
+    color: '#FF6600', // Orange color
     weight: 2,
-    fillOpacity: 0.1,
-    className: 'segment-rectangle'
-  }).addTo(map)
+    fillOpacity: 0.1
+  }).addTo(mapInstance)
 
-  // Add popup with segment info
-  rectangle.bindPopup(`
-    <div class="segment-popup">
-      <h3>${segment.name}</h3>
-      <p><strong>Surface:</strong> ${segment.surface_type}</p>
-      <p><strong>Difficulty:</strong> ${segment.difficulty_level}/10</p>
-      <p><strong>Type:</strong> ${segment.track_type}</p>
-      <p><em>GPX data not available</em></p>
-    </div>
-  `)
+  // Track the drawn layers to avoid duplicates
+  const segmentId = segment.id.toString()
+  currentMapLayers.set(segmentId, {
+    rectangle: rectangle
+  })
 }
 
 function cleanupMap() {
+  // Clear any pending search timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+    searchTimeout = null
+  }
+
+  // Close event source if active
+  if (eventSource) {
+    eventSource.close()
+    eventSource = null
+  }
+
   if (map) {
     map.remove()
     map = null
   }
+
+  isSearching = false
 }
 
 onMounted(() => {
@@ -425,6 +630,18 @@ onUnmounted(() => {
   margin: 4px 0;
   font-size: 14px;
   color: #4a5568;
+}
+
+/* Marker popup styling */
+:global(.marker-popup) {
+  font-size: 14px;
+  color: #2d3748;
+  text-align: center;
+  padding: 4px;
+}
+
+:global(.marker-popup strong) {
+  color: #1f2937;
 }
 
 /* Loading indicator */

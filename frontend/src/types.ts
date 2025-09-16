@@ -54,6 +54,7 @@ export interface GPXData {
 
 export interface TrackWithGPXDataResponse extends TrackResponse {
   gpx_data: GPXData | null
+  gpx_xml_data: string | null // Raw GPX XML data for frontend parsing
 }
 
 export interface TrackPoint {
