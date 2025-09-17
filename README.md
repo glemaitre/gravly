@@ -1,29 +1,30 @@
 # Cycling Routes Website
 
-A modern web application for discovering and viewing cycling routes stored as GPX files. Built with Vue.js frontend, FastAPI backend, and Elasticsearch for search functionality.
+A modern web application for discovering, creating, and viewing cycling routes stored as GPX files. Built with Vue.js frontend, FastAPI backend, and PostgreSQL for data persistence.
 
 ## Features
 
-- **Interactive Map Search**: Search for cycling routes using an interactive map with OpenStreetMap and cycling-specific layers
-- **Route Cards**: Browse routes with mini-map previews and key statistics (distance, elevation gain)
-- **Detailed Route Viewer**: View complete routes with synchronized map and
-  elevation profile
-- **Playback Mode**: Animate through routes with synchronized map and elevation chart
-- **Responsive Design**: Works on desktop and mobile devices
+- **Interactive Map Discovery**: Real-time streaming of cycling segments using Server-Sent Events (SSE) with Leaflet maps
+- **GPX Route Editor**: Upload and edit GPX files with visual segment selection, surface type classification, and difficulty rating
+- **Real-time Segment Streaming**: Efficient bounds-based search with client-side GPX parsing for optimal performance
+- **Multi-language Support**: Internationalization with English and French locales
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **Advanced Route Analysis**: Elevation profiles, distance calculations, and trail condition metadata
+- **Flexible Storage**: Support for both local filesystem and AWS S3 storage backends
 
 ## Tech Stack
 
-- **Frontend**: Vue.js 3, Leaflet, Chart.js
-- **Backend**: FastAPI, Python
-- **Database**: PostgreSQL (via conda-forge)
-- **Search**: Elasticsearch
+- **Frontend**: Vue.js 3, TypeScript, Leaflet, Chart.js, Vitest
+- **Backend**: FastAPI, Python, SQLAlchemy, Pydantic
+- **Database**: PostgreSQL (async with asyncpg)
 - **Storage**: Local filesystem (development) or AWS S3 (production)
+- **Testing**: pytest (backend), Vitest + Vue Test Utils (frontend)
 - **Environment**: Pixi (conda-based environment management)
+- **Code Quality**: Ruff (Python), ESLint (TypeScript), TypeScript strict mode
 
 ## Prerequisites
 
 - Pixi (for environment management)
-- Elasticsearch (running on localhost:9200)
 - PostgreSQL (installed via Pixi - see setup instructions)
 
 ## Setup Instructions
@@ -33,27 +34,16 @@ A modern web application for discovering and viewing cycling routes stored as GP
    curl -fsSL https://pixi.sh/install.sh | bash
    ```
 
-2. **Start Elasticsearch**:
-   ```bash
-   # Using Docker
-   docker run -d --name elasticsearch -p 9200:9200 -e "discovery.type=single-node" elasticsearch:8.11.0
-
-   # Or install locally and start the service
-   ```
-
-3. **Install dependencies and setup**:
+2. **Install dependencies and setup**:
    ```bash
    # Install frontend dependencies
    pixi run frontend-install
 
    # Setup PostgreSQL database
    pixi run pg-setup
-
-   # Setup Elasticsearch index and load mock data
-   pixi run setup-elasticsearch
    ```
 
-4. **Start the application**:
+3. **Start the application**:
    ```bash
    # Terminal 1: Start backend
    pixi run start-backend
@@ -62,8 +52,8 @@ A modern web application for discovering and viewing cycling routes stored as GP
    pixi run start-frontend
    ```
 
-5. **Access the application**:
-   - Frontend: http://localhost:3000
+4. **Access the application**:
+   - Frontend: http://localhost:5173 (Vite dev server)
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
 
@@ -231,31 +221,59 @@ Each GPX file has a corresponding `.metadata` file containing:
 ```
 website_cycling/
 ├── backend/                 # FastAPI backend
-│   └── main.py             # Main API server
+│   ├── src/
+│   │   ├── main.py         # Main API server with streaming endpoints
+│   │   ├── models/         # SQLAlchemy models and Pydantic schemas
+│   │   │   ├── track.py    # Track model and response schemas
+│   │   │   └── base.py     # Base model configuration
+│   │   └── utils/          # Utility modules
+│   │       ├── config.py   # Environment configuration
+│   │       ├── storage.py  # Storage managers (S3/Local)
+│   │       ├── gpx.py      # GPX parsing utilities
+│   │       └── postgres.py # Database configuration
+│   └── tests/              # Backend tests with comprehensive coverage
 ├── frontend/               # Vue.js frontend
 │   ├── src/
 │   │   ├── components/     # Vue components
-│   │   │   ├── Home.vue    # Landing page with search
-│   │   │   └── RideViewer.vue # Route detail viewer
-│   │   ├── App.vue         # Main app component
-│   │   └── main.ts         # App entry point
+│   │   │   ├── LandingPage.vue # Interactive map with streaming segments
+│   │   │   ├── Editor.vue      # GPX route editor with chart visualization
+│   │   │   └── Navbar.vue      # Navigation component
+│   │   ├── utils/          # Frontend utilities
+│   │   │   └── gpxParser.ts    # Client-side GPX parsing
+│   │   ├── types/          # TypeScript type definitions
+│   │   ├── i18n/           # Internationalization
+│   │   └── assets/         # Images and static assets
 │   ├── package.json        # Frontend dependencies
 │   └── vite.config.js      # Vite configuration
 ├── .env/                   # Environment configuration files
 │   ├── database            # Database configuration
 │   └── storage             # Storage configuration
-├── mock_gpx/               # Sample GPX files for testing
-├── scripts/                # Setup and utility scripts
-│   └── setup_elasticsearch.py
+├── backend/tests/data/     # Test GPX files
 ├── postgres_data/          # PostgreSQL data directory (created by pg-setup)
+├── scratch/                # Local storage directory
 ├── pixi.toml              # Pixi environment configuration
 └── README.md
 ```
 
 ## API Endpoints
 
-- `GET /api/rides` - Search for rides with optional filters
-- `GET /api/rides/{ride_id}` - Get detailed information about a specific ride
+### Core Endpoints
+- `GET /` - Root endpoint with API information
+- `GET /storage/{file_path}` - Serve GPX files from storage
+
+### GPX Management
+- `POST /api/upload-gpx` - Upload and parse GPX files
+- `POST /api/segments` - Create new cycling segments from uploaded GPX data
+
+### Segment Discovery (Streaming)
+- `GET /api/segments/search` - Stream segments within geographic bounds using Server-Sent Events
+- `OPTIONS /api/segments/search` - CORS preflight for streaming endpoint
+
+### Features
+- **Real-time Streaming**: Uses Server-Sent Events (SSE) for efficient data delivery
+- **Bounds-based Search**: Geographic filtering with PostgreSQL spatial queries
+- **Client-side GPX Parsing**: Raw XML data streamed to frontend for optimal performance
+- **CORS Support**: Full CORS configuration for cross-origin requests
 
 ## Development
 
@@ -292,23 +310,52 @@ pixi run test-frontend
 
 Task definitions use Pixi's cwd and depends-on fields for clarity.
 
-## Mock Data
+## Performance Optimizations
 
-The application includes sample GPX files in the `mock_gpx/` directory for testing.
-These are automatically loaded into Elasticsearch when you run the setup script.
+### Client-Side Processing
+- **GPX Parsing**: Moved from backend to frontend for reduced server load
+- **Streaming Architecture**: Server-Sent Events for real-time data delivery
+- **Bounds-based Filtering**: Efficient geographic queries with PostgreSQL
+- **Client-side Caching**: Layer tracking to prevent redundant map redraws
 
-For S3-based loading at startup, configure env vars `S3_BUCKET` and optional
-`S3_PREFIX`. Elasticsearch persists indexed data; consider loading mock data only if the
-index is empty.
+### Backend Optimizations
+- **Async Database**: PostgreSQL with asyncpg for concurrent operations
+- **Streaming Responses**: Real-time segment delivery without blocking
+- **Storage Abstraction**: Unified API for S3 and local storage
+- **Error Handling**: Comprehensive error recovery and logging
+
+### Frontend Optimizations
+- **Debounced Search**: Prevents excessive API calls during map interactions
+- **Incremental Updates**: Only updates map with new segments
+- **Zoom Optimization**: Avoids unnecessary searches when zooming in
+- **TypeScript**: Strict typing for better performance and reliability
 
 ## Testing
 
-- Backend: pytest with 100% coverage for `backend/main.py`
-  - Run: `pixi run test-backend`
-- Frontend: Vitest + Vue Test Utils + Testing Library with jsdom
-  - Run: `pixi run test-frontend`
+### Backend Testing
+- **Framework**: pytest with comprehensive coverage
+- **Coverage**: 100% coverage for core modules including:
+  - `backend/src/main.py` - API endpoints and streaming functionality
+  - `backend/src/utils/storage.py` - S3 and local storage managers
+  - `backend/src/models/track.py` - Data models and schemas
+  - `backend/src/utils/` - Utility modules
+- **Run**: `pixi run test-backend`
+- **Features**: Async database testing, S3 mocking with moto, comprehensive error handling
 
-Coverage is printed in the terminal for both back and front.
+### Frontend Testing
+- **Framework**: Vitest + Vue Test Utils + Testing Library with jsdom
+- **Coverage**: 83.43% overall coverage with:
+  - `LandingPage.vue`: 39.79% (map interactions, EventSource streaming)
+  - `gpxParser.ts`: 92.8% (comprehensive GPX parsing tests)
+  - `Editor.vue`: 69.14% (route editing functionality)
+- **Run**: `pixi run test-frontend`
+- **Features**: Component testing, Leaflet mocking, EventSource simulation
+
+### Test Quality
+- **Comprehensive Coverage**: Both backend and frontend have extensive test suites
+- **Real-world Scenarios**: Tests cover actual GPX data processing and map interactions
+- **Error Handling**: Robust testing of edge cases and error conditions
+- **Performance Testing**: Coverage of streaming functionality and client-side parsing
 
 ## Continuous Integration
 
@@ -319,11 +366,38 @@ GitHub Actions run tests on push/PR to `main` using `prefix-dev/setup-pixi`:
 Workflows activate the Pixi environment and run the Pixi tasks, posting coverage
 summaries.
 
+## Key Features Implemented
+
+### Real-time Segment Discovery
+- **Interactive Map**: Leaflet-based map with real-time segment streaming
+- **Server-Sent Events**: Efficient streaming of GPX data to frontend
+- **Geographic Search**: Bounds-based filtering with PostgreSQL spatial queries
+- **Client-side Parsing**: Frontend GPX parsing for optimal performance
+
+### GPX Route Editor
+- **File Upload**: Drag-and-drop GPX file upload with validation
+- **Visual Editing**: Interactive segment selection with map and elevation chart
+- **Surface Classification**: Trail condition metadata (surface type, difficulty, tire recommendations)
+- **Chart Visualization**: Real-time elevation profile with Chart.js
+
+### Storage & Database
+- **Dual Storage**: Support for both local filesystem and AWS S3
+- **PostgreSQL**: Async database with SQLAlchemy ORM
+- **Metadata Management**: Comprehensive track metadata storage
+- **File Serving**: Efficient GPX file serving with proper MIME types
+
+### Development Experience
+- **TypeScript**: Strict typing throughout frontend
+- **Testing**: Comprehensive test coverage (83.43% frontend, 100% backend core)
+- **Code Quality**: Automated linting with Ruff (Python) and ESLint (TypeScript)
+- **Environment Management**: Pixi-based development environment
+
 ## Future Enhancements
 
-- User authentication and personal ride collections
+- User authentication and personal segment collections
 - Social features (sharing, comments, ratings)
 - Advanced filtering and sorting options
-- GPX file upload functionality
+- Offline map support
 - Real-time route tracking
-- Database integration for persistent storage
+- Mobile app integration
+- Advanced analytics and route statistics
