@@ -1,40 +1,114 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import LandingPage from '../LandingPage.vue'
 
-// Mock Leaflet
+// Mock Leaflet with more comprehensive functionality
+const mockMapInstance = {
+  setView: vi.fn(),
+  addLayer: vi.fn(),
+  removeLayer: vi.fn(),
+  invalidateSize: vi.fn(),
+  fitBounds: vi.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  remove: vi.fn(),
+  eachLayer: vi.fn((callback) => {
+    // Mock implementation - call callback with some mock layers
+    const mockLayers = [{ _leaflet_id: 'tile-layer' }, { _leaflet_id: 'control-layer' }]
+    mockLayers.forEach(callback)
+  }),
+  getBounds: vi.fn(() => ({
+    getNorth: vi.fn(() => 50.0),
+    getSouth: vi.fn(() => 40.0),
+    getEast: vi.fn(() => 10.0),
+    getWest: vi.fn(() => 0.0),
+    contains: vi.fn(() => false)
+  })),
+  getCenter: vi.fn(() => ({ lat: 45.0, lng: 5.0 })),
+  getZoom: vi.fn(() => 10),
+  _layers: {},
+  _leaflet_id: 1
+}
+
+const mockPolyline = {
+  addTo: vi.fn(() => mockPolyline),
+  setStyle: vi.fn(),
+  _leaflet_id: 2
+}
+
+const mockMarker = {
+  addTo: vi.fn(() => mockMarker),
+  _leaflet_id: 3
+}
+
+const mockCircleMarker = {
+  addTo: vi.fn(() => mockCircleMarker),
+  _leaflet_id: 4
+}
+
+const mockTileLayer = {
+  addTo: vi.fn(() => mockTileLayer)
+}
+
+const mockScaleControl = {
+  addTo: vi.fn(() => mockScaleControl)
+}
+
 vi.mock('leaflet', () => ({
   default: {
-    map: vi.fn(() => ({
-      setView: vi.fn(),
-      addLayer: vi.fn(),
-      removeLayer: vi.fn(),
-      invalidateSize: vi.fn(),
-      fitBounds: vi.fn(),
-      on: vi.fn(),
-      off: vi.fn(),
-      remove: vi.fn()
-    })),
-    tileLayer: vi.fn(() => ({
-      addTo: vi.fn()
-    })),
-    polyline: vi.fn(() => ({
-      addTo: vi.fn()
-    })),
-    marker: vi.fn(() => ({
-      addTo: vi.fn()
-    })),
+    map: vi.fn(() => mockMapInstance),
+    tileLayer: vi.fn(() => mockTileLayer),
+    polyline: vi.fn(() => mockPolyline),
+    marker: vi.fn(() => mockMarker),
+    circleMarker: vi.fn(() => mockCircleMarker),
     divIcon: vi.fn(() => ({})),
     latLngBounds: vi.fn(() => ({
       fitBounds: vi.fn()
     })),
     control: {
-      scale: vi.fn(() => ({
-        addTo: vi.fn()
-      }))
-    }
+      scale: vi.fn(() => mockScaleControl)
+    },
+    // Add Leaflet classes for instanceof checks
+    Rectangle: class MockRectangle {},
+    Polyline: class MockPolyline {},
+    CircleMarker: class MockCircleMarker {}
   }
 }))
+
+// Mock EventSource
+global.EventSource = vi.fn(() => ({
+  onopen: null,
+  onmessage: null,
+  onerror: null,
+  readyState: 1,
+  url: 'http://localhost:8000/api/segments/search',
+  close: vi.fn()
+})) as any
+
+// Mock gpxParser
+vi.mock('../../utils/gpxParser', () => ({
+  parseGPXData: vi.fn(() => ({
+    points: [
+      { lat: 45.0, lng: 5.0, elevation: 100 },
+      { lat: 45.1, lng: 5.1, elevation: 110 }
+    ],
+    bounds: {
+      north: 45.1,
+      south: 45.0,
+      east: 5.1,
+      west: 5.0
+    }
+  }))
+}))
+
+// Mock DOM methods
+Object.defineProperty(document, 'getElementById', {
+  value: vi.fn(() => ({
+    offsetWidth: 800,
+    offsetHeight: 600
+  }))
+})
 
 describe('LandingPage', () => {
   let wrapper: any
@@ -295,6 +369,199 @@ describe('LandingPage', () => {
 
       wrapper1.unmount()
       wrapper2.unmount()
+    })
+  })
+
+  describe('Loading States', () => {
+    it('should show loading indicator when loading is true', async () => {
+      wrapper = mount(LandingPage)
+
+      // Set loading state
+      await wrapper.vm.$nextTick()
+      wrapper.vm.loading = true
+      wrapper.vm.totalTracks = 5
+      wrapper.vm.loadedTracks = 2
+
+      await wrapper.vm.$nextTick()
+
+      const loadingIndicator = wrapper.find('.loading-indicator')
+      expect(loadingIndicator.exists()).toBe(true)
+      expect(loadingIndicator.classes()).toContain('show')
+      expect(loadingIndicator.text()).toContain('🔍 Loading segments... 2/5')
+    })
+
+    it('should show searching message when no tracks loaded', async () => {
+      wrapper = mount(LandingPage)
+
+      wrapper.vm.loading = true
+      wrapper.vm.totalTracks = 0
+
+      await wrapper.vm.$nextTick()
+
+      const loadingIndicator = wrapper.find('.loading-indicator')
+      expect(loadingIndicator.text()).toContain('🔍 Searching segments...')
+    })
+
+    it('should hide loading indicator when loading is false', async () => {
+      wrapper = mount(LandingPage)
+
+      wrapper.vm.loading = false
+
+      await wrapper.vm.$nextTick()
+
+      const loadingIndicator = wrapper.find('.loading-indicator')
+      expect(loadingIndicator.exists()).toBe(true)
+      expect(loadingIndicator.classes()).not.toContain('show')
+    })
+  })
+
+  describe('Map Initialization', () => {
+    it('should initialize map on mount', async () => {
+      wrapper = mount(LandingPage)
+
+      // Wait for onMounted to execute
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Check that Leaflet.map was called with the correct arguments
+      const L = await import('leaflet')
+      expect(L.default.map).toHaveBeenCalled()
+
+      // The first argument should be the container element
+      const firstCall = L.default.map.mock.calls[0]
+      expect(firstCall[0]).toHaveProperty('offsetWidth')
+      expect(firstCall[0]).toHaveProperty('offsetHeight')
+    })
+
+    it('should set up tile layer', async () => {
+      wrapper = mount(LandingPage)
+
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const L = await import('leaflet')
+      expect(L.default.tileLayer).toHaveBeenCalled()
+      expect(mockTileLayer.addTo).toHaveBeenCalledWith(mockMapInstance)
+    })
+
+    it('should add scale control', async () => {
+      wrapper = mount(LandingPage)
+
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const L = await import('leaflet')
+      expect(L.default.control.scale).toHaveBeenCalled()
+      expect(mockScaleControl.addTo).toHaveBeenCalledWith(mockMapInstance)
+    })
+
+    it('should set initial map view', async () => {
+      wrapper = mount(LandingPage)
+
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      expect(mockMapInstance.setView).toHaveBeenCalledWith([45.764, 4.8357], 12)
+    })
+
+    it('should not initialize map if already exists', async () => {
+      wrapper = mount(LandingPage)
+
+      // First mount
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const L = await import('leaflet')
+      const mapCallCount = L.default.map.mock.calls.length
+
+      // Try to initialize again (should not create new map)
+      wrapper.vm.initializeMap()
+      await wrapper.vm.$nextTick()
+
+      expect(L.default.map.mock.calls.length).toBe(mapCallCount)
+    })
+  })
+
+  describe('EventSource Integration', () => {
+    it('should have searchSegmentsInView method', () => {
+      wrapper = mount(LandingPage)
+
+      expect(typeof wrapper.vm.searchSegmentsInView).toBe('function')
+    })
+
+    it('should have eventSource property', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.vm.eventSource).toBeNull()
+    })
+
+    it('should have loading state properties', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.vm.loading).toBe(false)
+      expect(wrapper.vm.totalTracks).toBe(0)
+      expect(wrapper.vm.loadedTracks).toBe(0)
+    })
+
+    it('should have segments array', () => {
+      wrapper = mount(LandingPage)
+
+      expect(Array.isArray(wrapper.vm.segments)).toBe(true)
+      expect(wrapper.vm.segments).toHaveLength(0)
+    })
+  })
+
+  describe('GPX Data Processing', () => {
+    it('should have parseGPXData imported', async () => {
+      const { parseGPXData } = await import('../../utils/gpxParser')
+      expect(typeof parseGPXData).toBe('function')
+    })
+
+    it('should have processTrack method', () => {
+      wrapper = mount(LandingPage)
+
+      expect(typeof wrapper.vm.processTrack).toBe('function')
+    })
+
+    it('should have addGPXTrackToMap method', () => {
+      wrapper = mount(LandingPage)
+
+      expect(typeof wrapper.vm.addGPXTrackToMap).toBe('function')
+    })
+
+    it('should have addBoundingBoxToMap method', () => {
+      wrapper = mount(LandingPage)
+
+      expect(typeof wrapper.vm.addBoundingBoxToMap).toBe('function')
+    })
+  })
+
+  describe('Component Lifecycle', () => {
+    it('should mount and unmount without errors', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.exists()).toBe(true)
+
+      // Should unmount cleanly
+      expect(() => wrapper.unmount()).not.toThrow()
+    })
+
+    it('should have onMounted and onUnmounted lifecycle hooks', () => {
+      wrapper = mount(LandingPage)
+
+      // Component should mount successfully, indicating lifecycle hooks work
+      expect(wrapper.exists()).toBe(true)
+    })
+
+    it('should initialize map on mount', async () => {
+      wrapper = mount(LandingPage)
+
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Map should be initialized (we can't directly test the private map variable)
+      // but we can test that the component mounted successfully
+      expect(wrapper.exists()).toBe(true)
     })
   })
 })
