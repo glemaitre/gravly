@@ -2422,6 +2422,122 @@ def test_search_segments_endpoint_database_not_available(client, main_module):
         main_module.SessionLocal = original_session_local
 
 
+def test_search_segments_invalid_track_type(client):
+    """Test search segments endpoint with invalid track_type parameter."""
+    # Test with invalid track_type value
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "invalid_type",
+        },
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    assert (
+        data["detail"]
+        == "Invalid track_type: invalid_type. Must be 'segment' or 'route'"
+    )
+
+
+def test_search_segments_empty_track_type(client):
+    """Test search segments endpoint with empty track_type parameter."""
+    # Test with empty track_type value
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "",
+        },
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"] == "Invalid track_type: . Must be 'segment' or 'route'"
+
+
+def test_search_segments_none_track_type(client):
+    """Test search segments endpoint with None track_type parameter."""
+    # Test with None track_type value (passed as string "None")
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "None",
+        },
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"] == "Invalid track_type: None. Must be 'segment' or 'route'"
+
+
+def test_search_segments_numeric_track_type(client):
+    """Test search segments endpoint with numeric track_type parameter."""
+    # Test with numeric track_type value
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "123",
+        },
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    assert data["detail"] == "Invalid track_type: 123. Must be 'segment' or 'route'"
+
+
+def test_search_segments_valid_track_types(client):
+    """Test search segments endpoint with valid track_type parameters."""
+    # Test with valid 'segment' track_type
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "segment",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Test with valid 'route' track_type
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "route",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+
 def test_main_module_execution():
     """Test the if __name__ == '__main__' block by importing and checking it exists."""
     import src.main

@@ -353,8 +353,7 @@ async def seed_database(
                     difficulty = select_random_difficulty()
 
                     # Generate comments
-                    comments = f"Generated cycling segment in {region.name}. "
-                    comments += (
+                    comments = (
                         f"Surface: {surface_type.value}, Difficulty: {difficulty}/5"
                     )
 

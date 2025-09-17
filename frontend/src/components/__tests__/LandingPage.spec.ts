@@ -192,7 +192,8 @@ describe('LandingPage', () => {
     // Should contain the expected HTML structure (accounting for scoped CSS attributes)
     expect(html).toContain('class="landing-page"')
     expect(html).toContain('class="landing-content"')
-    expect(html).toContain('<!-- Empty content for now -->')
+    expect(html).toContain('class="map-section"')
+    expect(html).toContain('class="segment-list-section"')
     expect(html).toContain('</div>')
     expect(html).toContain('</div>')
   })
@@ -216,7 +217,7 @@ describe('LandingPage', () => {
     expect(landingContent.exists()).toBe(true)
 
     // Should be able to add content inside landing-content
-    expect(landingContent.element.children.length).toBe(1) // Map section
+    expect(landingContent.element.children.length).toBe(2) // Map section and segment list section
   })
 
   it('follows Vue 3 Composition API patterns', () => {
@@ -783,6 +784,293 @@ describe('LandingPage', () => {
           radius: expectedRadius
         })
       )
+    })
+  })
+
+  describe('Segment Loading and Display', () => {
+    it('should display loading indicator when loading segments', async () => {
+      wrapper = mount(LandingPage)
+      await wrapper.vm.$nextTick()
+
+      // Set loading state
+      wrapper.vm.loading = true
+      wrapper.vm.totalTracks = 5
+      wrapper.vm.loadedTracks = 2
+      await wrapper.vm.$nextTick()
+
+      const loadingIndicator = wrapper.find('.loading-indicator')
+      expect(loadingIndicator.exists()).toBe(true)
+      expect(loadingIndicator.classes()).toContain('show')
+      expect(loadingIndicator.text()).toContain('Loading segments... 2/5')
+    })
+
+    it('should display search indicator when not loading and no tracks', async () => {
+      wrapper = mount(LandingPage)
+      await wrapper.vm.$nextTick()
+
+      // Set loading state to false and no tracks
+      wrapper.vm.loading = false
+      wrapper.vm.totalTracks = 0
+      await wrapper.vm.$nextTick()
+
+      const loadingIndicator = wrapper.find('.loading-indicator')
+      expect(loadingIndicator.exists()).toBe(true)
+      expect(loadingIndicator.text()).toContain('Searching segments...')
+    })
+
+    it('should pass segments data to SegmentList component', async () => {
+      const mockSegments = [
+        {
+          id: 1,
+          name: 'Test Segment 1',
+          track_type: 'segment',
+          file_path: 'test1.gpx',
+          bound_north: 45.8,
+          bound_south: 45.7,
+          bound_east: 4.9,
+          bound_west: 4.8,
+          difficulty_level: 3,
+          surface_type: 'forest-trail',
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs',
+          comments: 'Test comment'
+        },
+        {
+          id: 2,
+          name: 'Test Segment 2',
+          track_type: 'route',
+          file_path: 'test2.gpx',
+          bound_north: 45.9,
+          bound_south: 45.8,
+          bound_east: 5.0,
+          bound_west: 4.9,
+          difficulty_level: 4,
+          surface_type: 'big-stone-road',
+          tire_dry: 'knobs',
+          tire_wet: 'knobs',
+          comments: ''
+        }
+      ]
+
+      wrapper = mount(LandingPage)
+      wrapper.vm.segments = mockSegments
+      await wrapper.vm.$nextTick()
+
+      const segmentList = wrapper.findComponent({ name: 'SegmentList' })
+      expect(segmentList.exists()).toBe(true)
+      expect(segmentList.props('segments')).toEqual(mockSegments)
+      expect(segmentList.props('loading')).toBe(false)
+    })
+
+    it('should pass loading state to SegmentList component', async () => {
+      wrapper = mount(LandingPage)
+      wrapper.vm.loading = true
+      await wrapper.vm.$nextTick()
+
+      const segmentList = wrapper.findComponent({ name: 'SegmentList' })
+      expect(segmentList.props('loading')).toBe(true)
+    })
+  })
+
+  describe('Event Handling', () => {
+    it('should handle segment click events', async () => {
+      wrapper = mount(LandingPage)
+
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        track_type: 'segment',
+        file_path: 'test.gpx',
+        bound_north: 45.8,
+        bound_south: 45.7,
+        bound_east: 4.9,
+        bound_west: 4.8,
+        difficulty_level: 3,
+        surface_type: 'forest-trail',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        comments: 'Test'
+      }
+
+      // Test that the method exists and can be called
+      expect(typeof wrapper.vm.onSegmentClick).toBe('function')
+
+      // Test calling the method directly
+      wrapper.vm.onSegmentClick(mockSegment)
+
+      // Verify the method executes without error
+      expect(wrapper.vm.segments).toBeDefined()
+    })
+
+    it('should handle segment hover events', async () => {
+      wrapper = mount(LandingPage)
+
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        track_type: 'segment',
+        file_path: 'test.gpx',
+        bound_north: 45.8,
+        bound_south: 45.7,
+        bound_east: 4.9,
+        bound_west: 4.8,
+        difficulty_level: 3,
+        surface_type: 'forest-trail',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        comments: 'Test'
+      }
+
+      // Test that the method exists and can be called
+      expect(typeof wrapper.vm.onSegmentHover).toBe('function')
+
+      // Test calling the method directly
+      wrapper.vm.onSegmentHover(mockSegment)
+
+      // Verify the method executes without error
+      expect(wrapper.vm.segments).toBeDefined()
+    })
+
+    it('should handle segment leave events', async () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists and can be called
+      expect(typeof wrapper.vm.onSegmentLeave).toBe('function')
+
+      // Test calling the method directly
+      wrapper.vm.onSegmentLeave()
+
+      // Verify the method executes without error
+      expect(wrapper.vm.segments).toBeDefined()
+    })
+
+    it('should handle track type change events', async () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists and can be called
+      expect(typeof wrapper.vm.onTrackTypeChange).toBe('function')
+
+      // Test calling the method directly
+      wrapper.vm.onTrackTypeChange('route')
+
+      // Verify the track type was updated
+      expect(wrapper.vm.selectedTrackType).toBe('route')
+    })
+  })
+
+  describe('Map Bounds and Search Functionality', () => {
+    it('should initialize with default map bounds', () => {
+      wrapper = mount(LandingPage)
+
+      // Check that the component has the expected initial state
+      expect(wrapper.vm.segments).toEqual([])
+      expect(wrapper.vm.loading).toBe(false)
+      expect(wrapper.vm.totalTracks).toBe(0)
+      expect(wrapper.vm.loadedTracks).toBe(0)
+      expect(wrapper.vm.selectedTrackType).toBe('segment')
+    })
+
+    it('should have searchSegmentsInView method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.searchSegmentsInView).toBe('function')
+    })
+
+    it('should have debouncedSearchSegments method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.debouncedSearchSegments).toBe('function')
+    })
+  })
+
+  describe('GPX Data Processing', () => {
+    it('should have fetchAndRenderGPXData method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.fetchAndRenderGPXData).toBe('function')
+    })
+
+    it('should have processTrack method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.processTrack).toBe('function')
+    })
+
+    it('should handle GPX data processing', async () => {
+      const mockTrack = {
+        id: 1,
+        name: 'Test Track',
+        track_type: 'segment',
+        file_path: 'test.gpx',
+        bound_north: 45.8,
+        bound_south: 45.7,
+        bound_east: 4.9,
+        bound_west: 4.8,
+        difficulty_level: 3,
+        surface_type: 'forest-trail',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        comments: 'Test'
+      }
+
+      wrapper = mount(LandingPage)
+
+      // Test that processTrack can be called
+      await wrapper.vm.processTrack(mockTrack)
+
+      // Should not throw error
+      expect(wrapper.vm.segments).toBeDefined()
+    })
+  })
+
+  describe('Component Lifecycle', () => {
+    it('should have initializeMap method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.initializeMap).toBe('function')
+    })
+
+    it('should have cleanupMap method', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.cleanupMap).toBe('function')
+    })
+
+    it('should clean up resources on unmount', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that cleanupMap can be called
+      wrapper.vm.cleanupMap()
+
+      // Should not throw error
+      expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe('Error Handling', () => {
+    it('should handle missing map container gracefully', () => {
+      wrapper = mount(LandingPage)
+
+      // Test that initializeMap can be called without errors
+      wrapper.vm.initializeMap()
+
+      // Component should still be functional
+      expect(wrapper.exists()).toBe(true)
+    })
+
+    it('should handle component state correctly', () => {
+      wrapper = mount(LandingPage)
+
+      // Test initial state
+      expect(wrapper.vm.loading).toBe(false)
+      expect(wrapper.vm.segments).toEqual([])
+      expect(wrapper.vm.selectedTrackType).toBe('segment')
     })
   })
 })

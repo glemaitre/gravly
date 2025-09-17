@@ -105,7 +105,11 @@ app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -373,7 +377,7 @@ async def search_segments_options():
 
 @app.get("/api/segments/search")
 async def search_segments_in_bounds(
-    north: float, south: float, east: float, west: float
+    north: float, south: float, east: float, west: float, track_type: str = "segment"
 ):
     """Search for segments that intersect with the given map bounds using streaming.
 
@@ -395,6 +399,15 @@ async def search_segments_in_bounds(
     if not SessionLocal:
         raise HTTPException(status_code=500, detail="Database not available")
 
+    # Convert string track_type to enum
+    try:
+        track_type_enum = TrackType(track_type)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid track_type: {track_type}. Must be 'segment' or 'route'",
+        )
+
     async def generate():
         try:
             async with SessionLocal() as session:
@@ -406,6 +419,7 @@ async def search_segments_in_bounds(
                             Track.bound_south <= north,
                             Track.bound_east >= west,
                             Track.bound_west <= east,
+                            Track.track_type == track_type_enum,
                         )
                     )
                     .order_by(Track.created_at.desc())

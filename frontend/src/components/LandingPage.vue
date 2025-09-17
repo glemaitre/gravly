@@ -1,7 +1,6 @@
 <template>
   <div class="landing-page">
     <div class="landing-content">
-      <!-- Empty content for now -->
       <div class="map-section">
         <div class="map-container">
           <div class="card card-map">
@@ -15,15 +14,30 @@
           </div>
         </div>
       </div>
+
+      <!-- Segment List Section -->
+      <div class="segment-list-section">
+        <div class="segment-list-container">
+          <SegmentList
+            :segments="segments"
+            :loading="loading"
+            @segment-click="onSegmentClick"
+            @segment-hover="onSegmentHover"
+            @segment-leave="onSegmentLeave"
+            @track-type-change="onTrackTypeChange"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
+import SegmentList from './SegmentList.vue'
 
 // Map instance
 let map: any = null
@@ -37,11 +51,20 @@ let eventSource: EventSource | null = null
 let isSearching = false
 let searchTimeout: number | null = null
 let pendingTracks: TrackResponse[] = []
+
+// Track type filter
+const selectedTrackType = ref<'segment' | 'route'>('segment')
 let previousMapBounds: any = null
 
 // Cache for GPX data to avoid refetching
 const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
 const loadingGPXData = new Set<number>()
+
+// Hover rectangle for card hover effect
+let hoverRectangle: any = null
+
+// Resize handler for cleanup
+let resizeHandler: (() => void) | null = null
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
@@ -55,6 +78,19 @@ function initializeMap() {
   if (!container) {
     return
   }
+
+  // Ensure container has proper dimensions
+  if (container.offsetHeight === 0) {
+    // Wait for next tick to ensure DOM is fully rendered
+    nextTick(() => {
+      // Add a small delay to ensure CSS has been applied
+      setTimeout(() => {
+        initializeMap()
+      }, 100)
+    })
+    return
+  }
+
   // Initialize map
   map = L.map(container, {
     zoomControl: true,
@@ -84,6 +120,9 @@ function initializeMap() {
     })
     .addTo(map)
 
+  // Ensure map renders properly
+  map.invalidateSize()
+
   // Process any pending tracks that arrived before map was ready
   processPendingTracks()
 
@@ -91,13 +130,25 @@ function initializeMap() {
   searchSegmentsInView()
 
   // Add event listeners for map movement with debouncing
-  // OPTIMIZATION: Only trigger search when panning (center changes), not when zooming (center stays same)
-  // Initialize previous bounds for comparison
+  // Only trigger database search when bounds expand beyond previous search
+  // When zooming in, filter existing segments without re-fetching GPX data
   previousMapBounds = map.getBounds()
   map.on('moveend', handleMapMoveEnd)
 
-  // Add zoom event listener to update circle sizes
-  map.on('zoomend', updateCircleSizes)
+  // Add zoom event listener to update circle sizes and segment cards
+  map.on('zoomend', () => {
+    updateCircleSizes()
+    // Update segment cards for current view (may trigger search if bounds expanded)
+    handleMapMoveEnd()
+  })
+
+  // Add window resize listener to ensure map updates properly
+  resizeHandler = () => {
+    if (map) {
+      map.invalidateSize()
+    }
+  }
+  window.addEventListener('resize', resizeHandler)
 }
 
 // Process tracks that arrived before map was ready
@@ -112,7 +163,7 @@ function processPendingTracks() {
   pendingTracks = []
 }
 
-// Handle map move end - check if new bounds are within previous bounds (zooming in)
+// Handle map move end - only trigger search when bounds expand beyond previous search
 function handleMapMoveEnd() {
   if (!map || !previousMapBounds) {
     debouncedSearchSegments()
@@ -127,10 +178,47 @@ function handleMapMoveEnd() {
   // Only trigger search if bounds expanded beyond previous bounds (zooming out or panning to new area)
   if (!boundsWithinPrevious) {
     debouncedSearchSegments()
+  } else {
+    // Even when zooming in, we need to update the segment cards to remove
+    // segments that are no longer visible, but without re-fetching GPX data
+    updateSegmentCardsForCurrentView()
   }
 
   // Update previous bounds for next comparison
   previousMapBounds = currentBounds
+}
+
+// Update segment cards to show only segments visible in current view (without database request)
+function updateSegmentCardsForCurrentView() {
+  if (!map) return
+
+  const currentBounds = map.getBounds()
+
+  // Filter existing segments to only show those visible in current bounds
+  const visibleSegments = segments.value.filter((segment) => {
+    return (
+      segment.bound_north >= currentBounds.getSouth() &&
+      segment.bound_south <= currentBounds.getNorth() &&
+      segment.bound_east >= currentBounds.getWest() &&
+      segment.bound_west <= currentBounds.getEast()
+    )
+  })
+
+  // Update segments array to only show visible ones
+  segments.value = visibleSegments
+
+  // Remove map layers for segments that are no longer visible
+  const visibleSegmentIds = new Set(visibleSegments.map((s) => s.id.toString()))
+
+  // Remove layers for segments not in visible list
+  for (const [segmentId, layerData] of currentMapLayers.entries()) {
+    if (!visibleSegmentIds.has(segmentId)) {
+      if (layerData.rectangle) {
+        map.removeLayer(layerData.rectangle)
+      }
+      currentMapLayers.delete(segmentId)
+    }
+  }
 }
 
 // Update circle sizes based on current zoom level
@@ -195,11 +283,25 @@ function searchSegmentsInView() {
   isSearching = true
   loading.value = true
 
-  // Don't clear segments array - we'll add to it incrementally
-  // segments.value = [] // Commented out for incremental updates
-  totalTracks.value = 0
-  loadedTracks.value = 0
-  pendingTracks = [] // Clear any pending tracks from previous search
+  // Don't clear existing segments - we'll add new ones to existing ones
+  // Only clear if this is the first search or if we're switching track types
+  const isFirstSearch = segments.value.length === 0
+  const currentTrackType = selectedTrackType.value
+
+  // Check if we're switching track types by looking at existing segments
+  const isTrackTypeSwitch =
+    segments.value.length > 0 &&
+    segments.value.some((segment) => {
+      // Check if any existing segment has a different track type
+      return segment.track_type !== currentTrackType
+    })
+
+  if (isFirstSearch || isTrackTypeSwitch) {
+    segments.value = []
+    totalTracks.value = 0
+    loadedTracks.value = 0
+    pendingTracks = []
+  }
 
   const bounds = map.getBounds()
 
@@ -207,11 +309,12 @@ function searchSegmentsInView() {
     north: bounds.getNorth().toString(),
     south: bounds.getSouth().toString(),
     east: bounds.getEast().toString(),
-    west: bounds.getWest().toString()
+    west: bounds.getWest().toString(),
+    track_type: selectedTrackType.value
   })
 
-  // Only clear layers if this is the first search (no layers drawn yet)
-  if (currentMapLayers.size === 0) {
+  // Only clear all layers if this is the first search or switching track types
+  if (isFirstSearch || isTrackTypeSwitch) {
     map.eachLayer((layer: any) => {
       if (
         layer instanceof L.Rectangle ||
@@ -221,6 +324,15 @@ function searchSegmentsInView() {
         map.removeLayer(layer)
       }
     })
+
+    // Clear the layers tracking map
+    currentMapLayers.clear()
+  }
+
+  // Clear hover rectangle when starting new search
+  if (hoverRectangle) {
+    map.removeLayer(hoverRectangle)
+    hoverRectangle = null
   }
 
   // Create EventSource for streaming
@@ -262,11 +374,15 @@ function searchSegmentsInView() {
         try {
           const track: TrackResponse = JSON.parse(data)
 
-          segments.value.push(track)
-          loadedTracks.value++
+          // Check if this segment is already loaded to avoid duplicates
+          const existingSegment = segments.value.find((s) => s.id === track.id)
+          if (!existingSegment) {
+            segments.value.push(track)
+            loadedTracks.value++
 
-          // Process the track (add bounding box first, then fetch GPX data for rendering)
-          processTrack(track)
+            // Process the track (add bounding box first, then fetch GPX data for rendering)
+            processTrack(track)
+          }
         } catch {
           // Error parsing track data
         }
@@ -513,6 +629,12 @@ function cleanupMap() {
   }
 
   if (map) {
+    // Clear hover rectangle before removing map
+    if (hoverRectangle) {
+      map.removeLayer(hoverRectangle)
+      hoverRectangle = null
+    }
+
     map.remove()
     map = null
   }
@@ -520,6 +642,12 @@ function cleanupMap() {
   // Clear GPX data cache
   gpxDataCache.clear()
   loadingGPXData.clear()
+
+  // Remove resize listener
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+    resizeHandler = null
+  }
 
   isSearching = false
 }
@@ -531,6 +659,91 @@ onMounted(() => {
   }, 100)
 })
 
+// Handle segment click from the segment list
+function onSegmentClick(segment: TrackResponse) {
+  if (!map) return
+
+  // Focus the map on the selected segment
+  const bounds = L.latLngBounds([
+    [segment.bound_south, segment.bound_west],
+    [segment.bound_north, segment.bound_east]
+  ])
+  map.fitBounds(bounds, { padding: [20, 20] })
+
+  // Highlight the segment on the map
+  const segmentId = segment.id.toString()
+  const layerData = currentMapLayers.get(segmentId)
+  if (layerData) {
+    // Temporarily highlight the segment
+    if (layerData.rectangle) {
+      layerData.rectangle.setStyle({
+        fillOpacity: 0.3,
+        strokeWidth: 4,
+        color: '#ff6b35'
+      })
+
+      // Reset after 3 seconds
+      setTimeout(() => {
+        if (layerData.rectangle) {
+          layerData.rectangle.setStyle({
+            fillOpacity: 0.1,
+            strokeWidth: 2,
+            color: '#3388ff'
+          })
+        }
+      }, 3000)
+    }
+  }
+}
+
+// Handle segment hover from the segment list
+function onSegmentHover(segment: TrackResponse) {
+  if (!map) return
+
+  // Remove any existing hover rectangle
+  if (hoverRectangle) {
+    map.removeLayer(hoverRectangle)
+    hoverRectangle = null
+  }
+
+  // Create a new temporary rectangle using the segment's bounding box data
+  const segmentBounds = L.latLngBounds(
+    [segment.bound_south, segment.bound_west],
+    [segment.bound_north, segment.bound_east]
+  )
+
+  // Draw a temporary hover rectangle
+  hoverRectangle = L.rectangle(segmentBounds, {
+    color: '#ff6b35',
+    weight: 4,
+    fillOpacity: 0.2,
+    dashArray: '8, 8', // Dashed border for better visibility
+    interactive: false // Don't interfere with map interactions
+  }).addTo(map)
+
+  // Bring to front to ensure it's visible
+  hoverRectangle.bringToFront()
+}
+
+// Handle segment leave from the segment list
+function onSegmentLeave() {
+  if (!map) return
+
+  // Remove the hover rectangle
+  if (hoverRectangle) {
+    map.removeLayer(hoverRectangle)
+    hoverRectangle = null
+  }
+}
+
+function onTrackTypeChange(trackType: 'segment' | 'route') {
+  selectedTrackType.value = trackType
+  // Trigger a new search with the updated track type filter
+  if (map) {
+    searchSegmentsInView()
+  }
+}
+
 onUnmounted(() => {
   cleanupMap()
 })
@@ -538,28 +751,43 @@ onUnmounted(() => {
 
 <style scoped>
 .landing-page {
-  min-height: calc(100vh - 80px);
+  height: calc(100vh - var(--navbar-height, 60px));
   background: #f8fafc;
-  padding: 2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.segment-list-section {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  height: 30%;
+  flex-shrink: 0;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 .landing-content {
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
 }
 
 .hero-section {
   text-align: center;
   color: #2d3748;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem 0;
+  flex-shrink: 0;
 }
 
 .hero-title {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 700;
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
   background: linear-gradient(135deg, #ff6600, #ff7f2a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -567,7 +795,7 @@ onUnmounted(() => {
 }
 
 .hero-subtitle {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   color: #6b7280;
   margin: 0;
 }
@@ -576,10 +804,18 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
+  height: 70%;
+  flex-shrink: 0;
 }
 
 .map-container {
   width: 100%;
+  height: 100%;
+}
+
+.segment-list-container {
+  width: 100%;
+  height: 100%;
 }
 
 /* Card styles matching Editor */
@@ -596,10 +832,11 @@ onUnmounted(() => {
 .card-map {
   padding: 0;
   overflow: hidden;
+  height: 100%;
 }
 
 .map {
-  height: 65vh; /* 65% of viewport height */
+  height: 100%; /* Fill the map-section container */
   width: 100%; /* Full width */
 }
 
@@ -630,22 +867,36 @@ onUnmounted(() => {
   color: white;
 }
 
-/* Responsive design with 1:1 aspect ratio scaling */
+/* Responsive design with 60/40 split maintained */
 @media (max-width: 1200px) {
   .landing-content {
     padding: 0 1rem;
   }
+
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.75rem;
+  }
 }
 
 @media (max-width: 1000px) {
-  .map {
-    height: 65vh; /* Maintain 65% viewport height */
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.5rem;
   }
 }
 
 @media (max-width: 992px) {
   .landing-page {
-    padding: 1.5rem 1rem;
+    padding: 0;
   }
 
   .hero-title {
@@ -655,31 +906,55 @@ onUnmounted(() => {
   .hero-subtitle {
     font-size: 1.125rem;
   }
+
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.5rem;
+  }
 }
 
 @media (max-width: 768px) {
   .landing-page {
-    padding: 1rem 0.75rem;
+    padding: 0;
   }
 
-  .map {
-    height: 65vh; /* Maintain 65% viewport height */
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.5rem;
   }
 }
 
 @media (max-width: 576px) {
   .landing-page {
-    padding: 0.75rem 0.5rem;
+    padding: 0;
   }
 
-  .map {
-    height: 65vh; /* Maintain 65% viewport height */
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.25rem;
   }
 }
 
 @media (max-width: 480px) {
-  .map {
-    height: 65vh; /* Maintain 65% viewport height */
+  .map-section {
+    height: 70%;
+  }
+
+  .segment-list-section {
+    height: 30%;
+    padding: 0.25rem;
   }
 }
 
