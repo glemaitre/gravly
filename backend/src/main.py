@@ -15,12 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from .models.base import Base
 from .models.track import (
+    GPXDataResponse,
     SurfaceType,
     TireType,
     Track,
     TrackResponse,
     TrackType,
-    TrackWithGPXDataResponse,
 )
 from .utils.config import load_environment_config
 from .utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
@@ -417,31 +417,21 @@ async def search_segments_in_bounds(
                 yield f"data: {len(tracks)}\n\n"
 
                 for track in tracks:
-                    if storage_manager:
-                        try:
-                            gpx_bytes = storage_manager.load_gpx_data(track.file_path)
-                            gpx_xml_data = gpx_bytes.decode("utf-8")
-                        except Exception as e:
-                            logger.warning(
-                                f"Failed to load GPX data for track {track.id}: "
-                                f"{str(e)}"
-                            )
-
-                    track_response = TrackWithGPXDataResponse(
+                    # Return only overview data without GPX content
+                    track_response = TrackResponse(
                         id=track.id,
                         file_path=track.file_path,
-                        name=track.name,
                         bound_north=track.bound_north,
                         bound_south=track.bound_south,
                         bound_east=track.bound_east,
                         bound_west=track.bound_west,
-                        surface_type=track.surface_type.value,
-                        difficulty_level=track.difficulty_level,
+                        name=track.name,
                         track_type=track.track_type.value,
+                        difficulty_level=track.difficulty_level,
+                        surface_type=track.surface_type.value,
                         tire_dry=track.tire_dry.value,
                         tire_wet=track.tire_wet.value,
                         comments=track.comments or "",
-                        gpx_xml_data=gpx_xml_data,
                     )
 
                     track_json = json.dumps(track_response.model_dump())
@@ -465,6 +455,66 @@ async def search_segments_in_bounds(
             "Access-Control-Expose-Headers": "*",
         },
     )
+
+
+@app.get("/api/segments/{track_id}/gpx", response_model=GPXDataResponse)
+async def get_track_gpx_data(track_id: int):
+    """Get GPX data for a specific track by ID.
+
+    This endpoint fetches the GPX XML data from storage for the given track ID.
+    This is called by the frontend only when it needs to render the track on the map.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to fetch GPX data for
+
+    Returns
+    -------
+    GPXDataResponse
+        The GPX XML content only
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not available")
+
+    try:
+        async with SessionLocal() as session:
+            stmt = select(Track).filter(Track.id == track_id)
+            result = await session.execute(stmt)
+            track = result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            try:
+                gpx_bytes = storage_manager.load_gpx_data(track.file_path)
+                if gpx_bytes is None:
+                    logger.warning(
+                        f"No GPX data found for track {track_id} at path: "
+                        f"{track.file_path}"
+                    )
+                    raise HTTPException(status_code=404, detail="GPX data not found")
+                gpx_xml_data = gpx_bytes.decode("utf-8")
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning(
+                    f"Failed to load GPX data for track {track_id}: {str(e)}"
+                )
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to load GPX data: {str(e)}"
+                )
+
+            return GPXDataResponse(gpx_xml_data=gpx_xml_data)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching GPX data for track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 if __name__ == "__main__":

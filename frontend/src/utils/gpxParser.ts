@@ -68,7 +68,7 @@ export function parseGPXData(gpxXml: string, fileId: string): GPXData | null {
 /**
  * Calculate bounds from track points
  */
-function calculateBounds(points: GPXPoint[]): GPXBounds {
+export function calculateBounds(points: GPXPoint[]): GPXBounds {
   if (points.length === 0) {
     return {
       north: 0,

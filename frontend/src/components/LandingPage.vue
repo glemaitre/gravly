@@ -22,22 +22,26 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import L from 'leaflet'
-import type { TrackWithGPXDataResponse } from '../types'
+import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 
 // Map instance
 let map: any = null
 
 // Segments data from API
-const segments = ref<TrackWithGPXDataResponse[]>([])
+const segments = ref<TrackResponse[]>([])
 const loading = ref(false)
 const totalTracks = ref(0)
 const loadedTracks = ref(0)
 let eventSource: EventSource | null = null
 let isSearching = false
 let searchTimeout: number | null = null
-let pendingTracks: TrackWithGPXDataResponse[] = []
+let pendingTracks: TrackResponse[] = []
 let previousMapBounds: any = null
+
+// Cache for GPX data to avoid refetching
+const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
+const loadingGPXData = new Set<number>()
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
@@ -228,12 +232,12 @@ function searchSegmentsInView() {
 
         // Parse track data
         try {
-          const track: TrackWithGPXDataResponse = JSON.parse(data)
+          const track: TrackResponse = JSON.parse(data)
 
           segments.value.push(track)
           loadedTracks.value++
 
-          // Process the track (parse GPX and add to map)
+          // Process the track (add bounding box first, then fetch GPX data for rendering)
           processTrack(track)
         } catch {
           // Error parsing track data
@@ -254,8 +258,8 @@ function searchSegmentsInView() {
   }, 100)
 }
 
-// Process a track (parse GPX data and add to map)
-function processTrack(track: TrackWithGPXDataResponse) {
+// Process a track (add bounding box first, then fetch GPX data for detailed rendering)
+async function processTrack(track: TrackResponse) {
   // Check if track is already drawn to avoid duplicates
   const segmentId = track.id.toString()
   if (currentMapLayers.has(segmentId)) {
@@ -267,19 +271,80 @@ function processTrack(track: TrackWithGPXDataResponse) {
     return
   }
 
-  // Parse GPX data if available
-  let gpxData = track.gpx_data
-  if (!gpxData && track.gpx_xml_data) {
-    const fileId =
-      track.file_path.split('/').pop()?.replace('.gpx', '') || track.id.toString()
-    gpxData = parseGPXData(track.gpx_xml_data, fileId)
+  // First, add bounding box immediately for quick visual feedback
+  addBoundingBoxToMap(track, map)
+
+  // Then fetch GPX data asynchronously for detailed rendering
+  await fetchAndRenderGPXData(track)
+}
+
+// Fetch GPX data for a track and render it on the map
+async function fetchAndRenderGPXData(track: TrackResponse) {
+  // Check if we already have this GPX data cached
+  if (gpxDataCache.has(track.id)) {
+    const cachedTrack = gpxDataCache.get(track.id)!
+    renderGPXTrackOnMap(cachedTrack)
+    return
   }
 
-  // Add track to map
+  // Check if we're already loading this GPX data
+  if (loadingGPXData.has(track.id)) {
+    return
+  }
+
+  loadingGPXData.add(track.id)
+
+  try {
+    const response = await fetch(`http://localhost:8000/api/segments/${track.id}/gpx`)
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch GPX data for track ${track.id}: ${response.statusText}`
+      )
+      return
+    }
+
+    const gpxResponse: GPXDataResponse = await response.json()
+
+    // Create a TrackWithGPXDataResponse object for caching and rendering
+    const trackWithGPX: TrackWithGPXDataResponse = {
+      ...track,
+      gpx_data: null,
+      gpx_xml_data: gpxResponse.gpx_xml_data
+    }
+
+    // Cache the GPX data
+    gpxDataCache.set(track.id, trackWithGPX)
+
+    // Render the detailed GPX track
+    renderGPXTrackOnMap(trackWithGPX)
+  } catch (error) {
+    console.warn(`Error fetching GPX data for track ${track.id}:`, error)
+  } finally {
+    loadingGPXData.delete(track.id)
+  }
+}
+
+// Render GPX track on map (replaces bounding box with detailed track)
+function renderGPXTrackOnMap(track: TrackWithGPXDataResponse) {
+  if (!track.gpx_xml_data) {
+    return
+  }
+
+  // Remove the existing bounding box layer for this track
+  const segmentId = track.id.toString()
+  const existingLayer = currentMapLayers.get(segmentId)
+  if (existingLayer && existingLayer.rectangle) {
+    map.removeLayer(existingLayer.rectangle)
+  }
+
+  // Parse GPX data
+  const fileId =
+    track.file_path.split('/').pop()?.replace('.gpx', '') || track.id.toString()
+  const gpxData = parseGPXData(track.gpx_xml_data, fileId)
+
+  // Add detailed GPX track to map
   if (gpxData && gpxData.points && gpxData.points.length > 0) {
     addGPXTrackToMap(track, gpxData, map)
-  } else {
-    addBoundingBoxToMap(track, map)
   }
 }
 
@@ -363,8 +428,8 @@ function addGPXTrackToMap(
   })
 }
 
-// Add bounding box to map (fallback when no GPX data) - simplified
-function addBoundingBoxToMap(segment: TrackWithGPXDataResponse, mapInstance: any) {
+// Add bounding box to map (immediate visual feedback while GPX data loads)
+function addBoundingBoxToMap(segment: TrackResponse, mapInstance: any) {
   if (!mapInstance) {
     return
   }
@@ -412,6 +477,10 @@ function cleanupMap() {
     map.remove()
     map = null
   }
+
+  // Clear GPX data cache
+  gpxDataCache.clear()
+  loadingGPXData.clear()
 
   isSearching = false
 }

@@ -21,6 +21,10 @@ export interface TrackResponse {
   comments: string
 }
 
+export interface GPXDataResponse {
+  gpx_xml_data: string
+}
+
 export interface GPXPoint {
   latitude: number
   longitude: number

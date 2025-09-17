@@ -36,7 +36,7 @@ import Navbar from './components/Navbar.vue'
   --brand-primary-hover: #e65c00;
   --brand-accent: var(--brand-300);
 
-  --navbar-height: 80px;
+  --navbar-height: 60px;
 }
 
 /* Global styles to prevent horizontal overflow */

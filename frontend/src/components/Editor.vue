@@ -1435,7 +1435,7 @@ function renderChart() {
   })
 
   nextTick(() => {
-    if (points.value.length > 0 && chart && chartCanvas.value) {
+    if (points.value.length > 0 && chart && chartCanvas.value && chart.canvas) {
       const startX = getX(startIndex.value)
       const endX = getX(endIndex.value)
       const canvasRect = chart.canvas.getBoundingClientRect()
@@ -1614,11 +1614,13 @@ onMounted(() => {
     // Update chart and slider positions on resize
     if (chart && chartCanvas.value && points.value.length > 0) {
       // Force chart to recalculate its size
-      chart.resize()
+      if (typeof chart.resize === 'function') {
+        chart.resize()
+      }
 
       // Recalculate slider positions based on new chart dimensions
       nextTick(() => {
-        if (chart && chartCanvas.value) {
+        if (chart && chartCanvas.value && chart.canvas) {
           const startX = getX(startIndex.value)
           const endX = getX(endIndex.value)
           const canvasRect = chart.canvas.getBoundingClientRect()

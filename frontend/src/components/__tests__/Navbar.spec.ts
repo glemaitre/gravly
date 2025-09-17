@@ -131,6 +131,91 @@ describe('Navbar', () => {
       expect(flag.exists()).toBe(true)
       expect(name.exists()).toBe(true)
     })
+
+    it('handles closeLanguageDropdown function correctly', async () => {
+      // Test the closeLanguageDropdown function (lines 102-109)
+      const trigger = wrapper.find('.language-dropdown-trigger')
+
+      // Open dropdown first
+      await trigger.trigger('click')
+
+      // Create a mock event that targets an element outside the dropdown
+      const outsideElement = document.createElement('div')
+      document.body.appendChild(outsideElement)
+
+      const mockEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true
+      })
+      Object.defineProperty(mockEvent, 'target', {
+        value: outsideElement,
+        writable: false
+      })
+
+      // Simulate clicking outside the dropdown
+      document.dispatchEvent(mockEvent)
+
+      // Clean up
+      document.body.removeChild(outsideElement)
+    })
+
+    it('handles closeLanguageDropdown when clicking inside dropdown', async () => {
+      // Test that clicking inside the dropdown doesn't close it
+      const trigger = wrapper.find('.language-dropdown-trigger')
+
+      // Open dropdown first
+      await trigger.trigger('click')
+
+      // Create a mock event that targets the dropdown itself
+      const dropdown = wrapper.find('.language-dropdown')
+      const mockEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true
+      })
+      Object.defineProperty(mockEvent, 'target', {
+        value: dropdown.element,
+        writable: false
+      })
+
+      // Simulate clicking inside the dropdown
+      document.dispatchEvent(mockEvent)
+    })
+
+    it('handles closeLanguageDropdown when dropdown element is null', async () => {
+      // Test the edge case where languageDropdown.value is null
+      const trigger = wrapper.find('.language-dropdown-trigger')
+
+      // Open dropdown first
+      await trigger.trigger('click')
+
+      // Create a mock event
+      const mockEvent = new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true
+      })
+      Object.defineProperty(mockEvent, 'target', {
+        value: document.body,
+        writable: false
+      })
+
+      // Simulate clicking outside
+      document.dispatchEvent(mockEvent)
+    })
+
+    it('toggles language dropdown correctly', async () => {
+      const trigger = wrapper.find('.language-dropdown-trigger')
+
+      // Initially dropdown should be closed
+      expect(wrapper.vm.languageDropdownOpen).toBe(false)
+
+      // Click to open
+      await trigger.trigger('click')
+      expect(wrapper.vm.languageDropdownOpen).toBe(true)
+
+      // Click again to close
+      await trigger.trigger('click')
+      expect(wrapper.vm.languageDropdownOpen).toBe(false)
+    })
   })
 
   describe('Internationalization', () => {

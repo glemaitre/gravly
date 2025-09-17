@@ -1770,7 +1770,7 @@ def test_search_segments_endpoint_streaming_format(client):
             json_str = line[6:]  # Remove 'data: '
             data = json.loads(json_str)
 
-            # Check required fields
+            # Check required fields (TrackResponse fields, no GPX data in search)
             assert "id" in data
             assert "name" in data
             assert "file_path" in data
@@ -1778,59 +1778,577 @@ def test_search_segments_endpoint_streaming_format(client):
             assert "bound_south" in data
             assert "bound_east" in data
             assert "bound_west" in data
-            assert "gpx_xml_data" in data
+            assert "track_type" in data
+            assert "difficulty_level" in data
+            assert "surface_type" in data
+            assert "tire_dry" in data
+            assert "tire_wet" in data
+            assert "comments" in data
 
-            # Check that GPX data is present (may be None if no segments)
-            if data["gpx_xml_data"] is not None:
-                assert data["gpx_xml_data"].startswith("<?xml")
+            # GPX data should NOT be present in search endpoint (optimization)
+            assert "gpx_xml_data" not in data
 
 
 def test_search_segments_endpoint_gpx_load_error(client, main_module):
-    """Test search endpoint when GPX data loading fails (covers lines 424-428)."""
-    # Mock the storage manager to raise an exception when loading GPX data
+    """Test search endpoint behavior - GPX loading errors no longer affect search."""
+    # Since the search endpoint no longer loads GPX data (optimization),
+    # this test now verifies that the search endpoint works normally
+    # regardless of storage manager issues
+
+    response = client.get(
+        "/api/segments/search",
+        params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Find data lines
+    data_lines = [line for line in lines if line.startswith("data: ")]
+
+    # Should have: count + segments + [DONE]
+    assert len(data_lines) >= 2
+
+    # First line should be segment count
+    count_line = data_lines[0]
+    assert count_line.startswith("data: ")
+    segment_count = int(count_line[6:])  # Remove 'data: '
+    assert segment_count >= 0
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+    # Verify that segments don't contain GPX data (optimization)
+    if segment_count > 0:
+        segment_data_lines = data_lines[1:-1]  # Exclude count and [DONE]
+        for line in segment_data_lines:
+            json_str = line[6:]  # Remove 'data: '
+            data = json.loads(json_str)
+            # GPX data should NOT be present in search endpoint
+            assert "gpx_xml_data" not in data
+
+
+def test_get_track_gpx_data_endpoint(client):
+    """Test the new GPX data endpoint."""
+    # Test with a track ID that exists in the test database
+    response = client.get("/api/segments/1/gpx")
+
+    # Should return 404 if GPX data not found (expected with current test setup)
+    # or 200 with GPX data if file exists
+    assert response.status_code in [200, 404]
+
+    if response.status_code == 200:
+        data = response.json()
+        assert "gpx_xml_data" in data
+        assert isinstance(data["gpx_xml_data"], str)
+        # Should contain valid GPX XML
+        assert data["gpx_xml_data"].startswith("<?xml")
+
+
+def test_get_track_gpx_data_endpoint_not_found(client):
+    """Test GPX endpoint with non-existent track ID."""
+    response = client.get("/api/segments/99999/gpx")
+    assert response.status_code == 404
+    data = response.json()
+    assert "detail" in data
+
+
+def test_get_track_gpx_data_endpoint_database_unavailable(client, main_module):
+    """Test GPX endpoint when database is not available."""
+    # Mock database unavailability
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = None
+
+    try:
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"] == "Database not available"
+    finally:
+        # Restore original database session
+        main_module.SessionLocal = original_session_local
+
+
+def test_get_track_gpx_data_endpoint_storage_unavailable(client, main_module):
+    """Test GPX endpoint when storage manager is not available."""
+    # Mock storage manager unavailability
+    original_storage_manager = main_module.storage_manager
+    main_module.storage_manager = None
+
+    try:
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"] == "Storage manager not available"
+    finally:
+        # Restore original storage manager
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
+    """Test GPX endpoint when storage manager raises an exception."""
+    # Mock storage manager to raise an exception
     original_storage_manager = main_module.storage_manager
 
     class MockStorageManager:
         def load_gpx_data(self, url):
-            raise Exception("Mocked GPX loading error")
+            raise Exception("Storage connection failed")
 
     main_module.storage_manager = MockStorageManager()
 
     try:
-        # Search for segments - should handle GPX loading error gracefully
-        response = client.get(
-            "/api/segments/search",
-            params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
-        )
-
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
-
-        # Parse streaming response
-        content = response.text
-        lines = content.strip().split("\n")
-
-        # Find data lines
-        data_lines = [line for line in lines if line.startswith("data: ")]
-
-        # Should have: count + error (no [DONE] because error occurs during processing)
-        assert len(data_lines) == 2
-
-        # First line should be segment count
-        count_line = data_lines[0]
-        assert count_line.startswith("data: ")
-        segment_count = int(count_line[6:])  # Remove 'data: '
-        assert segment_count >= 0  # Should handle error gracefully
-
-        # Second line should contain error information
-        error_line = data_lines[1]
-        assert error_line.startswith("data: ")
-        error_data = error_line[6:]  # Remove 'data: '
-        assert "error" in error_data.lower() or "gpx_xml_data" in error_data
-
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to load GPX data: Storage connection failed" in data["detail"]
     finally:
         # Restore original storage manager
         main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
+    """Test GPX endpoint when storage manager returns None (file not found)."""
+    # Mock storage manager to return None
+    original_storage_manager = main_module.storage_manager
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            return None
+
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "GPX data not found"
+    finally:
+        # Restore original storage manager
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, main_module):
+    """Test GPX endpoint for gpx_bytes is None check (lines 495-500)."""
+    # Mock both database and storage manager to ensure we hit the None check
+    original_session_local = main_module.SessionLocal
+    original_storage_manager = main_module.storage_manager
+
+    # Create a mock track object that exists in database
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path="test/none_check.gpx",
+        bound_north=46.0,
+        bound_south=45.0,
+        bound_east=4.0,
+        bound_west=3.0,
+        name="None Check Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.KNOBS,
+        tire_wet=TireType.KNOBS,
+        comments="Test track for None check",
+        created_at=datetime.now(),
+    )
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_track  # Track exists in database
+
+            return MockResult()
+
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            # Return None to test the None check in lines 495-500
+            return None
+
+    main_module.SessionLocal = MockSessionLocal()
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        response = client.get("/api/segments/456/gpx")
+        assert response.status_code == 404
+        data = response.json()
+
+        # Verify the specific error message and status code from lines 495-500
+        assert data["detail"] == "GPX data not found"
+
+        # This test specifically covers the code path:
+        # 1. Database query (lines 486-488)
+        # 2. Track found check (line 490-491)
+        # 3. Storage load (line 494)
+        # 4. None check (lines 495-500)
+        # if gpx_bytes is None:
+        #     logger.warning(f"No GPX data found for track {track_id} at path: "
+        #                   f"{track.file_path}")
+        #     raise HTTPException(status_code=404, detail="GPX data not found")
+
+    finally:
+        # Restore original services
+        main_module.SessionLocal = original_session_local
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_invalid_track_id(client):
+    """Test GPX endpoint with invalid track ID format."""
+    response = client.get("/api/segments/invalid/gpx")
+    assert response.status_code == 422  # Validation error for invalid integer
+
+
+def test_get_track_gpx_data_endpoint_success(client, main_module):
+    """Test GPX endpoint with successful GPX data retrieval."""
+    # Mock storage manager to return valid GPX data
+    original_storage_manager = main_module.storage_manager
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            return (
+                b'<?xml version="1.0" encoding="UTF-8"?>\n'
+                b'<gpx version="1.1"><trk><name>Test Track</name></trk></gpx>'
+            )
+
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        # Use a track ID that exists in the test database (from the test data setup)
+        response = client.get("/api/segments/1/gpx")
+
+        # The response could be 200 (success) or 404 (if track doesn't exist in test DB)
+        # Both are valid for testing the code paths
+        if response.status_code == 200:
+            data = response.json()
+
+            # Check response structure
+            assert "gpx_xml_data" in data
+            assert isinstance(data["gpx_xml_data"], str)
+            assert data["gpx_xml_data"].startswith("<?xml")
+            assert "Test Track" in data["gpx_xml_data"]
+
+            # Verify response model compliance
+            assert len(data.keys()) == 1  # Only gpx_xml_data field
+        else:
+            # If track doesn't exist, that's also a valid test outcome
+            assert response.status_code == 404
+    finally:
+        # Restore original storage manager
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_success_with_existing_track(client, main_module):
+    """Test GPX endpoint success path with a track that definitely exists."""
+    # First, let's find a track that exists in the test database
+    search_response = client.get(
+        "/api/segments/search",
+        params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+    )
+    assert search_response.status_code == 200
+
+    # Parse the streaming response to get an existing track ID
+    content = search_response.text
+    lines = content.strip().split("\n")
+    data_lines = [line for line in lines if line.startswith("data: ")]
+
+    if len(data_lines) > 2:  # Has count + segments + [DONE]
+        # Get the first segment data
+        segment_line = data_lines[1]  # Skip count line
+        segment_data = json.loads(segment_line[6:])  # Remove 'data: '
+        existing_track_id = segment_data["id"]
+
+        # Mock storage manager to return valid GPX data
+        original_storage_manager = main_module.storage_manager
+
+        class MockStorageManager:
+            def load_gpx_data(self, url):
+                return (
+                    b'<?xml version="1.0" encoding="UTF-8"?>\n'
+                    b'<gpx version="1.1"><trk><name>Success Track</name></trk></gpx>'
+                )
+
+        main_module.storage_manager = MockStorageManager()
+
+        try:
+            # Test with the existing track ID
+            response = client.get(f"/api/segments/{existing_track_id}/gpx")
+            assert response.status_code == 200
+            data = response.json()
+
+            # Check response structure - this should cover lines 501 and 512
+            assert "gpx_xml_data" in data
+            assert isinstance(data["gpx_xml_data"], str)
+            assert data["gpx_xml_data"].startswith("<?xml")
+            assert "Success Track" in data["gpx_xml_data"]
+
+            # Verify response model compliance
+            assert len(data.keys()) == 1  # Only gpx_xml_data field
+
+        finally:
+            # Restore original storage manager
+            main_module.storage_manager = original_storage_manager
+    else:
+        # Skip test if no tracks exist in database
+        pytest.skip("No tracks found in test database")
+
+
+def test_get_track_gpx_data_endpoint_success_with_mock_database(client, main_module):
+    """Test GPX endpoint success path by mocking database to hit all code paths."""
+    # Mock both database and storage manager to ensure we hit the success path
+    original_session_local = main_module.SessionLocal
+    original_storage_manager = main_module.storage_manager
+
+    # Create a mock track object
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=123,
+        file_path="test/path.gpx",
+        bound_north=46.0,
+        bound_south=45.0,
+        bound_east=4.0,
+        bound_west=3.0,
+        name="Mock Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.KNOBS,
+        tire_wet=TireType.KNOBS,
+        comments="Test track",
+        created_at=datetime.now(),
+    )
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_track
+
+            return MockResult()
+
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            return (
+                b'<?xml version="1.0" encoding="UTF-8"?>\n'
+                b'<gpx version="1.1"><trk><name>Mock Track</name></trk></gpx>'
+            )
+
+    main_module.SessionLocal = MockSessionLocal()
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        response = client.get("/api/segments/123/gpx")
+        assert response.status_code == 200
+        data = response.json()
+
+        # This should now cover lines 488, 501, and 512
+        assert "gpx_xml_data" in data
+        assert isinstance(data["gpx_xml_data"], str)
+        assert data["gpx_xml_data"].startswith("<?xml")
+        assert "Mock Track" in data["gpx_xml_data"]
+
+        # Verify response model compliance
+        assert len(data.keys()) == 1  # Only gpx_xml_data field
+
+    finally:
+        # Restore original services
+        main_module.SessionLocal = original_session_local
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_track_not_found_in_database(client, main_module):
+    """Test GPX endpoint when track is not found in database (line 491)."""
+    # Mock database to return None (track not found)
+    original_session_local = main_module.SessionLocal
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return None  # Track not found
+
+            return MockResult()
+
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    main_module.SessionLocal = MockSessionLocal()
+
+    try:
+        response = client.get("/api/segments/99999/gpx")
+        assert response.status_code == 404
+        data = response.json()
+
+        # This should cover line 491: raise HTTPException(status_code=404,
+        # detail="Track not found")
+        assert data["detail"] == "Track not found"
+
+    finally:
+        # Restore original database session
+        main_module.SessionLocal = original_session_local
+
+
+def test_get_track_gpx_data_endpoint_decode_exception_path(client, main_module):
+    """Test GPX endpoint exception handling path (lines 504-508)."""
+    # Mock both database and storage manager to trigger decode exception
+    original_session_local = main_module.SessionLocal
+    original_storage_manager = main_module.storage_manager
+
+    # Create a mock track object
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=789,
+        file_path="test/exception_path.gpx",
+        bound_north=46.0,
+        bound_south=45.0,
+        bound_east=4.0,
+        bound_west=3.0,
+        name="Exception Path Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.KNOBS,
+        tire_wet=TireType.KNOBS,
+        comments="Test track for exception path",
+        created_at=datetime.now(),
+    )
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return mock_track
+
+            return MockResult()
+
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            # Return bytes that will cause a decode exception
+            # Using a mock object that will raise an exception when decode() is called
+            class MockBytes:
+                def decode(self, encoding):
+                    raise UnicodeDecodeError("utf-8", b"", 0, 1, "invalid start byte")
+
+            return MockBytes()
+
+    main_module.SessionLocal = MockSessionLocal()
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        response = client.get("/api/segments/789/gpx")
+        assert response.status_code == 500
+        data = response.json()
+
+        # This should cover lines 504-508:
+        # except Exception as e:
+        #     logger.warning(f"Failed to load GPX data for track {track_id}: {str(e)}")
+        #     raise HTTPException(status_code=500,
+        #                        detail=f"Failed to load GPX data: {str(e)}")
+
+        assert (
+            "Failed to load GPX data: 'utf-8' codec can't decode bytes"
+            in data["detail"]
+        )
+
+    finally:
+        # Restore original services
+        main_module.SessionLocal = original_session_local
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
+    """Test GPX endpoint when GPX data cannot be decoded as UTF-8."""
+    # Mock storage manager to return invalid UTF-8 data
+    original_storage_manager = main_module.storage_manager
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            # Return bytes that cannot be decoded as UTF-8
+            return b"\xff\xfe\x00\x00"
+
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to load GPX data" in data["detail"]
+    finally:
+        # Restore original storage manager
+        main_module.storage_manager = original_storage_manager
+
+
+def test_get_track_gpx_data_endpoint_database_error(client, main_module):
+    """Test GPX endpoint when database query fails."""
+    # Mock database session to raise an exception
+    original_session_local = main_module.SessionLocal
+
+    class MockSessionLocal:
+        async def __aenter__(self):
+            raise Exception("Database connection failed")
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    main_module.SessionLocal = MockSessionLocal
+
+    try:
+        response = client.get("/api/segments/1/gpx")
+        assert response.status_code == 500
+        data = response.json()
+        assert "Internal server error" in data["detail"]
+    finally:
+        # Restore original database session
+        main_module.SessionLocal = original_session_local
 
 
 def test_search_segments_endpoint_streaming_error(client, main_module):

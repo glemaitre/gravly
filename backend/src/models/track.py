@@ -76,3 +76,7 @@ class TrackResponse(BaseModel):
 
 class TrackWithGPXDataResponse(TrackResponse):
     gpx_xml_data: str | None = None
+
+
+class GPXDataResponse(BaseModel):
+    gpx_xml_data: str

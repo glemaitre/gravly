@@ -38,13 +38,32 @@ vi.mock('leaflet', () => ({
 
 // Mock Chart.js
 vi.mock('chart.js', () => ({
-  Chart: {
-    register: vi.fn(),
-    prototype: {
+  Chart: Object.assign(
+    vi.fn().mockImplementation((ctx, config) => ({
       destroy: vi.fn(),
-      update: vi.fn()
+      update: vi.fn(),
+      render: vi.fn(),
+      resize: vi.fn(),
+      canvas: {
+        getBoundingClientRect: vi.fn(() => ({
+          left: 0,
+          top: 0,
+          width: 800,
+          height: 400
+        }))
+      },
+      scales: {
+        x: {
+          getPixelForValue: vi.fn((value) => value * 10)
+        }
+      },
+      ctx,
+      config
+    })),
+    {
+      register: vi.fn()
     }
-  },
+  ),
   LineController: {},
   LineElement: {},
   PointElement: {},
@@ -55,6 +74,27 @@ vi.mock('chart.js', () => ({
   Tooltip: {},
   registerables: []
 }))
+
+// Create a more complete chart mock for tests
+const createChartMock = () => ({
+  destroy: vi.fn(),
+  update: vi.fn(),
+  render: vi.fn(),
+  resize: vi.fn(),
+  canvas: {
+    getBoundingClientRect: vi.fn(() => ({
+      left: 0,
+      top: 0,
+      width: 800,
+      height: 400
+    }))
+  },
+  scales: {
+    x: {
+      getPixelForValue: vi.fn((value) => value * 10)
+    }
+  }
+})
 
 // Mock axios
 vi.mock('axios', () => ({
@@ -370,7 +410,7 @@ describe('Editor', () => {
       ok: true,
       json: () => Promise.resolve({ id: 1, name: 'Test' })
     })
-    global.fetch = mockFetch
+    ;(global as any).fetch = mockFetch
 
     // Set up component state
     const vm = wrapper.vm as any
@@ -623,6 +663,261 @@ describe('Editor', () => {
     }
   })
 
+  it('handles form submission success path', async () => {
+    const wrapper = mountEditor()
+
+    // Mock successful fetch response
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('Success')
+    })
+
+    // Mock nextTick and render functions
+    const vm = wrapper.vm as any
+    const renderMapSpy = vi.spyOn(vm, 'renderMap').mockImplementation(() => {})
+    const renderChartSpy = vi
+      .spyOn(vm, 'renderChart')
+      .mockImplementation(() => {})
+
+    // Set up component state to pass validation
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+    vm.trailConditions = {
+      tire_dry: 'slick',
+      tire_wet: 'semi-slick',
+      surface_type: 'forest-trail',
+      difficulty_level: 3
+    }
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify success state
+    expect(vm.showSegmentSuccess).toBe(true)
+    expect(vm.showError).toBe(false)
+    expect(vm.currentErrorMessage).toBe('')
+    expect(vm.showUploadSuccess).toBe(false)
+
+    // Verify form was reset
+    expect(vm.name).toBe('')
+    expect(vm.trailConditions).toEqual({
+      tire_dry: 'slick',
+      tire_wet: 'slick',
+      surface_type: 'forest-trail',
+      difficulty_level: 3
+    })
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    renderMapSpy.mockRestore()
+    renderChartSpy.mockRestore()
+  })
+
+  it('handles form submission error with response detail', async () => {
+    const wrapper = mountEditor()
+
+    // Mock failed fetch response with detail
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('Server error detail')
+    })
+
+    // Mock setTimeout
+    vi.spyOn(global, 'setTimeout')
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify error state
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Server error detail')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('handles form submission error without response detail', async () => {
+    const wrapper = mountEditor()
+
+    // Mock failed fetch response without detail
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('')
+    })
+
+    // Mock setTimeout
+    vi.spyOn(global, 'setTimeout')
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify error state with fallback message
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Failed to create segment')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('handles form submission error with exception', async () => {
+    const wrapper = mountEditor()
+
+    // Mock fetch to throw an exception
+    ;(global as any).fetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+    // Mock setTimeout
+    vi.spyOn(global, 'setTimeout')
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify error state
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Network error')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('handles form submission error with exception without message', async () => {
+    const wrapper = mountEditor()
+
+    // Mock fetch to throw an exception without message
+    ;(global as any).fetch = vi.fn().mockRejectedValue(new Error())
+
+    // Mock setTimeout
+    vi.spyOn(global, 'setTimeout')
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify error state with fallback message
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Error while creating segment')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('automatically hides error after 5 seconds', async () => {
+    const wrapper = mountEditor()
+
+    // Mock failed fetch response
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('Error')
+    })
+
+    // Mock setTimeout
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify setTimeout was called with 5000ms
+    expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+    vi.restoreAllMocks()
+  })
+
+  it('resets submitting state in finally block', async () => {
+    const wrapper = mountEditor()
+
+    // Mock successful fetch response
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve('Success')
+    })
+
+    // Set up component state to pass validation
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+
+    // Submit form
+    await vm.onSubmit()
+
+    // Verify submitting was reset to false
+    expect(vm.submitting).toBe(false)
+
+    // Clean up
+    ;(global as any).fetch = undefined
+  })
+
   describe('Responsive behavior', () => {
     it('has resize event listener attached on mount', async () => {
       const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
@@ -759,7 +1054,7 @@ describe('Editor', () => {
       const wrapper = mountEditor()
 
       const vm = wrapper.vm as any
-      vm.chart = { resize: vi.fn() }
+      vm.chart = createChartMock()
       vm.chartCanvas = { parentElement: { getBoundingClientRect: vi.fn() } }
       vm.points = []
 
