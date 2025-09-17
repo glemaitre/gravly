@@ -1587,6 +1587,323 @@ def test_create_segment_successful_database_operations(
         assert data["file_path"].endswith(".gpx")
 
 
+def test_search_segments_options_endpoint(client):
+    """Test OPTIONS endpoint for /api/segments/search (CORS preflight)."""
+    response = client.options("/api/segments/search")
+
+    # Should return 200 OK
+    assert response.status_code == 200
+
+    # Check CORS headers are present
+    headers = response.headers
+    assert headers["Access-Control-Allow-Origin"] == "*"
+    assert headers["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+    assert headers["Access-Control-Allow-Headers"] == "*"
+    assert headers["Access-Control-Max-Age"] == "86400"
+
+    # Response body should be empty for OPTIONS
+    assert response.content == b""
+
+
+def test_search_segments_options_endpoint_basic_functionality(client):
+    """Test OPTIONS endpoint basic functionality."""
+    # Test basic OPTIONS request
+    response = client.options("/api/segments/search")
+
+    # Should return 200 OK
+    assert response.status_code == 200
+
+    # CORS headers should be present
+    headers = response.headers
+    assert headers["Access-Control-Allow-Origin"] == "*"
+    assert headers["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+    assert headers["Access-Control-Allow-Headers"] == "*"
+    assert headers["Access-Control-Max-Age"] == "86400"
+
+
+def test_search_segments_endpoint_success(client):
+    """Test successful search for segments within bounds."""
+    # Search for segments in a bounding box
+    # Using coordinates that should include most of Europe
+    response = client.get(
+        "/api/segments/search",
+        params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Check CORS headers
+    assert response.headers["Access-Control-Allow-Origin"] == "*"
+    assert response.headers["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Should have data lines and a [DONE] marker
+    data_lines = [line for line in lines if line.startswith("data: ")]
+    assert len(data_lines) >= 2  # At least one segment count + [DONE]
+
+    # First line should be segment count
+    count_line = data_lines[0]
+    assert count_line.startswith("data: ")
+    segment_count = int(count_line[6:])  # Remove 'data: '
+    assert segment_count >= 0  # Should find 0 or more segments
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+
+def test_search_segments_endpoint_no_results(client):
+    """Test search for segments with no results."""
+    # Search in an area with no segments (middle of ocean)
+    response = client.get(
+        "/api/segments/search",
+        params={"north": 0.0, "south": -1.0, "east": 0.0, "west": -1.0},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Should have only count and [DONE]
+    data_lines = [line for line in lines if line.startswith("data: ")]
+    assert len(data_lines) == 2
+
+    # First line should be 0 segments
+    count_line = data_lines[0]
+    assert count_line == "data: 0"
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+
+def test_search_segments_endpoint_missing_parameters(client):
+    """Test search endpoint with missing required parameters."""
+    # Missing one parameter
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            # Missing "west"
+        },
+    )
+
+    # Should return 422 Unprocessable Entity
+    assert response.status_code == 422
+
+
+def test_search_segments_endpoint_invalid_parameters(client):
+    """Test search endpoint with invalid parameter values."""
+    # Invalid coordinates (south > north)
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 40.0,  # south should be less than north
+            "south": 50.0,  # invalid: south > north
+            "east": 10.0,
+            "west": 0.0,
+        },
+    )
+
+    # Should still work (validation happens in the query, not the endpoint)
+    assert response.status_code == 200
+
+
+def test_search_segments_endpoint_cors_headers(client):
+    """Test that search endpoint returns proper CORS headers."""
+    response = client.get(
+        "/api/segments/search",
+        params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+    )
+
+    assert response.status_code == 200
+
+    # Check CORS headers
+    headers = response.headers
+    assert headers["Access-Control-Allow-Origin"] == "*"
+    assert headers["Access-Control-Allow-Headers"] == "Cache-Control"
+    assert headers["Access-Control-Allow-Methods"] == "GET, OPTIONS"
+    assert headers["Access-Control-Expose-Headers"] == "*"
+    assert headers["Cache-Control"] == "no-cache"
+    assert headers["Connection"] == "keep-alive"
+
+
+def test_search_segments_endpoint_streaming_format(client):
+    """Test that search endpoint returns properly formatted streaming data."""
+    # Search for segments
+    response = client.get(
+        "/api/segments/search",
+        params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+    )
+
+    assert response.status_code == 200
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Find data lines
+    data_lines = [line for line in lines if line.startswith("data: ")]
+
+    # Should have at least: count + [DONE]
+    assert len(data_lines) >= 2
+
+    # First line should be segment count
+    count_line = data_lines[0]
+    assert count_line.startswith("data: ")
+    segment_count = int(count_line[6:])  # Remove 'data: '
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+    # If there are segments, check that segment data is valid JSON
+    if segment_count > 0:
+        segment_data_lines = data_lines[1:-1]  # Exclude count and [DONE]
+        for line in segment_data_lines:
+            json_str = line[6:]  # Remove 'data: '
+            data = json.loads(json_str)
+
+            # Check required fields
+            assert "id" in data
+            assert "name" in data
+            assert "file_path" in data
+            assert "bound_north" in data
+            assert "bound_south" in data
+            assert "bound_east" in data
+            assert "bound_west" in data
+            assert "gpx_xml_data" in data
+
+            # Check that GPX data is present (may be None if no segments)
+            if data["gpx_xml_data"] is not None:
+                assert data["gpx_xml_data"].startswith("<?xml")
+
+
+def test_search_segments_endpoint_gpx_load_error(client, main_module):
+    """Test search endpoint when GPX data loading fails (covers lines 424-428)."""
+    # Mock the storage manager to raise an exception when loading GPX data
+    original_storage_manager = main_module.storage_manager
+
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            raise Exception("Mocked GPX loading error")
+
+    main_module.storage_manager = MockStorageManager()
+
+    try:
+        # Search for segments - should handle GPX loading error gracefully
+        response = client.get(
+            "/api/segments/search",
+            params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+        # Parse streaming response
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Find data lines
+        data_lines = [line for line in lines if line.startswith("data: ")]
+
+        # Should have: count + error (no [DONE] because error occurs during processing)
+        assert len(data_lines) == 2
+
+        # First line should be segment count
+        count_line = data_lines[0]
+        assert count_line.startswith("data: ")
+        segment_count = int(count_line[6:])  # Remove 'data: '
+        assert segment_count >= 0  # Should handle error gracefully
+
+        # Second line should contain error information
+        error_line = data_lines[1]
+        assert error_line.startswith("data: ")
+        error_data = error_line[6:]  # Remove 'data: '
+        assert "error" in error_data.lower() or "gpx_xml_data" in error_data
+
+    finally:
+        # Restore original storage manager
+        main_module.storage_manager = original_storage_manager
+
+
+def test_search_segments_endpoint_streaming_error(client, main_module):
+    """Test search endpoint when streaming generation fails (covers lines 452-454)."""
+    # Mock the database session to raise an exception during streaming
+    original_session_local = main_module.SessionLocal
+
+    class MockSessionLocal:
+        def __call__(self):
+            raise Exception("Mocked database connection error")
+
+    main_module.SessionLocal = MockSessionLocal
+
+    try:
+        # Search for segments - should handle streaming error gracefully
+        response = client.get(
+            "/api/segments/search",
+            params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+        )
+
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+        # Parse streaming response
+        content = response.text
+        lines = content.strip().split("\n")
+
+        # Find data lines
+        data_lines = [line for line in lines if line.startswith("data: ")]
+
+        # Should have error message
+        assert len(data_lines) >= 1
+
+        # Should contain error information
+        error_line = data_lines[0]
+        assert error_line.startswith("data: ")
+        error_data = error_line[6:]  # Remove 'data: '
+
+        # The error message contains single quotes, so we need to handle it carefully
+        # Check that it contains error information
+        assert (
+            "error" in error_data.lower()
+            or "Mocked database connection error" in error_data
+        )
+
+    finally:
+        # Restore original SessionLocal
+        main_module.SessionLocal = original_session_local
+
+
+def test_search_segments_endpoint_database_not_available(client, main_module):
+    """Test search endpoint when database is not available (covers lines 395-396)."""
+    # Mock SessionLocal to be None/False to trigger database availability check
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = None
+
+    try:
+        # Search for segments - should return 500 error
+        response = client.get(
+            "/api/segments/search",
+            params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+        )
+
+        assert response.status_code == 500
+        error_data = response.json()
+        assert "detail" in error_data
+        assert error_data["detail"] == "Database not available"
+
+    finally:
+        # Restore original SessionLocal
+        main_module.SessionLocal = original_session_local
+
+
 def test_main_module_execution():
     """Test the if __name__ == '__main__' block by importing and checking it exists."""
     import src.main

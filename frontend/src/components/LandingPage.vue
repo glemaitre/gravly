@@ -283,7 +283,6 @@ function processTrack(track: TrackWithGPXDataResponse) {
   }
 }
 
-
 // Add GPX track to map - simplified version
 function addGPXTrackToMap(
   segment: TrackWithGPXDataResponse,

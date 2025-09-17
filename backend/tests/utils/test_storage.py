@@ -191,12 +191,6 @@ class MockStorageManager:
         """Mock storage root prefix implementation."""
         return "mock://test-bucket"
 
-    def load_gpx_segment(self, url: str) -> bytes | None:
-        """Mock load implementation."""
-        self.load_calls = getattr(self, "load_calls", [])
-        self.load_calls.append(url)
-        return b"<gpx>mock content</gpx>"
-
 
 def test_storage_manager_protocol_interface():
     """Test that StorageManager Protocol defines the correct interface."""
@@ -205,7 +199,6 @@ def test_storage_manager_protocol_interface():
     assert hasattr(StorageManager, "get_gpx_segment_url")
     assert hasattr(StorageManager, "bucket_exists")
     assert hasattr(StorageManager, "get_storage_root_prefix")
-    assert hasattr(StorageManager, "load_gpx_segment")
 
     upload_method = StorageManager.__dict__["upload_gpx_segment"]
     assert upload_method.__annotations__["return"] is str
@@ -221,9 +214,6 @@ def test_storage_manager_protocol_interface():
 
     prefix_method = StorageManager.__dict__["get_storage_root_prefix"]
     assert prefix_method.__annotations__["return"] is str
-
-    load_method = StorageManager.__dict__["load_gpx_segment"]
-    assert load_method.__annotations__["return"] == bytes | None
 
 
 def test_storage_manager_protocol_implementation():
@@ -251,11 +241,6 @@ def test_storage_manager_protocol_implementation():
     result = manager.get_storage_root_prefix()
     assert result == "mock://test-bucket"
 
-    # Test load_gpx_segment
-    result = manager.load_gpx_segment("https://example.com/test.gpx")
-    assert result == b"<gpx>mock content</gpx>"
-    assert manager.load_calls == ["https://example.com/test.gpx"]
-
 
 def test_storage_manager_protocol_type_checking():
     """Test that type checking works with StorageManager Protocol."""
@@ -279,109 +264,3 @@ def test_storage_manager_protocol_default_parameters():
     result = manager.get_gpx_segment_url("test/file.gpx")
     assert result == "https://example.com/test/file.gpx"
     assert manager.url_calls[-1] == ("test/file.gpx", 3600)
-
-
-@patch("src.utils.storage.requests.get")
-def test_s3_manager_load_gpx_segment_success(mock_get):
-    """Test successful GPX segment loading with S3Manager."""
-    from src.utils.storage import S3Manager
-
-    from backend.src.utils.config import S3StorageConfig
-
-    # Mock successful response
-    mock_response = mock_get.return_value
-    mock_response.raise_for_status.return_value = None
-    mock_response.content = b"<gpx>test content</gpx>"
-
-    config = S3StorageConfig(
-        storage_type="s3",
-        bucket="test-bucket",
-        access_key_id="test-key",
-        secret_access_key="test-secret",
-        region="us-west-2",
-    )
-
-    with patch("src.utils.storage.S3Manager"):
-        manager = S3Manager(config)
-
-        result = manager.load_gpx_segment("https://example.com/test.gpx")
-
-        assert result == b"<gpx>test content</gpx>"
-        mock_get.assert_called_once_with("https://example.com/test.gpx", timeout=30)
-
-
-@patch("src.utils.storage.requests.get")
-def test_s3_manager_load_gpx_segment_failure(mock_get):
-    """Test failed GPX segment loading with S3Manager."""
-    import requests
-    from src.utils.storage import S3Manager
-
-    from backend.src.utils.config import S3StorageConfig
-
-    # Mock failed response
-    mock_get.side_effect = requests.exceptions.RequestException("Network error")
-
-    config = S3StorageConfig(
-        storage_type="s3",
-        bucket="test-bucket",
-        access_key_id="test-key",
-        secret_access_key="test-secret",
-        region="us-west-2",
-    )
-
-    with patch("src.utils.storage.S3Manager"):
-        manager = S3Manager(config)
-
-        result = manager.load_gpx_segment("https://example.com/test.gpx")
-
-        assert result is None
-
-
-@patch("src.utils.storage.requests.get")
-def test_local_storage_manager_load_gpx_segment_success(mock_get, tmp_path):
-    """Test successful GPX segment loading with LocalStorageManager."""
-    from src.utils.storage import LocalStorageManager
-
-    from backend.src.utils.config import LocalStorageConfig
-
-    # Mock successful response
-    mock_response = mock_get.return_value
-    mock_response.raise_for_status.return_value = None
-    mock_response.content = b"<gpx>test content</gpx>"
-
-    config = LocalStorageConfig(
-        storage_type="local",
-        storage_root=str(tmp_path / "storage"),
-        base_url="http://test:8080/storage",
-    )
-
-    manager = LocalStorageManager(config)
-
-    result = manager.load_gpx_segment("https://example.com/test.gpx")
-
-    assert result == b"<gpx>test content</gpx>"
-    mock_get.assert_called_once_with("https://example.com/test.gpx", timeout=30)
-
-
-@patch("src.utils.storage.requests.get")
-def test_local_storage_manager_load_gpx_segment_failure(mock_get, tmp_path):
-    """Test failed GPX segment loading with LocalStorageManager."""
-    import requests
-    from src.utils.storage import LocalStorageManager
-
-    from backend.src.utils.config import LocalStorageConfig
-
-    # Mock failed response
-    mock_get.side_effect = requests.exceptions.RequestException("Network error")
-
-    config = LocalStorageConfig(
-        storage_type="local",
-        storage_root=str(tmp_path / "storage"),
-        base_url="http://test:8080/storage",
-    )
-
-    manager = LocalStorageManager(config)
-
-    result = manager.load_gpx_segment("https://example.com/test.gpx")
-
-    assert result is None

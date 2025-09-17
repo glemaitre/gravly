@@ -396,3 +396,204 @@ def test_get_storage_root_prefix(local_storage_manager):
     """Test getting storage root prefix for local storage."""
     result = local_storage_manager.get_storage_root_prefix()
     assert result == "local://"
+
+
+def test_load_gpx_data_success_with_local_url(local_storage_manager):
+    """Test successful GPX data loading using local:/// URL format."""
+    test_content = b"<?xml version='1.0'?><gpx><trk><name>Test Track</name></trk></gpx>"
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / "test-file.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(test_content)
+
+    # Test loading with local:/// URL format (this should trigger line 401)
+    local_url = "local:///gpx-segments/test-file.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result == test_content
+
+
+def test_load_gpx_data_success_with_local_url_short_format(local_storage_manager):
+    """Test successful GPX data loading using local:// URL format (short format)."""
+    test_content = b"<?xml version='1.0'?><gpx><trk><name>Test Track</name></trk></gpx>"
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / "test-file.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(test_content)
+
+    # Test loading with local:// URL format (this should trigger the URL validation but fail)
+    # The method expects local:/// format, so this should fail
+    local_url = "local://gpx-segments/test-file.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    # This should fail because it doesn't start with the expected prefix
+    assert result is None
+
+
+def test_load_gpx_data_file_not_found(local_storage_manager):
+    """Test load_gpx_data when file doesn't exist."""
+    local_url = "local:///gpx-segments/non-existent-file.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result is None
+
+
+def test_load_gpx_data_invalid_url_format(local_storage_manager):
+    """Test load_gpx_data with invalid URL format."""
+    # Test with non-local URL (should fail URL validation)
+    result = local_storage_manager.load_gpx_data("s3://bucket/file.gpx")
+    assert result is None
+
+    # Test with malformed local URL (missing third slash - should fail URL validation)
+    result = local_storage_manager.load_gpx_data("local://file.gpx")
+    assert result is None
+
+    # Test with direct storage key (should fail URL validation)
+    result = local_storage_manager.load_gpx_data("gpx-segments/file.gpx")
+    assert result is None
+
+
+def test_load_gpx_data_large_file(local_storage_manager):
+    """Test load_gpx_data with a large GPX file."""
+    # Create a larger test file (simulate real GPX data)
+    large_content = b"<?xml version='1.0'?><gpx><trk><name>Large Track</name>"
+    large_content += b"<trkpt lat='45.0' lon='2.0'><ele>100.0</ele></trkpt>" * 1000
+    large_content += b"</trk></gpx>"
+
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / "large-file.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(large_content)
+
+    # Test loading with local:/// URL format
+    local_url = "local:///gpx-segments/large-file.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result == large_content
+    assert len(result) > 10000  # Ensure we got substantial data
+
+
+def test_load_gpx_data_empty_file(local_storage_manager):
+    """Test load_gpx_data with an empty file."""
+    empty_content = b""
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / "empty-file.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(empty_content)
+
+    # Test loading with local:/// URL format
+    local_url = "local:///gpx-segments/empty-file.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result == empty_content
+    assert len(result) == 0
+
+
+def test_load_gpx_data_with_nested_paths(local_storage_manager):
+    """Test load_gpx_data with nested directory paths."""
+    test_content = (
+        b"<?xml version='1.0'?><gpx><trk><name>Nested Track</name></trk></gpx>"
+    )
+    test_file_path = (
+        local_storage_manager.storage_root
+        / "gpx-segments"
+        / "2023"
+        / "08"
+        / "track-123.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(test_content)
+
+    # Test loading with nested path using local:/// URL format
+    local_url = "local:///gpx-segments/2023/08/track-123.gpx"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result == test_content
+
+
+def test_load_gpx_data_with_special_characters(local_storage_manager):
+    """Test load_gpx_data with special characters in the file path."""
+    test_content = (
+        b"<?xml version='1.0'?><gpx><trk><name>Special Track</name></trk></gpx>"
+    )
+    # Create a file with special characters in the name
+    special_filename = "track with spaces & symbols!.gpx"
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / special_filename
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(test_content)
+
+    # Test loading with special characters using local:/// URL format
+    local_url = f"local:///gpx-segments/{special_filename}"
+    result = local_storage_manager.load_gpx_data(local_url)
+
+    assert result == test_content
+
+
+def test_load_gpx_data_url_validation_error(local_storage_manager):
+    """Test load_gpx_data URL validation error (covers lines 508-510)."""
+    # Test with URL that doesn't start with the storage root prefix
+    # This should trigger the URL validation error
+    invalid_url = "https://example.com/file.gpx"
+    result = local_storage_manager.load_gpx_data(invalid_url)
+
+    # Should return None due to URL validation failure
+    assert result is None
+
+
+def test_load_gpx_data_exception_handling(local_storage_manager):
+    """Test load_gpx_data exception handling (covers lines 529-531)."""
+    # Create a valid file first
+    test_content = b"<?xml version='1.0'?><gpx><trk><name>Test Track</name></trk></gpx>"
+    test_file_path = (
+        local_storage_manager.storage_root / "gpx-segments" / "test-file.gpx"
+    )
+    test_file_path.parent.mkdir(parents=True, exist_ok=True)
+    test_file_path.write_bytes(test_content)
+
+    # Mock the open function to raise an exception
+    with patch("builtins.open", side_effect=IOError("Mocked filesystem error")):
+        local_url = "local:///gpx-segments/test-file.gpx"
+        result = local_storage_manager.load_gpx_data(local_url)
+
+        # Should return None due to exception
+        assert result is None
+
+
+def test_load_gpx_data_get_storage_root_prefix_exception(local_storage_manager):
+    """Test load_gpx_data when get_storage_root_prefix raises an exception."""
+    # Mock get_storage_root_prefix to raise an exception
+    with patch.object(
+        local_storage_manager,
+        "get_storage_root_prefix",
+        side_effect=Exception("Mocked error"),
+    ):
+        local_url = "local:///gpx-segments/test-file.gpx"
+        result = local_storage_manager.load_gpx_data(local_url)
+
+        # Should return None due to exception
+        assert result is None
+
+
+def test_get_gpx_segment_url_with_local_prefix(local_storage_manager, real_gpx_file):
+    """Test get_gpx_segment_url with local:/// prefix (covers line 401)."""
+    file_id = "test-segment-url-with-prefix"
+
+    # Upload a file first
+    storage_key = local_storage_manager.upload_gpx_segment(
+        local_file_path=real_gpx_file,
+        file_id=file_id,
+    )
+
+    # Test URL generation with local:/// prefix (this should trigger line 401)
+    local_url = f"local:///{storage_key}"
+    url = local_storage_manager.get_gpx_segment_url(local_url, expiration=3600)
+
+    assert url is not None
+    assert local_storage_manager.base_url in url
+    assert storage_key in url

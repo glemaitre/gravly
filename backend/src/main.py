@@ -144,35 +144,6 @@ async def serve_storage_file(file_path: str):
     )
 
 
-@app.get("/api/load-gpx")
-async def load_gpx_from_url(url: str):
-    """Load GPX data from a URL and return it directly to the client."""
-    global storage_manager
-
-    if not storage_manager:
-        raise HTTPException(status_code=500, detail="Storage manager not initialized")
-
-    try:
-        # Use the new load_gpx_segment method to load data into memory
-        gpx_data = storage_manager.load_gpx_segment(url)
-
-        if gpx_data is None:
-            raise HTTPException(
-                status_code=404, detail="Failed to load GPX data from URL"
-            )
-
-        # Return the GPX data directly as a response
-        return Response(
-            content=gpx_data,
-            media_type="application/gpx+xml",
-            headers={"Content-Disposition": "attachment; filename=loaded_segment.gpx"},
-        )
-
-    except Exception as e:
-        logger.error(f"Error loading GPX from URL {url}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error loading GPX data: {str(e)}")
-
-
 @app.post("/api/upload-gpx", response_model=GPXData)
 async def upload_gpx(file: UploadFile = File(...)):
     """Upload a GPX file from the client to the server in a temporary directory.

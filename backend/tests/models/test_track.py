@@ -427,11 +427,11 @@ def test_local_storage_manager_load_gpx_data(tmp_path):
     result = manager.load_gpx_data(storage_url)
     assert result == test_content
 
-    # Test with regular storage key
-    storage_key = "gpx-segments/test-file.gpx"
-    result = manager.load_gpx_data(storage_key)
+    # Test with local URL format
+    local_url = "local:///gpx-segments/test-file.gpx"
+    result = manager.load_gpx_data(local_url)
     assert result == test_content
 
     # Test with non-existent file
-    result = manager.load_gpx_data("gpx-segments/non-existent.gpx")
+    result = manager.load_gpx_data("local:///gpx-segments/non-existent.gpx")
     assert result is None

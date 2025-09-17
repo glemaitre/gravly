@@ -361,3 +361,157 @@ def test_get_storage_root_prefix(mock_s3_manager):
     """Test getting storage root prefix for S3 storage."""
     result = mock_s3_manager.get_storage_root_prefix()
     assert result == "s3://test-cycling-gpx-bucket"
+
+
+def test_load_gpx_data_success(mock_s3_manager):
+    """Test successful GPX data loading from S3."""
+    s3_key = "gpx-segments/test-file.gpx"
+    test_content = b"<?xml version='1.0'?><gpx><trk><name>Test Track</name></trk></gpx>"
+
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket", Key=s3_key, Body=test_content
+    )
+
+    s3_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+
+    assert result == test_content
+
+
+def test_load_gpx_data_invalid_url_format(mock_s3_manager):
+    """Test load_gpx_data with invalid URL format."""
+    result = mock_s3_manager.load_gpx_data("https://example.com/file.gpx")
+    assert result is None
+
+    result = mock_s3_manager.load_gpx_data("local:///file.gpx")
+    assert result is None
+
+    result = mock_s3_manager.load_gpx_data("s3://test-cycling-gpx-bucket")
+    assert result is None
+
+
+def test_load_gpx_data_wrong_bucket(mock_s3_manager):
+    """Test load_gpx_data with wrong bucket name."""
+    s3_url = "s3://wrong-bucket/gpx-segments/file.gpx"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+    assert result is None
+
+
+def test_load_gpx_data_bucket_validation_error(mock_s3_manager):
+    """Test load_gpx_data with bucket name that doesn't match configured bucket."""
+    # We need to test the bucket validation logic, but the URL must start with the correct prefix
+    # The prefix check happens before bucket validation, so we need to craft a URL that
+    # passes the prefix check but fails bucket validation
+    # Since get_storage_root_prefix() returns "s3://test-cycling-gpx-bucket",
+    # we need a URL that starts with that but has a different bucket in the path
+
+    # This is a bit tricky - let me test the URL parsing logic more directly
+    # by mocking the get_storage_root_prefix to return just "s3://" temporarily
+    from unittest.mock import patch
+
+    with patch.object(mock_s3_manager, "get_storage_root_prefix", return_value="s3://"):
+        wrong_bucket = "wrong-cycling-gpx-bucket"
+        s3_key = "gpx-segments/test-file.gpx"
+        s3_url = f"s3://{wrong_bucket}/{s3_key}"
+
+        # This should return None due to bucket name mismatch validation
+        result = mock_s3_manager.load_gpx_data(s3_url)
+
+        # Should return None due to bucket name mismatch
+        assert result is None
+
+
+def test_load_gpx_data_file_not_found(mock_s3_manager):
+    """Test load_gpx_data when file doesn't exist in S3."""
+    s3_url = "s3://test-cycling-gpx-bucket/non-existent/file.gpx"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+    assert result is None
+
+
+def test_load_gpx_data_client_error(mock_s3_manager):
+    """Test load_gpx_data when S3 client raises an error."""
+    s3_url = "s3://test-cycling-gpx-bucket/test-file.gpx"
+
+    client_error = ClientError(
+        error_response={
+            "Error": {
+                "Code": "NoSuchKey",
+                "Message": "The specified key does not exist.",
+            }
+        },
+        operation_name="GetObject",
+    )
+
+    with patch.object(
+        mock_s3_manager.s3_client, "get_object", side_effect=client_error
+    ):
+        result = mock_s3_manager.load_gpx_data(s3_url)
+        assert result is None
+
+
+def test_load_gpx_data_large_file(mock_s3_manager):
+    """Test load_gpx_data with a large GPX file."""
+    s3_key = "gpx-segments/large-file.gpx"
+    large_content = b"<?xml version='1.0'?><gpx><trk><name>Large Track</name>"
+    large_content += b"<trkpt lat='45.0' lon='2.0'><ele>100.0</ele></trkpt>" * 1000
+    large_content += b"</trk></gpx>"
+
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket", Key=s3_key, Body=large_content
+    )
+
+    s3_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+
+    assert result == large_content
+    assert len(result) > 10000  # Ensure we got substantial data
+
+
+def test_load_gpx_data_empty_file(mock_s3_manager):
+    """Test load_gpx_data with an empty file."""
+    s3_key = "gpx-segments/empty-file.gpx"
+    empty_content = b""
+
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket", Key=s3_key, Body=empty_content
+    )
+
+    s3_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+
+    assert result == empty_content
+    assert len(result) == 0
+
+
+def test_load_gpx_data_with_nested_paths(mock_s3_manager):
+    """Test load_gpx_data with nested S3 key paths."""
+    s3_key = "gpx-segments/2023/08/track-123.gpx"
+    test_content = (
+        b"<?xml version='1.0'?><gpx><trk><name>Nested Track</name></trk></gpx>"
+    )
+
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket", Key=s3_key, Body=test_content
+    )
+
+    s3_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+
+    assert result == test_content
+
+
+def test_load_gpx_data_with_special_characters(mock_s3_manager):
+    """Test load_gpx_data with special characters in the key."""
+    s3_key = "gpx-segments/track with spaces & symbols!.gpx"
+    test_content = (
+        b"<?xml version='1.0'?><gpx><trk><name>Special Track</name></trk></gpx>"
+    )
+
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket", Key=s3_key, Body=test_content
+    )
+
+    s3_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.load_gpx_data(s3_url)
+
+    assert result == test_content
