@@ -1,0 +1,672 @@
+<template>
+  <div class="segment-list">
+    <!-- Filter Card -->
+    <div class="filter-card">
+      <!-- Sticky Track Type Tabs -->
+      <div class="track-type-tabs">
+        <button
+          type="button"
+          class="tab-button"
+          :class="{ active: selectedTrackType === 'segment' }"
+          @click="onTrackTypeChange('segment')"
+        >
+          <i class="fa-solid fa-route"></i>
+          Segments
+        </button>
+        <button
+          type="button"
+          class="tab-button"
+          :class="{ active: selectedTrackType === 'route' }"
+          @click="onTrackTypeChange('route')"
+        >
+          <i class="fa-solid fa-map"></i>
+          Routes
+        </button>
+      </div>
+
+      <!-- Scrollable Cards Container -->
+      <div class="cards-container">
+        <div v-if="segments.length > 0" class="segment-cards">
+          <div
+            v-for="segment in segments"
+            :key="segment.id"
+            class="segment-card"
+            @click="onSegmentClick(segment)"
+            @mouseenter="onSegmentHover(segment)"
+            @mouseleave="onSegmentLeave(segment)"
+          >
+            <div class="segment-card-header">
+              <h4
+                class="segment-name"
+                :class="{ hovered: hoveredSegmentId === segment.id }"
+              >
+                {{ segment.name }}
+                <span v-if="hoveredSegmentId === segment.id" class="hover-indicator"
+                  >📍</span
+                >
+              </h4>
+            </div>
+
+            <div class="segment-card-content">
+              <div class="segment-metrics">
+                <div class="metric">
+                  <span class="metric-label">Distance</span>
+                  <span class="metric-value">{{
+                    formatDistance(segmentStats.get(segment.id)?.total_distance || 0)
+                  }}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Elevation</span>
+                  <span class="metric-value">{{
+                    formatElevation(
+                      segmentStats.get(segment.id)?.total_elevation_gain || 0
+                    )
+                  }}</span>
+                </div>
+                <div class="metric">
+                  <span class="metric-label">Time</span>
+                  <span class="metric-value">{{
+                    formatTime(segmentStats.get(segment.id)?.total_time || 0)
+                  }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="segment-card-footer">
+              <div class="segment-info-grid">
+                <!-- Surface Type -->
+                <div class="info-section">
+                  <div class="info-label">Surface</div>
+                  <div class="info-value">
+                    <i class="fa-solid fa-road"></i>
+                    <span>{{ formatSurfaceType(segment.surface_type) }}</span>
+                  </div>
+                </div>
+
+                <!-- Tire Recommendations -->
+                <div class="info-section">
+                  <div class="info-label">Tires</div>
+                  <div class="tire-recommendations">
+                    <div class="tire-recommendation">
+                      <i class="fa-solid fa-sun"></i>
+                      <span class="tire-badge">{{
+                        formatTireType(segment.tire_dry)
+                      }}</span>
+                    </div>
+                    <div class="tire-recommendation">
+                      <i class="fa-solid fa-cloud-rain"></i>
+                      <span class="tire-badge">{{
+                        formatTireType(segment.tire_wet)
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Difficulty -->
+                <div class="info-section">
+                  <div class="info-label">Difficulty</div>
+                  <div class="info-value difficulty">
+                    <i class="fa-solid fa-signal"></i>
+                    <span>{{ segment.difficulty_level }}/5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else-if="!loading" class="no-segments">
+          <p>
+            No {{ selectedTrackType }}s found in the current view. Try zooming out or
+            panning to a different area.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang="ts" setup>
+import { ref, onUnmounted, watch, nextTick } from 'vue'
+import type { TrackResponse } from '../types'
+
+interface SegmentStats {
+  total_distance: number
+  total_elevation_gain: number
+  total_time: number
+}
+
+interface Props {
+  segments: TrackResponse[]
+  loading: boolean
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  segmentClick: [segment: TrackResponse]
+  segmentHover: [segment: TrackResponse]
+  segmentLeave: [segment: TrackResponse]
+  trackTypeChange: [trackType: 'segment' | 'route']
+}>()
+
+// Refs for segment stats
+const segmentStats = ref<Map<number, SegmentStats>>(new Map())
+
+// Track type filter
+const selectedTrackType = ref<'segment' | 'route'>('segment')
+
+// Currently hovered segment
+const hoveredSegmentId = ref<number | null>(null)
+
+// Watch for segment changes and generate mock stats
+watch(
+  () => props.segments,
+  async (newSegments) => {
+    await nextTick()
+    for (const segment of newSegments) {
+      generateMockStats(segment)
+    }
+  },
+  { immediate: true }
+)
+
+function generateMockStats(segment: TrackResponse) {
+  // Generate mock stats based on segment properties
+  if (!segmentStats.value.has(segment.id)) {
+    // Calculate approximate distance based on bounding box
+    const latDiff = segment.bound_north - segment.bound_south
+    const lonDiff = segment.bound_east - segment.bound_west
+    const avgLat = (segment.bound_north + segment.bound_south) / 2
+
+    // Rough distance calculation (not precise, but gives a reasonable estimate)
+    const latKm = latDiff * 111.32 // 1 degree latitude ≈ 111.32 km
+    const lonKm = lonDiff * 111.32 * Math.cos((avgLat * Math.PI) / 180)
+    const distance = Math.sqrt(latKm * latKm + lonKm * lonKm) * 1000 // Convert to meters
+
+    // Generate mock elevation gain based on difficulty and track type
+    const baseElevation = segment.difficulty_level * 50 // 50m per difficulty level
+    const elevationGain = baseElevation + Math.random() * 100 // Add some randomness
+
+    // Estimate time based on distance and difficulty
+    const baseSpeed = 15 - segment.difficulty_level * 2 // km/h, decreases with difficulty
+    const timeHours = distance / 1000 / baseSpeed
+    const timeSeconds = timeHours * 3600
+
+    const stats: SegmentStats = {
+      total_distance: Math.round(distance),
+      total_elevation_gain: Math.round(elevationGain),
+      total_time: Math.round(timeSeconds)
+    }
+    segmentStats.value.set(segment.id, stats)
+  }
+}
+
+function onSegmentClick(segment: TrackResponse) {
+  emit('segmentClick', segment)
+}
+
+function onSegmentHover(segment: TrackResponse) {
+  hoveredSegmentId.value = segment.id
+  emit('segmentHover', segment)
+}
+
+function onSegmentLeave(segment: TrackResponse) {
+  hoveredSegmentId.value = null
+  emit('segmentLeave', segment)
+}
+
+function onTrackTypeChange(trackType: 'segment' | 'route') {
+  selectedTrackType.value = trackType
+  emit('trackTypeChange', trackType)
+}
+
+// Formatting functions
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)}m`
+  }
+  return `${(meters / 1000).toFixed(1)}km`
+}
+
+function formatElevation(meters: number): string {
+  return `${Math.round(meters)}m`
+}
+
+function formatTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`
+  }
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.round(seconds % 60)
+  if (minutes < 60) {
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+  const hours = Math.floor(minutes / 60)
+  const remainingMinutes = minutes % 60
+  return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
+function formatSurfaceType(surfaceType: string): string {
+  return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
+
+function formatTireType(tireType: string): string {
+  return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
+
+onUnmounted(() => {
+  // Clean up any resources if needed
+})
+</script>
+
+<style scoped>
+.segment-list-header {
+  margin-bottom: 16px;
+}
+
+.segment-list-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+/* Segment List Container */
+.segment-list {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-card {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Track Type Tabs - Sticky */
+.track-type-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: #f8fafc;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
+  min-height: 0;
+}
+
+/* Scrollable Cards Container */
+.cards-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  background: white;
+  position: relative;
+  min-height: 0; /* Ensure flex child can shrink */
+}
+
+/* Scroll indicator - subtle shadow at bottom when scrollable */
+.cards-container::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.1));
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cards-container.scrollable::after {
+  opacity: 1;
+}
+
+.cards-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.cards-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.cards-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.cards-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: #ff6600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ffb366;
+}
+
+.tab-button i {
+  font-size: 0.875rem;
+}
+
+.segment-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.segment-card {
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.segment-card:hover {
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px);
+  border-color: #ff6b35;
+  background: linear-gradient(135deg, #fff 0%, #fff8f5 100%);
+}
+
+.segment-card:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 2px solid #ff6b35;
+  border-radius: 8px;
+  pointer-events: none;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+.segment-card-header {
+  margin-bottom: 12px;
+}
+
+.segment-name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.2s ease;
+}
+
+.segment-name.hovered {
+  color: #ff6b35;
+}
+
+.hover-indicator {
+  font-size: 0.9rem;
+  animation: bounce 1s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+.segment-card-content {
+  margin-bottom: 12px;
+}
+
+.segment-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.metric {
+  text-align: center;
+}
+
+.metric-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.metric-value {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.segment-card-footer {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+  position: relative;
+}
+
+.segment-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+
+.info-label {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.info-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.info-value i {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.info-value.difficulty {
+  color: #e67e22;
+  font-weight: 600;
+}
+
+.tire-recommendations {
+  display: flex;
+  gap: 8px;
+}
+
+.tire-recommendation {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tire-recommendation i {
+  font-size: 0.8rem;
+}
+
+.tire-recommendation .fa-sun {
+  color: #ff6600; /* Orange for sun - matches Editor brand-500 */
+}
+
+.tire-recommendation .fa-cloud-rain {
+  color: #3b82f6; /* Blue for cloud - matches Editor blue-500 */
+}
+
+.tire-badge {
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.segment-comments {
+  font-size: 0.875rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.segment-comments p {
+  margin: 0;
+}
+
+.no-segments {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+  background: white;
+}
+
+.no-segments p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Large screens - more cards per row */
+@media (min-width: 1400px) {
+  .segment-cards {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .segment-cards {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .segment-cards {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-card {
+    height: 100%;
+  }
+
+  .segment-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .segment-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .segment-info-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .info-section:nth-child(3) {
+    grid-column: 1 / -1;
+    text-align: center;
+  }
+
+  .tire-recommendations {
+    justify-content: center;
+  }
+
+  .track-type-tabs {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem;
+    padding: 0.2rem;
+  }
+}
+</style>
