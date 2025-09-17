@@ -675,9 +675,7 @@ describe('Editor', () => {
     // Mock nextTick and render functions
     const vm = wrapper.vm as any
     const renderMapSpy = vi.spyOn(vm, 'renderMap').mockImplementation(() => {})
-    const renderChartSpy = vi
-      .spyOn(vm, 'renderChart')
-      .mockImplementation(() => {})
+    const renderChartSpy = vi.spyOn(vm, 'renderChart').mockImplementation(() => {})
 
     // Set up component state to pass validation
     vm.loaded = true

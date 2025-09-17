@@ -95,6 +95,9 @@ function initializeMap() {
   // Initialize previous bounds for comparison
   previousMapBounds = map.getBounds()
   map.on('moveend', handleMapMoveEnd)
+
+  // Add zoom event listener to update circle sizes
+  map.on('zoomend', updateCircleSizes)
 }
 
 // Process tracks that arrived before map was ready
@@ -128,6 +131,31 @@ function handleMapMoveEnd() {
 
   // Update previous bounds for next comparison
   previousMapBounds = currentBounds
+}
+
+// Update circle sizes based on current zoom level
+function updateCircleSizes() {
+  if (!map) return
+
+  const currentZoom = map.getZoom()
+  const baseRadius = 6
+  const maxRadius = 10
+  const minRadius = 2
+  // Scale radius with zoom level - smaller circles when zoomed out, larger when zoomed in
+  const dynamicRadius = Math.max(
+    minRadius,
+    Math.min(maxRadius, baseRadius + (currentZoom - 10) * 0.4)
+  )
+
+  // Update all existing circle markers
+  currentMapLayers.forEach((layerData) => {
+    if (layerData.startMarker) {
+      layerData.startMarker.setRadius(dynamicRadius)
+    }
+    if (layerData.endMarker) {
+      layerData.endMarker.setRadius(dynamicRadius)
+    }
+  })
 }
 
 // Debounced search function to prevent too many requests
@@ -388,10 +416,21 @@ function addGPXTrackToMap(
   let endMarker: any = null
 
   if (trackPoints.length > 0) {
-    // Start marker (green)
+    // Calculate dynamic radius based on zoom level
+    const currentZoom = mapInstance.getZoom()
+    const baseRadius = 6
+    const maxRadius = 10
+    const minRadius = 2
+    // Scale radius with zoom level - smaller circles when zoomed out, larger when zoomed in
+    const dynamicRadius = Math.max(
+      minRadius,
+      Math.min(maxRadius, baseRadius + (currentZoom - 10) * 0.4)
+    )
+
+    // Start marker (orange)
     startMarker = L.circleMarker(trackPoints[0], {
-      radius: 8,
-      fillColor: '#10b981',
+      radius: dynamicRadius,
+      fillColor: '#ff6600', // Orange color
       color: '#ffffff',
       weight: 2,
       opacity: 1,
@@ -403,10 +442,10 @@ function addGPXTrackToMap(
       `<div class="marker-popup"><strong>Start:</strong> ${segment.name}</div>`
     )
 
-    // End marker (red)
+    // End marker (blue)
     endMarker = L.circleMarker(trackPoints[trackPoints.length - 1], {
-      radius: 8,
-      fillColor: '#ef4444',
+      radius: dynamicRadius,
+      fillColor: '#3b82f6', // Blue color
       color: '#ffffff',
       weight: 2,
       opacity: 1,
@@ -582,12 +621,12 @@ onUnmounted(() => {
 }
 
 :global(.start-marker) {
-  background: #10b981;
+  background: #ff6600; /* Orange color */
   color: white;
 }
 
 :global(.end-marker) {
-  background: #ef4444;
+  background: #3b82f6; /* Blue color */
   color: white;
 }
 

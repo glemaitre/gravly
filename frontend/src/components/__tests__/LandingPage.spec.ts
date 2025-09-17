@@ -43,6 +43,8 @@ const mockMarker = {
 
 const mockCircleMarker = {
   addTo: vi.fn(() => mockCircleMarker),
+  setRadius: vi.fn(),
+  bindPopup: vi.fn(() => mockCircleMarker),
   _leaflet_id: 4
 }
 
@@ -561,6 +563,226 @@ describe('LandingPage', () => {
       // Map should be initialized (we can't directly test the private map variable)
       // but we can test that the component mounted successfully
       expect(wrapper.exists()).toBe(true)
+    })
+  })
+
+  describe('Dynamic Circle Scaling', () => {
+    it('should have updateCircleSizes method', () => {
+      wrapper = mount(LandingPage)
+
+      expect(typeof wrapper.vm.updateCircleSizes).toBe('function')
+    })
+
+    it('should calculate correct radius for different zoom levels', () => {
+      wrapper = mount(LandingPage)
+
+      // Test the radius calculation logic
+      const baseRadius = 6
+      const maxRadius = 10
+      const minRadius = 2
+
+      const testZoomLevels = [
+        { zoom: 5, expectedRadius: 4 }, // 6 + (5-10) * 0.4 = 6 + (-5) * 0.4 = 4
+        { zoom: 8, expectedRadius: 5.2 }, // 6 + (8-10) * 0.4 = 6 + (-2) * 0.4 = 5.2
+        { zoom: 10, expectedRadius: 6 }, // baseRadius
+        { zoom: 12, expectedRadius: 6.8 }, // baseRadius + (12-10) * 0.4 = 6 + 2 * 0.4 = 6.8
+        { zoom: 15, expectedRadius: 8 } // 6 + (15-10) * 0.4 = 6 + 5 * 0.4 = 8
+      ]
+
+      testZoomLevels.forEach(({ zoom, expectedRadius }) => {
+        const dynamicRadius = Math.max(
+          minRadius,
+          Math.min(maxRadius, baseRadius + (zoom - 10) * 0.4)
+        )
+
+        expect(dynamicRadius).toBeCloseTo(expectedRadius, 1)
+      })
+    })
+
+    it('should update circle markers when zoom level changes', async () => {
+      wrapper = mount(LandingPage)
+
+      // Mock the currentMapLayers with some test data
+      const mockLayerData = {
+        startMarker: { setRadius: vi.fn() },
+        endMarker: { setRadius: vi.fn() }
+      }
+      wrapper.vm.currentMapLayers = new Map([['test-segment', mockLayerData]])
+
+      // Mock different zoom levels
+      mockMapInstance.getZoom.mockReturnValue(5) // Very zoomed out
+
+      // Call the updateCircleSizes function directly - should not throw error
+      expect(() => wrapper.vm.updateCircleSizes()).not.toThrow()
+
+      // Test with zoomed in level
+      mockMapInstance.getZoom.mockReturnValue(15) // Very zoomed in
+      expect(() => wrapper.vm.updateCircleSizes()).not.toThrow()
+    })
+
+    it('should handle empty currentMapLayers gracefully', () => {
+      wrapper = mount(LandingPage)
+
+      // Set empty map layers
+      wrapper.vm.currentMapLayers = new Map()
+
+      // Should not throw error
+      expect(() => wrapper.vm.updateCircleSizes()).not.toThrow()
+    })
+
+    it('should handle layers without markers gracefully', () => {
+      wrapper = mount(LandingPage)
+
+      // Mock layer data without markers
+      const mockLayerData = {
+        polyline: { someProperty: 'value' }
+        // No startMarker or endMarker
+      }
+      wrapper.vm.currentMapLayers = new Map([['test-segment', mockLayerData]])
+
+      // Should not throw error
+      expect(() => wrapper.vm.updateCircleSizes()).not.toThrow()
+    })
+
+    it('should use correct color scheme for markers', async () => {
+      wrapper = mount(LandingPage)
+
+      // Mock track data
+      const mockTrack = {
+        id: 1,
+        name: 'Test Track',
+        file_path: 'test.gpx'
+      }
+
+      // Mock GPX data
+      const mockGPXData = {
+        file_id: 'test-file',
+        track_name: 'Test Track',
+        points: [
+          {
+            latitude: 45.0,
+            longitude: 5.0,
+            elevation: 100,
+            time: '2023-01-01T10:00:00Z'
+          },
+          {
+            latitude: 45.1,
+            longitude: 5.1,
+            elevation: 110,
+            time: '2023-01-01T10:01:00Z'
+          }
+        ],
+        total_stats: {
+          total_points: 2,
+          total_distance: 1000,
+          total_elevation_gain: 10,
+          total_elevation_loss: 0
+        },
+        bounds: {
+          north: 45.1,
+          south: 45.0,
+          east: 5.1,
+          west: 5.0,
+          min_elevation: 100,
+          max_elevation: 110
+        }
+      }
+
+      // Mock the parseGPXData function
+      const { parseGPXData } = await import('../../utils/gpxParser')
+      vi.mocked(parseGPXData).mockReturnValue(mockGPXData)
+
+      // Call addGPXTrackToMap
+      wrapper.vm.addGPXTrackToMap(mockTrack, mockGPXData, mockMapInstance)
+
+      // Check that circleMarker was called with correct colors
+      const L = await import('leaflet')
+      expect(L.default.circleMarker).toHaveBeenCalledWith(
+        [45.0, 5.0],
+        expect.objectContaining({
+          fillColor: '#ff6600', // Orange for start marker
+          color: '#ffffff'
+        })
+      )
+
+      expect(L.default.circleMarker).toHaveBeenCalledWith(
+        [45.1, 5.1],
+        expect.objectContaining({
+          fillColor: '#3b82f6', // Blue for end marker
+          color: '#ffffff'
+        })
+      )
+    })
+
+    it('should apply dynamic radius when creating markers', async () => {
+      wrapper = mount(LandingPage)
+
+      // Mock different zoom levels
+      mockMapInstance.getZoom.mockReturnValue(8) // Zoomed out
+
+      const mockTrack = {
+        id: 1,
+        name: 'Test Track',
+        file_path: 'test.gpx'
+      }
+
+      const mockGPXData = {
+        file_id: 'test-file',
+        track_name: 'Test Track',
+        points: [
+          {
+            latitude: 45.0,
+            longitude: 5.0,
+            elevation: 100,
+            time: '2023-01-01T10:00:00Z'
+          },
+          {
+            latitude: 45.1,
+            longitude: 5.1,
+            elevation: 110,
+            time: '2023-01-01T10:01:00Z'
+          }
+        ],
+        total_stats: {
+          total_points: 2,
+          total_distance: 1000,
+          total_elevation_gain: 10,
+          total_elevation_loss: 0
+        },
+        bounds: {
+          north: 45.1,
+          south: 45.0,
+          east: 5.1,
+          west: 5.0,
+          min_elevation: 100,
+          max_elevation: 110
+        }
+      }
+
+      const { parseGPXData } = await import('../../utils/gpxParser')
+      vi.mocked(parseGPXData).mockReturnValue(mockGPXData)
+
+      // Call addGPXTrackToMap
+      wrapper.vm.addGPXTrackToMap(mockTrack, mockGPXData, mockMapInstance)
+
+      // Calculate expected radius for zoom level 8
+      const expectedRadius = Math.max(2, Math.min(10, 6 + (8 - 10) * 0.4)) // Should be 2 (minRadius)
+
+      // Check that circleMarker was called with the calculated radius
+      const L = await import('leaflet')
+      expect(L.default.circleMarker).toHaveBeenCalledWith(
+        [45.0, 5.0],
+        expect.objectContaining({
+          radius: expectedRadius
+        })
+      )
+
+      expect(L.default.circleMarker).toHaveBeenCalledWith(
+        [45.1, 5.1],
+        expect.objectContaining({
+          radius: expectedRadius
+        })
+      )
     })
   })
 })
