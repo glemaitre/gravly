@@ -399,7 +399,8 @@ def test_load_gpx_data_wrong_bucket(mock_s3_manager):
 
 def test_load_gpx_data_bucket_validation_error(mock_s3_manager):
     """Test load_gpx_data with bucket name that doesn't match configured bucket."""
-    # We need to test the bucket validation logic, but the URL must start with the correct prefix
+    # We need to test the bucket validation logic, but the URL must start
+    # with the correct prefix
     # The prefix check happens before bucket validation, so we need to craft a URL that
     # passes the prefix check but fails bucket validation
     # Since get_storage_root_prefix() returns "s3://test-cycling-gpx-bucket",

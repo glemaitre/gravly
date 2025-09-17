@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { parseGPXData } from '../gpxParser'
-import type { GPXData, GPXPoint, GPXBounds, GPXTotalStats } from '../../types'
+import type { GPXPoint } from '../../types'
 
 // Mock console methods to avoid noise in tests
 const originalConsoleError = console.error

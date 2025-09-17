@@ -299,7 +299,7 @@ def test_track_with_gpx_data_response_creation():
     test_data_dir = Path(__file__).parent.parent / "data"
     gpx_file_path = test_data_dir / "file.gpx"
 
-    with open(gpx_file_path, "r", encoding="utf-8") as f:
+    with open(gpx_file_path, encoding="utf-8") as f:
         gpx_xml_data = f.read()
 
     response = TrackWithGPXDataResponse(

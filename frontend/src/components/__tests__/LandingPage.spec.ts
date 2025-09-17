@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import LandingPage from '../LandingPage.vue'
 

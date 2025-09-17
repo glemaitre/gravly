@@ -423,7 +423,8 @@ def test_load_gpx_data_success_with_local_url_short_format(local_storage_manager
     test_file_path.parent.mkdir(parents=True, exist_ok=True)
     test_file_path.write_bytes(test_content)
 
-    # Test loading with local:// URL format (this should trigger the URL validation but fail)
+    # Test loading with local:// URL format
+    # (this should trigger the URL validation but fail)
     # The method expects local:/// format, so this should fail
     local_url = "local://gpx-segments/test-file.gpx"
     result = local_storage_manager.load_gpx_data(local_url)
@@ -557,7 +558,7 @@ def test_load_gpx_data_exception_handling(local_storage_manager):
     test_file_path.write_bytes(test_content)
 
     # Mock the open function to raise an exception
-    with patch("builtins.open", side_effect=IOError("Mocked filesystem error")):
+    with patch("builtins.open", side_effect=OSError("Mocked filesystem error")):
         local_url = "local:///gpx-segments/test-file.gpx"
         result = local_storage_manager.load_gpx_data(local_url)
 

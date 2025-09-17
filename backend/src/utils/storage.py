@@ -13,7 +13,6 @@ from typing import Protocol
 from urllib.parse import urljoin
 
 import boto3
-import requests
 from botocore.exceptions import ClientError, NoCredentialsError
 
 from .config import LocalStorageConfig, S3StorageConfig
