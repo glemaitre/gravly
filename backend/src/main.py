@@ -24,7 +24,6 @@ from .models.track import (
 )
 from .utils.config import load_environment_config
 from .utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
-from .utils.math import haversine_distance
 from .utils.postgres import get_database_url
 from .utils.storage import (
     LocalStorageManager,
@@ -444,38 +443,12 @@ async def search_segments_in_bounds(
                 search_center_latitude = (north + south) / 2
                 search_center_longitude = (east + west) / 2
 
-                # Calculate Haversine distance directly in SQL for better performance
-                # Using the Haversine formula: 6371 * 2 * asin(sqrt(sin²(Δlat/2) +
-                # cos(lat1) * cos(lat2) * sin²(Δlon/2)))
+                # Calculate squared Euclidean distance for better performance on local areas
+                # For small distances, this is a good approximation and much faster than Haversine
+                # Using squared distance to avoid sqrt() calculation
                 distance_expr = (
-                    6371
-                    * 2
-                    * func.asin(
-                        func.sqrt(
-                            func.pow(
-                                func.sin(
-                                    (
-                                        func.radians(Track.barycenter_latitude)
-                                        - func.radians(search_center_latitude)
-                                    )
-                                    / 2
-                                ),
-                                2,
-                            )
-                            + func.cos(func.radians(search_center_latitude))
-                            * func.cos(func.radians(Track.barycenter_latitude))
-                            * func.pow(
-                                func.sin(
-                                    (
-                                        func.radians(Track.barycenter_longitude)
-                                        - func.radians(search_center_longitude)
-                                    )
-                                    / 2
-                                ),
-                                2,
-                            )
-                        )
-                    )
+                    func.pow(Track.barycenter_latitude - search_center_latitude, 2)
+                    + func.pow(Track.barycenter_longitude - search_center_longitude, 2)
                 ).label("distance")
 
                 # Get tracks with distance calculated in SQL, ordered by distance
