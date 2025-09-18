@@ -443,9 +443,10 @@ async def search_segments_in_bounds(
                 search_center_latitude = (north + south) / 2
                 search_center_longitude = (east + west) / 2
 
-                # Calculate squared Euclidean distance for better performance on local areas
-                # For small distances, this is a good approximation and much faster than Haversine
-                # Using squared distance to avoid sqrt() calculation
+                # Calculate squared Euclidean distance for better performance on local
+                # areas For small distances, this is a good approximation and much
+                # faster than Haversine Using squared distance to avoid sqrt()
+                # calculation
                 distance_expr = (
                     func.pow(Track.barycenter_latitude - search_center_latitude, 2)
                     + func.pow(Track.barycenter_longitude - search_center_longitude, 2)

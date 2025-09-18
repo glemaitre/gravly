@@ -5,6 +5,8 @@
         <div class="map-container">
           <div class="card card-map">
             <div id="landing-map" class="map"></div>
+            <!-- Fixed Center Marker -->
+            <div class="fixed-center-marker" title="Search Center">📍</div>
             <!-- Max Results Control - Bottom Left Corner -->
             <div class="map-controls">
               <div class="limit-control">
@@ -95,6 +97,8 @@ let resizeHandler: (() => void) | null = null
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
+
+// Fixed center marker - no need to track state
 
 function initializeMap() {
   if (map) {
@@ -1101,5 +1105,33 @@ onUnmounted(() => {
 
 :global(.marker-popup strong) {
   color: #1f2937;
+}
+
+/* Fixed center marker styling */
+.fixed-center-marker {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  pointer-events: none;
+  font-size: 24px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
 }
 </style>

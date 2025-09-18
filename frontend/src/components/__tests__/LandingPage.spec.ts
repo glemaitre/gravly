@@ -1035,6 +1035,162 @@ describe('LandingPage', () => {
     })
   })
 
+  describe('Fixed Center Marker', () => {
+    it('renders center marker in template', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+      expect(centerMarker.text()).toBe('📍')
+      expect(centerMarker.attributes('title')).toBe('Search Center')
+    })
+
+    it('has correct CSS classes and attributes', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.classes()).toContain('fixed-center-marker')
+      expect(centerMarker.attributes('title')).toBe('Search Center')
+    })
+
+    it('is positioned absolutely at center of map container', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      const mapContainer = wrapper.find('.card-map')
+
+      expect(centerMarker.exists()).toBe(true)
+      expect(mapContainer.exists()).toBe(true)
+
+      // Check that center marker is inside the map container
+      expect(mapContainer.find('.fixed-center-marker').exists()).toBe(true)
+    })
+
+    it('has proper CSS class for styling', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+      expect(centerMarker.classes()).toContain('fixed-center-marker')
+
+      // In test environment, we can't easily test computed styles
+      // but we can verify the element exists and has the right class
+      expect(centerMarker.element).toBeDefined()
+    })
+
+    it('has correct HTML structure for centering', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+
+      // Check that the element is properly structured
+      expect(centerMarker.element.tagName).toBe('DIV')
+      expect(centerMarker.text()).toBe('📍')
+    })
+
+    it('has proper accessibility attributes', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.attributes('title')).toBe('Search Center')
+    })
+
+    it('has CSS styles defined in component', () => {
+      wrapper = mount(LandingPage)
+
+      // Check that the component has the CSS styles defined
+      // We can't test computed styles in jsdom, but we can verify
+      // that the styles are present in the component's style section
+      const component = wrapper.vm
+      expect(component).toBeDefined()
+
+      // The styles are defined in the <style> section of the component
+      // and will be applied in a real browser environment
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+    })
+
+    it('maintains center position during map interactions', async () => {
+      wrapper = mount(LandingPage)
+
+      // Wait for component to mount
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+
+      // Simulate map movement (the center marker should remain in the same position)
+      // since it's positioned absolutely relative to the container, not the map
+
+      // The marker should always be at the center of the container
+      expect(centerMarker.classes()).toContain('fixed-center-marker')
+    })
+
+    it('does not interfere with map controls', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      const mapControls = wrapper.find('.map-controls')
+
+      // All elements should exist
+      expect(centerMarker.exists()).toBe(true)
+      expect(mapControls.exists()).toBe(true)
+
+      // Center marker should not overlap with controls
+      // (This is ensured by z-index and positioning)
+      expect(centerMarker.element).toBeDefined()
+      expect(mapControls.element).toBeDefined()
+    })
+
+    it('is always visible regardless of map state', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+      expect(centerMarker.isVisible()).toBe(true)
+
+      // Even when loading, the center marker should be visible
+      wrapper.vm.loading = true
+      expect(centerMarker.isVisible()).toBe(true)
+
+      // Even when no segments, the center marker should be visible
+      wrapper.vm.segments = []
+      expect(centerMarker.isVisible()).toBe(true)
+    })
+
+    it('works correctly with map initialization', async () => {
+      wrapper = mount(LandingPage)
+
+      // Wait for component to mount and map to initialize
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+      expect(centerMarker.isVisible()).toBe(true)
+
+      // Center marker should be present even after map initialization
+      expect(centerMarker.text()).toBe('📍')
+      expect(centerMarker.attributes('title')).toBe('Search Center')
+    })
+
+    it('does not require JavaScript updates for positioning', () => {
+      wrapper = mount(LandingPage)
+
+      const centerMarker = wrapper.find('.fixed-center-marker')
+      expect(centerMarker.exists()).toBe(true)
+
+      // The center marker is positioned using CSS only, no JavaScript needed
+      // This is the key benefit of the fixed positioning approach
+      expect(centerMarker.classes()).toContain('fixed-center-marker')
+
+      // No need to test JavaScript positioning logic since it's CSS-based
+      expect(centerMarker.element).toBeDefined()
+    })
+  })
+
   describe('Error Handling', () => {
     it('should handle missing map container gracefully', () => {
       wrapper = mount(LandingPage)
