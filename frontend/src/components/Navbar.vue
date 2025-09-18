@@ -215,7 +215,7 @@ onUnmounted(() => {
   font-size: 0.875rem;
 }
 
-.nav .language-dropdown {
+.language-dropdown {
   position: relative;
 }
 
@@ -248,7 +248,6 @@ onUnmounted(() => {
 }
 
 .navbar-menu {
-  position: absolute;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -258,17 +257,19 @@ onUnmounted(() => {
   visibility: hidden;
   transform: translateY(-8px);
   transition: all 0.2s ease;
-  margin-top: 4px;
   min-width: 140px;
 }
 
-.navbar-nav .language-dropdown-menu.navbar-menu {
-  top: 100%;
-  right: 0;
-  left: auto;
+.language-dropdown-menu.navbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: auto;
+  transform-origin: top left;
+  width: 100%;
 }
 
-.navbar-nav .language-dropdown-menu.navbar-menu.open {
+.language-dropdown-menu.navbar-menu.open {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
