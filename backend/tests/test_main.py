@@ -2538,6 +2538,101 @@ def test_search_segments_valid_track_types(client):
     assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
 
 
+def test_search_segments_with_limit_parameter(client):
+    """Test search segments endpoint with limit parameter."""
+    # Test with default limit (50)
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 45.0,
+            "south": 44.0,
+            "east": 2.0,
+            "west": 1.0,
+            "track_type": "segment",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Test with custom limit
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 45.0,
+            "south": 44.0,
+            "east": 2.0,
+            "west": 1.0,
+            "track_type": "segment",
+            "limit": 25,
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Test with invalid limit (too high)
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 45.0,
+            "south": 44.0,
+            "east": 2.0,
+            "west": 1.0,
+            "track_type": "segment",
+            "limit": 2000,
+        },
+    )
+    assert response.status_code == 422  # Validation error
+
+    # Test with invalid limit (too low)
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 45.0,
+            "south": 44.0,
+            "east": 2.0,
+            "west": 1.0,
+            "track_type": "segment",
+            "limit": 0,
+        },
+    )
+    assert response.status_code == 422  # Validation error
+
+
+def test_search_segments_response_includes_barycenter(client):
+    """Test that search segments response includes barycenter fields."""
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 45.0,
+            "south": 44.0,
+            "east": 2.0,
+            "west": 1.0,
+            "track_type": "segment",
+            "limit": 10,
+        },
+    )
+    assert response.status_code == 200
+
+    # Parse the streaming response
+    lines = response.text.strip().split("\n")
+    data_lines = [
+        line
+        for line in lines
+        if line.startswith("data: ") and not line.startswith("data: [DONE]")
+    ]
+
+    if data_lines:
+        # Skip the first line which contains the count
+        if len(data_lines) > 1:
+            track_data = json.loads(data_lines[1].replace("data: ", ""))
+
+            # Check that barycenter fields are present
+            assert "barycenter_latitude" in track_data
+            assert "barycenter_longitude" in track_data
+            assert isinstance(track_data["barycenter_latitude"], (int, float))
+            assert isinstance(track_data["barycenter_longitude"], (int, float))
+
+
 def test_main_module_execution():
     """Test the if __name__ == '__main__' block by importing and checking it exists."""
     import src.main

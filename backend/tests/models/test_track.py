@@ -42,6 +42,8 @@ def test_track_model_creation():
         bound_south=44.0,
         bound_east=2.0,
         bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
         name="Test Track",
         track_type=TrackType.SEGMENT,
         difficulty_level=3,
@@ -56,6 +58,8 @@ def test_track_model_creation():
     assert track.bound_south == 44.0
     assert track.bound_east == 2.0
     assert track.bound_west == 1.0
+    assert track.barycenter_latitude == 44.5
+    assert track.barycenter_longitude == 1.5
     assert track.name == "Test Track"
     assert track.track_type == TrackType.SEGMENT
     assert track.difficulty_level == 3
@@ -75,6 +79,8 @@ def test_track_model_optional_fields():
     assert track.bound_south is None
     assert track.bound_east is None
     assert track.bound_west is None
+    assert track.barycenter_latitude is None
+    assert track.barycenter_longitude is None
     assert track.track_type is None
     assert track.difficulty_level is None
     assert track.surface_type is None
@@ -103,6 +109,8 @@ def test_track_create_response_model():
         bound_south=44.0,
         bound_east=2.0,
         bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
         name="Test Track",
         track_type="segment",
         difficulty_level=3,
@@ -118,6 +126,8 @@ def test_track_create_response_model():
     assert response.bound_south == 44.0
     assert response.bound_east == 2.0
     assert response.bound_west == 1.0
+    assert response.barycenter_latitude == 44.5
+    assert response.barycenter_longitude == 1.5
     assert response.name == "Test Track"
     assert response.track_type == "segment"
     assert response.difficulty_level == 3
@@ -136,6 +146,8 @@ def test_track_create_response_with_string_path():
         bound_south=44.0,
         bound_east=2.0,
         bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
         name="Test Track",
         track_type="segment",
         difficulty_level=3,
@@ -310,6 +322,8 @@ def test_track_with_gpx_data_response_creation():
         bound_south=44.0,
         bound_east=2.0,
         bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
         surface_type="forest-trail",
         difficulty_level=3,
         track_type="segment",
@@ -344,6 +358,8 @@ def test_track_with_gpx_data_response_none_gpx():
         bound_south=44.0,
         bound_east=2.0,
         bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
         surface_type="forest-trail",
         difficulty_level=3,
         track_type="segment",
@@ -435,3 +451,70 @@ def test_local_storage_manager_load_gpx_data(tmp_path):
     # Test with non-existent file
     result = manager.load_gpx_data("local:///gpx-segments/non-existent.gpx")
     assert result is None
+
+
+def test_track_barycenter_calculation():
+    """Test that barycenter is calculated correctly from bounds."""
+    # Test with symmetric bounds
+    track = Track(
+        file_path="/path/to/track.gpx",
+        name="Symmetric Track",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=2.0,
+        bound_west=1.0,
+        barycenter_latitude=44.5,  # (45.0 + 44.0) / 2
+        barycenter_longitude=1.5,  # (2.0 + 1.0) / 2
+    )
+
+    assert track.barycenter_latitude == 44.5
+    assert track.barycenter_longitude == 1.5
+
+    # Test with asymmetric bounds
+    track2 = Track(
+        file_path="/path/to/track2.gpx",
+        name="Asymmetric Track",
+        bound_north=46.0,
+        bound_south=44.5,
+        bound_east=3.0,
+        bound_west=1.5,
+        barycenter_latitude=45.25,  # (46.0 + 44.5) / 2
+        barycenter_longitude=2.25,  # (3.0 + 1.5) / 2
+    )
+
+    assert track2.barycenter_latitude == 45.25
+    assert track2.barycenter_longitude == 2.25
+
+
+def test_track_response_barycenter_fields():
+    """Test that TrackResponse includes barycenter fields."""
+    response = TrackResponse(
+        id=1,
+        file_path="/path/to/track.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=2.0,
+        bound_west=1.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=1.5,
+        name="Test Track",
+        track_type="segment",
+        difficulty_level=3,
+        surface_type="forest-trail",
+        tire_dry="knobs",
+        tire_wet="knobs",
+        comments="Test track for unit testing",
+    )
+
+    # Test that barycenter fields are present and accessible
+    assert hasattr(response, "barycenter_latitude")
+    assert hasattr(response, "barycenter_longitude")
+    assert response.barycenter_latitude == 44.5
+    assert response.barycenter_longitude == 1.5
+
+    # Test that model_dump includes barycenter fields
+    data = response.model_dump()
+    assert "barycenter_latitude" in data
+    assert "barycenter_longitude" in data
+    assert data["barycenter_latitude"] == 44.5
+    assert data["barycenter_longitude"] == 1.5

@@ -7,7 +7,7 @@ from tempfile import TemporaryDirectory
 
 import gpxpy
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import and_, select
@@ -24,6 +24,7 @@ from .models.track import (
 )
 from .utils.config import load_environment_config
 from .utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
+from .utils.math import haversine_distance
 from .utils.postgres import get_database_url
 from .utils.storage import (
     LocalStorageManager,
@@ -36,6 +37,7 @@ db_config, storage_config = load_environment_config()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
@@ -307,12 +309,17 @@ async def create_segment(
     if SessionLocal is not None:
         try:
             async with SessionLocal() as session:
+                barycenter_latitude = (bounds.north + bounds.south) / 2
+                barycenter_longitude = (bounds.east + bounds.west) / 2
+
                 track = Track(
                     file_path=str(processed_file_path),
                     bound_north=bounds.north,
                     bound_south=bounds.south,
                     bound_east=bounds.east,
                     bound_west=bounds.west,
+                    barycenter_latitude=barycenter_latitude,
+                    barycenter_longitude=barycenter_longitude,
                     name=name,
                     track_type=TrackType(track_type),
                     difficulty_level=difficulty_level,
@@ -331,6 +338,8 @@ async def create_segment(
                     bound_south=track.bound_south,
                     bound_east=track.bound_east,
                     bound_west=track.bound_west,
+                    barycenter_latitude=track.barycenter_latitude,
+                    barycenter_longitude=track.barycenter_longitude,
                     name=track.name,
                     track_type=track.track_type,
                     difficulty_level=int(track.difficulty_level),
@@ -344,6 +353,9 @@ async def create_segment(
             # Continue without database storage
 
     # Return response without database ID if database is not available
+    barycenter_latitude = (bounds.north + bounds.south) / 2
+    barycenter_longitude = (bounds.east + bounds.west) / 2
+
     return TrackResponse(
         id=0,  # Placeholder ID when database is not available
         file_path=str(processed_file_path),
@@ -351,6 +363,8 @@ async def create_segment(
         bound_south=bounds.south,
         bound_east=bounds.east,
         bound_west=bounds.west,
+        barycenter_latitude=barycenter_latitude,
+        barycenter_longitude=barycenter_longitude,
         name=name,
         track_type=track_type,
         difficulty_level=difficulty_level,
@@ -377,13 +391,25 @@ async def search_segments_options():
 
 @app.get("/api/segments/search")
 async def search_segments_in_bounds(
-    north: float, south: float, east: float, west: float, track_type: str = "segment"
+    north: float,
+    south: float,
+    east: float,
+    west: float,
+    track_type: str = "segment",
+    limit: int = Query(
+        50,
+        ge=1,
+        le=1000,
+        description="Maximum number of segments to return (default: 50)",
+    ),
 ):
     """Search for segments that intersect with the given map bounds using streaming.
 
     This uses simple bounding box intersection - a segment is included if its bounding
-    rectangle overlaps with the search area rectangle. Streams segments as they are
-    processed, allowing the frontend to start drawing immediately.
+    rectangle overlaps with the search area rectangle. The results are limited to the
+    specified number of segments, selecting those closest to the center of the
+    search bounds. Streams segments as they are processed, allowing the frontend
+    to start drawing immediately.
 
     Parameters
     ----------
@@ -395,6 +421,10 @@ async def search_segments_in_bounds(
         Eastern boundary of the search area
     west : float
         Western boundary of the search area
+    track_type : str
+        Type of track to search for ('segment' or 'route')
+    limit : int
+        Maximum number of segments to return (default: 50, max: 1000)
     """
     if not SessionLocal:
         raise HTTPException(status_code=500, detail="Database not available")
@@ -411,22 +441,36 @@ async def search_segments_in_bounds(
     async def generate():
         try:
             async with SessionLocal() as session:
-                stmt = (
-                    select(Track)
-                    .filter(
-                        and_(
-                            Track.bound_north >= south,
-                            Track.bound_south <= north,
-                            Track.bound_east >= west,
-                            Track.bound_west <= east,
-                            Track.track_type == track_type_enum,
-                        )
+                search_center_latitude = (north + south) / 2
+                search_center_longitude = (east + west) / 2
+
+                # First, get all tracks that intersect with the bounds
+                stmt = select(Track).filter(
+                    and_(
+                        Track.bound_north >= south,
+                        Track.bound_south <= north,
+                        Track.bound_east >= west,
+                        Track.bound_west <= east,
+                        Track.track_type == track_type_enum,
                     )
-                    .order_by(Track.created_at.desc())
                 )
 
                 result = await session.execute(stmt)
-                tracks = result.scalars().all()
+                all_tracks = result.scalars().all()
+
+                tracks_with_distance = []
+                for track in all_tracks:
+                    distance = haversine_distance(
+                        latitude_1=search_center_latitude,
+                        longitude_1=search_center_longitude,
+                        latitude_2=track.barycenter_latitude,
+                        longitude_2=track.barycenter_longitude,
+                    )
+                    tracks_with_distance.append((track, distance))
+
+                tracks_with_distance.sort(key=lambda x: x[1])
+                limited_tracks = tracks_with_distance[:limit]
+                tracks = [track for track, _ in limited_tracks]
 
                 yield f"data: {len(tracks)}\n\n"
 
@@ -439,6 +483,8 @@ async def search_segments_in_bounds(
                         bound_south=track.bound_south,
                         bound_east=track.bound_east,
                         bound_west=track.bound_west,
+                        barycenter_latitude=track.barycenter_latitude,
+                        barycenter_longitude=track.barycenter_longitude,
                         name=track.name,
                         track_type=track.track_type.value,
                         difficulty_level=track.difficulty_level,

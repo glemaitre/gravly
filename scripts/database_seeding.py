@@ -29,6 +29,7 @@ sys.path.append(str(Path(__file__).parent.parent / "backend" / "src"))
 from models.base import Base
 from models.track import SurfaceType, TireType, Track, TrackType
 from utils.config import load_environment_config
+from utils.math import haversine_distance
 from utils.postgres import get_database_url
 from utils.storage import cleanup_local_file, get_storage_manager
 
@@ -184,30 +185,14 @@ def generate_realistic_cycling_route(
         if i > 0:
             prev_lat, prev_lon = points[-2][0], points[-2][1]
             distance_km = haversine_distance(
-                prev_lat, prev_lon, current_lat, current_lon
+                latitude_1=prev_lat,
+                longitude_1=prev_lon,
+                latitude_2=current_lat,
+                longitude_2=current_lon,
             )
             total_distance += distance_km
 
     return points
-
-
-def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculate the great circle distance between two points on Earth in kilometers."""
-    # Convert decimal degrees to radians
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-
-    # Haversine formula
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
-    )
-    c = 2 * math.asin(math.sqrt(a))
-
-    # Radius of earth in kilometers
-    r = 6371
-    return c * r
 
 
 def create_gpx_file(
@@ -404,12 +389,18 @@ async def seed_database(
                             f"{storage_manager.get_storage_root_prefix()}/{storage_key}"
                         )
 
+                        # Calculate barycenter from bounds
+                        barycenter_latitude = (north + south) / 2
+                        barycenter_longitude = (east + west) / 2
+
                         track = Track(
                             file_path=processed_file_path,
                             bound_north=north,
                             bound_south=south,
                             bound_east=east,
                             bound_west=west,
+                            barycenter_latitude=barycenter_latitude,
+                            barycenter_longitude=barycenter_longitude,
                             name=segment_data["track_name"],
                             track_type=TrackType.SEGMENT,
                             difficulty_level=segment_data["difficulty"],

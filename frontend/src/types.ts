@@ -12,6 +12,8 @@ export interface TrackResponse {
   bound_south: number
   bound_east: number
   bound_west: number
+  barycenter_latitude: number
+  barycenter_longitude: number
   name: string
   track_type: string
   difficulty_level: number

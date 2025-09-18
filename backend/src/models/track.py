@@ -46,6 +46,8 @@ class Track(Base):
     bound_south: Mapped[float] = mapped_column(Float)
     bound_east: Mapped[float] = mapped_column(Float)
     bound_west: Mapped[float] = mapped_column(Float)
+    barycenter_latitude: Mapped[float] = mapped_column(Float)
+    barycenter_longitude: Mapped[float] = mapped_column(Float)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     track_type: Mapped[TrackType] = mapped_column(Enum(TrackType))
     difficulty_level: Mapped[int] = mapped_column(Integer)
@@ -65,6 +67,8 @@ class TrackResponse(BaseModel):
     bound_south: float
     bound_east: float
     bound_west: float
+    barycenter_latitude: float
+    barycenter_longitude: float
     name: str
     track_type: str
     difficulty_level: int

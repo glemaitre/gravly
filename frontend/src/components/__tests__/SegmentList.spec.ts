@@ -48,8 +48,10 @@ describe('SegmentList', () => {
       file_path: '/path/to/test1.gpx',
       bound_north: 45.8,
       bound_south: 45.7,
-      bound_east: 4.9,
-      bound_west: 4.8,
+      bound_east: 2.1,
+      bound_west: 2.0,
+      barycenter_latitude: 45.75,
+      barycenter_longitude: 2.05,
       name: 'Test Segment 1',
       track_type: 'segment',
       difficulty_level: 3,
@@ -65,6 +67,8 @@ describe('SegmentList', () => {
       bound_south: 45.8,
       bound_east: 5.0,
       bound_west: 4.9,
+      barycenter_latitude: 45.85,
+      barycenter_longitude: 4.95,
       name: 'Test Segment 2',
       track_type: 'segment',
       difficulty_level: 4,
@@ -522,7 +526,7 @@ describe('SegmentList', () => {
       tabButtons.forEach((button) => {
         expect(button.element.tagName).toBe('BUTTON')
         // Buttons should be focusable
-        expect(button.element.tabIndex).not.toBe(-1)
+        expect((button.element as HTMLElement).tabIndex).not.toBe(-1)
       })
     })
   })
@@ -594,11 +598,13 @@ describe('SegmentList', () => {
         bound_south: 45.7,
         bound_east: 4.9,
         bound_west: 4.8,
+        barycenter_latitude: 45.75,
+        barycenter_longitude: 4.85,
         difficulty_level: 1,
         surface_type: 'forest-trail',
         tire_dry: 'semi-slick',
-        tire_wet: 'knobs'
-        // Missing comments field
+        tire_wet: 'knobs',
+        comments: ''
       }
 
       const wrapper = mount(SegmentList, {
@@ -649,6 +655,67 @@ describe('SegmentList', () => {
       const card = wrapper.find('.segment-card')
       expect(card.exists()).toBe(true)
       expect(card.find('.segment-name').text()).toBe('Test Segment 1')
+    })
+  })
+
+  describe('Limit Selector', () => {
+    it('renders limit selector with default value of 50', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments,
+          loading: false
+        }
+      })
+
+      const limitSelect = wrapper.find('#limit-select')
+      expect(limitSelect.exists()).toBe(true)
+      expect((limitSelect.element as HTMLSelectElement).value).toBe('50')
+    })
+
+    it('emits limit-change event when limit is changed', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments,
+          loading: false
+        }
+      })
+
+      const limitSelect = wrapper.find('#limit-select')
+      await limitSelect.setValue('25')
+      await limitSelect.trigger('change')
+
+      expect(wrapper.emitted('limit-change')).toBeTruthy()
+      expect(wrapper.emitted('limit-change')?.[0]).toEqual([25])
+    })
+
+    it('has all required limit options', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments,
+          loading: false
+        }
+      })
+
+      const options = wrapper.findAll('option')
+      const optionValues = options.map((option) => option.element.value)
+
+      expect(optionValues).toContain('25')
+      expect(optionValues).toContain('50')
+      expect(optionValues).toContain('75')
+      expect(optionValues).toContain('100')
+    })
+
+    it('displays correct label for limit selector', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments,
+          loading: false
+        }
+      })
+
+      const label = wrapper.find('.limit-label')
+      expect(label.exists()).toBe(true)
+      expect(label.text()).toContain('Max Results:')
     })
   })
 })

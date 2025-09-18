@@ -25,6 +25,7 @@
             @segment-hover="onSegmentHover"
             @segment-leave="onSegmentLeave"
             @track-type-change="onTrackTypeChange"
+            @limit-change="onLimitChange"
           />
         </div>
       </div>
@@ -54,6 +55,10 @@ let pendingTracks: TrackResponse[] = []
 
 // Track type filter
 const selectedTrackType = ref<'segment' | 'route'>('segment')
+
+// Limit for search results
+const searchLimit = ref<number>(50)
+
 let previousMapBounds: any = null
 
 // Cache for GPX data to avoid refetching
@@ -310,7 +315,8 @@ function searchSegmentsInView() {
     south: bounds.getSouth().toString(),
     east: bounds.getEast().toString(),
     west: bounds.getWest().toString(),
-    track_type: selectedTrackType.value
+    track_type: selectedTrackType.value,
+    limit: searchLimit.value.toString()
   })
 
   // Only clear all layers if this is the first search or switching track types
@@ -739,6 +745,14 @@ function onSegmentLeave() {
 function onTrackTypeChange(trackType: 'segment' | 'route') {
   selectedTrackType.value = trackType
   // Trigger a new search with the updated track type filter
+  if (map) {
+    searchSegmentsInView()
+  }
+}
+
+function onLimitChange(limit: number) {
+  searchLimit.value = limit
+  // Trigger a new search with the new limit
   if (map) {
     searchSegmentsInView()
   }
