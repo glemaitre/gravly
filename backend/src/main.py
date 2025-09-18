@@ -10,7 +10,7 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from sqlalchemy import and_, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from .models.base import Base
@@ -444,33 +444,59 @@ async def search_segments_in_bounds(
                 search_center_latitude = (north + south) / 2
                 search_center_longitude = (east + west) / 2
 
-                # First, get all tracks that intersect with the bounds
-                stmt = select(Track).filter(
-                    and_(
-                        Track.bound_north >= south,
-                        Track.bound_south <= north,
-                        Track.bound_east >= west,
-                        Track.bound_west <= east,
-                        Track.track_type == track_type_enum,
+                # Calculate Haversine distance directly in SQL for better performance
+                # Using the Haversine formula: 6371 * 2 * asin(sqrt(sin²(Δlat/2) +
+                # cos(lat1) * cos(lat2) * sin²(Δlon/2)))
+                distance_expr = (
+                    6371
+                    * 2
+                    * func.asin(
+                        func.sqrt(
+                            func.pow(
+                                func.sin(
+                                    (
+                                        func.radians(Track.barycenter_latitude)
+                                        - func.radians(search_center_latitude)
+                                    )
+                                    / 2
+                                ),
+                                2,
+                            )
+                            + func.cos(func.radians(search_center_latitude))
+                            * func.cos(func.radians(Track.barycenter_latitude))
+                            * func.pow(
+                                func.sin(
+                                    (
+                                        func.radians(Track.barycenter_longitude)
+                                        - func.radians(search_center_longitude)
+                                    )
+                                    / 2
+                                ),
+                                2,
+                            )
+                        )
                     )
+                ).label("distance")
+
+                # Get tracks with distance calculated in SQL, ordered by distance
+                stmt = (
+                    select(Track, distance_expr)
+                    .filter(
+                        and_(
+                            Track.bound_north >= south,
+                            Track.bound_south <= north,
+                            Track.bound_east >= west,
+                            Track.bound_west <= east,
+                            Track.track_type == track_type_enum,
+                        )
+                    )
+                    .order_by(distance_expr)
+                    .limit(limit)
                 )
 
                 result = await session.execute(stmt)
-                all_tracks = result.scalars().all()
-
-                tracks_with_distance = []
-                for track in all_tracks:
-                    distance = haversine_distance(
-                        latitude_1=search_center_latitude,
-                        longitude_1=search_center_longitude,
-                        latitude_2=track.barycenter_latitude,
-                        longitude_2=track.barycenter_longitude,
-                    )
-                    tracks_with_distance.append((track, distance))
-
-                tracks_with_distance.sort(key=lambda x: x[1])
-                limited_tracks = tracks_with_distance[:limit]
-                tracks = [track for track, _ in limited_tracks]
+                tracks_with_distance = result.all()
+                tracks = [track for track, _ in tracks_with_distance]
 
                 yield f"data: {len(tracks)}\n\n"
 
