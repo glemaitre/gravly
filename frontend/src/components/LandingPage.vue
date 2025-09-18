@@ -552,59 +552,10 @@ function addGPXTrackToMap(
     opacity: 0.8
   }).addTo(mapInstance)
 
-  // Add start and end markers
-  let startMarker: any = null
-  let endMarker: any = null
-
-  if (trackPoints.length > 0) {
-    // Calculate dynamic radius based on zoom level
-    const currentZoom = mapInstance.getZoom()
-    const baseRadius = 6
-    const maxRadius = 10
-    const minRadius = 2
-    // Scale radius with zoom level - smaller circles when zoomed out, larger when zoomed in
-    const dynamicRadius = Math.max(
-      minRadius,
-      Math.min(maxRadius, baseRadius + (currentZoom - 10) * 0.4)
-    )
-
-    // Start marker (orange)
-    startMarker = L.circleMarker(trackPoints[0], {
-      radius: dynamicRadius,
-      fillColor: '#ff6600', // Orange color
-      color: '#ffffff',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(mapInstance)
-
-    // Add start marker popup
-    startMarker.bindPopup(
-      `<div class="marker-popup"><strong>Start:</strong> ${segment.name}</div>`
-    )
-
-    // End marker (blue)
-    endMarker = L.circleMarker(trackPoints[trackPoints.length - 1], {
-      radius: dynamicRadius,
-      fillColor: '#3b82f6', // Blue color
-      color: '#ffffff',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(mapInstance)
-
-    // Add end marker popup
-    endMarker.bindPopup(
-      `<div class="marker-popup"><strong>End:</strong> ${segment.name}</div>`
-    )
-  }
-
   // Track the drawn layers to avoid duplicates
   const segmentId = segment.id.toString()
   currentMapLayers.set(segmentId, {
-    polyline: polyline,
-    startMarker: trackPoints.length > 0 ? startMarker : null,
-    endMarker: trackPoints.length > 0 ? endMarker : null
+    polyline: polyline
   })
 }
 
@@ -934,16 +885,6 @@ onUnmounted(() => {
   border-radius: 50%;
   font-size: 16px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-:global(.start-marker) {
-  background: #ff6600; /* Orange color */
-  color: white;
-}
-
-:global(.end-marker) {
-  background: #3b82f6; /* Blue color */
-  color: white;
 }
 
 /* Responsive design with 60/40 split maintained */

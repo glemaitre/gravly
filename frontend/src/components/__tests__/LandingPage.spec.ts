@@ -48,6 +48,11 @@ const mockCircleMarker = {
   _leaflet_id: 4
 }
 
+const mockRectangle = {
+  addTo: vi.fn(() => mockRectangle),
+  _leaflet_id: 5
+}
+
 const mockTileLayer = {
   addTo: vi.fn(() => mockTileLayer)
 }
@@ -63,6 +68,7 @@ vi.mock('leaflet', () => ({
     polyline: vi.fn(() => mockPolyline),
     marker: vi.fn(() => mockMarker),
     circleMarker: vi.fn(() => mockCircleMarker),
+    rectangle: vi.fn(() => mockRectangle),
     divIcon: vi.fn(() => ({})),
     latLngBounds: vi.fn(() => ({
       fitBounds: vi.fn()
@@ -643,147 +649,6 @@ describe('LandingPage', () => {
 
       // Should not throw error
       expect(() => wrapper.vm.updateCircleSizes()).not.toThrow()
-    })
-
-    it('should use correct color scheme for markers', async () => {
-      wrapper = mount(LandingPage)
-
-      // Mock track data
-      const mockTrack = {
-        id: 1,
-        name: 'Test Track',
-        file_path: 'test.gpx'
-      }
-
-      // Mock GPX data
-      const mockGPXData = {
-        file_id: 'test-file',
-        track_name: 'Test Track',
-        points: [
-          {
-            latitude: 45.0,
-            longitude: 5.0,
-            elevation: 100,
-            time: '2023-01-01T10:00:00Z'
-          },
-          {
-            latitude: 45.1,
-            longitude: 5.1,
-            elevation: 110,
-            time: '2023-01-01T10:01:00Z'
-          }
-        ],
-        total_stats: {
-          total_points: 2,
-          total_distance: 1000,
-          total_elevation_gain: 10,
-          total_elevation_loss: 0
-        },
-        bounds: {
-          north: 45.1,
-          south: 45.0,
-          east: 5.1,
-          west: 5.0,
-          min_elevation: 100,
-          max_elevation: 110
-        }
-      }
-
-      // Mock the parseGPXData function
-      const { parseGPXData } = await import('../../utils/gpxParser')
-      vi.mocked(parseGPXData).mockReturnValue(mockGPXData)
-
-      // Call addGPXTrackToMap
-      wrapper.vm.addGPXTrackToMap(mockTrack, mockGPXData, mockMapInstance)
-
-      // Check that circleMarker was called with correct colors
-      const L = await import('leaflet')
-      expect(L.default.circleMarker).toHaveBeenCalledWith(
-        [45.0, 5.0],
-        expect.objectContaining({
-          fillColor: '#ff6600', // Orange for start marker
-          color: '#ffffff'
-        })
-      )
-
-      expect(L.default.circleMarker).toHaveBeenCalledWith(
-        [45.1, 5.1],
-        expect.objectContaining({
-          fillColor: '#3b82f6', // Blue for end marker
-          color: '#ffffff'
-        })
-      )
-    })
-
-    it('should apply dynamic radius when creating markers', async () => {
-      wrapper = mount(LandingPage)
-
-      // Mock different zoom levels
-      mockMapInstance.getZoom.mockReturnValue(8) // Zoomed out
-
-      const mockTrack = {
-        id: 1,
-        name: 'Test Track',
-        file_path: 'test.gpx'
-      }
-
-      const mockGPXData = {
-        file_id: 'test-file',
-        track_name: 'Test Track',
-        points: [
-          {
-            latitude: 45.0,
-            longitude: 5.0,
-            elevation: 100,
-            time: '2023-01-01T10:00:00Z'
-          },
-          {
-            latitude: 45.1,
-            longitude: 5.1,
-            elevation: 110,
-            time: '2023-01-01T10:01:00Z'
-          }
-        ],
-        total_stats: {
-          total_points: 2,
-          total_distance: 1000,
-          total_elevation_gain: 10,
-          total_elevation_loss: 0
-        },
-        bounds: {
-          north: 45.1,
-          south: 45.0,
-          east: 5.1,
-          west: 5.0,
-          min_elevation: 100,
-          max_elevation: 110
-        }
-      }
-
-      const { parseGPXData } = await import('../../utils/gpxParser')
-      vi.mocked(parseGPXData).mockReturnValue(mockGPXData)
-
-      // Call addGPXTrackToMap
-      wrapper.vm.addGPXTrackToMap(mockTrack, mockGPXData, mockMapInstance)
-
-      // Calculate expected radius for zoom level 8
-      const expectedRadius = Math.max(2, Math.min(10, 6 + (8 - 10) * 0.4)) // Should be 2 (minRadius)
-
-      // Check that circleMarker was called with the calculated radius
-      const L = await import('leaflet')
-      expect(L.default.circleMarker).toHaveBeenCalledWith(
-        [45.0, 5.0],
-        expect.objectContaining({
-          radius: expectedRadius
-        })
-      )
-
-      expect(L.default.circleMarker).toHaveBeenCalledWith(
-        [45.1, 5.1],
-        expect.objectContaining({
-          radius: expectedRadius
-        })
-      )
     })
   })
 

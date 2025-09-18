@@ -657,5 +657,4 @@ describe('SegmentList', () => {
       expect(card.find('.segment-name').text()).toBe('Test Segment 1')
     })
   })
-
 })

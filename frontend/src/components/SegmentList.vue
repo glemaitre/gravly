@@ -24,7 +24,6 @@
         </button>
       </div>
 
-
       <!-- Scrollable Cards Container -->
       <div class="cards-container">
         <div v-if="segments.length > 0" class="segment-cards">
@@ -157,7 +156,6 @@ const segmentStats = ref<Map<number, SegmentStats>>(new Map())
 // Track type filter
 const selectedTrackType = ref<'segment' | 'route'>('segment')
 
-
 // Currently hovered segment
 const hoveredSegmentId = ref<number | null>(null)
 
@@ -222,7 +220,6 @@ function onTrackTypeChange(trackType: 'segment' | 'route') {
   selectedTrackType.value = trackType
   emit('trackTypeChange', trackType)
 }
-
 
 // Formatting functions
 function formatDistance(meters: number): string {
@@ -310,7 +307,6 @@ onUnmounted(() => {
   flex-shrink: 0;
   min-height: 0;
 }
-
 
 /* Scrollable Cards Container */
 .cards-container {
