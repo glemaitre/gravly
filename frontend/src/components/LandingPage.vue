@@ -28,9 +28,7 @@
 
             <!-- Loading Indicator - Top Right -->
             <div v-if="loading" class="loading-indicator">
-              <div class="loading-text">
-                🔍 Loading segments...
-              </div>
+              <div class="loading-text">🔍 Loading segments...</div>
             </div>
           </div>
         </div>
@@ -54,7 +52,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, nextTick, computed } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
@@ -97,12 +95,6 @@ let resizeHandler: (() => void) | null = null
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
-
-// Computed property for progress percentage
-const progressPercentage = computed(() => {
-  if (currentSearchTotal.value === 0) return 0
-  return Math.round((currentSearchLoaded.value / currentSearchTotal.value) * 100)
-})
 
 function initializeMap() {
   if (map) {
@@ -935,7 +927,6 @@ onUnmounted(() => {
   color: #666;
 }
 
-
 /* Custom marker styles */
 :global(.custom-div-icon) {
   background: transparent;
@@ -1111,5 +1102,4 @@ onUnmounted(() => {
 :global(.marker-popup strong) {
   color: #1f2937;
 }
-
 </style>

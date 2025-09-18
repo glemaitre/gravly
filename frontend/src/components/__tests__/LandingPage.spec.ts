@@ -422,7 +422,6 @@ describe('LandingPage', () => {
       const loadingIndicator = wrapper.find('.loading-indicator')
       expect(loadingIndicator.exists()).toBe(false)
     })
-
   })
 
   describe('Map Controls', () => {
@@ -849,7 +848,9 @@ describe('LandingPage', () => {
       }
 
       // Test that addGPXTrackToMap can be called
-      expect(() => wrapper.vm.addGPXTrackToMap(mockSegment, mockGPXData, mockMapInstance)).not.toThrow()
+      expect(() =>
+        wrapper.vm.addGPXTrackToMap(mockSegment, mockGPXData, mockMapInstance)
+      ).not.toThrow()
 
       // Verify that the polyline was created and added to the map
       expect(mockPolyline.addTo).toHaveBeenCalledWith(mockMapInstance)
@@ -875,7 +876,9 @@ describe('LandingPage', () => {
       }
 
       // Test that addBoundingBoxToMap can be called
-      expect(() => wrapper.vm.addBoundingBoxToMap(mockSegment, mockMapInstance)).not.toThrow()
+      expect(() =>
+        wrapper.vm.addBoundingBoxToMap(mockSegment, mockMapInstance)
+      ).not.toThrow()
 
       // Verify that the rectangle was created and added to the map
       expect(mockRectangle.addTo).toHaveBeenCalledWith(mockMapInstance)
