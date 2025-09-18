@@ -11,6 +11,26 @@
               </div>
               <div v-else>🔍 Searching segments...</div>
             </div>
+            <!-- Max Results Control - Top Right Corner -->
+            <div class="map-controls">
+              <div class="limit-control">
+                <label for="limit-select" class="limit-label">
+                  <i class="fa-solid fa-list-ol"></i>
+                  Max Results:
+                </label>
+                <select
+                  id="limit-select"
+                  v-model="searchLimit"
+                  @change="onLimitChange"
+                  class="limit-select"
+                >
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="75">75</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -25,7 +45,6 @@
             @segment-hover="onSegmentHover"
             @segment-leave="onSegmentLeave"
             @track-type-change="onTrackTypeChange"
-            @limit-change="onLimitChange"
           />
         </div>
       </div>
@@ -750,8 +769,7 @@ function onTrackTypeChange(trackType: 'segment' | 'route') {
   }
 }
 
-function onLimitChange(limit: number) {
-  searchLimit.value = limit
+function onLimitChange() {
   // Trigger a new search with the new limit
   if (map) {
     searchSegmentsInView()
@@ -847,11 +865,58 @@ onUnmounted(() => {
   padding: 0;
   overflow: hidden;
   height: 100%;
+  position: relative;
 }
 
 .map {
   height: 100%; /* Fill the map-section container */
   width: 100%; /* Full width */
+}
+
+/* Map Controls - Top Right Corner */
+.map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.limit-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.limit-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.limit-select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 12px;
+  background: white;
+  color: #374151;
+  cursor: pointer;
+  min-width: 60px;
+}
+
+.limit-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
 /* Custom marker styles */

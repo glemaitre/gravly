@@ -24,24 +24,6 @@
         </button>
       </div>
 
-      <!-- Limit Selector -->
-      <div class="limit-selector">
-        <label for="limit-select" class="limit-label">
-          <i class="fa-solid fa-list-ol"></i>
-          Max Results:
-        </label>
-        <select
-          id="limit-select"
-          v-model="selectedLimit"
-          @change="onLimitChange"
-          class="limit-select"
-        >
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="75">75</option>
-          <option value="100">100</option>
-        </select>
-      </div>
 
       <!-- Scrollable Cards Container -->
       <div class="cards-container">
@@ -167,7 +149,6 @@ const emit = defineEmits<{
   segmentHover: [segment: TrackResponse]
   segmentLeave: [segment: TrackResponse]
   trackTypeChange: [trackType: 'segment' | 'route']
-  limitChange: [limit: number]
 }>()
 
 // Refs for segment stats
@@ -176,8 +157,6 @@ const segmentStats = ref<Map<number, SegmentStats>>(new Map())
 // Track type filter
 const selectedTrackType = ref<'segment' | 'route'>('segment')
 
-// Limit selector
-const selectedLimit = ref<number>(50)
 
 // Currently hovered segment
 const hoveredSegmentId = ref<number | null>(null)
@@ -244,9 +223,6 @@ function onTrackTypeChange(trackType: 'segment' | 'route') {
   emit('trackTypeChange', trackType)
 }
 
-function onLimitChange() {
-  emit('limitChange', selectedLimit.value)
-}
 
 // Formatting functions
 function formatDistance(meters: number): string {
@@ -335,57 +311,6 @@ onUnmounted(() => {
   min-height: 0;
 }
 
-/* Limit Selector */
-.limit-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-  border-top: none;
-  border-bottom: none;
-  position: sticky;
-  top: 48px; /* Height of track-type-tabs */
-  z-index: 9;
-  flex-shrink: 0;
-}
-
-.limit-label {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
-}
-
-.limit-label i {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.limit-select {
-  padding: 0.25rem 0.5rem;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: white;
-  font-size: 0.875rem;
-  color: #374151;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.limit-select:hover {
-  border-color: #9ca3af;
-}
-
-.limit-select:focus {
-  outline: none;
-  border-color: #ff6b35;
-  box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.1);
-}
 
 /* Scrollable Cards Container */
 .cards-container {
