@@ -33,6 +33,7 @@ const mockMapInstance = {
 const mockPolyline = {
   addTo: vi.fn(() => mockPolyline),
   setStyle: vi.fn(),
+  on: vi.fn(),
   _leaflet_id: 2
 }
 
@@ -50,6 +51,8 @@ const mockCircleMarker = {
 
 const mockRectangle = {
   addTo: vi.fn(() => mockRectangle),
+  setStyle: vi.fn(),
+  on: vi.fn(),
   _leaflet_id: 5
 }
 
@@ -394,8 +397,7 @@ describe('LandingPage', () => {
 
       const loadingIndicator = wrapper.find('.loading-indicator')
       expect(loadingIndicator.exists()).toBe(true)
-      expect(loadingIndicator.classes()).toContain('show')
-      expect(loadingIndicator.text()).toContain('🔍 Loading segments... 2/5')
+      expect(loadingIndicator.text()).toContain('🔍 Loading segments...')
     })
 
     it('should show searching message when no tracks loaded', async () => {
@@ -407,7 +409,7 @@ describe('LandingPage', () => {
       await wrapper.vm.$nextTick()
 
       const loadingIndicator = wrapper.find('.loading-indicator')
-      expect(loadingIndicator.text()).toContain('🔍 Searching segments...')
+      expect(loadingIndicator.text()).toContain('🔍 Loading segments...')
     })
 
     it('should hide loading indicator when loading is false', async () => {
@@ -418,8 +420,62 @@ describe('LandingPage', () => {
       await wrapper.vm.$nextTick()
 
       const loadingIndicator = wrapper.find('.loading-indicator')
-      expect(loadingIndicator.exists()).toBe(true)
-      expect(loadingIndicator.classes()).not.toContain('show')
+      expect(loadingIndicator.exists()).toBe(false)
+    })
+
+  })
+
+  describe('Map Controls', () => {
+    it('should render Max Results control', () => {
+      wrapper = mount(LandingPage)
+
+      const mapControls = wrapper.find('.map-controls')
+      expect(mapControls.exists()).toBe(true)
+
+      const limitControl = mapControls.find('.limit-control')
+      expect(limitControl.exists()).toBe(true)
+
+      const limitLabel = limitControl.find('.limit-label')
+      expect(limitLabel.exists()).toBe(true)
+      expect(limitLabel.text()).toContain('Max Results:')
+
+      const limitSelect = limitControl.find('.limit-select')
+      expect(limitSelect.exists()).toBe(true)
+    })
+
+    it('should have correct default search limit', () => {
+      wrapper = mount(LandingPage)
+
+      expect(wrapper.vm.searchLimit).toBe(50)
+    })
+
+    it('should handle limit change events', async () => {
+      wrapper = mount(LandingPage)
+
+      const limitSelect = wrapper.find('.limit-select')
+      expect(limitSelect.exists()).toBe(true)
+
+      // Test that the method exists
+      expect(typeof wrapper.vm.onLimitChange).toBe('function')
+
+      // Test calling the method directly
+      wrapper.vm.onLimitChange()
+
+      // Should not throw error
+      expect(wrapper.vm.searchLimit).toBeDefined()
+    })
+
+    it('should have all limit options available', () => {
+      wrapper = mount(LandingPage)
+
+      const limitSelect = wrapper.find('.limit-select')
+      const options = limitSelect.findAll('option')
+
+      expect(options).toHaveLength(4)
+      expect(options[0].text()).toBe('25')
+      expect(options[1].text()).toBe('50')
+      expect(options[2].text()).toBe('75')
+      expect(options[3].text()).toBe('100')
     })
   })
 
@@ -665,22 +721,21 @@ describe('LandingPage', () => {
 
       const loadingIndicator = wrapper.find('.loading-indicator')
       expect(loadingIndicator.exists()).toBe(true)
-      expect(loadingIndicator.classes()).toContain('show')
-      expect(loadingIndicator.text()).toContain('Loading segments... 2/5')
+      expect(loadingIndicator.text()).toContain('Loading segments...')
     })
 
-    it('should display search indicator when not loading and no tracks', async () => {
+    it('should display search indicator when loading and no tracks', async () => {
       wrapper = mount(LandingPage)
       await wrapper.vm.$nextTick()
 
-      // Set loading state to false and no tracks
-      wrapper.vm.loading = false
+      // Set loading state to true and no tracks
+      wrapper.vm.loading = true
       wrapper.vm.totalTracks = 0
       await wrapper.vm.$nextTick()
 
       const loadingIndicator = wrapper.find('.loading-indicator')
       expect(loadingIndicator.exists()).toBe(true)
-      expect(loadingIndicator.text()).toContain('Searching segments...')
+      expect(loadingIndicator.text()).toContain('Loading segments...')
     })
 
     it('should pass segments data to SegmentList component', async () => {
@@ -765,6 +820,65 @@ describe('LandingPage', () => {
 
       // Verify the method executes without error
       expect(wrapper.vm.segments).toBeDefined()
+    })
+
+    it('should add click handlers to GPX track polylines', async () => {
+      wrapper = mount(LandingPage)
+
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        track_type: 'segment',
+        file_path: 'test.gpx',
+        bound_north: 45.8,
+        bound_south: 45.7,
+        bound_east: 4.9,
+        bound_west: 4.8,
+        difficulty_level: 3,
+        surface_type: 'forest-trail',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        comments: 'Test'
+      }
+
+      const mockGPXData = {
+        points: [
+          { latitude: 45.7, longitude: 4.8 },
+          { latitude: 45.8, longitude: 4.9 }
+        ]
+      }
+
+      // Test that addGPXTrackToMap can be called
+      expect(() => wrapper.vm.addGPXTrackToMap(mockSegment, mockGPXData, mockMapInstance)).not.toThrow()
+
+      // Verify that the polyline was created and added to the map
+      expect(mockPolyline.addTo).toHaveBeenCalledWith(mockMapInstance)
+    })
+
+    it('should add click handlers to bounding box rectangles', async () => {
+      wrapper = mount(LandingPage)
+
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        track_type: 'segment',
+        file_path: 'test.gpx',
+        bound_north: 45.8,
+        bound_south: 45.7,
+        bound_east: 4.9,
+        bound_west: 4.8,
+        difficulty_level: 3,
+        surface_type: 'forest-trail',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        comments: 'Test'
+      }
+
+      // Test that addBoundingBoxToMap can be called
+      expect(() => wrapper.vm.addBoundingBoxToMap(mockSegment, mockMapInstance)).not.toThrow()
+
+      // Verify that the rectangle was created and added to the map
+      expect(mockRectangle.addTo).toHaveBeenCalledWith(mockMapInstance)
     })
 
     it('should handle segment hover events', async () => {

@@ -5,13 +5,7 @@
         <div class="map-container">
           <div class="card card-map">
             <div id="landing-map" class="map"></div>
-            <div class="loading-indicator" :class="{ show: loading }">
-              <div v-if="totalTracks > 0">
-                🔍 Loading segments... {{ loadedTracks }}/{{ totalTracks }}
-              </div>
-              <div v-else>🔍 Searching segments...</div>
-            </div>
-            <!-- Max Results Control - Top Right Corner -->
+            <!-- Max Results Control - Bottom Left Corner -->
             <div class="map-controls">
               <div class="limit-control">
                 <label for="limit-select" class="limit-label">
@@ -29,6 +23,13 @@
                   <option value="75">75</option>
                   <option value="100">100</option>
                 </select>
+              </div>
+            </div>
+
+            <!-- Loading Indicator - Top Right -->
+            <div v-if="loading" class="loading-indicator">
+              <div class="loading-text">
+                🔍 Loading segments...
               </div>
             </div>
           </div>
@@ -53,7 +54,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick, computed } from 'vue'
 import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
@@ -67,6 +68,10 @@ const segments = ref<TrackResponse[]>([])
 const loading = ref(false)
 const totalTracks = ref(0)
 const loadedTracks = ref(0)
+
+// Current search session tracking
+const currentSearchTotal = ref(0)
+const currentSearchLoaded = ref(0)
 let eventSource: EventSource | null = null
 let isSearching = false
 let searchTimeout: number | null = null
@@ -92,6 +97,12 @@ let resizeHandler: (() => void) | null = null
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
+
+// Computed property for progress percentage
+const progressPercentage = computed(() => {
+  if (currentSearchTotal.value === 0) return 0
+  return Math.round((currentSearchLoaded.value / currentSearchTotal.value) * 100)
+})
 
 function initializeMap() {
   if (map) {
@@ -327,6 +338,10 @@ function searchSegmentsInView() {
     pendingTracks = []
   }
 
+  // Reset current search tracking for every new search
+  currentSearchTotal.value = 0
+  currentSearchLoaded.value = 0
+
   const bounds = map.getBounds()
 
   const params = new URLSearchParams({
@@ -378,6 +393,7 @@ function searchSegmentsInView() {
         // Check if this is the total count message
         if (!isNaN(Number(data))) {
           totalTracks.value = Number(data)
+          currentSearchTotal.value = Number(data)
           return
         }
 
@@ -404,6 +420,7 @@ function searchSegmentsInView() {
           if (!existingSegment) {
             segments.value.push(track)
             loadedTracks.value++
+            currentSearchLoaded.value++
 
             // Process the track (add bounding box first, then fetch GPX data for rendering)
             processTrack(track)
@@ -552,6 +569,11 @@ function addGPXTrackToMap(
     opacity: 0.8
   }).addTo(mapInstance)
 
+  // Add click handler to zoom in on the segment
+  polyline.on('click', () => {
+    onSegmentClick(segment)
+  })
+
   // Track the drawn layers to avoid duplicates
   const segmentId = segment.id.toString()
   currentMapLayers.set(segmentId, {
@@ -583,6 +605,11 @@ function addBoundingBoxToMap(segment: TrackResponse, mapInstance: any) {
     weight: 2,
     fillOpacity: 0.1
   }).addTo(mapInstance)
+
+  // Add click handler to zoom in on the segment
+  rectangle.on('click', () => {
+    onSegmentClick(segment)
+  })
 
   // Track the drawn layers to avoid duplicates
   const segmentId = segment.id.toString()
@@ -635,7 +662,7 @@ onMounted(() => {
   }, 100)
 })
 
-// Handle segment click from the segment list
+// Handle segment click from the segment list or map
 function onSegmentClick(segment: TrackResponse) {
   if (!map) return
 
@@ -665,6 +692,26 @@ function onSegmentClick(segment: TrackResponse) {
             fillOpacity: 0.1,
             strokeWidth: 2,
             color: '#3388ff'
+          })
+        }
+      }, 3000)
+    }
+
+    // Also highlight the polyline if it exists
+    if (layerData.polyline) {
+      layerData.polyline.setStyle({
+        weight: 5,
+        opacity: 1,
+        color: '#ff6b35'
+      })
+
+      // Reset after 3 seconds
+      setTimeout(() => {
+        if (layerData.polyline) {
+          layerData.polyline.setStyle({
+            weight: 3,
+            opacity: 0.8,
+            color: '#FF6600'
           })
         }
       }, 3000)
@@ -824,11 +871,11 @@ onUnmounted(() => {
   width: 100%; /* Full width */
 }
 
-/* Map Controls - Top Right Corner */
+/* Map Controls - Bottom Left Corner */
 .map-controls {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  bottom: 10px;
+  left: 10px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
@@ -866,9 +913,28 @@ onUnmounted(() => {
 
 .limit-select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);
 }
+
+/* Loading Indicator Styles - Top Right */
+.loading-indicator {
+  position: absolute;
+  top: 10px; /* Position at top of map */
+  right: 10px; /* Position at right side of map */
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(10px);
+}
+
+.loading-text {
+  font-size: 12px;
+  color: #666;
+}
+
 
 /* Custom marker styles */
 :global(.custom-div-icon) {
@@ -1046,21 +1112,4 @@ onUnmounted(() => {
   color: #1f2937;
 }
 
-/* Loading indicator */
-.loading-indicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #666;
-  z-index: 1000;
-  display: none;
-}
-
-.loading-indicator.show {
-  display: block;
-}
 </style>
