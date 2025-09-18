@@ -56,7 +56,7 @@
                   }}</span>
                 </div>
                 <div class="metric">
-                  <span class="metric-label">Elevation</span>
+                  <span class="metric-label">Elevation Gain</span>
                   <span class="metric-value">{{
                     formatElevation(
                       segmentStats.get(segment.id)?.total_elevation_gain || 0
@@ -64,9 +64,11 @@
                   }}</span>
                 </div>
                 <div class="metric">
-                  <span class="metric-label">Time</span>
+                  <span class="metric-label">Elevation Loss</span>
                   <span class="metric-value">{{
-                    formatTime(segmentStats.get(segment.id)?.total_time || 0)
+                    formatElevation(
+                      segmentStats.get(segment.id)?.total_elevation_loss || 0
+                    )
                   }}</span>
                 </div>
               </div>
@@ -128,12 +130,13 @@
 
 <script lang="ts" setup>
 import { ref, onUnmounted, watch, nextTick } from 'vue'
-import type { TrackResponse } from '../types'
+import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
+import { parseGPXData } from '../utils/gpxParser'
 
 interface SegmentStats {
   total_distance: number
   total_elevation_gain: number
-  total_time: number
+  total_elevation_loss: number
 }
 
 interface Props {
@@ -153,6 +156,10 @@ const emit = defineEmits<{
 // Refs for segment stats
 const segmentStats = ref<Map<number, SegmentStats>>(new Map())
 
+// Cache for GPX data to avoid refetching
+const gpxDataCache = new Map<number, GPXData>()
+const loadingGPXData = new Set<number>()
+
 // Track type filter
 const selectedTrackType = ref<'segment' | 'route'>('segment')
 
@@ -165,41 +172,90 @@ watch(
   async (newSegments) => {
     await nextTick()
     for (const segment of newSegments) {
-      generateMockStats(segment)
+      await fetchSegmentStats(segment)
     }
   },
   { immediate: true }
 )
 
-function generateMockStats(segment: TrackResponse) {
-  // Generate mock stats based on segment properties
-  if (!segmentStats.value.has(segment.id)) {
-    // Calculate approximate distance based on bounding box
-    const latDiff = segment.bound_north - segment.bound_south
-    const lonDiff = segment.bound_east - segment.bound_west
-    const avgLat = (segment.bound_north + segment.bound_south) / 2
-
-    // Rough distance calculation (not precise, but gives a reasonable estimate)
-    const latKm = latDiff * 111.32 // 1 degree latitude ≈ 111.32 km
-    const lonKm = lonDiff * 111.32 * Math.cos((avgLat * Math.PI) / 180)
-    const distance = Math.sqrt(latKm * latKm + lonKm * lonKm) * 1000 // Convert to meters
-
-    // Generate mock elevation gain based on difficulty and track type
-    const baseElevation = segment.difficulty_level * 50 // 50m per difficulty level
-    const elevationGain = baseElevation + Math.random() * 100 // Add some randomness
-
-    // Estimate time based on distance and difficulty
-    const baseSpeed = 15 - segment.difficulty_level * 2 // km/h, decreases with difficulty
-    const timeHours = distance / 1000 / baseSpeed
-    const timeSeconds = timeHours * 3600
-
-    const stats: SegmentStats = {
-      total_distance: Math.round(distance),
-      total_elevation_gain: Math.round(elevationGain),
-      total_time: Math.round(timeSeconds)
-    }
-    segmentStats.value.set(segment.id, stats)
+async function fetchSegmentStats(segment: TrackResponse) {
+  // Check if we already have stats for this segment
+  if (segmentStats.value.has(segment.id)) {
+    return
   }
+
+  // Check if we're already loading this GPX data
+  if (loadingGPXData.has(segment.id)) {
+    return
+  }
+
+  loadingGPXData.add(segment.id)
+
+  try {
+    // Fetch GPX data from backend
+    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch GPX data for segment ${segment.id}: ${response.statusText}`
+      )
+      // Fallback to mock data if fetch fails
+      generateFallbackStats(segment)
+      return
+    }
+
+    const gpxResponse: GPXDataResponse = await response.json()
+
+    // Parse GPX data
+    const fileId =
+      segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+    const gpxData = parseGPXData(gpxResponse.gpx_xml_data, fileId)
+
+    if (gpxData && gpxData.total_stats) {
+      // Cache the GPX data
+      gpxDataCache.set(segment.id, gpxData)
+
+      // Extract stats from GPX data
+      const stats: SegmentStats = {
+        total_distance: gpxData.total_stats.total_distance,
+        total_elevation_gain: gpxData.total_stats.total_elevation_gain,
+        total_elevation_loss: gpxData.total_stats.total_elevation_loss
+      }
+      segmentStats.value.set(segment.id, stats)
+    } else {
+      // Fallback to mock data if parsing fails
+      generateFallbackStats(segment)
+    }
+  } catch (error) {
+    console.warn(`Error fetching GPX data for segment ${segment.id}:`, error)
+    // Fallback to mock data if error occurs
+    generateFallbackStats(segment)
+  } finally {
+    loadingGPXData.delete(segment.id)
+  }
+}
+
+function generateFallbackStats(segment: TrackResponse) {
+  // Generate fallback stats based on segment properties (same as before)
+  const latDiff = segment.bound_north - segment.bound_south
+  const lonDiff = segment.bound_east - segment.bound_west
+  const avgLat = (segment.bound_north + segment.bound_south) / 2
+
+  // Rough distance calculation (not precise, but gives a reasonable estimate)
+  const latKm = latDiff * 111.32 // 1 degree latitude ≈ 111.32 km
+  const lonKm = lonDiff * 111.32 * Math.cos((avgLat * Math.PI) / 180)
+  const distance = Math.sqrt(latKm * latKm + lonKm * lonKm) * 1000 // Convert to meters
+
+  // Generate mock elevation gain and loss based on difficulty and track type
+  const baseElevation = segment.difficulty_level * 50 // 50m per difficulty level
+  const elevationGain = baseElevation + Math.random() * 100 // Add some randomness
+  const elevationLoss = elevationGain * (0.8 + Math.random() * 0.4) // Loss is typically 80-120% of gain
+
+  const stats: SegmentStats = {
+    total_distance: Math.round(distance),
+    total_elevation_gain: Math.round(elevationGain),
+    total_elevation_loss: Math.round(elevationLoss)
+  }
+  segmentStats.value.set(segment.id, stats)
 }
 
 function onSegmentClick(segment: TrackResponse) {
@@ -233,20 +289,6 @@ function formatElevation(meters: number): string {
   return `${Math.round(meters)}m`
 }
 
-function formatTime(seconds: number): string {
-  if (seconds < 60) {
-    return `${Math.round(seconds)}s`
-  }
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.round(seconds % 60)
-  if (minutes < 60) {
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-  }
-  const hours = Math.floor(minutes / 60)
-  const remainingMinutes = minutes % 60
-  return `${hours}:${remainingMinutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
-}
-
 function formatSurfaceType(surfaceType: string): string {
   if (!surfaceType) return ''
   return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
@@ -258,7 +300,10 @@ function formatTireType(tireType: string): string {
 }
 
 onUnmounted(() => {
-  // Clean up any resources if needed
+  // Cleanup GPX data cache and loading sets
+  gpxDataCache.clear()
+  loadingGPXData.clear()
+  segmentStats.value.clear()
 })
 </script>
 

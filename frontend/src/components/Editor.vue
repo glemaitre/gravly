@@ -1790,7 +1790,7 @@ async function onSubmit() {
   transition: margin-left 0.3s ease;
 }
 .page {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
   box-sizing: border-box;
@@ -3003,6 +3003,39 @@ async function onSubmit() {
 
   .sidebar {
     left: 0;
+  }
+}
+
+/* Responsive layout for screens under 1000px */
+@media (max-width: 999px) {
+  .main-col {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .page {
+    max-width: 100%;
+    padding: 0 1rem;
+  }
+
+  .content {
+    margin-left: 0;
+    padding: 1rem 0.5rem;
+  }
+
+  /* Ensure all cards take full width */
+  .card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Stack all form elements vertically */
+  .trail-conditions-card,
+  .meta,
+  .card-map,
+  .card-elevation {
+    width: 100%;
+    margin-bottom: 1rem;
   }
 }
 

@@ -1,52 +1,54 @@
 <template>
   <div class="landing-page">
     <div class="landing-content">
-      <div class="map-section">
-        <div class="map-container">
-          <div class="card card-map">
-            <div id="landing-map" class="map"></div>
-            <!-- Fixed Center Marker -->
-            <div class="fixed-center-marker" title="Search Center">📍</div>
-            <!-- Max Results Control - Bottom Left Corner -->
-            <div class="map-controls">
-              <div class="limit-control">
-                <label for="limit-select" class="limit-label">
-                  <i class="fa-solid fa-list-ol"></i>
-                  Max Results:
-                </label>
-                <select
-                  id="limit-select"
-                  v-model="searchLimit"
-                  @change="onLimitChange"
-                  class="limit-select"
-                >
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="75">75</option>
-                  <option value="100">100</option>
-                </select>
+      <div class="content-wrapper">
+        <div class="map-section">
+          <div class="map-container">
+            <div class="card card-map">
+              <div id="landing-map" class="map"></div>
+              <!-- Fixed Center Marker -->
+              <div class="fixed-center-marker" title="Search Center">📍</div>
+              <!-- Max Results Control - Bottom Left Corner -->
+              <div class="map-controls">
+                <div class="limit-control">
+                  <label for="limit-select" class="limit-label">
+                    <i class="fa-solid fa-list-ol"></i>
+                    Max Results:
+                  </label>
+                  <select
+                    id="limit-select"
+                    v-model="searchLimit"
+                    @change="onLimitChange"
+                    class="limit-select"
+                  >
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="75">75</option>
+                    <option value="100">100</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <!-- Loading Indicator - Top Right -->
-            <div v-if="loading" class="loading-indicator">
-              <div class="loading-text">🔍 Loading segments...</div>
+              <!-- Loading Indicator - Top Right -->
+              <div v-if="loading" class="loading-indicator">
+                <div class="loading-text">🔍 Loading segments...</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Segment List Section -->
-      <div class="segment-list-section">
-        <div class="segment-list-container">
-          <SegmentList
-            :segments="segments"
-            :loading="loading"
-            @segment-click="onSegmentClick"
-            @segment-hover="onSegmentHover"
-            @segment-leave="onSegmentLeave"
-            @track-type-change="onTrackTypeChange"
-          />
+        <!-- Segment List Section -->
+        <div class="segment-list-section">
+          <div class="segment-list-container">
+            <SegmentList
+              :segments="segments"
+              :loading="loading"
+              @segment-click="onSegmentClick"
+              @segment-hover="onSegmentHover"
+              @segment-leave="onSegmentLeave"
+              @track-type-change="onTrackTypeChange"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -55,10 +57,13 @@
 
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 import SegmentList from './SegmentList.vue'
+
+const router = useRouter()
 
 // Map instance
 let map: any = null
@@ -711,59 +716,8 @@ onMounted(() => {
 
 // Handle segment click from the segment list or map
 function onSegmentClick(segment: TrackResponse) {
-  if (!map) return
-
-  // Focus the map on the selected segment
-  const bounds = L.latLngBounds([
-    [segment.bound_south, segment.bound_west],
-    [segment.bound_north, segment.bound_east]
-  ])
-  map.fitBounds(bounds, { padding: [20, 20] })
-
-  // Highlight the segment on the map
-  const segmentId = segment.id.toString()
-  const layerData = currentMapLayers.get(segmentId)
-  if (layerData) {
-    // Temporarily highlight the segment
-    if (layerData.rectangle) {
-      layerData.rectangle.setStyle({
-        fillOpacity: 0.3,
-        strokeWidth: 4,
-        color: '#ff6b35'
-      })
-
-      // Reset after 3 seconds
-      setTimeout(() => {
-        if (layerData.rectangle) {
-          layerData.rectangle.setStyle({
-            fillOpacity: 0.1,
-            strokeWidth: 2,
-            color: '#3388ff'
-          })
-        }
-      }, 3000)
-    }
-
-    // Also highlight the polyline if it exists
-    if (layerData.polyline) {
-      layerData.polyline.setStyle({
-        weight: 5,
-        opacity: 1,
-        color: '#ff6b35'
-      })
-
-      // Reset after 3 seconds
-      setTimeout(() => {
-        if (layerData.polyline) {
-          layerData.polyline.setStyle({
-            weight: 3,
-            opacity: 0.8,
-            color: '#FF6600'
-          })
-        }
-      }, 3000)
-    }
-  }
+  // Navigate to segment detail view
+  router.push(`/segment/${segment.id}`)
 }
 
 // Handle segment hover from the segment list
@@ -833,22 +787,33 @@ onUnmounted(() => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scrolling when content exceeds viewport */
 }
 
 .segment-list-section {
   display: flex;
   justify-content: center;
   width: 100%;
-  height: 30%;
+  min-height: 450px; /* Minimum height to show ~2 rows of cards */
+  max-height: 50vh; /* Maximum height to prevent taking too much space */
   flex-shrink: 0;
   padding: 1rem;
   box-sizing: border-box;
+  overflow-y: auto; /* Enable scrolling when content exceeds max-height */
 }
 
 .landing-content {
   width: 100%;
-  height: 100%;
+  min-height: 100%; /* Allow content to grow beyond viewport */
+  display: flex;
+  flex-direction: column;
+}
+
+.content-wrapper {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100%; /* Allow content to grow beyond viewport */
   display: flex;
   flex-direction: column;
 }
@@ -881,7 +846,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
-  height: 70%;
+  flex: 1; /* Take remaining space after segment-list-section */
+  min-height: 550px; /* Increased minimum height to ensure map is always usable */
   flex-shrink: 0;
 }
 
@@ -999,29 +965,31 @@ onUnmounted(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Responsive design with 60/40 split maintained */
+/* Responsive design with max-width container */
 @media (max-width: 1200px) {
-  .landing-content {
+  .content-wrapper {
     padding: 0 1rem;
   }
 
   .map-section {
-    height: 70%;
+    min-height: 350px;
   }
 
   .segment-list-section {
-    height: 30%;
+    min-height: 380px;
+    max-height: 45vh;
     padding: 0.75rem;
   }
 }
 
 @media (max-width: 1000px) {
   .map-section {
-    height: 70%;
+    min-height: 320px;
   }
 
   .segment-list-section {
-    height: 30%;
+    min-height: 360px;
+    max-height: 40vh;
     padding: 0.5rem;
   }
 }
@@ -1040,53 +1008,61 @@ onUnmounted(() => {
   }
 
   .map-section {
-    height: 70%;
+    min-height: 300px;
   }
 
   .segment-list-section {
-    height: 30%;
+    min-height: 340px;
+    max-height: 35vh;
     padding: 0.5rem;
   }
 }
 
 @media (max-width: 768px) {
-  .landing-page {
-    padding: 0;
+  .content-wrapper {
+    padding: 0 0.5rem;
   }
 
   .map-section {
-    height: 70%;
+    min-height: 280px;
   }
 
   .segment-list-section {
-    height: 30%;
+    min-height: 320px;
+    max-height: 30vh;
     padding: 0.5rem;
   }
 }
 
 @media (max-width: 576px) {
-  .landing-page {
-    padding: 0;
+  .content-wrapper {
+    padding: 0 0.25rem;
   }
 
   .map-section {
-    height: 70%;
+    min-height: 250px;
   }
 
   .segment-list-section {
-    height: 30%;
+    min-height: 280px;
+    max-height: 25vh;
     padding: 0.25rem;
   }
 }
 
 @media (max-width: 480px) {
+  .content-wrapper {
+    padding: 0 0.125rem;
+  }
+
   .map-section {
-    height: 70%;
+    min-height: 220px;
   }
 
   .segment-list-section {
-    height: 30%;
-    padding: 0.25rem;
+    min-height: 250px;
+    max-height: 20vh;
+    padding: 0.125rem;
   }
 }
 

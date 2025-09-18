@@ -30,7 +30,7 @@ export default {
   form: {
     segmentName: 'Nom du segment',
     routeName: 'Nom de la sortie',
-    tire: 'Pneu',
+    tire: 'Recommandations de pneu',
     trailConditions: 'Conditions de piste',
     surfaceType: 'Type de surface',
     majorSurfaceType: 'Type de surface principal',
@@ -139,5 +139,27 @@ export default {
     level3: 'Modéré',
     level4: 'Difficile',
     level5: 'Très difficile'
+  },
+
+  // Segment detail page
+  segmentDetail: {
+    backToTrackFinder: 'Retour',
+    map: 'Carte',
+    information: 'Information',
+    elevation: 'Altitude',
+    difficulty: 'Difficulté',
+    surface: 'Surface',
+    tireRecommendations: 'Recommandations de pneu',
+    statistics: 'Statistiques',
+    distance: 'Dist:',
+    elevationGain: 'Gain:',
+    elevationLoss: 'Perte:',
+    over5: 'plus de 5',
+    dry: 'Sec',
+    wet: 'Humide',
+    photosVideos: 'Photos & Vidéos',
+    photoGallery: 'Galerie photo',
+    youtubeVideos: 'Vidéos YouTube',
+    videoPlayback: 'Lecture vidéo'
   }
 }

@@ -2679,3 +2679,689 @@ def test_main_module_execution():
         content = f.read()
         assert 'if __name__ == "__main__":' in content
         assert 'uvicorn.run(app, host="0.0.0.0", port=8000)' in content
+
+
+def test_get_track_info_success(client):
+    """Test successful track info retrieval."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    # Create a mock track object
+    mock_track = Track(
+        id=123,
+        file_path="test/path.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    # Mock the database session and query
+    with patch("src.main.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/123")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify all TrackResponse fields are present
+        assert data["id"] == 123
+        assert data["file_path"] == "test/path.gpx"
+        assert data["bound_north"] == 45.0
+        assert data["bound_south"] == 44.0
+        assert data["bound_east"] == 5.0
+        assert data["bound_west"] == 3.0
+        assert data["barycenter_latitude"] == 44.5
+        assert data["barycenter_longitude"] == 4.0
+        assert data["name"] == "Test Track"
+        assert data["track_type"] == "segment"
+        assert data["difficulty_level"] == 3
+        assert data["surface_type"] == "forest-trail"
+        assert data["tire_dry"] == "semi-slick"
+        assert data["tire_wet"] == "knobs"
+        assert data["comments"] == "Test comments"
+
+
+def test_get_track_info_database_not_available(client):
+    """Test track info retrieval when database is not available."""
+    with patch("src.main.SessionLocal", None):
+        response = client.get("/api/segments/123")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"] == "Database not available"
+
+
+def test_get_track_info_track_not_found(client):
+    """Test track info retrieval when track doesn't exist."""
+    with patch("src.main.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return None  # Track not found
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/999")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "Track not found"
+
+
+def test_get_track_info_database_exception(client):
+    """Test track info retrieval when database throws an exception."""
+    with patch("src.main.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                raise Exception("Database connection failed")
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/123")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert "Internal server error" in data["detail"]
+        assert "Database connection failed" in data["detail"]
+
+
+def test_get_track_parsed_data_success(client):
+    """Test successful track parsed data retrieval using real GPX file."""
+    import os
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    # Create a mock track object
+    mock_track = Track(
+        id=456,
+        file_path="data/file.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test chemin Gravel autour du Puit",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    # Load real GPX data from file
+    data_dir = os.path.dirname(os.path.abspath(__file__))
+    gpx_file_path = os.path.join(data_dir, "data", "file.gpx")
+
+    with open(gpx_file_path, "rb") as f:
+        real_gpx_data = f.read()
+
+    # Mock parsed GPX data based on real file structure
+    mock_parsed_data = {
+        "file_id": "file",
+        "track_name": "Test chemin Gravel autour du Puit",
+        "points": [
+            {
+                "latitude": 46.9192890,
+                "longitude": 3.9921170,
+                "elevation": 576.0,
+                "time": "2025-08-30T13:25:10Z",
+            }
+        ],
+        "total_stats": {
+            "total_points": 1,
+            "total_distance": 1000.0,
+            "total_elevation_gain": 50.0,
+            "total_elevation_loss": 30.0,
+        },
+        "bounds": {
+            "north": 45.0,
+            "south": 44.0,
+            "east": 5.0,
+            "west": 3.0,
+            "min_elevation": 100.0,
+            "max_elevation": 150.0,
+        },
+    }
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.main.gpxpy.parse"),
+        patch("src.main.extract_from_gpx_file") as mock_extract,
+    ):
+        # Setup mocks
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        mock_storage_manager.load_gpx_data.return_value = real_gpx_data
+        mock_extract.return_value = mock_parsed_data
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify GPXData response structure
+        assert data["file_id"] == "file"
+        assert data["track_name"] == "Test chemin Gravel autour du Puit"
+        assert len(data["points"]) == 1
+        assert data["points"][0]["latitude"] == 46.9192890
+        assert data["total_stats"]["total_distance"] == 1000.0
+        assert data["bounds"]["north"] == 45.0
+
+
+def test_get_track_parsed_data_database_not_available(client):
+    """Test track parsed data retrieval when database is not available."""
+    with patch("src.main.SessionLocal", None):
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"] == "Database not available"
+
+
+def test_get_track_parsed_data_storage_manager_not_available(client):
+    """Test track parsed data retrieval when storage manager is not available."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path="data/file.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test chemin Gravel autour du Puit",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager", None),
+    ):
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert data["detail"] == "Storage manager not available"
+
+
+def test_get_track_parsed_data_track_not_found(client):
+    """Test track parsed data retrieval when track doesn't exist."""
+    with patch("src.main.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return None  # Track not found
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/999/data")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "Track not found"
+
+
+def test_get_track_parsed_data_gpx_not_found(client):
+    """Test track parsed data retrieval when GPX file is not found."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path="data/nonexistent.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager") as mock_storage_manager,
+    ):
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        # Storage manager returns None (GPX not found)
+        mock_storage_manager.load_gpx_data.return_value = None
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "GPX data not found"
+
+
+def test_get_track_parsed_data_gpx_parsing_failure(client):
+    """Test track parsed data retrieval when GPX parsing fails."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path="data/invalid.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    mock_gpx_data = b'<?xml version="1.0" encoding="UTF-8"?>\n<invalid>gpx</invalid>'
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.main.gpxpy.parse"),
+    ):
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        mock_storage_manager.load_gpx_data.return_value = mock_gpx_data
+        # GPX parsing throws an exception
+        with patch("src.main.gpxpy.parse") as mock_gpx_parse:
+            mock_gpx_parse.side_effect = Exception("Invalid GPX format")
+
+            response = client.get("/api/segments/456/data")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "Failed to parse GPX data" in data["detail"]
+
+
+def test_get_track_parsed_data_extraction_failure(client):
+    """Test track parsed data retrieval when data extraction fails."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path="data/extraction_fail.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    mock_gpx_data = (
+        b'<?xml version="1.0" encoding="UTF-8"?>\n'
+        b'<gpx version="1.1"><trk><name>Test Track</name></trk></gpx>'
+    )
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.main.gpxpy.parse"),
+        patch("src.main.extract_from_gpx_file") as mock_extract,
+    ):
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        mock_storage_manager.load_gpx_data.return_value = mock_gpx_data
+        # Data extraction throws an exception
+        mock_extract.side_effect = Exception("Failed to extract data")
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to parse GPX data" in data["detail"]
+
+
+def test_get_track_parsed_data_database_exception(client):
+    """Test track parsed data retrieval when database throws an exception."""
+    with patch("src.main.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                raise Exception("Database connection failed")
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert "Internal server error" in data["detail"]
+        assert "Database connection failed" in data["detail"]
+
+
+def test_get_track_parsed_data_file_path_none(client):
+    """Test track parsed data retrieval when file_path is None."""
+    from datetime import datetime
+
+    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+
+    mock_track = Track(
+        id=456,
+        file_path=None,  # None file path
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=SurfaceType.FOREST_TRAIL,
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    mock_gpx_data = (
+        b'<?xml version="1.0" encoding="UTF-8"?>\n'
+        b'<gpx version="1.1"><trk><name>Test Track</name></trk></gpx>'
+    )
+
+    mock_parsed_data = {
+        "file_id": "456",  # Should use track ID when file_path is None
+        "track_name": "Test Track",
+        "points": [],
+        "total_stats": {
+            "total_points": 0,
+            "total_distance": 0.0,
+            "total_elevation_gain": 0.0,
+            "total_elevation_loss": 0.0,
+        },
+        "bounds": {
+            "north": 45.0,
+            "south": 44.0,
+            "east": 5.0,
+            "west": 3.0,
+            "min_elevation": 0.0,
+            "max_elevation": 0.0,
+        },
+    }
+
+    with (
+        patch("src.main.SessionLocal") as mock_session_local,
+        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.main.gpxpy.parse"),
+        patch("src.main.extract_from_gpx_file") as mock_extract,
+    ):
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        mock_storage_manager.load_gpx_data.return_value = mock_gpx_data
+        mock_extract.return_value = mock_parsed_data
+
+        response = client.get("/api/segments/456/data")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["file_id"] == "456"  # Should use track ID as fallback

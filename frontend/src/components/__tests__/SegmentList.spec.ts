@@ -306,8 +306,8 @@ describe('SegmentList', () => {
       // Check that metric labels exist
       const labels = card.findAll('.metric-label')
       expect(labels.some((label) => label.text().includes('Distance'))).toBe(true)
-      expect(labels.some((label) => label.text().includes('Elevation'))).toBe(true)
-      expect(labels.some((label) => label.text().includes('Time'))).toBe(true)
+      expect(labels.some((label) => label.text().includes('Elevation Gain'))).toBe(true)
+      expect(labels.some((label) => label.text().includes('Elevation Loss'))).toBe(true)
     })
 
     it('should format metrics with proper units', () => {

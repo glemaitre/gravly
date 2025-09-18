@@ -4,10 +4,12 @@ import { i18n, initializeLanguage } from './i18n'
 import App from './App.vue'
 import Editor from './components/Editor.vue'
 import LandingPage from './components/LandingPage.vue'
+import SegmentDetail from './components/SegmentDetail.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: LandingPage },
-  { path: '/editor', component: Editor }
+  { path: '/editor', component: Editor },
+  { path: '/segment/:id', component: SegmentDetail, props: true }
 ]
 
 const router = createRouter({

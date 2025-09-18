@@ -577,5 +577,129 @@ async def get_track_gpx_data(track_id: int):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@app.get("/api/segments/{track_id}", response_model=TrackResponse)
+async def get_track_info(track_id: int):
+    """Get basic track information by ID.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to fetch info for
+
+    Returns
+    -------
+    TrackResponse
+        Basic track information
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        async with SessionLocal() as session:
+            stmt = select(Track).filter(Track.id == track_id)
+            result = await session.execute(stmt)
+            track = result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            return TrackResponse(
+                id=track.id,
+                file_path=track.file_path,
+                bound_north=track.bound_north,
+                bound_south=track.bound_south,
+                bound_east=track.bound_east,
+                bound_west=track.bound_west,
+                barycenter_latitude=track.barycenter_latitude,
+                barycenter_longitude=track.barycenter_longitude,
+                name=track.name,
+                track_type=track.track_type,
+                difficulty_level=track.difficulty_level,
+                surface_type=track.surface_type,
+                tire_dry=track.tire_dry,
+                tire_wet=track.tire_wet,
+                comments=track.comments,
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching track info for track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/api/segments/{track_id}/data", response_model=GPXData)
+async def get_track_parsed_data(track_id: int):
+    """Get parsed GPX data for a specific track by ID.
+
+    This endpoint fetches the GPX file from storage, parses it, and returns
+    the structured data directly to the frontend.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to fetch parsed data for
+
+    Returns
+    -------
+    GPXData
+        The parsed GPX data with points, stats, and bounds
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not available")
+
+    try:
+        async with SessionLocal() as session:
+            stmt = select(Track).filter(Track.id == track_id)
+            result = await session.execute(stmt)
+            track = result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            try:
+                # Load GPX data from storage
+                gpx_bytes = storage_manager.load_gpx_data(track.file_path)
+                if gpx_bytes is None:
+                    logger.warning(
+                        f"No GPX data found for track {track_id} at path: "
+                        f"{track.file_path}"
+                    )
+                    raise HTTPException(status_code=404, detail="GPX data not found")
+
+                # Parse GPX data
+                gpx_xml_data = gpx_bytes.decode("utf-8")
+                gpx = gpxpy.parse(gpx_xml_data)
+
+                # Extract structured data using the utility function
+                file_id = (
+                    track.file_path.split("/")[-1].replace(".gpx", "")
+                    if track.file_path
+                    else str(track_id)
+                )
+                parsed_data = extract_from_gpx_file(gpx, file_id)
+
+                return parsed_data
+
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.warning(
+                    f"Failed to parse GPX data for track {track_id}: {str(e)}"
+                )
+                raise HTTPException(
+                    status_code=500, detail=f"Failed to parse GPX data: {str(e)}"
+                )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching parsed data for track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

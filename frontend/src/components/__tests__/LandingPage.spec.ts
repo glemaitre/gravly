@@ -2,6 +2,27 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import LandingPage from '../LandingPage.vue'
 
+// Mock Vue Router
+const mockRouter = {
+  push: vi.fn(),
+  replace: vi.fn(),
+  go: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn()
+}
+
+// Mock useRouter composable
+vi.mock('vue-router', () => ({
+  useRouter: () => mockRouter
+}))
+
+// Helper function to mount component with router mock
+const mountWithRouter = (component: any, options: any = {}) => {
+  return mount(component, {
+    ...options
+  })
+}
+
 // Mock Leaflet with more comprehensive functionality
 const mockMapInstance = {
   setView: vi.fn(),
@@ -134,14 +155,14 @@ describe('LandingPage', () => {
   })
 
   it('renders correctly', () => {
-    wrapper = mount(LandingPage)
+    wrapper = mountWithRouter(LandingPage)
 
     expect(wrapper.find('.landing-page').exists()).toBe(true)
     expect(wrapper.find('.landing-content').exists()).toBe(true)
   })
 
   it('has correct CSS classes for styling', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     const landingPage = wrapper.find('.landing-page')
     const landingContent = wrapper.find('.landing-content')
@@ -151,7 +172,7 @@ describe('LandingPage', () => {
   })
 
   it('has proper structure with landing-page container', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     const landingPage = wrapper.find('.landing-page')
     expect(landingPage.exists()).toBe(true)
@@ -162,7 +183,7 @@ describe('LandingPage', () => {
   })
 
   it('renders as a single root element', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     // Should have only one root element
     expect(wrapper.element.children.length).toBe(1)
@@ -171,20 +192,20 @@ describe('LandingPage', () => {
   })
 
   it('has correct component name', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     expect(wrapper.vm.$options.name || 'LandingPage').toBe('LandingPage')
   })
 
   it('is a functional component with no props', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     // Should not have any props
     expect(Object.keys(wrapper.props())).toHaveLength(0)
   })
 
   it('has content area ready for future content', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     const landingContent = wrapper.find('.landing-content')
     expect(landingContent.exists()).toBe(true)
@@ -194,7 +215,7 @@ describe('LandingPage', () => {
   })
 
   it('maintains proper HTML structure', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     const html = wrapper.html()
 
@@ -208,7 +229,7 @@ describe('LandingPage', () => {
   })
 
   it('has scoped styles applied correctly', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     const landingPage = wrapper.find('.landing-page')
     const landingContent = wrapper.find('.landing-content')
@@ -219,18 +240,18 @@ describe('LandingPage', () => {
   })
 
   it('is ready for future content expansion', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     // The component should be structured to easily accept new content
     const landingContent = wrapper.find('.landing-content')
     expect(landingContent.exists()).toBe(true)
 
     // Should be able to add content inside landing-content
-    expect(landingContent.element.children.length).toBe(2) // Map section and segment list section
+    expect(landingContent.element.children.length).toBe(1) // content-wrapper
   })
 
   it('follows Vue 3 Composition API patterns', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     // Component should be using <script setup> syntax
     // This is verified by the fact that it mounts without errors
@@ -238,7 +259,7 @@ describe('LandingPage', () => {
   })
 
   it('has proper accessibility structure', () => {
-    const wrapper = mount(LandingPage)
+    const wrapper = mountWithRouter(LandingPage)
 
     // Should have proper div structure for screen readers
     const landingPage = wrapper.find('.landing-page')
@@ -250,8 +271,8 @@ describe('LandingPage', () => {
 
   it('can be mounted multiple times without issues', () => {
     // Test that the component is stateless and can be reused
-    const wrapper1 = mount(LandingPage)
-    const wrapper2 = mount(LandingPage)
+    const wrapper1 = mountWithRouter(LandingPage)
+    const wrapper2 = mountWithRouter(LandingPage)
 
     expect(wrapper1.find('.landing-page').exists()).toBe(true)
     expect(wrapper2.find('.landing-page').exists()).toBe(true)
@@ -261,7 +282,7 @@ describe('LandingPage', () => {
   })
 
   it('handles component lifecycle correctly', () => {
-    wrapper = mount(LandingPage)
+    wrapper = mountWithRouter(LandingPage)
 
     // Component should mount successfully
     expect(wrapper.find('.landing-page').exists()).toBe(true)
@@ -272,7 +293,7 @@ describe('LandingPage', () => {
 
   describe('Map functionality', () => {
     it('renders map container', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.find('#landing-map').exists()).toBe(true)
       expect(wrapper.find('.map').exists()).toBe(true)
@@ -280,7 +301,7 @@ describe('LandingPage', () => {
     })
 
     it('displays map section without hero titles', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.find('.hero-section').exists()).toBe(false)
       expect(wrapper.find('.hero-title').exists()).toBe(false)
@@ -289,7 +310,7 @@ describe('LandingPage', () => {
     })
 
     it('has proper map section structure', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.find('.map-section').exists()).toBe(true)
       expect(wrapper.find('.map-container').exists()).toBe(true)
@@ -297,7 +318,7 @@ describe('LandingPage', () => {
     })
 
     it('has correct map dimensions with full width and 65% height', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapElement = wrapper.find('.map')
       expect(mapElement.exists()).toBe(true)
@@ -306,7 +327,7 @@ describe('LandingPage', () => {
     })
 
     it('has responsive CSS classes', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapContainer = wrapper.find('.map-container')
       expect(mapContainer.exists()).toBe(true)
@@ -314,7 +335,7 @@ describe('LandingPage', () => {
     })
 
     it('has full width and 65% height styling', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapElement = wrapper.find('.map')
       expect(mapElement.exists()).toBe(true)
@@ -331,7 +352,7 @@ describe('LandingPage', () => {
 
   describe('Responsive design', () => {
     it('has proper responsive structure', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const landingContent = wrapper.find('.landing-content')
       expect(landingContent.exists()).toBe(true)
@@ -339,7 +360,7 @@ describe('LandingPage', () => {
     })
 
     it('maintains proper layout structure', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Check that all main sections exist
       expect(wrapper.find('.map-section').exists()).toBe(true)
@@ -349,14 +370,14 @@ describe('LandingPage', () => {
 
   describe('Non-regression tests', () => {
     it('should not have duplicate map containers', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapContainers = wrapper.findAll('#landing-map')
       expect(mapContainers).toHaveLength(1)
     })
 
     it('should have proper map container hierarchy', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapSection = wrapper.find('.map-section')
       const mapContainer = mapSection.find('.map-container')
@@ -370,8 +391,8 @@ describe('LandingPage', () => {
     })
 
     it('should maintain consistent structure across multiple mounts', () => {
-      const wrapper1 = mount(LandingPage)
-      const wrapper2 = mount(LandingPage)
+      const wrapper1 = mountWithRouter(LandingPage)
+      const wrapper2 = mountWithRouter(LandingPage)
 
       expect(wrapper1.find('.landing-page').exists()).toBe(true)
       expect(wrapper2.find('.landing-page').exists()).toBe(true)
@@ -385,7 +406,7 @@ describe('LandingPage', () => {
 
   describe('Loading States', () => {
     it('should show loading indicator when loading is true', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Set loading state
       await wrapper.vm.$nextTick()
@@ -401,7 +422,7 @@ describe('LandingPage', () => {
     })
 
     it('should show searching message when no tracks loaded', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       wrapper.vm.loading = true
       wrapper.vm.totalTracks = 0
@@ -413,7 +434,7 @@ describe('LandingPage', () => {
     })
 
     it('should hide loading indicator when loading is false', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       wrapper.vm.loading = false
 
@@ -426,7 +447,7 @@ describe('LandingPage', () => {
 
   describe('Map Controls', () => {
     it('should render Max Results control', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mapControls = wrapper.find('.map-controls')
       expect(mapControls.exists()).toBe(true)
@@ -443,13 +464,13 @@ describe('LandingPage', () => {
     })
 
     it('should have correct default search limit', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.vm.searchLimit).toBe(50)
     })
 
     it('should handle limit change events', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const limitSelect = wrapper.find('.limit-select')
       expect(limitSelect.exists()).toBe(true)
@@ -465,7 +486,7 @@ describe('LandingPage', () => {
     })
 
     it('should have all limit options available', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const limitSelect = wrapper.find('.limit-select')
       const options = limitSelect.findAll('option')
@@ -480,7 +501,7 @@ describe('LandingPage', () => {
 
   describe('Map Initialization', () => {
     it('should initialize map on mount', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Wait for onMounted to execute
       await wrapper.vm.$nextTick()
@@ -497,7 +518,7 @@ describe('LandingPage', () => {
     })
 
     it('should set up tile layer', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -508,7 +529,7 @@ describe('LandingPage', () => {
     })
 
     it('should add scale control', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -519,7 +540,7 @@ describe('LandingPage', () => {
     })
 
     it('should set initial map view', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -528,7 +549,7 @@ describe('LandingPage', () => {
     })
 
     it('should not initialize map if already exists', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // First mount
       await wrapper.vm.$nextTick()
@@ -547,19 +568,19 @@ describe('LandingPage', () => {
 
   describe('EventSource Integration', () => {
     it('should have searchSegmentsInView method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(typeof wrapper.vm.searchSegmentsInView).toBe('function')
     })
 
     it('should have eventSource property', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.vm.eventSource).toBeNull()
     })
 
     it('should have loading state properties', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.vm.loading).toBe(false)
       expect(wrapper.vm.totalTracks).toBe(0)
@@ -567,7 +588,7 @@ describe('LandingPage', () => {
     })
 
     it('should have segments array', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(Array.isArray(wrapper.vm.segments)).toBe(true)
       expect(wrapper.vm.segments).toHaveLength(0)
@@ -581,19 +602,19 @@ describe('LandingPage', () => {
     })
 
     it('should have processTrack method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(typeof wrapper.vm.processTrack).toBe('function')
     })
 
     it('should have addGPXTrackToMap method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(typeof wrapper.vm.addGPXTrackToMap).toBe('function')
     })
 
     it('should have addBoundingBoxToMap method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(typeof wrapper.vm.addBoundingBoxToMap).toBe('function')
     })
@@ -601,7 +622,7 @@ describe('LandingPage', () => {
 
   describe('Component Lifecycle', () => {
     it('should mount and unmount without errors', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(wrapper.exists()).toBe(true)
 
@@ -610,14 +631,14 @@ describe('LandingPage', () => {
     })
 
     it('should have onMounted and onUnmounted lifecycle hooks', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Component should mount successfully, indicating lifecycle hooks work
       expect(wrapper.exists()).toBe(true)
     })
 
     it('should initialize map on mount', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
@@ -630,13 +651,13 @@ describe('LandingPage', () => {
 
   describe('Dynamic Circle Scaling', () => {
     it('should have updateCircleSizes method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       expect(typeof wrapper.vm.updateCircleSizes).toBe('function')
     })
 
     it('should calculate correct radius for different zoom levels', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test the radius calculation logic
       const baseRadius = 6
@@ -662,7 +683,7 @@ describe('LandingPage', () => {
     })
 
     it('should update circle markers when zoom level changes', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Mock the currentMapLayers with some test data
       const mockLayerData = {
@@ -683,7 +704,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle empty currentMapLayers gracefully', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Set empty map layers
       wrapper.vm.currentMapLayers = new Map()
@@ -693,7 +714,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle layers without markers gracefully', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Mock layer data without markers
       const mockLayerData = {
@@ -709,7 +730,7 @@ describe('LandingPage', () => {
 
   describe('Segment Loading and Display', () => {
     it('should display loading indicator when loading segments', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
       await wrapper.vm.$nextTick()
 
       // Set loading state
@@ -724,7 +745,7 @@ describe('LandingPage', () => {
     })
 
     it('should display search indicator when loading and no tracks', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
       await wrapper.vm.$nextTick()
 
       // Set loading state to true and no tracks
@@ -771,7 +792,7 @@ describe('LandingPage', () => {
         }
       ]
 
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
       wrapper.vm.segments = mockSegments
       await wrapper.vm.$nextTick()
 
@@ -782,7 +803,7 @@ describe('LandingPage', () => {
     })
 
     it('should pass loading state to SegmentList component', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
       wrapper.vm.loading = true
       await wrapper.vm.$nextTick()
 
@@ -793,7 +814,7 @@ describe('LandingPage', () => {
 
   describe('Event Handling', () => {
     it('should handle segment click events', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mockSegment = {
         id: 1,
@@ -822,7 +843,7 @@ describe('LandingPage', () => {
     })
 
     it('should add click handlers to GPX track polylines', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mockSegment = {
         id: 1,
@@ -857,7 +878,7 @@ describe('LandingPage', () => {
     })
 
     it('should add click handlers to bounding box rectangles', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mockSegment = {
         id: 1,
@@ -885,7 +906,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle segment hover events', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const mockSegment = {
         id: 1,
@@ -914,7 +935,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle segment leave events', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists and can be called
       expect(typeof wrapper.vm.onSegmentLeave).toBe('function')
@@ -927,7 +948,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle track type change events', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists and can be called
       expect(typeof wrapper.vm.onTrackTypeChange).toBe('function')
@@ -942,7 +963,7 @@ describe('LandingPage', () => {
 
   describe('Map Bounds and Search Functionality', () => {
     it('should initialize with default map bounds', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Check that the component has the expected initial state
       expect(wrapper.vm.segments).toEqual([])
@@ -953,14 +974,14 @@ describe('LandingPage', () => {
     })
 
     it('should have searchSegmentsInView method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.searchSegmentsInView).toBe('function')
     })
 
     it('should have debouncedSearchSegments method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.debouncedSearchSegments).toBe('function')
@@ -969,14 +990,14 @@ describe('LandingPage', () => {
 
   describe('GPX Data Processing', () => {
     it('should have fetchAndRenderGPXData method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.fetchAndRenderGPXData).toBe('function')
     })
 
     it('should have processTrack method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.processTrack).toBe('function')
@@ -999,7 +1020,7 @@ describe('LandingPage', () => {
         comments: 'Test'
       }
 
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that processTrack can be called
       await wrapper.vm.processTrack(mockTrack)
@@ -1011,21 +1032,21 @@ describe('LandingPage', () => {
 
   describe('Component Lifecycle', () => {
     it('should have initializeMap method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.initializeMap).toBe('function')
     })
 
     it('should have cleanupMap method', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that the method exists
       expect(typeof wrapper.vm.cleanupMap).toBe('function')
     })
 
     it('should clean up resources on unmount', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that cleanupMap can be called
       wrapper.vm.cleanupMap()
@@ -1037,7 +1058,7 @@ describe('LandingPage', () => {
 
   describe('Fixed Center Marker', () => {
     it('renders center marker in template', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.exists()).toBe(true)
@@ -1046,7 +1067,7 @@ describe('LandingPage', () => {
     })
 
     it('has correct CSS classes and attributes', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.classes()).toContain('fixed-center-marker')
@@ -1054,7 +1075,7 @@ describe('LandingPage', () => {
     })
 
     it('is positioned absolutely at center of map container', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       const mapContainer = wrapper.find('.card-map')
@@ -1067,7 +1088,7 @@ describe('LandingPage', () => {
     })
 
     it('has proper CSS class for styling', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.exists()).toBe(true)
@@ -1079,7 +1100,7 @@ describe('LandingPage', () => {
     })
 
     it('has correct HTML structure for centering', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.exists()).toBe(true)
@@ -1090,14 +1111,14 @@ describe('LandingPage', () => {
     })
 
     it('has proper accessibility attributes', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.attributes('title')).toBe('Search Center')
     })
 
     it('has CSS styles defined in component', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Check that the component has the CSS styles defined
       // We can't test computed styles in jsdom, but we can verify
@@ -1112,7 +1133,7 @@ describe('LandingPage', () => {
     })
 
     it('maintains center position during map interactions', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Wait for component to mount
       await wrapper.vm.$nextTick()
@@ -1129,7 +1150,7 @@ describe('LandingPage', () => {
     })
 
     it('does not interfere with map controls', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       const mapControls = wrapper.find('.map-controls')
@@ -1145,7 +1166,7 @@ describe('LandingPage', () => {
     })
 
     it('is always visible regardless of map state', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.exists()).toBe(true)
@@ -1161,7 +1182,7 @@ describe('LandingPage', () => {
     })
 
     it('works correctly with map initialization', async () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Wait for component to mount and map to initialize
       await wrapper.vm.$nextTick()
@@ -1177,7 +1198,7 @@ describe('LandingPage', () => {
     })
 
     it('does not require JavaScript updates for positioning', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       const centerMarker = wrapper.find('.fixed-center-marker')
       expect(centerMarker.exists()).toBe(true)
@@ -1193,7 +1214,7 @@ describe('LandingPage', () => {
 
   describe('Segment Containment Filtering', () => {
     it('filters segments to show only those at least partially visible within map bounds', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Mock segments with different containment scenarios
       const mockSegments = [
@@ -1275,7 +1296,7 @@ describe('LandingPage', () => {
     })
 
     it('filters segments correctly when zooming in', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Mock segments
       const mockSegments = [
@@ -1339,7 +1360,7 @@ describe('LandingPage', () => {
 
   describe('Error Handling', () => {
     it('should handle missing map container gracefully', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test that initializeMap can be called without errors
       wrapper.vm.initializeMap()
@@ -1349,7 +1370,7 @@ describe('LandingPage', () => {
     })
 
     it('should handle component state correctly', () => {
-      wrapper = mount(LandingPage)
+      wrapper = mountWithRouter(LandingPage)
 
       // Test initial state
       expect(wrapper.vm.loading).toBe(false)
