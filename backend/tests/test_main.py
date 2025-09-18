@@ -1645,9 +1645,14 @@ def test_search_segments_endpoint_success(client):
     data_lines = [line for line in lines if line.startswith("data: ")]
     assert len(data_lines) >= 2  # At least one segment count + [DONE]
 
-    # First line should be segment count
-    count_line = data_lines[0]
-    assert count_line.startswith("data: ")
+    # Find the count line (it comes after track data)
+    count_line = None
+    for line in data_lines:
+        if line.startswith("data: ") and line[6:].isdigit():
+            count_line = line
+            break
+
+    assert count_line is not None, "Should have a count line"
     segment_count = int(count_line[6:])  # Remove 'data: '
     assert segment_count >= 0  # Should find 0 or more segments
 
@@ -1755,9 +1760,14 @@ def test_search_segments_endpoint_streaming_format(client):
     # Should have at least: count + [DONE]
     assert len(data_lines) >= 2
 
-    # First line should be segment count
-    count_line = data_lines[0]
-    assert count_line.startswith("data: ")
+    # Find the count line (it comes after track data)
+    count_line = None
+    for line in data_lines:
+        if line.startswith("data: ") and line[6:].isdigit():
+            count_line = line
+            break
+
+    assert count_line is not None, "Should have a count line"
     segment_count = int(count_line[6:])  # Remove 'data: '
 
     # Last line should be [DONE]
@@ -1765,7 +1775,16 @@ def test_search_segments_endpoint_streaming_format(client):
 
     # If there are segments, check that segment data is valid JSON
     if segment_count > 0:
-        segment_data_lines = data_lines[1:-1]  # Exclude count and [DONE]
+        # Filter out count line and [DONE] from segment data
+        segment_data_lines = []
+        for line in data_lines:
+            if (
+                line.startswith("data: ")
+                and not line[6:].isdigit()
+                and line != "data: [DONE]"
+            ):
+                segment_data_lines.append(line)
+
         for line in segment_data_lines:
             json_str = line[6:]  # Remove 'data: '
             data = json.loads(json_str)
@@ -1813,9 +1832,14 @@ def test_search_segments_endpoint_gpx_load_error(client, main_module):
     # Should have: count + segments + [DONE]
     assert len(data_lines) >= 2
 
-    # First line should be segment count
-    count_line = data_lines[0]
-    assert count_line.startswith("data: ")
+    # Find the count line (it comes after track data)
+    count_line = None
+    for line in data_lines:
+        if line.startswith("data: ") and line[6:].isdigit():
+            count_line = line
+            break
+
+    assert count_line is not None, "Should have a count line"
     segment_count = int(count_line[6:])  # Remove 'data: '
     assert segment_count >= 0
 
@@ -1824,7 +1848,16 @@ def test_search_segments_endpoint_gpx_load_error(client, main_module):
 
     # Verify that segments don't contain GPX data (optimization)
     if segment_count > 0:
-        segment_data_lines = data_lines[1:-1]  # Exclude count and [DONE]
+        # Filter out count line and [DONE] from segment data
+        segment_data_lines = []
+        for line in data_lines:
+            if (
+                line.startswith("data: ")
+                and not line[6:].isdigit()
+                and line != "data: [DONE]"
+            ):
+                segment_data_lines.append(line)
+
         for line in segment_data_lines:
             json_str = line[6:]  # Remove 'data: '
             data = json.loads(json_str)

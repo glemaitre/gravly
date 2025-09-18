@@ -248,10 +248,12 @@ function formatTime(seconds: number): string {
 }
 
 function formatSurfaceType(surfaceType: string): string {
+  if (!surfaceType) return ''
   return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
 function formatTireType(tireType: string): string {
+  if (!tireType) return ''
   return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 

@@ -1191,6 +1191,152 @@ describe('LandingPage', () => {
     })
   })
 
+  describe('Segment Containment Filtering', () => {
+    it('filters segments to show only those at least partially visible within map bounds', () => {
+      wrapper = mount(LandingPage)
+
+      // Mock segments with different containment scenarios
+      const mockSegments = [
+        // Fully contained segment
+        {
+          id: 1,
+          bound_north: 45.8,
+          bound_south: 45.7,
+          bound_east: 4.9,
+          bound_west: 4.8,
+          name: 'Contained Segment',
+          surface_type: 'asphalt',
+          difficulty_level: 'easy',
+          track_type: 'segment',
+          file_path: '/test1.gpx',
+          barycenter_latitude: 45.75,
+          barycenter_longitude: 4.85,
+          tire_type: 'road'
+        },
+        // Partially overlapping segment (should be included with intersection logic)
+        {
+          id: 2,
+          bound_north: 45.95, // Extends beyond search north (45.9)
+          bound_south: 45.6,
+          bound_east: 5.0,
+          bound_west: 4.7,
+          name: 'Overlapping Segment',
+          surface_type: 'gravel',
+          difficulty_level: 'medium',
+          track_type: 'segment',
+          file_path: '/test2.gpx',
+          barycenter_latitude: 45.75,
+          barycenter_longitude: 4.85,
+          tire_type: 'gravel'
+        },
+        // Segment outside bounds (should be filtered out)
+        {
+          id: 3,
+          bound_north: 46.0,
+          bound_south: 45.9,
+          bound_east: 5.1,
+          bound_west: 5.0,
+          name: 'Outside Segment',
+          surface_type: 'dirt',
+          difficulty_level: 'hard',
+          track_type: 'segment',
+          file_path: '/test3.gpx',
+          barycenter_latitude: 45.95,
+          barycenter_longitude: 5.05,
+          tire_type: 'mountain'
+        }
+      ]
+
+      // Set up mock segments
+      wrapper.vm.segments = mockSegments
+
+      // Mock map bounds (search area) - larger area to contain the test segment
+      const mockBounds = {
+        getNorth: () => 45.9, // Larger than segment's north (45.8)
+        getSouth: () => 45.6, // Smaller than segment's south (45.7)
+        getEast: () => 5.0, // Larger than segment's east (4.9)
+        getWest: () => 4.7 // Smaller than segment's west (4.8)
+      }
+
+      // Mock map.getBounds to return our test bounds
+      const mockMap = {
+        getBounds: () => mockBounds,
+        remove: vi.fn()
+      }
+      wrapper.vm.map = mockMap
+
+      // Call the filtering function
+      wrapper.vm.updateSegmentCardsForCurrentView()
+
+      // Both the contained and overlapping segments should remain (intersection logic)
+      expect(wrapper.vm.segments).toHaveLength(2)
+      expect(wrapper.vm.segments.map((s: any) => s.id)).toContain(1) // Contained Segment
+      expect(wrapper.vm.segments.map((s: any) => s.id)).toContain(2) // Overlapping Segment
+    })
+
+    it('filters segments correctly when zooming in', () => {
+      wrapper = mount(LandingPage)
+
+      // Mock segments
+      const mockSegments = [
+        {
+          id: 1,
+          bound_north: 45.8,
+          bound_south: 45.76, // Now inside the map bounds (45.75 < 45.76 < 45.85)
+          bound_east: 4.9,
+          bound_west: 4.8,
+          name: 'Segment 1',
+          surface_type: 'asphalt',
+          difficulty_level: 'easy',
+          track_type: 'segment',
+          file_path: '/test1.gpx',
+          barycenter_latitude: 45.75,
+          barycenter_longitude: 4.85,
+          tire_type: 'road'
+        },
+        {
+          id: 2,
+          bound_north: 45.82,
+          bound_south: 45.78,
+          bound_east: 4.88,
+          bound_west: 4.86,
+          name: 'Segment 2',
+          surface_type: 'gravel',
+          difficulty_level: 'medium',
+          track_type: 'segment',
+          file_path: '/test2.gpx',
+          barycenter_latitude: 45.8,
+          barycenter_longitude: 4.87,
+          tire_type: 'gravel'
+        }
+      ]
+
+      wrapper.vm.segments = mockSegments
+
+      // Mock tighter bounds (zoomed in) - should contain only segment 2
+      const mockBounds = {
+        getNorth: () => 45.85, // Larger than segment 2's north (45.82)
+        getSouth: () => 45.75, // Smaller than segment 2's south (45.78)
+        getEast: () => 4.9, // Larger than segment 2's east (4.88)
+        getWest: () => 4.8 // Smaller than segment 2's west (4.86)
+      }
+
+      const mockMap = {
+        getBounds: () => mockBounds,
+        remove: vi.fn()
+      }
+      wrapper.vm.map = mockMap
+
+      // Call the filtering function
+      wrapper.vm.updateSegmentCardsForCurrentView()
+
+      // Both segments should remain (both are now within the tighter bounds)
+      expect(wrapper.vm.segments).toHaveLength(2)
+      expect(wrapper.vm.segments.map((s: any) => s.id)).toContain(1) // Segment 1
+      expect(wrapper.vm.segments.map((s: any) => s.id)).toContain(2) // Segment 2
+    })
+  })
+
   describe('Error Handling', () => {
     it('should handle missing map container gracefully', () => {
       wrapper = mount(LandingPage)

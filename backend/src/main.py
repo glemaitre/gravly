@@ -402,13 +402,14 @@ async def search_segments_in_bounds(
         description="Maximum number of segments to return (default: 50)",
     ),
 ):
-    """Search for segments that intersect with the given map bounds using streaming.
+    """Search for segments that are at least partially visible within the given map
+    bounds using streaming.
 
     This uses simple bounding box intersection - a segment is included if its bounding
-    rectangle overlaps with the search area rectangle. The results are limited to the
-    specified number of segments, selecting those closest to the center of the
-    search bounds. Streams segments as they are processed, allowing the frontend
-    to start drawing immediately.
+    rectangle intersects with the search area rectangle (at least partially visible).
+    The results are limited to the specified number of segments, selecting those closest
+    to the center of the search bounds. Streams segments as they are processed, allowing
+    the frontend to start drawing immediately.
 
     Parameters
     ----------
@@ -452,15 +453,14 @@ async def search_segments_in_bounds(
                     + func.pow(Track.barycenter_longitude - search_center_longitude, 2)
                 ).label("distance")
 
-                # Get tracks with distance calculated in SQL, ordered by distance
                 stmt = (
                     select(Track, distance_expr)
                     .filter(
                         and_(
-                            Track.bound_north >= south,
-                            Track.bound_south <= north,
-                            Track.bound_east >= west,
-                            Track.bound_west <= east,
+                            Track.bound_north > south,
+                            Track.bound_south < north,
+                            Track.bound_east > west,
+                            Track.bound_west < east,
                             Track.track_type == track_type_enum,
                         )
                     )

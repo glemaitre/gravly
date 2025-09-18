@@ -164,10 +164,24 @@ function initializeMap() {
   // Only trigger database search when bounds expand beyond previous search
   // When zooming in, filter existing segments without re-fetching GPX data
   previousMapBounds = map.getBounds()
-  map.on('moveend', handleMapMoveEnd)
+
+  // Listen to multiple events to ensure we catch all map movements
+  map.on('moveend', () => {
+    console.log('🗺️ Event: moveend')
+    handleMapMoveEnd()
+  })
+  map.on('dragend', () => {
+    console.log('🗺️ Event: dragend')
+    handleMapMoveEnd()
+  }) // Additional event for panning
+  map.on('viewreset', () => {
+    console.log('🗺️ Event: viewreset')
+    handleMapMoveEnd()
+  }) // Additional event for view changes
 
   // Add zoom event listener to update circle sizes and segment cards
   map.on('zoomend', () => {
+    console.log('🗺️ Event: zoomend')
     updateCircleSizes()
     // Update segment cards for current view (may trigger search if bounds expanded)
     handleMapMoveEnd()
@@ -194,7 +208,7 @@ function processPendingTracks() {
   pendingTracks = []
 }
 
-// Handle map move end - only trigger search when bounds expand beyond previous search
+// Handle map move end - trigger search when bounds expand or move significantly
 function handleMapMoveEnd() {
   if (!map || !previousMapBounds) {
     debouncedSearchSegments()
@@ -206,8 +220,14 @@ function handleMapMoveEnd() {
   // Check if current bounds are completely within previous bounds (zooming in)
   const boundsWithinPrevious = previousMapBounds.contains(currentBounds)
 
-  // Only trigger search if bounds expanded beyond previous bounds (zooming out or panning to new area)
-  if (!boundsWithinPrevious) {
+  // Check if bounds have moved significantly (panning to new area)
+  const centerMoved = !previousMapBounds.contains(currentBounds.getCenter())
+
+  // Check if bounds have expanded beyond previous bounds (zooming out)
+  const boundsExpanded = !boundsWithinPrevious
+
+  // Trigger search if bounds expanded OR if we've panned to a new area
+  if (boundsExpanded || centerMoved) {
     debouncedSearchSegments()
   } else {
     // Even when zooming in, we need to update the segment cards to remove
@@ -225,15 +245,46 @@ function updateSegmentCardsForCurrentView() {
 
   const currentBounds = map.getBounds()
 
-  // Filter existing segments to only show those visible in current bounds
-  const visibleSegments = segments.value.filter((segment) => {
-    return (
-      segment.bound_north >= currentBounds.getSouth() &&
-      segment.bound_south <= currentBounds.getNorth() &&
-      segment.bound_east >= currentBounds.getWest() &&
-      segment.bound_west <= currentBounds.getEast()
-    )
+  // Debug logging
+  console.log('🔍 DEBUG: Segment filtering conditions:')
+  console.log('Map bounds:', {
+    north: currentBounds.getNorth(),
+    south: currentBounds.getSouth(),
+    east: currentBounds.getEast(),
+    west: currentBounds.getWest()
   })
+  console.log('Total segments before filtering:', segments.value.length)
+
+  // Filter existing segments to only show those at least partially visible in current bounds
+  const visibleSegments = segments.value.filter((segment) => {
+    const isVisible =
+      segment.bound_north > currentBounds.getSouth() && // Track's northern boundary is south of map's southern edge
+      segment.bound_south < currentBounds.getNorth() && // Track's southern boundary is north of map's northern edge
+      segment.bound_east > currentBounds.getWest() && // Track's eastern boundary is west of map's western edge
+      segment.bound_west < currentBounds.getEast() // Track's western boundary is east of map's eastern edge
+
+    // Debug logging for each segment
+    console.log(`Segment ${segment.id} (${segment.name}):`, {
+      segmentBounds: {
+        north: segment.bound_north,
+        south: segment.bound_south,
+        east: segment.bound_east,
+        west: segment.bound_west
+      },
+      conditions: {
+        northVisible: segment.bound_north > currentBounds.getSouth(),
+        southVisible: segment.bound_south < currentBounds.getNorth(),
+        eastVisible: segment.bound_east > currentBounds.getWest(),
+        westVisible: segment.bound_west < currentBounds.getEast()
+      },
+      isVisible: isVisible
+    })
+
+    return isVisible
+  })
+
+  console.log('Visible segments after filtering:', visibleSegments.length)
+  console.log('Filtered out segments:', segments.value.length - visibleSegments.length)
 
   // Update segments array to only show visible ones
   segments.value = visibleSegments
