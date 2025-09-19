@@ -47,9 +47,6 @@
                 :class="{ hovered: hoveredSegmentId === segment.id }"
               >
                 {{ segment.name }}
-                <span v-if="hoveredSegmentId === segment.id" class="hover-indicator"
-                  >📍</span
-                >
               </h4>
             </div>
 
@@ -127,7 +124,7 @@
               class="segment-distance"
               :title="`Distance from map center`"
             >
-              {{ formatDistanceFromCenter(getDistanceFromCenter(segment)) }}
+              {{ formatDistanceFromCenter(getDistanceFromCenter(segment)) }} to📍
             </div>
           </div>
 
@@ -597,27 +594,6 @@ onUnmounted(() => {
   color: #ff6b35;
 }
 
-.hover-indicator {
-  font-size: 0.9rem;
-  animation: bounce 1s ease-in-out infinite;
-}
-
-@keyframes bounce {
-  0%,
-  20%,
-  50%,
-  80%,
-  100% {
-    transform: translateY(0);
-  }
-  40% {
-    transform: translateY(-3px);
-  }
-  60% {
-    transform: translateY(-2px);
-  }
-}
-
 .segment-card-content {
   margin-bottom: 12px;
 }
@@ -653,28 +629,23 @@ onUnmounted(() => {
   border-top: 1px solid #f0f0f0;
   padding-top: 12px;
   position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 }
 
 /* Distance from center indicator */
 .segment-distance {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
   font-size: 0.75rem;
   color: #9ca3af;
-  background: rgba(255, 255, 255, 0.9);
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #e5e7eb;
   font-weight: 500;
-  backdrop-filter: blur(4px);
-  transition: all 0.2s ease;
+  margin-top: 8px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .segment-card:hover .segment-distance {
   color: #6b7280;
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #d1d5db;
 }
 
 .segment-info-grid {
