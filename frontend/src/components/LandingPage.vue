@@ -74,9 +74,13 @@ import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 import { haversineDistance, getBoundingBoxCenter } from '../utils/distance'
+import { useMapState } from '../composables/useMapState'
 import SegmentList from './SegmentList.vue'
 
 const router = useRouter()
+
+// Map state management
+const { savedMapState, saveMapState, extractMapState, applyMapState } = useMapState()
 
 // Map instance
 let map: any = null
@@ -239,8 +243,13 @@ function initializeMap() {
     maxZoom: 19
   }).addTo(map)
 
-  // Set initial view to Lyon, France
-  map.setView([45.764, 4.8357], 12)
+  // Set initial view - restore saved state or default to Lyon, France
+  if (savedMapState.value) {
+    applyMapState(map, savedMapState.value)
+  } else {
+    // Mont-Beuvray parce que ca pique!
+    map.setView([46.942728, 4.033681], 12)
+  }
 
   // Add scale control
   L.control
@@ -781,6 +790,14 @@ onMounted(() => {
 
 // Handle segment click from the segment list or map
 function onSegmentClick(segment: TrackResponse) {
+  // Save current map state before navigating
+  if (map) {
+    const mapState = extractMapState(map)
+    if (mapState) {
+      saveMapState(mapState)
+    }
+  }
+
   // Navigate to segment detail view
   router.push(`/segment/${segment.id}`)
 }

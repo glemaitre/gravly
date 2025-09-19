@@ -1,6 +1,6 @@
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=cycling_website
+DB_NAME=gravly
 DB_USER=cycling_user
 DB_PASSWORD=your-database-password

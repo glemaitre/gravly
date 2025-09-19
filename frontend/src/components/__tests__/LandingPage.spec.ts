@@ -540,12 +540,30 @@ describe('LandingPage', () => {
     })
 
     it('should set initial map view', async () => {
+      // Clear any existing localStorage data
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.clear()
+      }
+
+      // Mock localStorage to return null (no saved state)
+      const mockLocalStorage = {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn()
+      }
+
+      Object.defineProperty(window, 'localStorage', {
+        value: mockLocalStorage,
+        writable: true
+      })
+
       wrapper = mountWithRouter(LandingPage)
 
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      expect(mockMapInstance.setView).toHaveBeenCalledWith([45.764, 4.8357], 12)
+      expect(mockMapInstance.setView).toHaveBeenCalledWith([46.942728, 4.033681], 12)
     })
 
     it('should not initialize map if already exists', async () => {
