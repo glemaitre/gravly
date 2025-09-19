@@ -29,7 +29,9 @@
         <div
           v-if="segments.length > 0"
           class="segment-cards"
-          :class="{ 'segment-cards--no-button': segments.length <= initialDisplayCount }"
+          :class="{
+            'segment-cards--no-button': segments.length <= initialDisplayCount
+          }"
         >
           <div
             v-for="segment in displayedSegments"
