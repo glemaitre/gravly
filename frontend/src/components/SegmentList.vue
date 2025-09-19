@@ -26,7 +26,11 @@
 
       <!-- Scrollable Cards Container -->
       <div class="cards-container">
-        <div v-if="segments.length > 0" class="segment-cards">
+        <div
+          v-if="segments.length > 0"
+          class="segment-cards"
+          :class="{ 'segment-cards--no-button': segments.length <= initialDisplayCount }"
+        >
           <div
             v-for="segment in displayedSegments"
             :key="segment.id"
@@ -507,6 +511,10 @@ onUnmounted(() => {
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
   padding: 16px 16px 0px 16px;
+}
+
+.segment-cards--no-button {
+  padding: 16px; /* Add bottom padding when button is not present */
 }
 
 .segment-card {

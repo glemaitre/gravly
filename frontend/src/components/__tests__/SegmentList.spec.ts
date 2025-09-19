@@ -859,5 +859,29 @@ describe('SegmentList', () => {
       const showMoreButton = wrapper.find('.show-more-button')
       expect(showMoreButton.exists()).toBe(true)
     })
+
+    it('should add bottom padding when button is not present', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments, // 2 segments - below display limit
+          loading: false
+        }
+      })
+
+      const segmentCards = wrapper.find('.segment-cards')
+      expect(segmentCards.classes()).toContain('segment-cards--no-button')
+    })
+
+    it('should not add bottom padding when button is present', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments, // 12 segments - above display limit
+          loading: false
+        }
+      })
+
+      const segmentCards = wrapper.find('.segment-cards')
+      expect(segmentCards.classes()).not.toContain('segment-cards--no-button')
+    })
   })
 })
