@@ -250,16 +250,6 @@ function updateSegmentCardsForCurrentView() {
 
   const currentBounds = map.getBounds()
 
-  // Debug logging
-  console.log('🔍 DEBUG: Segment filtering conditions:')
-  console.log('Map bounds:', {
-    north: currentBounds.getNorth(),
-    south: currentBounds.getSouth(),
-    east: currentBounds.getEast(),
-    west: currentBounds.getWest()
-  })
-  console.log('Total segments before filtering:', segments.value.length)
-
   // Filter existing segments to only show those at least partially visible in current bounds
   const visibleSegments = segments.value.filter((segment) => {
     const isVisible =
@@ -268,28 +258,8 @@ function updateSegmentCardsForCurrentView() {
       segment.bound_east > currentBounds.getWest() && // Track's eastern boundary is west of map's western edge
       segment.bound_west < currentBounds.getEast() // Track's western boundary is east of map's eastern edge
 
-    // Debug logging for each segment
-    console.log(`Segment ${segment.id} (${segment.name}):`, {
-      segmentBounds: {
-        north: segment.bound_north,
-        south: segment.bound_south,
-        east: segment.bound_east,
-        west: segment.bound_west
-      },
-      conditions: {
-        northVisible: segment.bound_north > currentBounds.getSouth(),
-        southVisible: segment.bound_south < currentBounds.getNorth(),
-        eastVisible: segment.bound_east > currentBounds.getWest(),
-        westVisible: segment.bound_west < currentBounds.getEast()
-      },
-      isVisible: isVisible
-    })
-
     return isVisible
   })
-
-  console.log('Visible segments after filtering:', visibleSegments.length)
-  console.log('Filtered out segments:', segments.value.length - visibleSegments.length)
 
   // Update segments array to only show visible ones
   segments.value = visibleSegments
@@ -794,12 +764,10 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
-  min-height: 450px; /* Minimum height to show ~2 rows of cards */
-  max-height: 50vh; /* Maximum height to prevent taking too much space */
-  flex-shrink: 0;
   padding: 1rem;
+  padding-bottom: -20px; /* Negative padding to end in middle of button */
   box-sizing: border-box;
-  overflow-y: auto; /* Enable scrolling when content exceeds max-height */
+  /* Remove height constraints to allow free expansion */
 }
 
 .landing-content {
@@ -846,8 +814,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
-  flex: 1; /* Take remaining space after segment-list-section */
-  min-height: 550px; /* Increased minimum height to ensure map is always usable */
+  height: 70vh; /* Fixed height: 70% of viewport height */
   flex-shrink: 0;
 }
 
@@ -859,6 +826,7 @@ onUnmounted(() => {
 .segment-list-container {
   width: 100%;
   height: 100%;
+  overflow: visible; /* Allow button to overflow outside */
 }
 
 /* Card styles matching Editor */
@@ -972,25 +940,23 @@ onUnmounted(() => {
   }
 
   .map-section {
-    min-height: 350px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 380px;
-    max-height: 45vh;
     padding: 0.75rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
 @media (max-width: 1000px) {
   .map-section {
-    min-height: 320px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 360px;
-    max-height: 40vh;
     padding: 0.5rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1008,13 +974,12 @@ onUnmounted(() => {
   }
 
   .map-section {
-    min-height: 300px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 340px;
-    max-height: 35vh;
     padding: 0.5rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1024,13 +989,12 @@ onUnmounted(() => {
   }
 
   .map-section {
-    min-height: 280px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 320px;
-    max-height: 30vh;
     padding: 0.5rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1040,13 +1004,12 @@ onUnmounted(() => {
   }
 
   .map-section {
-    min-height: 250px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 280px;
-    max-height: 25vh;
     padding: 0.25rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1056,13 +1019,12 @@ onUnmounted(() => {
   }
 
   .map-section {
-    min-height: 220px;
+    height: 70vh; /* Maintain 70% height on all screen sizes */
   }
 
   .segment-list-section {
-    min-height: 250px;
-    max-height: 20vh;
     padding: 0.125rem;
+    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 

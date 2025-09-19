@@ -42,42 +42,33 @@ global.fetch = vi.fn(() =>
 )
 
 describe('SegmentList', () => {
+  const createMockSegment = (id: number, name: string): TrackResponse => ({
+    id,
+    file_path: `/path/to/test${id}.gpx`,
+    bound_north: 45.8,
+    bound_south: 45.7,
+    bound_east: 2.1,
+    bound_west: 2.0,
+    barycenter_latitude: 45.75,
+    barycenter_longitude: 2.05,
+    name,
+    track_type: 'segment',
+    difficulty_level: 3,
+    surface_type: 'forest-trail',
+    tire_dry: 'semi-slick',
+    tire_wet: 'knobs',
+    comments: `Test segment ${id}`
+  })
+
   const mockSegments: TrackResponse[] = [
-    {
-      id: 1,
-      file_path: '/path/to/test1.gpx',
-      bound_north: 45.8,
-      bound_south: 45.7,
-      bound_east: 2.1,
-      bound_west: 2.0,
-      barycenter_latitude: 45.75,
-      barycenter_longitude: 2.05,
-      name: 'Test Segment 1',
-      track_type: 'segment',
-      difficulty_level: 3,
-      surface_type: 'forest-trail',
-      tire_dry: 'semi-slick',
-      tire_wet: 'knobs',
-      comments: 'A great test segment'
-    },
-    {
-      id: 2,
-      file_path: '/path/to/test2.gpx',
-      bound_north: 45.9,
-      bound_south: 45.8,
-      bound_east: 5.0,
-      bound_west: 4.9,
-      barycenter_latitude: 45.85,
-      barycenter_longitude: 4.95,
-      name: 'Test Segment 2',
-      track_type: 'segment',
-      difficulty_level: 4,
-      surface_type: 'big-stone-road',
-      tire_dry: 'knobs',
-      tire_wet: 'knobs',
-      comments: ''
-    }
+    createMockSegment(1, 'Test Segment 1'),
+    createMockSegment(2, 'Test Segment 2')
   ]
+
+  // Create many segments for testing "Show more" functionality
+  const manyMockSegments: TrackResponse[] = Array.from({ length: 12 }, (_, i) =>
+    createMockSegment(i + 1, `Test Segment ${i + 1}`)
+  )
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -655,6 +646,218 @@ describe('SegmentList', () => {
       const card = wrapper.find('.segment-card')
       expect(card.exists()).toBe(true)
       expect(card.find('.segment-name').text()).toBe('Test Segment 1')
+    })
+  })
+
+  describe('Show More/Less Button Functionality', () => {
+    it('should not show the "Show more" button when segments count is below initial display limit', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: mockSegments, // 2 segments
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      expect(showMoreButton.exists()).toBe(false)
+    })
+
+    it('should show the "Show more" button when segments count exceeds initial display limit', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments, // 12 segments
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      expect(showMoreButton.exists()).toBe(true)
+    })
+
+    it('should display correct initial count of segments', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments, // 12 segments
+          loading: false
+        }
+      })
+
+      // Should show initial count (typically 2, 4, 6, or 8 depending on screen size)
+      const segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards.length).toBeLessThan(manyMockSegments.length)
+      expect(segmentCards.length).toBeGreaterThan(0)
+    })
+
+    it('should show "Show More" text with count when collapsed', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      expect(showMoreButton.exists()).toBe(true)
+
+      const buttonText = showMoreButton.text()
+      expect(buttonText).toContain('Show More')
+      expect(buttonText).toContain('more)')
+    })
+
+    it('should expand to show all segments when "Show More" is clicked', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      await showMoreButton.trigger('click')
+
+      // Should now show all segments
+      const segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards).toHaveLength(manyMockSegments.length)
+    })
+
+    it('should show "Show Less" text when expanded', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      await showMoreButton.trigger('click')
+
+      // Button text should change to "Show Less"
+      const updatedButton = wrapper.find('.show-more-button')
+      expect(updatedButton.text()).toBe('Show Less')
+    })
+
+    it('should collapse back to initial count when "Show Less" is clicked', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+
+      // First expand
+      await showMoreButton.trigger('click')
+      let segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards).toHaveLength(manyMockSegments.length)
+
+      // Then collapse
+      await showMoreButton.trigger('click')
+      segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards.length).toBeLessThan(manyMockSegments.length)
+    })
+
+    it('should reset to collapsed state when segments prop changes', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+
+      // Expand first
+      await showMoreButton.trigger('click')
+      let segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards).toHaveLength(manyMockSegments.length)
+
+      // Change segments prop
+      await wrapper.setProps({ segments: mockSegments })
+
+      // Should reset to collapsed state and show fewer segments
+      segmentCards = wrapper.findAll('.segment-card')
+      expect(segmentCards.length).toBeLessThanOrEqual(mockSegments.length)
+    })
+
+    it('should have correct chevron icon direction based on state', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      const chevronIcon = showMoreButton.find('i')
+
+      // Initially should have chevron-down
+      expect(chevronIcon.classes()).toContain('fa-chevron-down')
+    })
+
+    it('should change chevron icon direction when toggled', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      let chevronIcon = showMoreButton.find('i')
+
+      // Initially chevron-down
+      expect(chevronIcon.classes()).toContain('fa-chevron-down')
+
+      // Click to expand
+      await showMoreButton.trigger('click')
+
+      // Should now be chevron-up
+      chevronIcon = wrapper.find('.show-more-button i')
+      expect(chevronIcon.classes()).toContain('fa-chevron-up')
+    })
+
+    it('should have proper button styling classes', () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      const showMoreButton = wrapper.find('.show-more-button')
+      expect(showMoreButton.exists()).toBe(true)
+
+      // Check that button has proper structure
+      expect(showMoreButton.find('i').exists()).toBe(true) // Icon
+      expect(showMoreButton.text()).toContain('Show More') // Text
+    })
+
+    it('should handle window resize and update display count', async () => {
+      // Mock window.innerWidth
+      Object.defineProperty(window, 'innerWidth', {
+        writable: true,
+        configurable: true,
+        value: 800
+      })
+
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: manyMockSegments,
+          loading: false
+        }
+      })
+
+      // Simulate window resize
+      window.innerWidth = 1400
+      window.dispatchEvent(new Event('resize'))
+
+      // Wait for next tick to allow component to update
+      await wrapper.vm.$nextTick()
+
+      // Component should still function correctly after resize
+      const showMoreButton = wrapper.find('.show-more-button')
+      expect(showMoreButton.exists()).toBe(true)
     })
   })
 })

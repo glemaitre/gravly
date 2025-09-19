@@ -3,6 +3,16 @@ import { mount } from '@vue/test-utils'
 import SegmentDetail from '../SegmentDetail.vue'
 import type { TrackResponse } from '../../types'
 
+// Mock console.error to suppress expected error messages during tests
+const originalConsoleError = console.error
+beforeEach(() => {
+  console.error = vi.fn()
+})
+
+afterEach(() => {
+  console.error = originalConsoleError
+})
+
 // Mock Vue Router
 const mockRouter = {
   push: vi.fn(),

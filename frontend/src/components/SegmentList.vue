@@ -28,7 +28,7 @@
       <div class="cards-container">
         <div v-if="segments.length > 0" class="segment-cards">
           <div
-            v-for="segment in segments"
+            v-for="segment in displayedSegments"
             :key="segment.id"
             class="segment-card"
             @click="onSegmentClick(segment)"
@@ -115,6 +115,24 @@
               </div>
             </div>
           </div>
+
+          <!-- Show More Button -->
+          <div
+            v-if="segments.length > initialDisplayCount"
+            class="show-more-button-grid-item"
+          >
+            <button class="show-more-button" @click="toggleShowMore">
+              <i
+                class="fa-solid"
+                :class="showAll ? 'fa-chevron-up' : 'fa-chevron-down'"
+              ></i>
+              <span v-if="showAll">Show Less</span>
+              <span v-else>
+                Show More<br />
+                ({{ segments.length - initialDisplayCount }} more)
+              </span>
+            </button>
+          </div>
         </div>
 
         <div v-else-if="!loading" class="no-segments">
@@ -129,7 +147,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 
@@ -166,6 +184,34 @@ const selectedTrackType = ref<'segment' | 'route'>('segment')
 // Currently hovered segment
 const hoveredSegmentId = ref<number | null>(null)
 
+// Show more/less functionality
+const showAll = ref(false)
+
+// Dynamic initial display count based on screen size
+const getInitialDisplayCount = () => {
+  const width = window.innerWidth
+  if (width >= 1400) return 8 // 2 rows of 4 cards on large screens
+  if (width >= 1200) return 6 // 2 rows of 3 cards on medium-large screens
+  if (width >= 900) return 6 // 2 rows of 3 cards on medium screens
+  if (width >= 768) return 4 // 2 rows of 2 cards on small-medium screens
+  return 2 // 2 rows of 1 card on mobile
+}
+
+const initialDisplayCount = ref(getInitialDisplayCount())
+
+// Update display count on window resize
+const updateDisplayCount = () => {
+  initialDisplayCount.value = getInitialDisplayCount()
+}
+
+// Computed property for displayed segments
+const displayedSegments = computed(() => {
+  if (showAll.value) {
+    return props.segments
+  }
+  return props.segments.slice(0, initialDisplayCount.value)
+})
+
 // Watch for segment changes and generate mock stats
 watch(
   () => props.segments,
@@ -176,6 +222,14 @@ watch(
     }
   },
   { immediate: true }
+)
+
+// Reset showAll when segments change (new search)
+watch(
+  () => props.segments,
+  () => {
+    showAll.value = false
+  }
 )
 
 async function fetchSegmentStats(segment: TrackResponse) {
@@ -277,6 +331,10 @@ function onTrackTypeChange(trackType: 'segment' | 'route') {
   emit('trackTypeChange', trackType)
 }
 
+function toggleShowMore() {
+  showAll.value = !showAll.value
+}
+
 // Formatting functions
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -299,11 +357,19 @@ function formatTireType(tireType: string): string {
   return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
+// Add window resize listener
+onMounted(() => {
+  window.addEventListener('resize', updateDisplayCount)
+})
+
 onUnmounted(() => {
   // Cleanup GPX data cache and loading sets
   gpxDataCache.clear()
   loadingGPXData.clear()
   segmentStats.value.clear()
+
+  // Remove window resize listener
+  window.removeEventListener('resize', updateDisplayCount)
 })
 </script>
 
@@ -335,7 +401,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow: visible; /* Allow button to overflow outside */
 }
 
 /* Track Type Tabs - Sticky */
@@ -358,7 +424,7 @@ onUnmounted(() => {
 /* Scrollable Cards Container */
 .cards-container {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: inherit; /* Allow button to overflow outside */
   padding: 0;
   border-radius: 0 0 8px 8px;
   border: 1px solid #e5e7eb;
@@ -440,7 +506,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 16px;
-  padding: 16px;
+  padding: 16px 16px 0px 16px;
 }
 
 .segment-card {
@@ -663,6 +729,82 @@ onUnmounted(() => {
   font-size: 1rem;
 }
 
+/* Show More Button */
+.show-more-button-grid-item {
+  grid-column: 1 / -1; /* Span all grid columns */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  position: relative;
+  z-index: 10; /* Higher z-index to appear above filter-card */
+  margin-top: 16px; /* Add some spacing from the cards above */
+  margin-bottom: 14px; /* Space for button to overlap filter-card */
+}
+
+.show-more-button {
+  position: absolute;
+  bottom: -30px; /* Half outside the cards-container */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10; /* Ensure button is above filter-card */
+
+  /* Pill shape and style */
+  background: linear-gradient(135deg, #ff6600, #ff7f2a);
+  border: none;
+  border-radius: 24px;
+  padding: 10px 28px;
+  height: 36px;
+  min-width: 90px;
+
+  /* Orange shadow */
+  box-shadow: 0 2px 8px rgba(255, 102, 0, 0.3);
+
+  /* Button styles */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: white;
+  font-weight: 600;
+  transition: all 0.3s ease;
+
+  /* Remove default button styles */
+  outline: none;
+  font-family: inherit;
+}
+
+.show-more-button:hover {
+  background: linear-gradient(135deg, #e55a00, #e66a00);
+  transform: translateX(-50%) translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.4);
+}
+
+.show-more-button:active {
+  transform: translateX(-50%) translateY(0);
+  box-shadow: 0 2px 8px rgba(255, 102, 0, 0.3);
+}
+
+/* Icon animation */
+.show-more-button i {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 12px;
+}
+
+.show-more-button:hover i {
+  transform: scale(1.1);
+}
+
+/* Focus state for accessibility */
+.show-more-button:focus-visible {
+  box-shadow:
+    0 0 0 3px rgba(255, 102, 0, 0.4),
+    0 2px 8px rgba(255, 102, 0, 0.3);
+}
+
 /* Large screens - more cards per row */
 @media (min-width: 1400px) {
   .segment-cards {
@@ -679,6 +821,13 @@ onUnmounted(() => {
 @media (min-width: 900px) {
   .segment-cards {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+
+  .show-more-button {
+    min-width: 110px;
+    font-size: 0.9rem;
+    padding: 12px 32px;
+    height: 40px;
   }
 }
 
@@ -714,6 +863,13 @@ onUnmounted(() => {
     grid-template-columns: 1fr 1fr;
     gap: 0.25rem;
     padding: 0.2rem;
+  }
+
+  .show-more-button {
+    min-width: 80px;
+    font-size: 0.8rem;
+    padding: 8px 24px;
+    height: 32px;
   }
 }
 </style>
