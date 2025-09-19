@@ -301,9 +301,9 @@ describe('SegmentDetail', () => {
       await new Promise((resolve) => setTimeout(resolve, 100))
 
       expect(wrapper.find('.error-container').exists()).toBe(true)
-      // The component checks for segment ID first, so it shows "No segment ID provided"
-      // when the route params are empty. Let's check for the actual error message
-      expect(wrapper.find('.error-message').text()).toContain('No segment ID provided')
+      // The component successfully gets the segment ID from route, but fetch fails
+      // so it shows the actual fetch error message
+      expect(wrapper.find('.error-message').text()).toContain('Segment not found')
     })
 
     it('shows error message when GPX data fetch fails', async () => {
