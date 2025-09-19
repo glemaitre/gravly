@@ -1,4 +1,4 @@
-# Cycling Routes Website
+# Gravly - Find your next gravel ride
 
 A modern web application for discovering, creating, and viewing cycling routes stored as GPX files. Built with Vue.js frontend, FastAPI backend, and PostgreSQL for data persistence.
 
@@ -6,11 +6,15 @@ A modern web application for discovering, creating, and viewing cycling routes s
 
 - **Interactive Map Discovery**: Real-time streaming of cycling segments using Server-Sent Events (SSE) with Leaflet maps
 - **GPX Route Editor**: Upload and edit GPX files with visual segment selection, surface type classification, and difficulty rating
+- **Segment Detail View**: Comprehensive segment information with interactive maps, elevation charts, and detailed metadata
+- **Advanced Segment List**: Filterable and sortable segment lists with track type filtering (segments vs routes)
 - **Real-time Segment Streaming**: Efficient bounds-based search with client-side GPX parsing for optimal performance
+- **Map State Persistence**: Automatic saving and restoration of map position and zoom level
 - **Multi-language Support**: Internationalization with English and French locales
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Advanced Route Analysis**: Elevation profiles, distance calculations, and trail condition metadata
 - **Flexible Storage**: Support for both local filesystem and AWS S3 storage backends
+- **Database Seeding**: Automated generation of realistic test data for development and testing
 
 ## Tech Stack
 
@@ -56,6 +60,15 @@ A modern web application for discovering, creating, and viewing cycling routes s
    - Frontend: http://localhost:5173 (Vite dev server)
    - Backend API: http://localhost:8000
    - API Documentation: http://localhost:8000/docs
+
+5. **Seed the database with test data** (optional):
+   ```bash
+   # Generate 1,000 realistic cycling segments across France
+   pixi run python scripts/database_seeding.py
+   
+   # Or generate just 5 segments for quick testing
+   pixi run python scripts/test_seeding.py
+   ```
 
 ## Environment Configuration
 
@@ -159,6 +172,48 @@ When using S3 storage, configure these variables in `.env/storage`:
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
 - `AWS_REGION` - AWS region (optional, defaults to `us-east-1`)
 
+## Database Seeding
+
+The project includes comprehensive database seeding scripts to generate realistic test data for development and testing purposes.
+
+### Seeding Scripts
+
+- **`scripts/database_seeding.py`**: Generates 1,000 realistic 5km cycling segments across 13 French regions
+- **`scripts/test_seeding.py`**: Generates 5 segments for quick testing
+
+### Features of Generated Data
+
+- **Geographic Distribution**: Segments distributed across 13 French regions with realistic GPS coordinates
+- **Realistic Routes**: 5km cycling routes with elevation changes and proper GPS point distribution
+- **Varied Surface Types**: Different surface types (paved roads, trails, etc.) with realistic probabilities
+- **Tire Recommendations**: Appropriate tire types for dry and wet conditions
+- **Difficulty Levels**: 1-5 difficulty scale with realistic distribution
+- **Batch Processing**: Processes segments in batches for memory efficiency
+- **Storage Integration**: Uploads GPX files to configured storage (local or S3)
+- **Database Integration**: Stores segment metadata in PostgreSQL
+
+### Usage
+
+```bash
+# Full seeding (1,000 segments) - takes several minutes
+pixi run python scripts/database_seeding.py
+
+# Quick test seeding (5 segments) - takes seconds
+pixi run python scripts/test_seeding.py
+```
+
+### Customization
+
+You can modify the parameters in the `main()` function of `database_seeding.py`:
+
+```python
+await seed_database(
+    num_segments=1000,      # Number of segments to generate
+    target_distance_km=5.0, # Distance of each segment in km
+    batch_size=50           # Number of segments per batch
+)
+```
+
 ### Running the Application
 
 #### Start the Backend
@@ -237,9 +292,14 @@ website_cycling/
 │   │   ├── components/     # Vue components
 │   │   │   ├── LandingPage.vue # Interactive map with streaming segments
 │   │   │   ├── Editor.vue      # GPX route editor with chart visualization
-│   │   │   └── Navbar.vue      # Navigation component
+│   │   │   ├── SegmentDetail.vue # Detailed segment view with map and charts
+│   │   │   ├── SegmentList.vue   # Filterable segment list component
+│   │   │   └── Navbar.vue        # Navigation component
+│   │   ├── composables/    # Vue composables
+│   │   │   └── useMapState.ts    # Map state persistence management
 │   │   ├── utils/          # Frontend utilities
-│   │   │   └── gpxParser.ts    # Client-side GPX parsing
+│   │   │   ├── gpxParser.ts      # Client-side GPX parsing
+│   │   │   └── distance.ts       # Distance calculation utilities
 │   │   ├── types/          # TypeScript type definitions
 │   │   ├── i18n/           # Internationalization
 │   │   └── assets/         # Images and static assets
@@ -248,6 +308,10 @@ website_cycling/
 ├── .env/                   # Environment configuration files
 │   ├── database            # Database configuration
 │   └── storage             # Storage configuration
+├── scripts/                # Database seeding and utility scripts
+│   ├── database_seeding.py # Generate 1,000 realistic cycling segments
+│   ├── test_seeding.py     # Generate 5 test segments
+│   └── README.md           # Scripts documentation
 ├── backend/tests/data/     # Test GPX files
 ├── postgres_data/          # PostgreSQL data directory (created by pg-setup)
 ├── scratch/                # Local storage directory
@@ -295,6 +359,10 @@ pixi run pg-setup                 # Initialize PostgreSQL database (first time)
 pixi run pg-start                 # Start PostgreSQL server
 pixi run pg-stop                  # Stop PostgreSQL server
 pixi run pg-status                # Check PostgreSQL server status
+pixi run pg-create-db             # Create database
+pixi run pg-drop-db               # Drop database
+pixi run pg-cleanup               # Stop, drop, and erase database
+pixi run pg-erase                 # Erase database files
 
 # Lint & format
 pixi run lint-all
@@ -317,6 +385,7 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 - **Streaming Architecture**: Server-Sent Events for real-time data delivery
 - **Bounds-based Filtering**: Efficient geographic queries with PostgreSQL
 - **Client-side Caching**: Layer tracking to prevent redundant map redraws
+- **Distance Calculations**: Real-time distance calculations from map center to segments
 
 ### Backend Optimizations
 - **Async Database**: PostgreSQL with asyncpg for concurrent operations
@@ -328,6 +397,8 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 - **Debounced Search**: Prevents excessive API calls during map interactions
 - **Incremental Updates**: Only updates map with new segments
 - **Zoom Optimization**: Avoids unnecessary searches when zooming in
+- **Map State Persistence**: Automatic saving and restoration of map state using localStorage
+- **Composable Architecture**: Reusable Vue composables for state management
 - **TypeScript**: Strict typing for better performance and reliability
 
 ## Testing
@@ -346,10 +417,14 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 - **Framework**: Vitest + Vue Test Utils + Testing Library with jsdom
 - **Coverage**: 83.43% overall coverage with:
   - `LandingPage.vue`: 39.79% (map interactions, EventSource streaming)
-  - `gpxParser.ts`: 92.8% (comprehensive GPX parsing tests)
+  - `SegmentList.vue`: Comprehensive segment list functionality
+  - `SegmentDetail.vue`: Detailed segment view and interactions
   - `Editor.vue`: 69.14% (route editing functionality)
+  - `Navbar.vue`: Navigation and language switching
+  - `gpxParser.ts`: 92.8% (comprehensive GPX parsing tests)
+  - `useMapState.ts`: Map state persistence composable
 - **Run**: `pixi run test-frontend`
-- **Features**: Component testing, Leaflet mocking, EventSource simulation
+- **Features**: Component testing, Leaflet mocking, EventSource simulation, composable testing
 
 ### Test Quality
 - **Comprehensive Coverage**: Both backend and frontend have extensive test suites
@@ -373,24 +448,36 @@ summaries.
 - **Server-Sent Events**: Efficient streaming of GPX data to frontend
 - **Geographic Search**: Bounds-based filtering with PostgreSQL spatial queries
 - **Client-side Parsing**: Frontend GPX parsing for optimal performance
+- **Map State Persistence**: Automatic saving and restoration of map position and zoom level
+
+### Segment Management
+- **Segment List**: Filterable and sortable segment lists with track type filtering
+- **Segment Detail View**: Comprehensive segment information with interactive maps and elevation charts
+- **Track Type Filtering**: Separate views for segments and routes
+- **Distance Calculations**: Real-time distance calculations from map center
 
 ### GPX Route Editor
 - **File Upload**: Drag-and-drop GPX file upload with validation
 - **Visual Editing**: Interactive segment selection with map and elevation chart
 - **Surface Classification**: Trail condition metadata (surface type, difficulty, tire recommendations)
 - **Chart Visualization**: Real-time elevation profile with Chart.js
+- **Commentary Support**: Text, video links, and image attachments for segments
 
 ### Storage & Database
 - **Dual Storage**: Support for both local filesystem and AWS S3
 - **PostgreSQL**: Async database with SQLAlchemy ORM
 - **Metadata Management**: Comprehensive track metadata storage
 - **File Serving**: Efficient GPX file serving with proper MIME types
+- **Database Seeding**: Automated generation of realistic test data
 
 ### Development Experience
 - **TypeScript**: Strict typing throughout frontend
 - **Testing**: Comprehensive test coverage (83.43% frontend, 100% backend core)
 - **Code Quality**: Automated linting with Ruff (Python) and ESLint (TypeScript)
 - **Environment Management**: Pixi-based development environment
+- **Component Architecture**: Modular Vue components with clear separation of concerns
+- **Composable Pattern**: Reusable state management with Vue composables
+- **Database Seeding**: Automated test data generation for development
 
 ## Future Enhancements
 
