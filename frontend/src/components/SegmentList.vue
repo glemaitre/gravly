@@ -120,6 +120,15 @@
                 </div>
               </div>
             </div>
+
+            <!-- Distance from center indicator -->
+            <div
+              v-if="getDistanceFromCenter"
+              class="segment-distance"
+              :title="`Distance from map center`"
+            >
+              {{ formatDistanceFromCenter(getDistanceFromCenter(segment)) }}
+            </div>
           </div>
 
           <!-- Show More Button -->
@@ -156,6 +165,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
+import { formatDistance as formatDistanceFromCenter } from '../utils/distance'
 
 interface SegmentStats {
   total_distance: number
@@ -166,6 +176,8 @@ interface SegmentStats {
 interface Props {
   segments: TrackResponse[]
   loading: boolean
+  // eslint-disable-next-line no-unused-vars
+  getDistanceFromCenter?: (segment: TrackResponse) => number
 }
 
 const props = defineProps<Props>()
@@ -641,6 +653,28 @@ onUnmounted(() => {
   border-top: 1px solid #f0f0f0;
   padding-top: 12px;
   position: relative;
+}
+
+/* Distance from center indicator */
+.segment-distance {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+  transition: all 0.2s ease;
+}
+
+.segment-card:hover .segment-distance {
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #d1d5db;
 }
 
 .segment-info-grid {

@@ -52,8 +52,9 @@
         <div class="segment-list-section">
           <div class="segment-list-container">
             <SegmentList
-              :segments="segments"
+              :segments="sortedSegments"
               :loading="loading"
+              :get-distance-from-center="getSegmentDistanceFromCenter"
               @segment-click="onSegmentClick"
               @segment-hover="onSegmentHover"
               @segment-leave="onSegmentLeave"
@@ -67,11 +68,12 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
+import { haversineDistance, getBoundingBoxCenter } from '../utils/distance'
 import SegmentList from './SegmentList.vue'
 
 const router = useRouter()
@@ -123,6 +125,80 @@ let resizeHandler: (() => void) | null = null
 const currentMapLayers = new Map<string, any>()
 
 // Fixed center marker - no need to track state
+
+// Computed property to sort segments by distance from map center
+const sortedSegments = computed(() => {
+  if (!map || segments.value.length === 0 || typeof map.getCenter !== 'function') {
+    return segments.value
+  }
+
+  try {
+    const mapCenter = map.getCenter()
+    const centerLat = mapCenter.lat
+    const centerLng = mapCenter.lng
+
+    return [...segments.value].sort((a, b) => {
+      // Calculate center of each segment's bounding box
+      const centerA = getBoundingBoxCenter(
+        a.bound_north,
+        a.bound_south,
+        a.bound_east,
+        a.bound_west
+      )
+      const centerB = getBoundingBoxCenter(
+        b.bound_north,
+        b.bound_south,
+        b.bound_east,
+        b.bound_west
+      )
+
+      // Calculate distances from map center
+      const distanceA = haversineDistance(
+        centerLat,
+        centerLng,
+        centerA.lat,
+        centerA.lng
+      )
+      const distanceB = haversineDistance(
+        centerLat,
+        centerLng,
+        centerB.lat,
+        centerB.lng
+      )
+
+      return distanceA - distanceB
+    })
+  } catch (error) {
+    // If there's any error getting map center, return unsorted segments
+    console.warn('Error calculating segment distances:', error)
+    return segments.value
+  }
+})
+
+// Function to get distance from map center for a segment
+const getSegmentDistanceFromCenter = (segment: TrackResponse): number => {
+  if (!map || typeof map.getCenter !== 'function') return 0
+
+  try {
+    const mapCenter = map.getCenter()
+    const segmentCenter = getBoundingBoxCenter(
+      segment.bound_north,
+      segment.bound_south,
+      segment.bound_east,
+      segment.bound_west
+    )
+
+    return haversineDistance(
+      mapCenter.lat,
+      mapCenter.lng,
+      segmentCenter.lat,
+      segmentCenter.lng
+    )
+  } catch (error) {
+    console.warn('Error calculating distance for segment:', segment.id, error)
+    return 0
+  }
+}
 
 function initializeMap() {
   if (map) {
