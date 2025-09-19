@@ -402,12 +402,12 @@ onUnmounted(() => {
   background: white;
   border: 1px solid #e1e5e9;
   border-radius: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: visible; /* Allow button to overflow outside */
+  overflow: hidden; /* Contain everything within the card */
 }
 
 /* Track Type Tabs - Sticky */
@@ -430,7 +430,7 @@ onUnmounted(() => {
 /* Scrollable Cards Container */
 .cards-container {
   flex: 1;
-  overflow-y: inherit; /* Allow button to overflow outside */
+  overflow-y: auto; /* Enable scrolling within the container */
   padding: 0;
   border-radius: 0 0 8px 8px;
   border: 1px solid #e5e7eb;
@@ -438,6 +438,7 @@ onUnmounted(() => {
   background: white;
   position: relative;
   min-height: 0; /* Ensure flex child can shrink */
+  padding-bottom: 50px; /* Space for the show more button */
 }
 
 /* Scroll indicator - subtle shadow at bottom when scrollable */
@@ -749,12 +750,12 @@ onUnmounted(() => {
   position: relative;
   z-index: 10; /* Higher z-index to appear above filter-card */
   margin-top: 16px; /* Add some spacing from the cards above */
-  margin-bottom: 14px; /* Space for button to overlap filter-card */
+  margin-bottom: 0; /* No bottom margin needed */
 }
 
 .show-more-button {
-  position: absolute;
-  bottom: -30px; /* Half outside the cards-container */
+  position: sticky;
+  bottom: 10px; /* Stick to bottom of scrollable container */
   left: 50%;
   transform: translateX(-50%);
   z-index: 10; /* Ensure button is above filter-card */

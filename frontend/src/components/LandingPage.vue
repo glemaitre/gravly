@@ -2,7 +2,8 @@
   <div class="landing-page">
     <div class="landing-content">
       <div class="content-wrapper">
-        <div class="map-section">
+        <!-- Fixed Map Section with Resizable Height -->
+        <div class="map-section" :style="{ height: mapHeight + 'px' }">
           <div class="map-container">
             <div class="card card-map">
               <div id="landing-map" class="map"></div>
@@ -35,6 +36,16 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Resizable Handle -->
+        <div
+          class="resize-handle"
+          @mousedown="startResize"
+          @touchstart="startResize"
+          title="Drag up or down to resize map height"
+        >
+          <div class="resize-handle-bar"></div>
         </div>
 
         <!-- Segment List Section -->
@@ -87,6 +98,14 @@ const selectedTrackType = ref<'segment' | 'route'>('segment')
 
 // Limit for search results
 const searchLimit = ref<number>(50)
+
+// Map height control
+const mapHeight = ref<number>(400) // Default height in pixels
+const minMapHeight = 200
+const maxMapHeight = 800
+let isResizing = false
+let startY = 0
+let startHeight = 0
 
 let previousMapBounds: any = null
 
@@ -745,8 +764,80 @@ function onLimitChange() {
   }
 }
 
+// Resize functionality
+function startResize(event: MouseEvent | TouchEvent) {
+  isResizing = true
+  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  startY = clientY
+  startHeight = mapHeight.value
+
+  // Add global event listeners
+  document.addEventListener('mousemove', handleResize)
+  document.addEventListener('mouseup', stopResize)
+  document.addEventListener('touchmove', handleResize)
+  document.addEventListener('touchend', stopResize)
+
+  // Prevent default to avoid text selection
+  event.preventDefault()
+}
+
+function handleResize(event: MouseEvent | TouchEvent) {
+  if (!isResizing) return
+
+  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  const deltaY = clientY - startY
+  const newHeight = startHeight + deltaY
+
+  // Constrain height within bounds
+  mapHeight.value = Math.max(minMapHeight, Math.min(maxMapHeight, newHeight))
+
+  // Invalidate map size to ensure proper rendering
+  if (map) {
+    setTimeout(() => {
+      map.invalidateSize()
+    }, 0)
+  }
+
+  event.preventDefault()
+}
+
+function stopResize() {
+  isResizing = false
+
+  // Remove global event listeners
+  document.removeEventListener('mousemove', handleResize)
+  document.removeEventListener('mouseup', stopResize)
+  document.removeEventListener('touchmove', handleResize)
+  document.removeEventListener('touchend', stopResize)
+}
+
+// Initialize map height based on viewport
+function initializeMapHeight() {
+  const viewportHeight = window.innerHeight
+  const navbarHeight = 60 // Approximate navbar height
+  const availableHeight = viewportHeight - navbarHeight
+
+  // Set initial map height to 50% of available height
+  mapHeight.value = Math.max(
+    minMapHeight,
+    Math.min(maxMapHeight, availableHeight * 0.5)
+  )
+}
+
+onMounted(() => {
+  // Initialize map height
+  initializeMapHeight()
+
+  // Small delay to ensure DOM is ready
+  setTimeout(() => {
+    initializeMap()
+  }, 100)
+})
+
 onUnmounted(() => {
   cleanupMap()
+  // Clean up resize event listeners
+  stopResize()
 })
 </script>
 
@@ -757,7 +848,7 @@ onUnmounted(() => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Enable vertical scrolling when content exceeds viewport */
+  overflow: hidden; /* Prevent overall page scrolling */
 }
 
 .segment-list-section {
@@ -765,14 +856,15 @@ onUnmounted(() => {
   justify-content: center;
   width: 100%;
   padding: 1rem;
-  padding-bottom: -20px; /* Negative padding to end in middle of button */
   box-sizing: border-box;
-  /* Remove height constraints to allow free expansion */
+  flex: 1;
+  overflow: hidden; /* Prevent scrolling at this level */
+  min-height: 0; /* Allow flex item to shrink below content size */
 }
 
 .landing-content {
   width: 100%;
-  min-height: 100%; /* Allow content to grow beyond viewport */
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -781,7 +873,7 @@ onUnmounted(() => {
   max-width: 1200px;
   width: 100%;
   margin: 0 auto;
-  min-height: 100%; /* Allow content to grow beyond viewport */
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -814,8 +906,8 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   width: 100%;
-  height: 70vh; /* Fixed height: 70% of viewport height */
   flex-shrink: 0;
+  transition: height 0.2s ease;
 }
 
 .map-container {
@@ -826,7 +918,83 @@ onUnmounted(() => {
 .segment-list-container {
   width: 100%;
   height: 100%;
-  overflow: visible; /* Allow button to overflow outside */
+  overflow: hidden; /* Contain scrolling within the component */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Resize Handle */
+.resize-handle {
+  height: 16px;
+  background: #ff6600;
+  cursor: ns-resize;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+  border-radius: 8px;
+  margin: 4px 8px; /* Add some margin for rounded appearance */
+}
+
+.resize-handle:hover {
+  background: #e55a00;
+  box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+  transform: scaleY(1.1);
+}
+
+.resize-handle:active {
+  background: #cc4d00;
+  box-shadow: 0 1px 2px rgba(255, 102, 0, 0.4);
+  transform: scaleY(1.05);
+}
+
+.resize-handle-bar {
+  width: 60px;
+  height: 8px;
+  background: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.resize-handle:hover .resize-handle-bar {
+  background: #fff5f0;
+  transform: scale(1.05);
+}
+
+/* Vertical arrows to indicate resize direction */
+.resize-handle-bar::before,
+.resize-handle-bar::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+
+.resize-handle-bar::before {
+  top: -6px;
+  border-bottom: 6px solid white;
+}
+
+.resize-handle-bar::after {
+  bottom: -6px;
+  border-top: 6px solid white;
+}
+
+.resize-handle:hover .resize-handle-bar::before,
+.resize-handle:hover .resize-handle-bar::after {
+  border-bottom-color: #fff5f0;
+  border-top-color: #fff5f0;
 }
 
 /* Card styles matching Editor */
@@ -939,24 +1107,14 @@ onUnmounted(() => {
     padding: 0 1rem;
   }
 
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.75rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
 @media (max-width: 1000px) {
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.5rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -973,13 +1131,8 @@ onUnmounted(() => {
     font-size: 1.125rem;
   }
 
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.5rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -988,13 +1141,8 @@ onUnmounted(() => {
     padding: 0 0.5rem;
   }
 
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.5rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1003,13 +1151,8 @@ onUnmounted(() => {
     padding: 0 0.25rem;
   }
 
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.25rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
@@ -1018,13 +1161,8 @@ onUnmounted(() => {
     padding: 0 0.125rem;
   }
 
-  .map-section {
-    height: 70vh; /* Maintain 70% height on all screen sizes */
-  }
-
   .segment-list-section {
     padding: 0.125rem;
-    padding-bottom: -20px; /* Negative padding to end in middle of button */
   }
 }
 
