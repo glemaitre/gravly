@@ -860,6 +860,7 @@ let map: any = null
 let fullLine: any = null
 let selectedLine: any = null
 let baseLayer: any = null
+let mapMarker: any = null
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
@@ -1282,7 +1283,72 @@ function renderMap() {
   if (fullLine) fullLine.remove()
   fullLine = L.polyline(latlngs, { color: '#888', weight: 4 })
   fullLine.addTo(map!)
+
+  // Add click and mousemove handlers for marker positioning
+  fullLine.on('click', (e: any) => {
+    updateMarkerPosition(e.latlng)
+  })
+
+  fullLine.on('mousemove', (e: any) => {
+    updateMarkerPosition(e.latlng)
+  })
+
+  // Clean up existing marker before creating new one
+  if (mapMarker) {
+    mapMarker.remove()
+    mapMarker = null
+  }
+
   updateSelectedPolyline()
+
+  // Create initial marker at first point AFTER polylines are added
+  if (points.value.length > 0) {
+    const firstPoint = points.value[0]
+
+    // Create a custom icon for the marker
+    const markerIcon = L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="background-color: #ff6600; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    })
+
+    mapMarker = L.marker([firstPoint.latitude, firstPoint.longitude], {
+      icon: markerIcon,
+      zIndexOffset: 1000
+    }).addTo(map!)
+  }
+}
+
+function updateMarkerPosition(latlng: any) {
+  if (!points.value.length) return
+
+  // Find closest point
+  let closestPoint = points.value[0]
+  let minDistance = Infinity
+
+  for (let i = 0; i < points.value.length; i++) {
+    const point = points.value[i]
+    const distance = haversine(latlng.lat, latlng.lng, point.latitude, point.longitude)
+    if (distance < minDistance) {
+      minDistance = distance
+      closestPoint = point
+    }
+  }
+
+  // Update marker position
+  if (mapMarker) {
+    mapMarker.setLatLng([closestPoint.latitude, closestPoint.longitude])
+  }
+}
+
+function updateMarkerPositionFromIndex(index: number) {
+  if (!points.value.length || index < 0 || index >= points.value.length) return
+
+  const point = points.value[index]
+  if (mapMarker) {
+    mapMarker.setLatLng([point.latitude, point.longitude])
+  }
 }
 
 function updateSelectedPolyline() {
@@ -1346,6 +1412,10 @@ function renderChart() {
       responsive: true,
       maintainAspectRatio: false,
       animation: false,
+      interaction: {
+        intersect: false,
+        mode: 'index'
+      },
       layout: {
         padding: {
           left: 0,
@@ -1390,6 +1460,12 @@ function renderChart() {
           }
         }
       },
+      onHover: (event, activeElements) => {
+        if (activeElements.length > 0) {
+          const pointIndex = activeElements[0].index
+          updateMarkerPositionFromIndex(pointIndex)
+        }
+      },
       onClick: (event) => {
         if (event && chart && event.x !== null && event.y !== null) {
           const rect = chart.canvas.getBoundingClientRect()
@@ -1429,6 +1505,9 @@ function renderChart() {
               endIndex.value = Math.max(closestIndex, startIndex.value + 1)
             }
           }
+
+          // Update marker position based on the closest point
+          updateMarkerPositionFromIndex(closestIndex)
         }
       }
     }
@@ -1546,6 +1625,9 @@ watch([startIndex, endIndex], () => {
     const segBounds = L.latLngBounds(segLatLngs)
     map.fitBounds(segBounds, { padding: [20, 20] })
   }
+
+  // Update marker position to the start point when sliders change
+  updateMarkerPositionFromIndex(startIndex.value)
 })
 
 watch(xMode, () => {
@@ -1648,6 +1730,12 @@ onMounted(() => {
 onUnmounted(() => {
   const onResize = (window as any).__editorOnResize
   if (onResize) window.removeEventListener('resize', onResize)
+
+  // Clean up map marker
+  if (mapMarker) {
+    mapMarker.remove()
+    mapMarker = null
+  }
 })
 
 // function escapeXml(s: string): string {
