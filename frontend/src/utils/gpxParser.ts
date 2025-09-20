@@ -23,13 +23,17 @@ export function parseGPXData(gpxXml: string, fileId: string): GPXData | null {
 
     // Extract track points
     const trkptElements = doc.querySelectorAll('trkpt')
+    
     const points: GPXPoint[] = []
 
-    for (const trkpt of trkptElements) {
+    for (let i = 0; i < trkptElements.length; i++) {
+      const trkpt = trkptElements[i]
       const lat = parseFloat(trkpt.getAttribute('lat') || '0')
       const lon = parseFloat(trkpt.getAttribute('lon') || '0')
-      const ele = parseFloat(trkpt.querySelector('ele')?.textContent || '0')
-      const time = trkpt.querySelector('time')?.textContent || new Date().toISOString()
+      const eleElement = trkpt.querySelector('ele')
+      const timeElement = trkpt.querySelector('time')
+      const ele = eleElement ? parseFloat(eleElement.textContent || '0') : 0
+      const time = timeElement ? timeElement.textContent : new Date().toISOString()
 
       if (!isNaN(lat) && !isNaN(lon)) {
         points.push({
