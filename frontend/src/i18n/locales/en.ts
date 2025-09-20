@@ -4,6 +4,7 @@ export default {
     import: 'Import from ...',
     segments: 'Track',
     gpxFile: 'GPX file',
+    stravaImport: 'Strava',
     saveInDb: 'Save in DB',
     infoFeed: 'Information feed',
     collapseSidebar: 'Collapse sidebar',
@@ -101,7 +102,9 @@ export default {
   // Navbar
   navbar: {
     home: 'Home',
-    editor: 'Editor'
+    editor: 'Editor',
+    login: 'Login with Strava',
+    logout: 'Logout'
   },
 
   // Language selector
@@ -161,5 +164,58 @@ export default {
     photoGallery: 'Photo Gallery',
     youtubeVideos: 'YouTube Videos',
     videoPlayback: 'Video Playback'
+  },
+
+  // Strava integration
+  strava: {
+    login: 'Login with Strava',
+    logout: 'Logout',
+    activityDetails: 'Activity Details',
+    distance: 'Distance',
+    movingTime: 'Moving Time',
+    elevationGain: 'Elevation Gain',
+    averageSpeed: 'Average Speed',
+    maxSpeed: 'Max Speed',
+    avgHeartrate: 'Avg Heartrate',
+    activityInfo: 'Activity Information',
+    startTime: 'Start Time',
+    totalTime: 'Total Time',
+    kudos: 'Kudos',
+    comments: 'Comments',
+    gpsStatus: 'GPS Status',
+    gpsDataAvailable: 'GPS data available',
+    routePreview: 'Route Preview',
+    startPoint: 'Start Point',
+    endPoint: 'End Point',
+    noGpsDataWarning: 'This activity does not have GPS data and cannot be imported.',
+    routes: 'Your Routes',
+    loadingRoutes: 'Loading routes...',
+    noRoutes: 'No cycling routes found',
+    importRoute: 'Import Route',
+    selectRoute: 'Select a route to import',
+    activities: 'Your Activities',
+    loadingActivities: 'Loading activities...',
+    noActivities: 'No cycling activities found',
+    loadMore: 'Load More',
+    refresh: 'Refresh',
+    importActivity: 'Import Activity',
+    selectActivity: 'Select an activity to import',
+    loginRequired: 'Please login to Strava to view your activities',
+    loginSuccess: 'Successfully logged in to Strava',
+    loginError: 'Failed to login to Strava',
+    importSuccess: 'Activity imported successfully',
+    importError: 'Failed to import activity',
+    completingLogin: 'Completing login...',
+    redirecting: 'Redirecting...',
+    noGpsData: 'This activity does not have GPS data available for import'
+  },
+
+  // Common
+  common: {
+    close: 'Close',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    loading: 'Loading...',
+    continue: 'Continue'
   }
 }

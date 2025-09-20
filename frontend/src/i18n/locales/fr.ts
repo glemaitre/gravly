@@ -4,6 +4,7 @@ export default {
     import: 'Importer depuis ...',
     segments: 'Piste',
     gpxFile: 'Fichier GPX',
+    stravaImport: 'Strava',
     saveInDb: 'Sauvegarder en BD',
     infoFeed: "Flux d'informations",
     collapseSidebar: 'Réduire la barre latérale',
@@ -101,7 +102,9 @@ export default {
   // Navbar
   navbar: {
     home: 'Accueil',
-    editor: 'Éditeur'
+    editor: 'Éditeur',
+    login: 'Connexion Strava',
+    logout: 'Déconnexion'
   },
 
   // Language selector
@@ -161,5 +164,58 @@ export default {
     photoGallery: 'Galerie photo',
     youtubeVideos: 'Vidéos YouTube',
     videoPlayback: 'Lecture vidéo'
+  },
+
+  // Strava integration
+  strava: {
+    login: 'Se connecter avec Strava',
+    logout: 'Se déconnecter',
+    activityDetails: 'Détails de l\'Activité',
+    distance: 'Distance',
+    movingTime: 'Temps de Mouvement',
+    elevationGain: 'Dénivelé Positif',
+    averageSpeed: 'Vitesse Moyenne',
+    maxSpeed: 'Vitesse Max',
+    avgHeartrate: 'Fréquence Cardiaque Moy',
+    activityInfo: 'Informations sur l\'Activité',
+    startTime: 'Heure de Début',
+    totalTime: 'Temps Total',
+    kudos: 'Kudos',
+    comments: 'Commentaires',
+    gpsStatus: 'Statut GPS',
+    gpsDataAvailable: 'Données GPS disponibles',
+    routePreview: 'Aperçu du Parcours',
+    startPoint: 'Point de Départ',
+    endPoint: 'Point d\'Arrivée',
+    noGpsDataWarning: 'Cette activité n\'a pas de données GPS et ne peut pas être importée.',
+    routes: 'Vos Itinéraires',
+    loadingRoutes: 'Chargement des itinéraires...',
+    noRoutes: 'Aucun itinéraire de vélo trouvé',
+    importRoute: 'Importer l\'itinéraire',
+    selectRoute: 'Sélectionnez un itinéraire à importer',
+    activities: 'Vos Activités',
+    loadingActivities: 'Chargement des activités...',
+    noActivities: 'Aucune activité de vélo trouvée',
+    loadMore: 'Charger plus',
+    refresh: 'Actualiser',
+    importActivity: 'Importer l\'activité',
+    selectActivity: 'Sélectionnez une activité à importer',
+    loginRequired: 'Veuillez vous connecter à Strava pour voir vos activités',
+    loginSuccess: 'Connexion à Strava réussie',
+    loginError: 'Échec de la connexion à Strava',
+    importSuccess: 'Activité importée avec succès',
+    importError: 'Échec de l\'importation de l\'activité',
+    completingLogin: 'Finalisation de la connexion...',
+    redirecting: 'Redirection...',
+    noGpsData: 'Cette activité n\'a pas de données GPS disponibles pour l\'importation'
+  },
+
+  // Common
+  common: {
+    close: 'Fermer',
+    cancel: 'Annuler',
+    confirm: 'Confirmer',
+    loading: 'Chargement...',
+    continue: 'Continuer'
   }
 }
