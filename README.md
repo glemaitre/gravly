@@ -1,20 +1,32 @@
 # Gravly - Find your next gravel ride
 
-A modern web application for discovering, creating, and viewing cycling routes stored as GPX files. Built with Vue.js frontend, FastAPI backend, and PostgreSQL for data persistence.
+A modern web application for discovering, creating, and viewing cycling routes stored as
+GPX files. Built with Vue.js frontend, FastAPI backend, and PostgreSQL for data
+persistence.
 
 ## Features
 
-- **Interactive Map Discovery**: Real-time streaming of cycling segments using Server-Sent Events (SSE) with Leaflet maps
-- **GPX Route Editor**: Upload and edit GPX files with visual segment selection, surface type classification, and difficulty rating
-- **Segment Detail View**: Comprehensive segment information with interactive maps, elevation charts, and detailed metadata
-- **Advanced Segment List**: Filterable and sortable segment lists with track type filtering (segments vs routes)
-- **Real-time Segment Streaming**: Efficient bounds-based search with client-side GPX parsing for optimal performance
-- **Map State Persistence**: Automatic saving and restoration of map position and zoom level
+- **Interactive Map Discovery**: Real-time streaming of cycling segments using
+  Server-Sent Events (SSE) with Leaflet maps
+- **GPX Route Editor**: Upload and edit GPX files with visual segment selection, surface
+  type classification, and difficulty rating
+- **Segment Detail View**: Comprehensive segment information with interactive maps,
+  elevation charts, and detailed metadata
+- **Advanced Segment List**: Filterable and sortable segment lists with track type
+  filtering (segments vs routes)
+- **Real-time Segment Streaming**: Efficient bounds-based search with client-side GPX
+  parsing for optimal performance
+- **Map State Persistence**: Automatic saving and restoration of map position and zoom
+  level
 - **Multi-language Support**: Internationalization with English and French locales
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
-- **Advanced Route Analysis**: Elevation profiles, distance calculations, and trail condition metadata
+- **Advanced Route Analysis**: Elevation profiles, distance calculations, and trail
+  condition metadata
 - **Flexible Storage**: Support for both local filesystem and AWS S3 storage backends
-- **Database Seeding**: Automated generation of realistic test data for development and testing
+- **Database Seeding**: Automated generation of realistic test data for development and
+  testing
+- **Strava Integration**: Import GPX files directly from Strava activities with OAuth
+  authentication
 
 ## Tech Stack
 
@@ -65,14 +77,16 @@ A modern web application for discovering, creating, and viewing cycling routes s
    ```bash
    # Generate 1,000 realistic cycling segments across France
    pixi run python scripts/database_seeding.py
-   
+
    # Or generate just 5 segments for quick testing
    pixi run python scripts/test_seeding.py
    ```
 
 ## Environment Configuration
 
-This project uses separate `.env` files for database and storage configuration. The backend automatically loads environment variables from `.env/storage` and `.env/database` files.
+This project uses separate `.env` files for database and storage configuration. The
+backend automatically loads environment variables from `.env/storage` and
+`.env/database` files.
 
 ### Setup Environment Files
 
@@ -98,7 +112,7 @@ This project uses separate `.env` files for database and storage configuration. 
    LOCAL_STORAGE_ROOT=../scratch/local_storage
    LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage
    ```
-   
+
    Or for S3 storage:
    ```bash
    # For S3 storage (production/testing)
@@ -109,7 +123,15 @@ This project uses separate `.env` files for database and storage configuration. 
    AWS_REGION=us-east-1
    ```
 
-4. **Never commit actual `.env` files** - they contain sensitive information and are
+4. **Create the Strava configuration file** (`.env/strava`):
+   ```bash
+   # Strava API Configuration
+   STRAVA_CLIENT_ID=your_client_id_here
+   STRAVA_CLIENT_SECRET=your_client_secret_here
+   STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json
+   ```
+
+5. **Never commit actual `.env` files** - they contain sensitive information and are
    already in `.gitignore`.
 
 ### Storage Configuration
@@ -121,7 +143,8 @@ The storage backend is controlled by the `STORAGE_TYPE` variable in `.env/storag
 
 ### Database Configuration
 
-The application uses PostgreSQL for persistent storage. Database connection is configured through environment variables in `.env/database`:
+The application uses PostgreSQL for persistent storage. Database connection is
+configured through environment variables in `.env/database`:
 
 - `DB_HOST` - Database host (required)
 - `DB_PORT` - Database port (required)
@@ -129,7 +152,8 @@ The application uses PostgreSQL for persistent storage. Database connection is c
 - `DB_USER` - Database username (required)
 - `DB_PASSWORD` - Database password (required)
 
-The application automatically constructs the PostgreSQL connection string from these individual components.
+The application automatically constructs the PostgreSQL connection string from these
+individual components.
 
 ### PostgreSQL Setup
 
@@ -172,20 +196,194 @@ When using S3 storage, configure these variables in `.env/storage`:
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
 - `AWS_REGION` - AWS region (optional, defaults to `us-east-1`)
 
+## Strava Integration
+
+The application includes comprehensive Strava integration with full OAuth 2.0
+authentication, activity retrieval, and GPX data import capabilities. The backend
+provides a complete Strava API service with secure token management and comprehensive
+error handling.
+
+### Setup Strava Integration
+
+1. **Create a Strava Application**:
+   - Go to [Strava API Settings](https://www.strava.com/settings/api)
+   - Click "Create App" or "Register Your Application"
+   - Fill in the application details:
+     - **Application Name**: Your cycling website name
+     - **Category**: Choose "Web"
+     - **Club**: Leave empty or select a club
+     - **Website**: Your website URL (e.g., `http://localhost:5173`)
+     - **Authorization Callback Domain**: `localhost` (for development) or your
+       production domain
+
+2. **Get Your API Credentials**:
+   After creating the app, you'll get:
+   - **Client ID**: A number (e.g., `12345`)
+   - **Client Secret**: A string (e.g., `abcdef1234567890abcdef1234567890abcdef12`)
+
+3. **Configure Environment Variables**:
+   Add your Strava credentials to the `.env/strava` file (see Environment Configuration
+   section above). **Important**: The `STRAVA_TOKENS_FILE_PATH` must be set to a secure
+   location for storing OAuth tokens. This path should be outside your web root and
+   accessible only by your application.
+
+### How Strava Integration Works
+
+1. **Authentication**: Users click "Login with Strava" in the navbar to authenticate
+   with Strava using OAuth 2.0
+2. **Route Protection**: The editor requires Strava authentication - users are
+   automatically redirected to login when accessing protected routes
+3. **Activity Import**: Once authenticated, users can import Strava activities directly
+   from the editor's sidebar menu
+4. **Activity List**: Users see a list of their cycling activities with previews
+   including distance, time, elevation, and mini-maps
+5. **Import**: Users can select any activity to import its GPX data directly into the
+   editor
+6. **Processing**: The GPX data is processed the same way as local file uploads,
+   maintaining full compatibility with existing editor functionality
+
+### Authentication Flow
+
+The Strava integration uses a sophisticated authentication system:
+
+1. **Global Authentication**: Login/logout buttons are always visible in the navbar
+2. **Route Protection**: Protected routes (like editor) automatically check
+   authentication status
+3. **Smart Redirects**: Users are returned to their original page after authentication
+4. **Token Storage**: Access and refresh tokens are stored securely on the backend
+5. **Proactive Refresh**: Tokens are automatically refreshed 5 minutes before expiration
+6. **Error Handling**: If authentication fails, users are automatically redirected back
+   to Strava login
+7. **Full Page Reload**: After authentication, the page reloads to ensure navbar updates
+   correctly
+8. **Seamless Experience**: Users rarely need to manually re-authenticate
+
+### Strava Integration Features
+
+- **Global Authentication**: Login/logout buttons in the navbar for easy access
+- **OAuth Authentication**: Secure login with Strava using industry-standard OAuth 2.0
+- **Route Protection**: Automatic authentication checks for protected routes
+- **Smart Redirects**: Users return to their original page after authentication
+- **Automatic Token Refresh**: Seamless token renewal when access tokens expire
+- **Smart Authentication Handling**: Automatic redirect to login when authentication
+  fails
+- **Activity Preview**: Visual previews showing distance, time, elevation, and GPS trace
+  for each activity
+- **GPX Import**: Direct import of Strava activity GPX data with elevation and time
+  information
+- **Seamless Integration**: Works with all existing editor functionality including
+  charts, segment selection, and metadata editing
+- **Backend Processing**: GPX data is processed on the backend using the same pipeline
+  as local file uploads
+
+### User Experience Improvements
+
+The Strava integration provides a modern, seamless user experience:
+
+#### **Authentication States**
+- **Not Authenticated**: Orange "Login with Strava" button in navbar
+- **Authenticated**: User avatar, name, and dropdown menu in navbar
+- **Token Expired**: Automatic refresh or redirect to login
+- **Logout**: Clean return to home page with login button restored
+
+#### **Smart Navigation**
+- **Context Preservation**: Users return to their original page after authentication
+- **Route Protection**: Editor automatically redirects unauthenticated users to login
+- **Full Page Reload**: Ensures navbar updates correctly after authentication
+- **Seamless Flow**: No manual navigation required
+
+#### **Mobile Responsive**
+- **Desktop**: Full login button with text and Strava branding
+- **Tablet**: Icon-only login button to save space
+- **Mobile**: Compact authentication interface
+
+### Troubleshooting Strava Integration
+
+#### Common Issues
+
+1. **"Invalid redirect_uri"**: Check that your callback domain in Strava settings
+   matches your development/production domain
+2. **"Invalid client_id"**: Verify your `STRAVA_CLIENT_ID` is correct in
+   `.env/strava`
+3. **"Invalid client_secret"**: Verify your `STRAVA_CLIENT_SECRET` is correct in
+   `.env/strava`
+4. **CORS errors**: Make sure your callback domain is properly configured in Strava
+
+#### Development vs Production
+
+- **Development**: Use `localhost` as the callback domain in Strava settings
+- **Production**: Use your actual domain (e.g., `mycyclingapp.com`) without `http://` or
+  `https://`
+
+### Strava API Limits
+
+Strava has rate limits for API calls:
+- **Default**: 1,000 requests per 15 minutes
+- **Premium**: 1,000 requests per 15 minutes (same as default)
+
+The integration is designed to be efficient and should not hit these limits under normal
+usage.
+
+### Strava Service Architecture
+
+The backend includes a comprehensive Strava service (`backend/src/services/strava.py`)
+that provides:
+
+#### **Core Features**
+- **OAuth 2.0 Flow**: Complete authentication flow with authorization URL generation and
+  token exchange
+- **Token Management**: Automatic token refresh with secure filesystem storage
+- **Activity Retrieval**: Paginated access to user activities with comprehensive metadata
+- **GPX Processing**: Direct GPX data retrieval and processing from Strava streams
+- **Athlete Information**: Access to authenticated user profile data
+
+#### **Error Handling**
+- **HTTPException Propagation**: Proper handling of Strava API errors with correct HTTP
+  status codes
+- **Authentication Failures**: Comprehensive handling of token expiration and refresh
+  scenarios
+- **Rate Limiting**: Proper handling of Strava API rate limits
+- **Network Errors**: Robust error handling for network failures and API unavailability
+
+#### **Security Features**
+- **Secure Configuration**: Environment-based configuration with mandatory token file
+  path
+- **Token Encryption**: Secure storage of OAuth tokens with proper file permissions
+- **Client Secret Protection**: Backend-only handling of sensitive credentials
+- **Request Validation**: Proper validation of all API requests and responses
+
+### Security Notes
+
+- Client secret is handled securely on the backend
+- OAuth tokens are stored in localStorage (consider using httpOnly cookies for
+  production)
+- All Strava API calls are proxied through the backend for security
+- **Secure Token Storage**: OAuth tokens are stored securely in the location specified
+  by `STRAVA_TOKENS_FILE_PATH` environment variable for persistence across sessions
+- **Never commit tokens**: The token file is automatically ignored by git and should
+  never be committed to version control
+- **Token Security**: The token file path must be set to a secure location outside your
+  web root and accessible only by your application
+
 ## Database Seeding
 
-The project includes comprehensive database seeding scripts to generate realistic test data for development and testing purposes.
+The project includes comprehensive database seeding scripts to generate realistic test
+data for development and testing purposes.
 
 ### Seeding Scripts
 
-- **`scripts/database_seeding.py`**: Generates 1,000 realistic 5km cycling segments across 13 French regions
+- **`scripts/database_seeding.py`**: Generates 1,000 realistic 5km cycling segments
+  across 13 French regions
 - **`scripts/test_seeding.py`**: Generates 5 segments for quick testing
 
 ### Features of Generated Data
 
-- **Geographic Distribution**: Segments distributed across 13 French regions with realistic GPS coordinates
-- **Realistic Routes**: 5km cycling routes with elevation changes and proper GPS point distribution
-- **Varied Surface Types**: Different surface types (paved roads, trails, etc.) with realistic probabilities
+- **Geographic Distribution**: Segments distributed across 13 French regions with
+  realistic GPS coordinates
+- **Realistic Routes**: 5km cycling routes with elevation changes and proper GPS point
+  distribution
+- **Varied Surface Types**: Different surface types (paved roads, trails, etc.) with
+  realistic probabilities
 - **Tire Recommendations**: Appropriate tire types for dry and wet conditions
 - **Difficulty Levels**: 1-5 difficulty scale with realistic distribution
 - **Batch Processing**: Processes segments in batches for memory efficiency
@@ -222,7 +420,7 @@ await seed_database(
 pixi run start-backend
 
 # Or manually
-uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
+source ../.env/strava && uvicorn backend.src.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 #### Start the Frontend
@@ -281,6 +479,8 @@ website_cycling/
 │   │   ├── models/         # SQLAlchemy models and Pydantic schemas
 │   │   │   ├── track.py    # Track model and response schemas
 │   │   │   └── base.py     # Base model configuration
+│   │   ├── services/       # Service modules
+│   │   │   └── strava.py   # Strava API integration service with OAuth and GPX processing
 │   │   └── utils/          # Utility modules
 │   │       ├── config.py   # Environment configuration
 │   │       ├── storage.py  # Storage managers (S3/Local)
@@ -294,9 +494,14 @@ website_cycling/
 │   │   │   ├── Editor.vue      # GPX route editor with chart visualization
 │   │   │   ├── SegmentDetail.vue # Detailed segment view with map and charts
 │   │   │   ├── SegmentList.vue   # Filterable segment list component
-│   │   │   └── Navbar.vue        # Navigation component
+│   │   │   ├── Navbar.vue        # Navigation component with Strava authentication
+│   │   │   ├── StravaCallback.vue # Strava OAuth callback handler
+│   │   │   ├── StravaActivityList.vue # Strava activities list component
+│   │   │   └── StravaActivityDetailsModal.vue # Strava activity details modal
 │   │   ├── composables/    # Vue composables
-│   │   │   └── useMapState.ts    # Map state persistence management
+│   │   │   ├── useMapState.ts    # Map state persistence management
+│   │   │   ├── useStravaApi.ts   # Strava API integration and authentication composable
+│   │   │   └── useStravaActivities.ts # Strava activities management composable
 │   │   ├── utils/          # Frontend utilities
 │   │   │   ├── gpxParser.ts      # Client-side GPX parsing
 │   │   │   └── distance.ts       # Distance calculation utilities
@@ -307,7 +512,9 @@ website_cycling/
 │   └── vite.config.js      # Vite configuration
 ├── .env/                   # Environment configuration files
 │   ├── database            # Database configuration
-│   └── storage             # Storage configuration
+│   ├── storage             # Storage configuration
+│   ├── strava              # Strava API configuration
+│   └── strava_tokens.json  # Strava OAuth tokens (auto-generated, git-ignored)
 ├── scripts/                # Database seeding and utility scripts
 │   ├── database_seeding.py # Generate 1,000 realistic cycling segments
 │   ├── test_seeding.py     # Generate 5 test segments
@@ -329,8 +536,27 @@ website_cycling/
 - `POST /api/upload-gpx` - Upload and parse GPX files
 - `POST /api/segments` - Create new cycling segments from uploaded GPX data
 
+### Strava Integration
+- `GET /api/strava/auth-url?state={route}` - Get Strava OAuth authorization URL with
+  optional state parameter for redirect
+- `POST /api/strava/exchange-code` - Exchange Strava authorization code for access token
+- `POST /api/strava/refresh-token` - Refresh expired Strava access token
+- `GET /api/strava/activities?page={page}&per_page={per_page}` - Get paginated list of
+  Strava activities
+- `GET /api/strava/activities/{activity_id}/gpx` - Get GPX data for a specific Strava
+  activity
+
+**Features**:
+- **OAuth 2.0 Authentication**: Complete OAuth flow with secure token management
+- **Automatic Token Refresh**: Seamless token renewal when access tokens expire
+- **Activity Retrieval**: Paginated access to user's Strava activities
+- **GPX Data Processing**: Direct import and processing of Strava activity GPX files
+- **Comprehensive Error Handling**: Proper HTTP status codes and error messages
+- **Secure Token Storage**: OAuth tokens stored securely on the backend filesystem
+
 ### Segment Discovery (Streaming)
-- `GET /api/segments/search` - Stream segments within geographic bounds using Server-Sent Events
+- `GET /api/segments/search` - Stream segments within geographic bounds using
+  Server-Sent Events
 - `OPTIONS /api/segments/search` - CORS preflight for streaming endpoint
 
 ### Features
@@ -397,7 +623,8 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 - **Debounced Search**: Prevents excessive API calls during map interactions
 - **Incremental Updates**: Only updates map with new segments
 - **Zoom Optimization**: Avoids unnecessary searches when zooming in
-- **Map State Persistence**: Automatic saving and restoration of map state using localStorage
+- **Map State Persistence**: Automatic saving and restoration of map state using
+  localStorage
 - **Composable Architecture**: Reusable Vue composables for state management
 - **TypeScript**: Strict typing for better performance and reliability
 
@@ -406,12 +633,21 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 ### Backend Testing
 - **Framework**: pytest with comprehensive coverage
 - **Coverage**: 100% coverage for core modules including:
-  - `backend/src/main.py` - API endpoints and streaming functionality
-  - `backend/src/utils/storage.py` - S3 and local storage managers
-  - `backend/src/models/track.py` - Data models and schemas
-  - `backend/src/utils/` - Utility modules
+  - `backend/src/main.py` - API endpoints and streaming functionality (99% coverage)
+  - `backend/src/services/strava.py` - Strava API integration service (100% coverage)
+  - `backend/src/utils/config.py` - Environment configuration management (100% coverage)
+  - `backend/src/utils/storage.py` - S3 and local storage managers (100% coverage)
+  - `backend/src/models/track.py` - Data models and schemas (100% coverage)
+  - `backend/src/utils/` - All utility modules (100% coverage)
 - **Run**: `pixi run test-backend`
-- **Features**: Async database testing, S3 mocking with moto, comprehensive error handling
+- **Features**:
+  - **Comprehensive Strava Testing**: 22 tests covering all Strava API endpoints
+  - **Error Handling Coverage**: HTTPException propagation, authentication failures, API
+    errors
+  - **Mock Integration**: stravalib mock fixture integration for realistic API testing
+  - **Async Database Testing**: PostgreSQL testing with async operations
+  - **S3 Mocking**: moto-based S3 testing for storage operations
+  - **Security Testing**: Token management, OAuth flow validation
 
 ### Frontend Testing
 - **Framework**: Vitest + Vue Test Utils + Testing Library with jsdom
@@ -424,7 +660,8 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
   - `gpxParser.ts`: 92.8% (comprehensive GPX parsing tests)
   - `useMapState.ts`: Map state persistence composable
 - **Run**: `pixi run test-frontend`
-- **Features**: Component testing, Leaflet mocking, EventSource simulation, composable testing
+- **Features**: Component testing, Leaflet mocking, EventSource simulation, composable
+  testing
 
 ### Test Quality
 - **Comprehensive Coverage**: Both backend and frontend have extensive test suites
@@ -448,20 +685,34 @@ summaries.
 - **Server-Sent Events**: Efficient streaming of GPX data to frontend
 - **Geographic Search**: Bounds-based filtering with PostgreSQL spatial queries
 - **Client-side Parsing**: Frontend GPX parsing for optimal performance
-- **Map State Persistence**: Automatic saving and restoration of map position and zoom level
+- **Map State Persistence**: Automatic saving and restoration of map position and zoom
+  level
 
 ### Segment Management
 - **Segment List**: Filterable and sortable segment lists with track type filtering
-- **Segment Detail View**: Comprehensive segment information with interactive maps and elevation charts
+- **Segment Detail View**: Comprehensive segment information with interactive maps and
+  elevation charts
 - **Track Type Filtering**: Separate views for segments and routes
 - **Distance Calculations**: Real-time distance calculations from map center
 
 ### GPX Route Editor
 - **File Upload**: Drag-and-drop GPX file upload with validation
+- **Strava Integration**: Import GPX files directly from Strava activities with OAuth
+  authentication
+- **Route Protection**: Editor requires Strava authentication for access
 - **Visual Editing**: Interactive segment selection with map and elevation chart
-- **Surface Classification**: Trail condition metadata (surface type, difficulty, tire recommendations)
+- **Surface Classification**: Trail condition metadata (surface type, difficulty, tire
+  recommendations)
 - **Chart Visualization**: Real-time elevation profile with Chart.js
 - **Commentary Support**: Text, video links, and image attachments for segments
+
+### Authentication System
+- **Global Authentication**: Navbar-based login/logout with Strava OAuth 2.0
+- **Route Protection**: Automatic authentication checks for protected routes
+- **Token Management**: Secure backend token storage with automatic refresh
+- **Smart Redirects**: Users return to original page after authentication
+- **Full Page Reload**: Ensures proper navbar state updates
+- **Mobile Responsive**: Adaptive authentication UI for all screen sizes
 
 ### Storage & Database
 - **Dual Storage**: Support for both local filesystem and AWS S3
