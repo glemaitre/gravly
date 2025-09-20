@@ -18,6 +18,17 @@ python-dotenv = "*"
 pre-commit = "*"
 postgresql = "*"
 requests = "*"
+polyline = "*"
+# dependencies for stravalib available in conda-forge
+arrow = "*"
+pint = "*"
+pytz = "*"
+flexcache = "*"
+flexparser = "*"
+types-python-dateutil = "*"
+
+[pypi-dependencies]
+stravalib = "*"
 
 [feature.dev.dependencies]
 ipykernel = "*"
@@ -32,9 +43,10 @@ pre-commit = "*" # Git hooks framework
 pytest = "*"
 pytest-cov = "*"
 moto = "*"
+requests-mock = "*"
 
 [tasks.start-backend]
-cmd = "uvicorn src.main:app --reload --host 0.0.0.0 --port 8000"
+cmd = "bash -c 'source ../.env/strava && uvicorn src.main:app --reload --host 0.0.0.0 --port 8000'"
 cwd = "backend"
 
 [tasks.start-frontend]
