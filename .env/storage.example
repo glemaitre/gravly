@@ -1,14 +1,16 @@
 # Storage Configuration
-# Choose storage type: "local" or "s3"
+# Copy this file to 'storage' and fill in your actual values
+
+# Storage type: 'local' or 's3'
 STORAGE_TYPE=local
 
 # For local storage:
-LOCAL_STORAGE_ROOT=../scratch/local_storage
+LOCAL_STORAGE_ROOT=./scratch/local_storage
 LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage
 
-# For S3 storage (uncomment and configure if using S3):
+# For S3 storage (uncomment and fill if using S3):
 # STORAGE_TYPE=s3
-# AWS_S3_BUCKET=your-bucket-name
-# AWS_ACCESS_KEY_ID=your-access-key-id
-# AWS_SECRET_ACCESS_KEY=your-secret-access-key
+# AWS_S3_BUCKET=your_bucket_name
+# AWS_ACCESS_KEY_ID=your_access_key_id
+# AWS_SECRET_ACCESS_KEY=your_secret_access_key
 # AWS_REGION=us-east-1

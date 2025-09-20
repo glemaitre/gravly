@@ -1,6 +1,17 @@
 # Database Configuration
+# Copy this file to 'database' and fill in your actual values
+
+# Required: Database host
 DB_HOST=localhost
+
+# Required: Database port
 DB_PORT=5432
-DB_NAME=gravly
-DB_USER=cycling_user
-DB_PASSWORD=your-database-password
+
+# Required: Database name
+DB_NAME=cycling
+
+# Required: Database user
+DB_USER=postgres
+
+# Required: Database password
+DB_PASSWORD=your_password_here
