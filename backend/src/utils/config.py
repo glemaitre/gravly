@@ -7,6 +7,10 @@ from typing import NamedTuple
 
 from dotenv import load_dotenv
 
+# Configure detailed logging for configuration loading
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 class DatabaseConfig(NamedTuple):
     """Database configuration parameters."""
@@ -36,16 +40,25 @@ class LocalStorageConfig(NamedTuple):
     base_url: str
 
 
+class StravaConfig(NamedTuple):
+    """Strava API configuration parameters."""
+
+    client_id: str
+    client_secret: str
+    tokens_file_path: str
+
+
 # Union type for storage configurations
 StorageConfig = S3StorageConfig | LocalStorageConfig
 
 
 def load_environment_config(
     project_root: Path | None = None,
-) -> tuple[DatabaseConfig, StorageConfig]:
-    """Load environment variables from separate storage and database .env files.
+) -> tuple[DatabaseConfig, StorageConfig, StravaConfig]:
+    """Load environment variables from separate storage, database, and Strava files.
 
-    This function loads environment variables from .env/storage and .env/database files
+    This function loads environment variables from .env/storage, .env/database, and
+    .env/strava files
     in the .env folder and provides helpful error messages if no configuration is found.
 
     Parameters
@@ -64,6 +77,7 @@ def load_environment_config(
         # config.py -> utils -> src -> backend -> project_root)
         project_root = Path(__file__).parent.parent.parent.parent
 
+    logger.debug(f"Loading configuration from project root: {project_root}")
     env_folder = project_root / ".env"
 
     # Load storage configuration
@@ -104,6 +118,26 @@ def load_environment_config(
         else:
             raise FileNotFoundError(
                 f"Database configuration file not found at {database_file} "
+                f"and no example file available."
+            )
+
+    # Load Strava configuration
+    strava_file = env_folder / "strava"
+    if strava_file.exists():
+        load_dotenv(strava_file, override=True)
+        logger.info(f"Loaded Strava environment variables from {strava_file}")
+    else:
+        # Check if example file exists
+        strava_example = env_folder / "strava.example"
+        if strava_example.exists():
+            raise FileNotFoundError(
+                f"Strava configuration file not found at {strava_file}. "
+                f"Please create a Strava configuration file based on "
+                f"{strava_example}. Copy the example file and rename it to 'strava'."
+            )
+        else:
+            raise FileNotFoundError(
+                f"Strava configuration file not found at {strava_file} "
                 f"and no example file available."
             )
 
@@ -164,4 +198,31 @@ def load_environment_config(
             base_url=os.getenv("LOCAL_STORAGE_BASE_URL"),
         )
 
-    return database_config, storage_config
+    # Extract Strava configuration from environment variables
+    required_strava_params = [
+        "STRAVA_CLIENT_ID",
+        "STRAVA_CLIENT_SECRET",
+        "STRAVA_TOKENS_FILE_PATH",
+    ]
+    missing_strava_params = [
+        param for param in required_strava_params if not os.getenv(param)
+    ]
+
+    if missing_strava_params:
+        raise ValueError(
+            f"Missing required Strava configuration parameters: "
+            f"{', '.join(missing_strava_params)}. "
+            f"Please set these environment variables in your .env/strava file. "
+            f"STRAVA_TOKENS_FILE_PATH must be set to a secure location for "
+            f"storing tokens."
+        )
+
+    tokens_file_path = os.getenv("STRAVA_TOKENS_FILE_PATH")
+
+    strava_config = StravaConfig(
+        client_id=os.getenv("STRAVA_CLIENT_ID"),
+        client_secret=os.getenv("STRAVA_CLIENT_SECRET"),
+        tokens_file_path=tokens_file_path,
+    )
+
+    return database_config, storage_config, strava_config
