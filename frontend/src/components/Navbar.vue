@@ -20,6 +20,59 @@
 
       <!-- Right Section -->
       <nav class="navbar-nav">
+        <!-- Strava Authentication -->
+        <div class="auth-section">
+          <button
+            v-if="!isAuthenticated"
+            class="strava-login-btn navbar-btn"
+            @click="handleStravaLogin"
+            :disabled="isLoading"
+          >
+            <i class="fab fa-strava"></i>
+            <span>{{ $t('navbar.login') }}</span>
+          </button>
+          
+          <div v-else class="strava-user-dropdown" ref="userDropdown">
+            <button
+              class="strava-user-btn navbar-btn"
+              @click="toggleUserDropdown"
+              :class="{ active: userDropdownOpen }"
+            >
+              <img 
+                v-if="athlete?.profile_medium" 
+                :src="athlete.profile_medium" 
+                :alt="athlete.firstname"
+                class="user-avatar"
+              />
+              <i v-else class="fas fa-user-circle user-icon"></i>
+              <span class="user-name">{{ athlete?.firstname || 'User' }}</span>
+              <span class="dropdown-arrow">
+                <i
+                  class="fa-solid fa-chevron-down"
+                  :class="{ rotated: userDropdownOpen }"
+                ></i>
+              </span>
+            </button>
+            
+            <div
+              class="user-dropdown-menu navbar-menu"
+              :class="{ open: userDropdownOpen }"
+            >
+              <div class="user-info">
+                <div class="user-name">{{ athlete?.firstname }} {{ athlete?.lastname }}</div>
+                <div class="user-location" v-if="athlete?.city">
+                  {{ athlete.city }}, {{ athlete.country }}
+                </div>
+              </div>
+              <hr class="dropdown-divider" />
+              <button class="user-option logout-option" @click="handleLogout">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>{{ $t('navbar.logout') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="language-dropdown" ref="languageDropdown">
           <button
             class="language-dropdown-trigger navbar-trigger"
@@ -69,14 +122,30 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { setLanguage, type MessageLanguages } from '../i18n'
+import { useStravaApi } from '../composables/useStravaApi'
 import logoUrl from '../assets/images/logo.svg'
 
 // i18n setup
 const { locale } = useI18n()
+const router = useRouter()
 const currentLanguage = ref<MessageLanguages>('en')
+
+// Strava authentication
+const { 
+  authState, 
+  isLoading, 
+  isAuthenticated: isAuthenticatedFn, 
+  getAuthUrl, 
+  clearAuth 
+} = useStravaApi()
+
+// Computed properties for authentication
+const isAuthenticated = computed(() => isAuthenticatedFn())
+const athlete = computed(() => authState.value.athlete)
 
 // Watch for locale changes to update currentLanguage
 watch(
@@ -87,8 +156,20 @@ watch(
   { immediate: true }
 )
 
+// Watch for authentication state changes (for debugging if needed)
+// watch(
+//   authState,
+//   (newAuthState) => {
+//     console.debug('Navbar authState changed:', newAuthState)
+//   },
+//   { deep: true }
+// )
+
 // Language dropdown state
 const languageDropdownOpen = ref(false)
+
+// User dropdown state
+const userDropdownOpen = ref(false)
 
 // Language options with flags
 const languageOptions = {
@@ -98,6 +179,7 @@ const languageOptions = {
 
 // Close dropdown when clicking outside
 const languageDropdown = ref<HTMLElement | null>(null)
+const userDropdown = ref<HTMLElement | null>(null)
 
 function closeLanguageDropdown(event: MouseEvent) {
   if (
@@ -108,10 +190,31 @@ function closeLanguageDropdown(event: MouseEvent) {
   }
 }
 
+function closeUserDropdown(event: MouseEvent) {
+  if (
+    userDropdown.value &&
+    !userDropdown.value.contains(event.target as Node)
+  ) {
+    userDropdownOpen.value = false
+  }
+}
+
+function closeDropdowns(event: MouseEvent) {
+  closeLanguageDropdown(event)
+  closeUserDropdown(event)
+}
+
 // Toggle dropdown function that prevents event bubbling
 function toggleLanguageDropdown(event: Event) {
   event.stopPropagation()
   languageDropdownOpen.value = !languageDropdownOpen.value
+  userDropdownOpen.value = false // Close user dropdown when opening language
+}
+
+function toggleUserDropdown(event: Event) {
+  event.stopPropagation()
+  userDropdownOpen.value = !userDropdownOpen.value
+  languageDropdownOpen.value = false // Close language dropdown when opening user
 }
 
 // Language switching function
@@ -121,12 +224,32 @@ function changeLanguage(lang: MessageLanguages) {
   languageDropdownOpen.value = false // Close dropdown after selection
 }
 
+// Strava authentication functions
+async function handleStravaLogin() {
+  try {
+    // Store the current route so we can redirect back after authentication
+    const currentRoute = router.currentRoute.value.fullPath
+    const authUrl = await getAuthUrl(currentRoute)
+    
+    window.location.href = authUrl
+  } catch (error) {
+    console.error('Failed to get Strava auth URL:', error)
+  }
+}
+
+function handleLogout() {
+  clearAuth()
+  userDropdownOpen.value = false
+  // Redirect to home page after logout
+  router.push('/')
+}
+
 onMounted(() => {
-  document.addEventListener('click', closeLanguageDropdown)
+  document.addEventListener('click', closeDropdowns)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', closeLanguageDropdown)
+  document.removeEventListener('click', closeDropdowns)
 })
 </script>
 
@@ -178,6 +301,179 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   margin-left: auto;
+  gap: 0.75rem;
+}
+
+/* Authentication Section */
+.auth-section {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.navbar-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.navbar-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Strava Login Button */
+.strava-login-btn {
+  background: linear-gradient(135deg, #fc4c02 0%, #ff6b35 100%);
+  color: white;
+  border-color: #fc4c02;
+}
+
+.strava-login-btn:hover {
+  background: linear-gradient(135deg, #e63e00 0%, #ff5a2b 100%);
+  border-color: #e63e00;
+  color: white;
+}
+
+.strava-login-btn i {
+  font-size: 1.1em;
+}
+
+/* User Dropdown */
+.strava-user-dropdown {
+  position: relative;
+}
+
+.strava-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.strava-user-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.strava-user-btn.active {
+  background: var(--brand-50);
+  border-color: var(--brand-300);
+  color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-icon {
+  font-size: 1.2em;
+  color: #6b7280;
+}
+
+.user-name {
+  font-weight: 500;
+}
+
+/* User Dropdown Menu */
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: auto;
+  transform-origin: top right;
+  width: 220px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s ease;
+}
+
+.user-dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.user-info {
+  padding: 0.75rem;
+}
+
+.user-info .user-name {
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 0.25rem;
+}
+
+.user-location {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.dropdown-divider {
+  margin: 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+.user-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #374151;
+  font-size: 0.875rem;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.user-option:hover {
+  background: #f3f4f6;
+}
+
+.logout-option {
+  color: #dc2626;
+}
+
+.logout-option:hover {
+  background: #fef2f2;
+  color: #b91c1c;
 }
 
 .nav-menu {
@@ -395,6 +691,19 @@ onUnmounted(() => {
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
   }
+
+  .navbar-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+  }
+
+  .strava-login-btn span {
+    display: none;
+  }
+
+  .strava-user-btn .user-name {
+    display: none;
+  }
 }
 
 @media (max-width: 576px) {
@@ -412,6 +721,11 @@ onUnmounted(() => {
   }
 
   .navbar-nav .language-dropdown-trigger.navbar-trigger {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  .navbar-btn {
     padding: 0.3rem 0.5rem;
     font-size: 0.8rem;
   }

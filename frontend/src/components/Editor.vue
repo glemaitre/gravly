@@ -24,6 +24,19 @@
                   t('menu.gpxFile')
                 }}</span>
               </li>
+              <li
+                class="menu-item"
+                @click="openStravaImport"
+                :title="isCompactSidebar ? t('menu.stravaImport') : t('strava.selectActivity')"
+                role="button"
+              >
+                <span class="icon" aria-hidden="true"
+                  ><i class="fa-brands fa-strava"></i
+                ></span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.stravaImport')
+                }}</span>
+              </li>
             </ul>
             <input
               ref="fileInput"
@@ -713,6 +726,16 @@
 
     <!-- Regular Messages -->
     <p v-if="message" class="message">{{ message }}</p>
+
+    <!-- Strava Import Modal -->
+    <div v-if="showStravaModal" class="modal-overlay" @click="closeStravaModal">
+      <div class="modal-content" @click.stop>
+        <StravaActivityList 
+          @close="closeStravaModal"
+          @import="handleStravaImport"
+        />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -720,6 +743,7 @@
 import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
+import StravaActivityList from './StravaActivityList.vue'
 import {
   Chart,
   LineController,
@@ -808,6 +832,10 @@ const isDragOver = ref(false)
 // Responsive sidebar state
 const isCompactSidebar = ref(false)
 const isSidebarCollapsed = ref(false)
+
+// Strava integration
+// Strava authentication is now handled by the navbar and route guards
+const showStravaModal = ref(false)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -1748,14 +1776,90 @@ onUnmounted(() => {
 //   )
 // }
 
+// Strava integration functions
+function openStravaImport() {
+  showStravaModal.value = true
+}
+
+function closeStravaModal() {
+  showStravaModal.value = false
+}
+
+async function handleStravaImport(gpxData: any) {
+  try {
+    console.info(`Importing Strava activity: ${gpxData.track_name} with ${gpxData.points?.length || 0} points`)
+    
+    // Use the same logic as file upload but with GPX data from Strava
+    const actualPoints: TrackPoint[] = gpxData.points.map((p: any) => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      elevation: p.elevation,
+      time: p.time
+    }))
+
+    // CRITICAL: Process the data the same way as regular file upload
+    points.value = actualPoints
+    cumulativeKm.value = computeCumulativeKm(actualPoints)
+    cumulativeSec.value = computeCumulativeSec(actualPoints)
+    smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
+    startIndex.value = 0
+    endIndex.value = actualPoints.length - 1
+    
+    console.info(`Data processing complete: ${actualPoints.length} points processed`)
+
+    if (actualPoints.length < 2) {
+      console.error(`❌ Insufficient points: ${actualPoints.length}`)
+      showError.value = true
+      currentErrorMessage.value = t('message.insufficientPoints')
+      showUploadSuccess.value = false
+      showSegmentSuccess.value = false
+      return
+    }
+
+    // Set additional data
+    loaded.value = true
+    name.value = gpxData.track_name || 'Strava Activity'
+    
+    // CRITICAL: Set uploadedFileId for Strava imports using the real file ID from backend
+    uploadedFileId.value = gpxData.file_id || `strava-activity-${Date.now()}`
+    
+    console.info(`Editor state updated: ${points.value.length} points loaded`)
+    
+    // Clear any previous errors
+    showError.value = false
+    currentErrorMessage.value = ''
+    message.value = ''
+    showUploadSuccess.value = true
+    showSegmentSuccess.value = false
+
+    console.info(`Strava import successful`)
+
+    // Close the modal
+    closeStravaModal()
+
+    // Update the map and chart
+    await nextTick()
+    renderMap()
+    renderChart()
+  } catch (error) {
+    console.error('Error importing Strava activity:', error)
+    showError.value = true
+    currentErrorMessage.value = t('strava.importError')
+  }
+}
+
 async function onSubmit() {
   if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
+    console.error(`Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : 'no uploadedFileId'}`)
+    
     showError.value = true
     currentErrorMessage.value = t('message.loadGpxFirst')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
     return
   }
+  
+  console.log(`✅ onSubmit validation passed, proceeding with submission`)
   submitting.value = true
   showError.value = false
   currentErrorMessage.value = ''
@@ -3541,5 +3645,39 @@ async function onSubmit() {
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 90vw;
+  max-height: 90vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .modal-content {
+    max-width: 800px;
+    max-height: 600px;
+  }
 }
 </style>
