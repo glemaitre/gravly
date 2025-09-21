@@ -1,0 +1,4 @@
+# Thunderforest API Key for OpenCycleMap tiles
+# Get your free API key from: https://www.thunderforest.com/maps/opencyclemap/
+# Copy this file to .env/thunderforest and add your actual API key
+THUNDERFOREST_API_KEY=your_api_key_here

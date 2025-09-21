@@ -103,6 +103,7 @@ export default {
   navbar: {
     home: 'Accueil',
     editor: 'Éditeur',
+    routePlanner: 'Planificateur de Route',
     login: 'Connexion Strava',
     logout: 'Déconnexion'
   },
@@ -210,6 +211,24 @@ export default {
     completingLogin: 'Finalisation de la connexion...',
     redirecting: 'Redirection...',
     noGpsData: "Cette activité n'a pas de données GPS disponibles pour l'importation"
+  },
+
+  // Route Planner
+  routePlanner: {
+    planning: 'Planification de Route',
+    clearRoute: 'Effacer la Route',
+    saveRoute: 'Sauvegarder la Route',
+    loadRoute: 'Charger la Route',
+    routeInfo: 'Informations de Route',
+    distance: 'Distance',
+    duration: 'Durée',
+    elevation: 'Altitude',
+    noRoute: 'Aucune route planifiée',
+    togglePlanning: 'Basculer le Mode Planification',
+    centerMap: 'Centrer la Carte',
+    elevationProfile: 'Profil d\'Altitude',
+    routeSaved: 'Route sauvegardée avec succès',
+    noSavedRoutes: 'Aucune route sauvegardée trouvée'
   },
 
   // Common

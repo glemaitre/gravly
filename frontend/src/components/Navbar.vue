@@ -15,6 +15,10 @@
             <i class="fa-solid fa-edit"></i>
             <span>{{ $t('navbar.editor') }}</span>
           </router-link>
+          <router-link to="/route-planner" class="nav-link" active-class="active">
+            <i class="fa-solid fa-route"></i>
+            <span>{{ $t('navbar.routePlanner') }}</span>
+          </router-link>
         </div>
       </div>
 

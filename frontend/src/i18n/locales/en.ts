@@ -103,6 +103,7 @@ export default {
   navbar: {
     home: 'Home',
     editor: 'Editor',
+    routePlanner: 'Route Planner',
     login: 'Login with Strava',
     logout: 'Logout'
   },
@@ -209,6 +210,24 @@ export default {
     completingLogin: 'Completing login...',
     redirecting: 'Redirecting...',
     noGpsData: 'This activity does not have GPS data available for import'
+  },
+
+  // Route Planner
+  routePlanner: {
+    planning: 'Route Planning',
+    clearRoute: 'Clear Route',
+    saveRoute: 'Save Route',
+    loadRoute: 'Load Route',
+    routeInfo: 'Route Information',
+    distance: 'Distance',
+    duration: 'Duration',
+    elevation: 'Elevation',
+    noRoute: 'No route planned',
+    togglePlanning: 'Toggle Planning Mode',
+    centerMap: 'Center Map',
+    elevationProfile: 'Elevation Profile',
+    routeSaved: 'Route saved successfully',
+    noSavedRoutes: 'No saved routes found'
   },
 
   // Common

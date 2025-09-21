@@ -7,12 +7,18 @@ import Editor from './components/Editor.vue'
 import LandingPage from './components/LandingPage.vue'
 import SegmentDetail from './components/SegmentDetail.vue'
 import StravaCallback from './components/StravaCallback.vue'
+import RoutePlanner from './components/RoutePlanner.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: LandingPage },
   {
     path: '/editor',
     component: Editor,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/route-planner',
+    component: RoutePlanner,
     meta: { requiresAuth: true }
   },
   { path: '/segment/:id', component: SegmentDetail, props: true },

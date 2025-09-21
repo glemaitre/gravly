@@ -19,6 +19,21 @@ export default defineConfig(() => {
     console.warn('Could not load .env/strava file:', error.message)
   }
 
+  // Load env file from .env/thunderforest
+  const thunderforestEnv = {}
+  try {
+    const envPath = resolve(process.cwd(), '../.env/thunderforest')
+    const envContent = readFileSync(envPath, 'utf-8')
+    envContent.split('\n').forEach((line) => {
+      const [key, ...valueParts] = line.split('=')
+      if (key && valueParts.length > 0) {
+        thunderforestEnv[key.trim()] = valueParts.join('=').trim()
+      }
+    })
+  } catch (error) {
+    console.warn('Could not load .env/thunderforest file:', error.message)
+  }
+
   return {
     plugins: [vue()],
     server: {
@@ -56,6 +71,9 @@ export default defineConfig(() => {
       'import.meta.env.STRAVA_CLIENT_ID': JSON.stringify(stravaEnv.STRAVA_CLIENT_ID),
       'import.meta.env.STRAVA_CLIENT_SECRET': JSON.stringify(
         stravaEnv.STRAVA_CLIENT_SECRET
+      ),
+      'import.meta.env.THUNDERFOREST_API_KEY': JSON.stringify(
+        thunderforestEnv.THUNDERFOREST_API_KEY
       )
     },
     esbuild: {
