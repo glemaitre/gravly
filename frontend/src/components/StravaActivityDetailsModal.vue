@@ -125,7 +125,7 @@ import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import type { StravaActivity } from '../composables/useStravaApi'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   isVisible: boolean
@@ -169,7 +169,6 @@ const formatSpeed = (speed: number): string => {
 
 const formatDateTime = (dateString: string): string => {
   const date = new Date(dateString)
-  const { locale } = useI18n()
 
   if (locale.value === 'fr') {
     return date.toLocaleString('fr-FR', {

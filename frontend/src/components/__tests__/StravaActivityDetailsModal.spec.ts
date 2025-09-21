@@ -291,9 +291,15 @@ describe('StravaActivityDetailsModal', () => {
     it('should display section title with icon', () => {
       wrapper = createWrapper({ isVisible: true, activity: sampleActivity })
 
-      const sectionTitle = wrapper.find('.section-title')
-      expect(sectionTitle.exists()).toBe(true)
-      expect(sectionTitle.text()).toContain('Activity Stats')
+      const sectionTitles = wrapper.findAll('.section-title')
+      expect(sectionTitles.length).toBeGreaterThan(0)
+
+      // Find the stats section title (second one)
+      const statsSectionTitle = sectionTitles.find((title) =>
+        title.text().includes('Activity Stats')
+      )
+      expect(statsSectionTitle).toBeDefined()
+      expect(statsSectionTitle?.text()).toContain('Activity Stats')
     })
   })
 
@@ -310,7 +316,7 @@ describe('StravaActivityDetailsModal', () => {
 
       const gpsWarning = wrapper.find('.gps-warning')
       expect(gpsWarning.exists()).toBe(true)
-      expect(gpsWarning.text()).toContain('no GPS data')
+      expect(gpsWarning.text()).toContain('This activity does not have GPS data')
     })
   })
 
