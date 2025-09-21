@@ -266,7 +266,7 @@ async def seed_database(
 
     # Load configuration
     try:
-        db_config, storage_config = load_environment_config()
+        db_config, storage_config, strava_config = load_environment_config()
         logger.info("Configuration loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load configuration: {e}")

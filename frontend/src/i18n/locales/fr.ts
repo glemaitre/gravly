@@ -178,6 +178,7 @@ export default {
     maxSpeed: 'Vitesse Max',
     avgHeartrate: 'Fréquence Cardiaque Moy',
     activityInfo: "Informations sur l'Activité",
+    activityStats: "Statistiques de l'Activité",
     startTime: 'Heure de Début',
     totalTime: 'Temps Total',
     kudos: 'Kudos',

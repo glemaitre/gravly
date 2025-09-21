@@ -178,6 +178,7 @@ export default {
     maxSpeed: 'Max Speed',
     avgHeartrate: 'Avg Heartrate',
     activityInfo: 'Activity Information',
+    activityStats: 'Activity Stats',
     startTime: 'Start Time',
     totalTime: 'Total Time',
     kudos: 'Kudos',

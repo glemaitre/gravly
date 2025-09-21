@@ -1,163 +1,112 @@
 <template>
   <div v-if="isVisible" class="modal-overlay" @click="closeModal">
     <div class="modal-content" @click.stop>
-      <div class="modal-header">
-        <h3>{{ t('strava.activityDetails') }}</h3>
-        <button @click="closeModal" class="close-btn" :title="t('common.close')">
-          <i class="fa-solid fa-times"></i>
-        </button>
-      </div>
-
       <div v-if="activity" class="modal-body">
         <!-- Activity Header -->
         <div class="activity-header">
-          <h2 class="activity-name">{{ activity.name }}</h2>
-          <div class="activity-type-badge">
-            <i :class="getActivityTypeIcon(activity.type)"></i>
-            <span>{{ activity.type }}</span>
-          </div>
-        </div>
-
-        <!-- Activity Stats Grid -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-route"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ formatDistance(activity.distance) }}</div>
-              <div class="stat-label">{{ t('strava.distance') }}</div>
+          <div class="activity-info">
+            <h2 class="activity-name">{{ activity.name }}</h2>
+            <div class="activity-start-time">
+              {{ formatDateTime(activity.start_date_local) }}
             </div>
           </div>
 
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-clock"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ formatDuration(activity.moving_time) }}</div>
-              <div class="stat-label">{{ t('strava.movingTime') }}</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-mountain"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">
-                {{ formatElevation(activity.total_elevation_gain) }}
-              </div>
-              <div class="stat-label">{{ t('strava.elevationGain') }}</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-gauge"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ formatSpeed(activity.average_speed) }}</div>
-              <div class="stat-label">{{ t('strava.averageSpeed') }}</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-tachometer-alt"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ formatSpeed(activity.max_speed) }}</div>
-              <div class="stat-label">{{ t('strava.maxSpeed') }}</div>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-icon">
-              <i class="fa-solid fa-heart"></i>
-            </div>
-            <div class="stat-content">
-              <div class="stat-value">{{ activity.average_heartrate || 'N/A' }}</div>
-              <div class="stat-label">{{ t('strava.avgHeartrate') }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity Details -->
-        <div class="activity-details">
-          <div class="detail-section">
-            <h4>{{ t('strava.activityInfo') }}</h4>
-            <div class="detail-grid">
-              <div class="detail-item">
-                <span class="detail-label">{{ t('strava.startTime') }}:</span>
-                <span class="detail-value">{{
-                  formatDateTime(activity.start_date_local)
-                }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">{{ t('strava.totalTime') }}:</span>
-                <span class="detail-value">{{
-                  formatDuration(activity.elapsed_time)
-                }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">{{ t('strava.kudos') }}:</span>
-                <span class="detail-value">{{ activity.kudos_count }}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">{{ t('strava.comments') }}:</span>
-                <span class="detail-value">{{ activity.comment_count }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- GPS Status -->
-          <div class="detail-section">
-            <h4>{{ t('strava.gpsStatus') }}</h4>
-            <div
-              class="gps-status"
-              :class="{
-                'has-gps': activity.start_latlng,
-                'no-gps': !activity.start_latlng
-              }"
+          <!-- Import Actions -->
+          <div class="modal-actions">
+            <button
+              @click="importActivity"
+              :disabled="isImporting || !activity.start_latlng"
+              class="btn btn-primary"
             >
-              <i
-                :class="
-                  activity.start_latlng
-                    ? 'fa-solid fa-location-dot'
-                    : 'fa-solid fa-exclamation-triangle'
-                "
-              ></i>
-              <span>{{
-                activity.start_latlng
-                  ? t('strava.gpsDataAvailable')
-                  : t('strava.noGpsData')
-              }}</span>
-            </div>
+              <i v-if="isImporting" class="fa-solid fa-spinner fa-spin"></i>
+              <i v-else class="fa-solid fa-download"></i>
+              Import
+            </button>
+
+            <button @click="closeModal" class="btn btn-secondary">
+              {{ t('common.cancel') }}
+            </button>
           </div>
         </div>
 
         <!-- Map Preview -->
         <div v-if="activity.start_latlng" class="map-section">
-          <h4>{{ t('strava.routePreview') }}</h4>
+          <h4 class="section-title">
+            <i class="fa-solid fa-map-location-dot"></i>
+            {{ t('strava.routePreview') }}
+          </h4>
           <div ref="mapContainer" class="activity-map"></div>
         </div>
 
-        <!-- Import Actions -->
-        <div class="modal-actions">
-          <button
-            @click="importActivity"
-            :disabled="isImporting || !activity.start_latlng"
-            class="btn btn-primary btn-lg"
-          >
-            <i v-if="isImporting" class="fa-solid fa-spinner fa-spin"></i>
-            <i v-else class="fa-solid fa-download"></i>
-            {{ t('strava.importActivity') }}
-          </button>
+        <!-- Activity Stats Grid -->
+        <div class="stats-section">
+          <h4 class="section-title">
+            <i class="fa-solid fa-chart-line"></i>
+            {{ t('strava.activityStats') }}
+          </h4>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-route"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ formatDistance(activity.distance) }}</div>
+                <div class="stat-label">{{ t('strava.distance') }}</div>
+              </div>
+            </div>
 
-          <button @click="closeModal" class="btn btn-secondary btn-lg">
-            {{ t('common.cancel') }}
-          </button>
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ formatDuration(activity.moving_time) }}</div>
+                <div class="stat-label">{{ t('strava.movingTime') }}</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-mountain"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">
+                  {{ formatElevation(activity.total_elevation_gain) }}
+                </div>
+                <div class="stat-label">{{ t('strava.elevationGain') }}</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-gauge"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ formatSpeed(activity.average_speed) }}</div>
+                <div class="stat-label">{{ t('strava.averageSpeed') }}</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-tachometer-alt"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ formatSpeed(activity.max_speed) }}</div>
+                <div class="stat-label">{{ t('strava.maxSpeed') }}</div>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">
+                <i class="fa-solid fa-heart"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-value">{{ activity.average_heartrate || 'N/A' }}</div>
+                <div class="stat-label">{{ t('strava.avgHeartrate') }}</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- GPS Warning -->
@@ -220,7 +169,27 @@ const formatSpeed = (speed: number): string => {
 
 const formatDateTime = (dateString: string): string => {
   const date = new Date(dateString)
-  return date.toLocaleString()
+  const { locale } = useI18n()
+
+  if (locale.value === 'fr') {
+    return date.toLocaleString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+  } else {
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
 }
 
 const getActivityTypeIcon = (type: string): string => {
@@ -343,7 +312,7 @@ const createMap = async () => {
 
           // Create polyline with better styling for the modal
           const polyline = L.polyline(subsampledCoords, {
-            color: '#3b82f6',
+            color: '#f97316',
             weight: 4,
             opacity: 0.9,
             lineCap: 'round',
@@ -464,6 +433,19 @@ watch(
 onUnmounted(() => {
   destroyMap()
 })
+
+// Expose methods for testing
+defineExpose({
+  formatDistance,
+  formatDuration,
+  formatElevation,
+  formatSpeed,
+  formatDateTime,
+  getActivityTypeIcon,
+  decodePolyline,
+  subsampleCoordinates,
+  createMap
+})
 </script>
 
 <style scoped>
@@ -486,40 +468,9 @@ onUnmounted(() => {
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
-  max-height: 90vh;
+  height: 80vh;
   overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: #6b7280;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
 }
 
 .modal-body {
@@ -534,53 +485,68 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.activity-name {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: #1f2937;
+.activity-info {
   flex: 1;
 }
 
-.activity-type-badge {
+.activity-name {
+  margin: 0 0 4px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.activity-start-time {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.stats-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #3b82f6;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.9rem;
+}
+
+.section-title i {
+  color: #f97316;
+  font-size: 1rem;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
-  margin-bottom: 32px;
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 12px;
   background: #f8fafc;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
 }
 
 .stat-icon {
-  width: 40px;
-  height: 40px;
-  background: #3b82f6;
+  width: 36px;
+  height: 36px;
+  background: #f97316;
   color: white;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .stat-content {
@@ -588,86 +554,20 @@ onUnmounted(() => {
 }
 
 .stat-value {
-  font-size: 1.25rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1f2937;
   margin-bottom: 2px;
 }
 
 .stat-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
   font-weight: 500;
-}
-
-.activity-details {
-  margin-bottom: 32px;
-}
-
-.detail-section {
-  margin-bottom: 24px;
-}
-
-.detail-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 12px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.detail-label {
-  font-weight: 500;
-  color: #6b7280;
-}
-
-.detail-value {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.gps-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.gps-status.has-gps {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.gps-status.no-gps {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
 }
 
 .map-section {
   margin-bottom: 32px;
-}
-
-.map-section h4 {
-  margin: 0 0 12px 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #1f2937;
 }
 
 .activity-map {
@@ -679,36 +579,31 @@ onUnmounted(() => {
 
 .modal-actions {
   display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-bottom: 16px;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .btn {
-  padding: 12px 24px;
+  padding: 8px 16px;
   border-radius: 8px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.8rem;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.btn-lg {
-  padding: 16px 32px;
-  font-size: 1.1rem;
+  gap: 6px;
 }
 
 .btn-primary {
-  background: #3b82f6;
+  background: #f97316;
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: #ea580c;
 }
 
 .btn-primary:disabled {
@@ -737,7 +632,7 @@ onUnmounted(() => {
 }
 
 .gps-warning i {
-  font-size: 1.2rem;
+  font-size: 1rem;
 }
 
 .gps-warning p {
@@ -748,7 +643,7 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .modal-content {
     margin: 10px;
-    max-height: 95vh;
+    height: 80vh;
   }
 
   .modal-header {
@@ -759,17 +654,19 @@ onUnmounted(() => {
     padding: 20px;
   }
 
-  .activity-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .stats-grid {
     grid-template-columns: 1fr;
   }
 
-  .modal-actions {
+  .activity-header {
     flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .modal-actions {
+    align-items: flex-start;
+    width: auto;
   }
 }
 </style>
