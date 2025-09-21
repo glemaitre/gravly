@@ -340,15 +340,17 @@ describe('useStravaActivities', () => {
 
   describe('loadMoreActivities', () => {
     beforeEach(() => {
-      // Set up some existing activities
+      // Set up some existing activities and pagination state
       composable.activities.value = sampleActivities.slice(0, 1)
+      composable.currentPage.value = 1
+      composable.perPage.value = 30
     })
 
-    it('should append new activities to existing ones', async () => {
+    it('should append new activities to existing ones and update pagination', async () => {
       const moreActivities = sampleActivities.slice(1, 3)
       mockStravaApi.getActivities.mockResolvedValue(moreActivities)
 
-      await composable.loadMoreActivities(2)
+      await composable.loadMoreActivities()
 
       expect(mockStravaApi.getActivities).toHaveBeenCalledWith(2, 30)
       expect(composable.activities.value).toHaveLength(3)
@@ -356,15 +358,31 @@ describe('useStravaActivities', () => {
         ...sampleActivities.slice(0, 1),
         ...moreActivities
       ])
-      expect(mockConsole.info).toHaveBeenCalledWith('Loaded 2 more activities')
+      expect(composable.currentPage.value).toBe(2)
+      expect(mockConsole.info).toHaveBeenCalledWith('Loaded 2 more activities (page 2)')
     })
 
-    it('should use default page parameter', async () => {
-      mockStravaApi.getActivities.mockResolvedValue([])
+    it('should set hasMore to false when fewer activities than perPage are returned', async () => {
+      const moreActivities = sampleActivities.slice(1, 2) // Only 1 activity, less than perPage (30)
+      mockStravaApi.getActivities.mockResolvedValue(moreActivities)
 
       await composable.loadMoreActivities()
 
-      expect(mockStravaApi.getActivities).toHaveBeenCalledWith(1, 30)
+      expect(composable.hasMore.value).toBe(false)
+    })
+
+    it('should set hasMore to true when full page of activities is returned', async () => {
+      // Create a full page of activities (30 items)
+      const fullPageActivities = Array.from({ length: 30 }, (_, i) => ({
+        ...sampleActivities[0],
+        id: `activity-${i + 2}`,
+        name: `Activity ${i + 2}`
+      }))
+      mockStravaApi.getActivities.mockResolvedValue(fullPageActivities)
+
+      await composable.loadMoreActivities()
+
+      expect(composable.hasMore.value).toBe(true)
     })
 
     it('should handle API errors', async () => {
@@ -382,28 +400,34 @@ describe('useStravaActivities', () => {
 
     it('should not affect existing activities on error', async () => {
       const initialActivities = composable.activities.value
+      const initialPage = composable.currentPage.value
       mockStravaApi.getActivities.mockRejectedValue(new Error('API Error'))
 
       await expect(composable.loadMoreActivities()).rejects.toThrow()
 
       expect(composable.activities.value).toEqual(initialActivities)
+      expect(composable.currentPage.value).toBe(initialPage)
     })
   })
 
   describe('refreshActivities', () => {
     beforeEach(() => {
-      // Set up some existing activities and error
+      // Set up some existing activities, error, and pagination state
       composable.activities.value = sampleActivities
       composable.error.value = 'Some error'
+      composable.currentPage.value = 3
+      composable.hasMore.value = true
     })
 
-    it('should clear activities and reload', async () => {
+    it('should clear activities, reset pagination, and reload', async () => {
       mockStravaApi.getActivities.mockResolvedValue(sampleActivities.slice(0, 2))
 
       await composable.refreshActivities()
 
       expect(composable.activities.value).toEqual(sampleActivities.slice(0, 2))
       expect(mockStravaApi.getActivities).toHaveBeenCalledWith(1, 30)
+      expect(composable.currentPage.value).toBe(1)
+      expect(composable.hasMore.value).toBe(false)
     })
 
     it('should handle errors during refresh', async () => {
@@ -413,6 +437,8 @@ describe('useStravaActivities', () => {
       await expect(composable.refreshActivities()).rejects.toThrow('Refresh failed')
 
       expect(composable.activities.value).toEqual([]) // Should still be cleared
+      expect(composable.currentPage.value).toBe(1)
+      expect(composable.hasMore.value).toBe(false)
       expect(composable.error.value).toBe('Refresh failed')
     })
   })
@@ -421,13 +447,17 @@ describe('useStravaActivities', () => {
     beforeEach(() => {
       composable.activities.value = sampleActivities
       composable.error.value = 'Some error'
+      composable.currentPage.value = 3
+      composable.hasMore.value = true
     })
 
-    it('should clear activities and error', () => {
+    it('should clear activities, error, and reset pagination', () => {
       composable.clearActivities()
 
       expect(composable.activities.value).toEqual([])
       expect(composable.error.value).toBe(null)
+      expect(composable.currentPage.value).toBe(1)
+      expect(composable.hasMore.value).toBe(false)
     })
   })
 
@@ -532,7 +562,7 @@ describe('useStravaActivities', () => {
 
       // Then load more activities
       mockStravaApi.getActivities.mockResolvedValue(sampleActivities.slice(2, 3))
-      await composable.loadMoreActivities(2)
+      await composable.loadMoreActivities()
 
       expect(composable.activities.value).toHaveLength(3)
       expect(composable.filteredActivities.value).toHaveLength(2) // Only cycling activities
@@ -561,6 +591,9 @@ describe('useStravaActivities', () => {
       expect(composable).toHaveProperty('activities')
       expect(composable).toHaveProperty('isLoading')
       expect(composable).toHaveProperty('error')
+      expect(composable).toHaveProperty('hasMore')
+      expect(composable).toHaveProperty('currentPage')
+      expect(composable).toHaveProperty('perPage')
       expect(composable).toHaveProperty('filteredActivities')
       expect(composable).toHaveProperty('loadActivities')
       expect(composable).toHaveProperty('loadMoreActivities')

@@ -294,6 +294,21 @@ describe('StravaActivityList', () => {
       expect(activityCard.text()).toContain('100 m') // Elevation
     })
 
+    it('should display calendar icon with activity date', async () => {
+      mockStravaActivities.activities.value = [sampleActivities[0]]
+      mockStravaActivities.isLoading.value = false
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      const activityDate = wrapper.find('.activity-date')
+      expect(activityDate.exists()).toBe(true)
+
+      // Check for calendar icon (stubbed as fa-solid)
+      const calendarIcon = activityDate.find('i.fa-solid.fa-calendar')
+      expect(calendarIcon.exists()).toBe(true)
+    })
+
     it('should show GPS indicator for activities with GPS data', async () => {
       mockStravaActivities.activities.value = [sampleActivities[0]]
       mockStravaActivities.isLoading.value = false
@@ -387,7 +402,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const loadMoreButton = wrapper.find('.load-more .btn-primary')
+      const loadMoreButton = wrapper.find('.load-more .btn-load-more')
       expect(loadMoreButton.exists()).toBe(true)
       expect(loadMoreButton.text()).toContain('Load More')
     })
@@ -400,7 +415,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const loadMoreButton = wrapper.find('.load-more .btn-primary')
+      const loadMoreButton = wrapper.find('.load-more .btn-load-more')
       await loadMoreButton.trigger('click')
 
       expect(mockStravaActivities.loadMoreActivities).toHaveBeenCalled()
@@ -414,7 +429,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const loadMoreButton = wrapper.find('.load-more .btn-primary')
+      const loadMoreButton = wrapper.find('.load-more .btn-load-more')
       expect(loadMoreButton.attributes('disabled')).toBeDefined()
     })
   })
@@ -444,11 +459,40 @@ describe('StravaActivityList', () => {
       expect(wrapper.vm.formatElevation(999.9)).toBe('1000 m')
     })
 
-    it('should format date correctly', () => {
+    it('should format date correctly with long month names', () => {
       wrapper = createWrapper()
 
       const formattedDate = wrapper.vm.formatDate('2024-01-01T11:00:00Z')
-      expect(formattedDate).toMatch(/\d+\/\d+\/\d+/) // Should match date format
+      expect(formattedDate).toMatch(/January \d+, \d{4}/) // Should match long month format
+    })
+
+    it('should format date in French when locale is French', () => {
+      // Create wrapper with French locale
+      const frenchI18n = createI18n({
+        legacy: false,
+        locale: 'fr',
+        fallbackLocale: 'en',
+        messages: { en, fr }
+      })
+
+      const frenchWrapper = mount(StravaActivityList, {
+        global: {
+          plugins: [frenchI18n],
+          stubs: {
+            'fa-solid': true,
+            StravaActivityDetailsModal: {
+              template: '<div class="modal-stub"></div>',
+              props: ['isVisible', 'activity', 'isImporting'],
+              emits: ['close', 'import']
+            }
+          }
+        }
+      })
+
+      const formattedDate = frenchWrapper.vm.formatDate('2024-01-01T11:00:00Z')
+      expect(formattedDate).toMatch(/\d+ janvier \d{4}/) // Should match French month format
+
+      frenchWrapper.unmount()
     })
   })
 
@@ -573,6 +617,47 @@ describe('StravaActivityList', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(mockStravaActivities.loadActivities).toHaveBeenCalled()
+    })
+
+    it('should create minimaps for newly loaded activities via watch', async () => {
+      // Start with some activities
+      mockStravaActivities.activities.value = [sampleActivities[0]]
+      mockStravaActivities.isLoading.value = false
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      // Verify initial minimap exists
+      expect(wrapper.find('#map-1').exists()).toBe(true)
+
+      // Add more activities (simulating load more) - only use activities that exist
+      mockStravaActivities.activities.value = [...sampleActivities.slice(0, 2)]
+
+      // Wait for Vue to process the change and trigger the watch
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100)) // Allow time for retry logic
+
+      // Check that minimap containers exist for all activities
+      expect(wrapper.find('#map-1').exists()).toBe(true)
+      expect(wrapper.find('#map-2').exists()).toBe(true)
+    })
+
+    it('should handle multiple pagination loads correctly', async () => {
+      // Start with one activity
+      mockStravaActivities.activities.value = [sampleActivities[0]]
+      mockStravaActivities.isLoading.value = false
+
+      wrapper = createWrapper()
+      await wrapper.vm.$nextTick()
+
+      // First load more - add the second activity
+      mockStravaActivities.activities.value = [...sampleActivities.slice(0, 2)]
+      await wrapper.vm.$nextTick()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      // Check that both minimap containers exist
+      expect(wrapper.find('#map-1').exists()).toBe(true)
+      expect(wrapper.find('#map-2').exists()).toBe(true)
     })
   })
 

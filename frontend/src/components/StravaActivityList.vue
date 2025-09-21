@@ -22,17 +22,17 @@
     </div>
 
     <div v-if="error" class="error-message">
-      <i class="fa-solid fa-exclamation-triangle"></i>
+      <i class="fa-solid fa-exclamation-triangle" style="color: #f97316"></i>
       {{ error }}
     </div>
 
     <div v-if="isLoading && activities.length === 0" class="loading">
-      <i class="fa-solid fa-spinner fa-spin"></i>
+      <i class="fa-solid fa-spinner fa-spin" style="color: #f97316"></i>
       {{ t('strava.loadingActivities') }}
     </div>
 
     <div v-else-if="activities.length === 0" class="empty-state">
-      <i class="fa-solid fa-bicycle"></i>
+      <i class="fa-solid fa-bicycle" style="color: #f97316"></i>
       <p>{{ t('strava.noActivities') }}</p>
     </div>
 
@@ -49,22 +49,26 @@
             <h4 class="activity-name">{{ activity.name }}</h4>
             <div class="activity-stats">
               <div class="stat">
-                <i class="fa-solid fa-route"></i>
+                <i class="fa-solid fa-route" style="color: #f97316"></i>
                 <span>{{ formatDistance(activity.distance) }}</span>
               </div>
               <div class="stat">
-                <i class="fa-solid fa-clock"></i>
+                <i class="fa-solid fa-clock" style="color: #f97316"></i>
                 <span>{{ formatDuration(activity.moving_time) }}</span>
               </div>
               <div class="stat">
-                <i class="fa-solid fa-mountain"></i>
+                <i class="fa-solid fa-mountain" style="color: #f97316"></i>
                 <span>{{ formatElevation(activity.total_elevation_gain) }}</span>
               </div>
             </div>
             <div class="activity-meta">
-              <span class="activity-date">{{
-                formatDate(activity.start_date_local)
-              }}</span>
+              <span class="activity-date">
+                <i
+                  class="fa-solid fa-calendar"
+                  style="color: #f97316; margin-right: 0.25rem"
+                ></i>
+                {{ formatDate(activity.start_date_local) }}
+              </span>
               <div class="activity-type-badge">
                 <span class="activity-type">{{ activity.type }}</span>
                 <span
@@ -72,7 +76,7 @@
                   class="gps-indicator"
                   title="GPS data available"
                 >
-                  <i class="fa-solid fa-location-dot"></i>
+                  <i class="fa-solid fa-location-dot" style="color: #f97316"></i>
                 </span>
               </div>
             </div>
@@ -80,7 +84,7 @@
           <div class="activity-map">
             <div ref="mapContainer" :id="`map-${activity.id}`" class="mini-map"></div>
             <div v-if="!activity.start_latlng" class="no-gps-warning">
-              <i class="fa-solid fa-exclamation-triangle"></i>
+              <i class="fa-solid fa-exclamation-triangle" style="color: #f97316"></i>
               <span>{{ t('strava.noGpsData') }}</span>
             </div>
           </div>
@@ -91,7 +95,7 @@
         <button
           @click="() => loadMoreActivities()"
           :disabled="isLoading"
-          class="btn btn-primary"
+          class="btn btn-load-more"
         >
           <i v-if="isLoading" class="fa-solid fa-spinner fa-spin"></i>
           <i v-else class="fa-solid fa-plus"></i>
@@ -112,14 +116,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import { useStravaActivities } from '../composables/useStravaActivities'
 import type { StravaActivity } from '../composables/useStravaApi'
 import StravaActivityDetailsModal from './StravaActivityDetailsModal.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const {
   activities,
   isLoading,
@@ -208,7 +212,7 @@ const createMiniMap = async (activity: StravaActivity, containerId: string) => {
 
           // Create polyline
           const polyline = L.polyline(subsampledCoords, {
-            color: '#3b82f6',
+            color: '#f97316',
             weight: 3,
             opacity: 0.8
           }).addTo(map)
@@ -299,7 +303,12 @@ const formatElevation = (meters: number): string => {
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString)
-  return date.toLocaleDateString()
+  const currentLocale = locale.value === 'fr' ? 'fr-FR' : 'en-US'
+  return date.toLocaleDateString(currentLocale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 // Decode Google Polyline encoded string to coordinates
@@ -372,12 +381,55 @@ onMounted(async () => {
   // Create mini maps after activities are loaded
   await nextTick()
   activities.value.forEach((activity) => {
-    createMiniMap(activity, `map-${activity.id}`)
+    if (activity && activity.id) {
+      createMiniMap(activity, `map-${activity.id}`)
+    }
   })
 })
 
+// Watch for new activities and create minimaps for them
+watch(
+  activities,
+  async (newActivities, oldActivities) => {
+    if (newActivities && newActivities.length > (oldActivities?.length || 0)) {
+      await nextTick()
+      // Create minimaps for newly added activities
+      const newlyAddedActivities = newActivities.slice(oldActivities?.length || 0)
+
+      // Use a more reliable approach with retry logic
+      const createMapsWithRetry = (retries = 3) => {
+        newlyAddedActivities.forEach((activity) => {
+          if (activity && activity.id) {
+            const containerId = `map-${activity.id}`
+            const container = document.getElementById(containerId)
+
+            if (container) {
+              // Container exists, create the map
+              createMiniMap(activity, containerId)
+            } else if (retries > 0) {
+              // Container doesn't exist yet, retry after a short delay
+              setTimeout(() => createMapsWithRetry(retries - 1), 50)
+            }
+          }
+        })
+      }
+
+      createMapsWithRetry()
+    }
+  },
+  { deep: true }
+)
+
 onUnmounted(() => {
   destroyMaps()
+})
+
+// Expose functions for testing
+defineExpose({
+  formatDate,
+  formatDistance,
+  formatDuration,
+  formatElevation
 })
 </script>
 
@@ -609,5 +661,20 @@ onUnmounted(() => {
 .btn-sm {
   padding: 0.375rem 0.75rem;
   font-size: 0.75rem;
+}
+
+.btn-load-more {
+  background: #f97316;
+  color: white;
+  border: none;
+}
+
+.btn-load-more:hover:not(:disabled) {
+  background: #ea580c;
+}
+
+.btn-load-more:disabled {
+  background: #fb923c;
+  opacity: 0.7;
 }
 </style>

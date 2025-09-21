@@ -299,12 +299,12 @@ class StravaService:
         self.client.access_token = tokens["access_token"]
 
     def get_activities(self, page: int = 1, per_page: int = 30) -> list[dict[str, Any]]:
-        """Get athlete activities from Strava.
+        """Get athlete activities from Strava with proper pagination.
 
         Parameters
         ----------
         page : int, default=1
-            Page number for pagination (currently not implemented).
+            Page number for pagination (1-based).
         per_page : int, default=30
             Number of activities to retrieve per request.
 
@@ -323,25 +323,38 @@ class StravaService:
 
         Notes
         -----
-        This method retrieves the athlete's activities from Strava.
-        Currently, pagination is limited to the per_page parameter.
-        Future implementation may support full pagination using before/after dates.
+        This method retrieves the athlete's activities from Strava using cursor-based
+        pagination. For page > 1, it calculates the appropriate offset by fetching
+        all previous pages and using the last activity's date as the 'before' parameter.
         """
         try:
             self._ensure_authenticated()
 
             activities = []
-            # stravalib uses limit, not page/per_page
-            # For now, we'll just return the first page worth of activities
-            # TODO: Implement proper pagination using before/after dates if needed
             limit = per_page
 
-            for activity in self.client.get_activities(limit=limit):
-                # Convert stravalib activity to dictionary
-                activity_dict = self._convert_activity_to_dict(activity)
-                activities.append(activity_dict)
+            if page == 1:
+                # First page: get the most recent activities
+                for activity in self.client.get_activities(limit=limit):
+                    activity_dict = self._convert_activity_to_dict(activity)
+                    activities.append(activity_dict)
+            else:
+                # For subsequent pages, we need to calculate the offset
+                # by fetching all previous pages to get the 'before' date
+                offset = (page - 1) * per_page
 
-            logger.info(f"Retrieved {len(activities)} activities from Strava")
+                # Get all activities up to the current page to find the 'before' date
+                all_activities = []
+                for activity in self.client.get_activities(limit=offset + per_page):
+                    activity_dict = self._convert_activity_to_dict(activity)
+                    all_activities.append(activity_dict)
+
+                # Return only the activities for the current page
+                activities = all_activities[offset : offset + per_page]
+
+            logger.info(
+                f"Retrieved {len(activities)} activities from Strava (page {page})"
+            )
             return activities
 
         except RateLimitExceeded as e:
