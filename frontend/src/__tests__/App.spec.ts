@@ -40,7 +40,17 @@ const i18n = createI18n({
 describe('App', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorageMock.getItem.mockReturnValue('en')
+    // Mock localStorage.getItem to return appropriate values for different keys
+    localStorageMock.getItem.mockImplementation((key: string) => {
+      switch (key) {
+        case 'cycling-editor-lang':
+          return 'en'
+        case 'strava_auth':
+          return null // No Strava auth in tests
+        default:
+          return null
+      }
+    })
   })
 
   afterEach(() => {
@@ -191,7 +201,16 @@ describe('App', () => {
   })
 
   it('loads saved language from localStorage on mount', () => {
-    localStorageMock.getItem.mockReturnValue('fr')
+    // Override the mock for this specific test
+    localStorageMock.getItem.mockImplementation((key: string) => {
+      if (key === 'cycling-editor-lang') {
+        return 'fr'
+      }
+      if (key === 'strava_auth') {
+        return null // No Strava auth in tests
+      }
+      return null
+    })
 
     const wrapper = mount(App, {
       global: {
@@ -204,7 +223,8 @@ describe('App', () => {
   })
 
   it('handles missing localStorage gracefully', () => {
-    localStorageMock.getItem.mockReturnValue(null)
+    // Override the mock to return null for all keys
+    localStorageMock.getItem.mockImplementation(() => null)
 
     const wrapper = mount(App, {
       global: {

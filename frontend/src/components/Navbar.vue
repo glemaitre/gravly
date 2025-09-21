@@ -31,16 +31,16 @@
             <i class="fab fa-strava"></i>
             <span>{{ $t('navbar.login') }}</span>
           </button>
-          
+
           <div v-else class="strava-user-dropdown" ref="userDropdown">
             <button
               class="strava-user-btn navbar-btn"
               @click="toggleUserDropdown"
               :class="{ active: userDropdownOpen }"
             >
-              <img 
-                v-if="athlete?.profile_medium" 
-                :src="athlete.profile_medium" 
+              <img
+                v-if="athlete?.profile_medium"
+                :src="athlete.profile_medium"
                 :alt="athlete.firstname"
                 class="user-avatar"
               />
@@ -53,7 +53,7 @@
                 ></i>
               </span>
             </button>
-            
+
             <div
               class="user-dropdown-menu navbar-menu"
               :class="{ open: userDropdownOpen }"
@@ -135,12 +135,12 @@ const router = useRouter()
 const currentLanguage = ref<MessageLanguages>('en')
 
 // Strava authentication
-const { 
-  authState, 
-  isLoading, 
-  isAuthenticated: isAuthenticatedFn, 
-  getAuthUrl, 
-  clearAuth 
+const {
+  authState,
+  isLoading,
+  isAuthenticated: isAuthenticatedFn,
+  getAuthUrl,
+  clearAuth
 } = useStravaApi()
 
 // Computed properties for authentication
@@ -230,7 +230,7 @@ async function handleStravaLogin() {
     // Store the current route so we can redirect back after authentication
     const currentRoute = router.currentRoute.value.fullPath
     const authUrl = await getAuthUrl(currentRoute)
-    
+
     window.location.href = authUrl
   } catch (error) {
     console.error('Failed to get Strava auth URL:', error)
