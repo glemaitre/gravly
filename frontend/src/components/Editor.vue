@@ -730,7 +730,7 @@
     <!-- Strava Import Modal -->
     <div v-if="showStravaModal" class="modal-overlay" @click="closeStravaModal">
       <div class="modal-content" @click.stop>
-        <StravaActivityList 
+        <StravaActivityList
           @close="closeStravaModal"
           @import="handleStravaImport"
         />
@@ -1788,7 +1788,7 @@ function closeStravaModal() {
 async function handleStravaImport(gpxData: any) {
   try {
     console.info(`Importing Strava activity: ${gpxData.track_name} with ${gpxData.points?.length || 0} points`)
-    
+
     // Use the same logic as file upload but with GPX data from Strava
     const actualPoints: TrackPoint[] = gpxData.points.map((p: any) => ({
       latitude: p.latitude,
@@ -1804,7 +1804,7 @@ async function handleStravaImport(gpxData: any) {
     smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
     startIndex.value = 0
     endIndex.value = actualPoints.length - 1
-    
+
     console.info(`Data processing complete: ${actualPoints.length} points processed`)
 
     if (actualPoints.length < 2) {
@@ -1819,12 +1819,12 @@ async function handleStravaImport(gpxData: any) {
     // Set additional data
     loaded.value = true
     name.value = gpxData.track_name || 'Strava Activity'
-    
+
     // CRITICAL: Set uploadedFileId for Strava imports using the real file ID from backend
     uploadedFileId.value = gpxData.file_id || `strava-activity-${Date.now()}`
-    
+
     console.info(`Editor state updated: ${points.value.length} points loaded`)
-    
+
     // Clear any previous errors
     showError.value = false
     currentErrorMessage.value = ''
@@ -1851,15 +1851,14 @@ async function handleStravaImport(gpxData: any) {
 async function onSubmit() {
   if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
     console.error(`Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : 'no uploadedFileId'}`)
-    
+
     showError.value = true
     currentErrorMessage.value = t('message.loadGpxFirst')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
     return
   }
-  
-  console.log(`✅ onSubmit validation passed, proceeding with submission`)
+
   submitting.value = true
   showError.value = false
   currentErrorMessage.value = ''

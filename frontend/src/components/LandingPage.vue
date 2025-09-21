@@ -276,21 +276,17 @@ function initializeMap() {
 
   // Listen to multiple events to ensure we catch all map movements
   map.on('moveend', () => {
-    console.log('🗺️ Event: moveend')
     handleMapMoveEnd()
   })
   map.on('dragend', () => {
-    console.log('🗺️ Event: dragend')
     handleMapMoveEnd()
   }) // Additional event for panning
   map.on('viewreset', () => {
-    console.log('🗺️ Event: viewreset')
     handleMapMoveEnd()
   }) // Additional event for view changes
 
   // Add zoom event listener to update circle sizes and segment cards
   map.on('zoomend', () => {
-    console.log('🗺️ Event: zoomend')
     updateCircleSizes()
     // Update segment cards for current view (may trigger search if bounds expanded)
     handleMapMoveEnd()
