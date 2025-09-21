@@ -27,7 +27,9 @@
               <li
                 class="menu-item"
                 @click="openStravaImport"
-                :title="isCompactSidebar ? t('menu.stravaImport') : t('strava.selectActivity')"
+                :title="
+                  isCompactSidebar ? t('menu.stravaImport') : t('strava.selectActivity')
+                "
                 role="button"
               >
                 <span class="icon" aria-hidden="true"
@@ -730,10 +732,7 @@
     <!-- Strava Import Modal -->
     <div v-if="showStravaModal" class="modal-overlay" @click="closeStravaModal">
       <div class="modal-content" @click.stop>
-        <StravaActivityList
-          @close="closeStravaModal"
-          @import="handleStravaImport"
-        />
+        <StravaActivityList @close="closeStravaModal" @import="handleStravaImport" />
       </div>
     </div>
   </div>
@@ -1787,7 +1786,9 @@ function closeStravaModal() {
 
 async function handleStravaImport(gpxData: any) {
   try {
-    console.info(`Importing Strava activity: ${gpxData.track_name} with ${gpxData.points?.length || 0} points`)
+    console.info(
+      `Importing Strava activity: ${gpxData.track_name} with ${gpxData.points?.length || 0} points`
+    )
 
     // Use the same logic as file upload but with GPX data from Strava
     const actualPoints: TrackPoint[] = gpxData.points.map((p: any) => ({
@@ -1850,7 +1851,9 @@ async function handleStravaImport(gpxData: any) {
 
 async function onSubmit() {
   if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
-    console.error(`Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : 'no uploadedFileId'}`)
+    console.error(
+      `Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : 'no uploadedFileId'}`
+    )
 
     showError.value = true
     currentErrorMessage.value = t('message.loadGpxFirst')
@@ -3664,7 +3667,9 @@ async function onSubmit() {
 .modal-content {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   max-width: 90vw;
   max-height: 90vh;
   width: 100%;

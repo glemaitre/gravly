@@ -17,20 +17,20 @@ def mock_strava_config(tmp_path):
     return StravaConfig(
         client_id="12345",  # Use numeric string that can be converted to int
         client_secret="test_client_secret",
-        tokens_file_path=str(tokens_file)
+        tokens_file_path=str(tokens_file),
     )
 
 
 @pytest.fixture
 def strava_service(mock_strava_config):
     """Create a StravaService instance for testing."""
-    with patch('backend.src.services.strava.Client'):
+    with patch("backend.src.services.strava.Client"):
         return StravaService(mock_strava_config)
 
 
 def test_strava_service_initialization(mock_strava_config):
     """Test StravaService initialization with secure configuration."""
-    with patch('backend.src.services.strava.Client'):
+    with patch("backend.src.services.strava.Client"):
         service = StravaService(mock_strava_config)
 
         assert service.client_id == 12345  # Should be converted to int
@@ -50,13 +50,13 @@ def test_load_tokens_file_exists(strava_service, tmp_path):
     test_tokens = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
-        "expires_at": 1234567890
+        "expires_at": 1234567890,
     }
 
     tokens_file = Path(strava_service.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     tokens = strava_service._load_tokens()
@@ -69,7 +69,7 @@ def test_load_tokens_invalid_json(strava_service, tmp_path):
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
     # Write invalid JSON
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         f.write("invalid json")
 
     tokens = strava_service._load_tokens()
@@ -81,7 +81,7 @@ def test_save_tokens(strava_service, tmp_path):
     test_tokens = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
-        "expires_at": 1234567890
+        "expires_at": 1234567890,
     }
 
     tokens_file = Path(strava_service.tokens_file)
@@ -99,22 +99,23 @@ def test_save_tokens(strava_service, tmp_path):
 
 def test_refresh_access_token_success(strava_service):
     """Test successful token refresh."""
-    with patch.object(strava_service, '_load_tokens') as mock_load, \
-         patch.object(strava_service, '_save_tokens') as mock_save, \
-         patch.object(strava_service.client, 'refresh_access_token') as mock_refresh:
-
+    with (
+        patch.object(strava_service, "_load_tokens") as mock_load,
+        patch.object(strava_service, "_save_tokens") as mock_save,
+        patch.object(strava_service.client, "refresh_access_token") as mock_refresh,
+    ):
         # Mock expired tokens
         mock_load.return_value = {
             "access_token": "old_token",
             "refresh_token": "refresh_token",
-            "expires_at": 1234567890
+            "expires_at": 1234567890,
         }
 
         # Mock successful refresh
         mock_refresh.return_value = {
             "access_token": "new_token",
             "refresh_token": "new_refresh_token",
-            "expires_at": 9999999999
+            "expires_at": 9999999999,
         }
 
         result = strava_service.refresh_access_token()
@@ -123,21 +124,22 @@ def test_refresh_access_token_success(strava_service):
         mock_refresh.assert_called_once_with(
             client_id=12345,  # Should be converted to int
             client_secret=strava_service.client_secret,
-            refresh_token="refresh_token"
+            refresh_token="refresh_token",
         )
         mock_save.assert_called_once()
 
 
 def test_refresh_access_token_failure(strava_service):
     """Test token refresh failure."""
-    with patch.object(strava_service, '_load_tokens') as mock_load, \
-         patch.object(strava_service.client, 'refresh_access_token') as mock_refresh:
-
+    with (
+        patch.object(strava_service, "_load_tokens") as mock_load,
+        patch.object(strava_service.client, "refresh_access_token") as mock_refresh,
+    ):
         # Mock expired tokens
         mock_load.return_value = {
             "access_token": "old_token",
             "refresh_token": "refresh_token",
-            "expires_at": 1234567890
+            "expires_at": 1234567890,
         }
 
         # Mock refresh failure
@@ -148,7 +150,7 @@ def test_refresh_access_token_failure(strava_service):
         assert result is False
 
 
-@patch('backend.src.services.strava.Client')
+@patch("backend.src.services.strava.Client")
 def test_get_authorization_url(mock_client_class):
     """Test getting authorization URL."""
     mock_client = Mock()
@@ -158,7 +160,7 @@ def test_get_authorization_url(mock_client_class):
     config = StravaConfig(
         client_id="12345",  # Use numeric string that can be converted to int
         client_secret="test_secret",
-        tokens_file_path="/tmp/test.json"
+        tokens_file_path="/tmp/test.json",
     )
 
     service = StravaService(config)
@@ -170,7 +172,7 @@ def test_get_authorization_url(mock_client_class):
         client_id=12345,  # Should be converted to int
         redirect_uri="test_redirect_uri",
         scope=["activity:read_all"],
-        state="strava_auth"
+        state="strava_auth",
     )
 
 
@@ -187,15 +189,12 @@ def test_ensure_authenticated_no_access_token(strava_service, tmp_path):
     from stravalib.exc import AccessUnauthorized
 
     # Save tokens without access_token
-    test_tokens = {
-        "refresh_token": "test_refresh_token",
-        "expires_at": 1234567890
-    }
+    test_tokens = {"refresh_token": "test_refresh_token", "expires_at": 1234567890}
 
     tokens_file = Path(strava_service.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     with pytest.raises(AccessUnauthorized, match="No access token available"):
@@ -210,10 +209,7 @@ def test_construct_gpx_no_latlng_stream(strava_service):
     mock_activity.start_date = "2023-01-01T10:00:00Z"
 
     # Mock streams without latlng data
-    mock_streams = {
-        "altitude": {"data": [10.0, 15.0]},
-        "time": {"data": [0, 60]}
-    }
+    mock_streams = {"altitude": {"data": [10.0, 15.0]}, "time": {"data": [0, 60]}}
 
     result = strava_service._construct_gpx_from_streams(mock_activity, mock_streams)
 
@@ -226,6 +222,7 @@ def test_construct_gpx_success(strava_service):
     mock_activity = Mock()
     mock_activity.name = "Test Activity"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     # Mock streams with valid data - need to mock the stream objects properly
@@ -241,13 +238,13 @@ def test_construct_gpx_success(strava_service):
     mock_streams = {
         "latlng": mock_latlng_stream,
         "altitude": mock_altitude_stream,
-        "time": mock_time_stream
+        "time": mock_time_stream,
     }
 
     result = strava_service._construct_gpx_from_streams(mock_activity, mock_streams)
 
     assert result is not None
-    assert result.startswith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+    assert result.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     assert "<gpx" in result
     assert "<trk>" in result
     assert "<trkpt" in result
@@ -263,7 +260,7 @@ def strava_config_alt(tmp_path):
     return StravaConfig(
         client_id="12345",
         client_secret="test_client_secret",
-        tokens_file_path=str(tokens_file)
+        tokens_file_path=str(tokens_file),
     )
 
 
@@ -289,13 +286,13 @@ def test_get_activities_with_unit_mocks(strava_service_alt):
     test_tokens = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
-        "expires_at": 9999999999  # Far in the future
+        "expires_at": 9999999999,  # Far in the future
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client methods
@@ -311,6 +308,7 @@ def test_get_activities_with_unit_mocks(strava_service_alt):
     mock_activity.type = "Ride"
 
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
     mock_activity.start_date_local = datetime(2023, 1, 1, 11, 0, 0)
     mock_activity.timezone = "UTC"
@@ -348,7 +346,7 @@ def test_get_activities_with_unit_mocks(strava_service_alt):
     mock_activity.suffer_score = None
 
     with patch.object(
-        strava_service_alt.client, 'get_activities'
+        strava_service_alt.client, "get_activities"
     ) as mock_get_activities:
         mock_get_activities.return_value = [mock_activity]
 
@@ -366,7 +364,7 @@ def test_convert_activity_to_dict_with_mock_data():
     config = StravaConfig(
         client_id="12345",
         client_secret="test_secret",
-        tokens_file_path="/tmp/test.json"
+        tokens_file_path="/tmp/test.json",
     )
 
     service = StravaService(config)
@@ -387,6 +385,7 @@ def test_convert_activity_to_dict_with_mock_data():
 
     # Mock datetime objects
     from datetime import datetime
+
     mock_start_date = datetime(2023, 1, 1, 10, 0, 0)
     mock_start_date_local = datetime(2023, 1, 1, 11, 0, 0)
 
@@ -476,7 +475,7 @@ def test_construct_gpx_with_realistic_data():
     config = StravaConfig(
         client_id="12345",
         client_secret="test_secret",
-        tokens_file_path="/tmp/test.json"
+        tokens_file_path="/tmp/test.json",
     )
 
     service = StravaService(config)
@@ -485,6 +484,7 @@ def test_construct_gpx_with_realistic_data():
     mock_activity = Mock()
     mock_activity.name = "Test Ride"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     # Mock streams with realistic GPS data - need to mock the stream objects properly
@@ -492,7 +492,7 @@ def test_construct_gpx_with_realistic_data():
     mock_latlng_stream.data = [
         [51.5074, -0.1278],  # London
         [51.5084, -0.1288],  # Slightly north and east
-        [51.5094, -0.1298]   # Further north and east
+        [51.5094, -0.1298],  # Further north and east
     ]
 
     mock_altitude_stream = Mock()
@@ -504,13 +504,13 @@ def test_construct_gpx_with_realistic_data():
     mock_streams = {
         "latlng": mock_latlng_stream,
         "altitude": mock_altitude_stream,
-        "time": mock_time_stream
+        "time": mock_time_stream,
     }
 
     result = service._construct_gpx_from_streams(mock_activity, mock_streams)
 
     assert result is not None
-    assert result.startswith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>")
+    assert result.startswith('<?xml version="1.0" encoding="UTF-8"?>')
     assert "<gpx" in result
     assert "<trk>" in result
     assert "<trkpt" in result
@@ -526,13 +526,13 @@ def test_ensure_authenticated_success(strava_service_alt, tmp_path):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999  # Far in the future
+        "expires_at": 9999999999,  # Far in the future
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # This should not raise an exception
@@ -548,17 +548,17 @@ def test_ensure_authenticated_expired_token_auto_refresh(strava_service_alt, tmp
     test_tokens = {
         "access_token": "old_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 1234567890  # Past timestamp
+        "expires_at": 1234567890,  # Past timestamp
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the refresh method to succeed
-    with patch.object(strava_service_alt, 'refresh_access_token') as mock_refresh:
+    with patch.object(strava_service_alt, "refresh_access_token") as mock_refresh:
         mock_refresh.return_value = True
 
         # Mock _load_tokens to return updated tokens after refresh
@@ -566,13 +566,13 @@ def test_ensure_authenticated_expired_token_auto_refresh(strava_service_alt, tmp
             return {
                 "access_token": "new_token",
                 "refresh_token": "new_refresh_token",
-                "expires_at": 9999999999
+                "expires_at": 9999999999,
             }
 
         with patch.object(
             strava_service_alt,
-            '_load_tokens',
-            side_effect=[test_tokens, mock_load_tokens()]
+            "_load_tokens",
+            side_effect=[test_tokens, mock_load_tokens()],
         ):
             strava_service_alt._ensure_authenticated()
 
@@ -589,7 +589,7 @@ def test_token_file_operations(strava_service_alt, tmp_path):
     test_tokens = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
-        "expires_at": 1234567890
+        "expires_at": 1234567890,
     }
 
     strava_service_alt._save_tokens(test_tokens)
@@ -603,11 +603,13 @@ def test_token_file_operations(strava_service_alt, tmp_path):
 
     # Test loading non-existent file
     non_existent_file = tmp_path / "non_existent.json"
-    service_no_file = StravaService(StravaConfig(
-        client_id="12345",
-        client_secret="test_secret",
-        tokens_file_path=str(non_existent_file)
-    ))
+    service_no_file = StravaService(
+        StravaConfig(
+            client_id="12345",
+            client_secret="test_secret",
+            tokens_file_path=str(non_existent_file),
+        )
+    )
 
     assert service_no_file._load_tokens() is None
 
@@ -625,8 +627,8 @@ def test_save_tokens_with_datetime_objects(strava_service_alt, tmp_path):
         "created_at": datetime(2023, 1, 1, 10, 0, 0),
         "nested_data": {
             "nested_datetime": datetime(2023, 1, 1, 11, 0, 0),
-            "nested_list": [datetime(2023, 1, 1, 12, 0, 0)]
-        }
+            "nested_list": [datetime(2023, 1, 1, 12, 0, 0)],
+        },
     }
 
     # This should not raise an exception and should convert datetime objects
@@ -645,6 +647,7 @@ def test_save_tokens_with_datetime_objects(strava_service_alt, tmp_path):
 
 def test_save_tokens_error_handling(strava_service_alt, tmp_path, monkeypatch):
     """Test error handling in _save_tokens method."""
+
     # Mock open to raise an exception
     def mock_open(*args, **kwargs):
         raise PermissionError("Permission denied")
@@ -654,7 +657,7 @@ def test_save_tokens_error_handling(strava_service_alt, tmp_path, monkeypatch):
     test_tokens = {
         "access_token": "test_access_token",
         "refresh_token": "test_refresh_token",
-        "expires_at": 1234567890
+        "expires_at": 1234567890,
     }
 
     # This should not raise an exception but log an error
@@ -669,7 +672,7 @@ def test_exchange_code_for_token_success_with_athlete(strava_service_alt):
     mock_access_info = {
         "access_token": "new_access_token",
         "refresh_token": "new_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     mock_athlete = Mock()
@@ -677,17 +680,17 @@ def test_exchange_code_for_token_success_with_athlete(strava_service_alt):
         "id": 12345,
         "username": "test_user",
         "firstname": "Test",
-        "lastname": "User"
+        "lastname": "User",
     }
 
     # Mock the exchange_code_for_token to return tuple with athlete
     with patch.object(
-        strava_service_alt.client, 'exchange_code_for_token'
+        strava_service_alt.client, "exchange_code_for_token"
     ) as mock_exchange:
         mock_exchange.return_value = (mock_access_info, mock_athlete)
 
         # Mock _save_tokens to avoid file operations
-        with patch.object(strava_service_alt, '_save_tokens') as mock_save:
+        with patch.object(strava_service_alt, "_save_tokens") as mock_save:
             result = strava_service_alt.exchange_code_for_token("test_code")
 
             # Verify the result
@@ -704,7 +707,7 @@ def test_exchange_code_for_token_success_with_athlete(strava_service_alt):
                 client_id=12345,
                 client_secret="test_client_secret",
                 code="test_code",
-                return_athlete=True
+                return_athlete=True,
             )
 
 
@@ -714,17 +717,17 @@ def test_exchange_code_for_token_success_without_athlete(strava_service_alt):
     mock_access_info = {
         "access_token": "new_access_token",
         "refresh_token": "new_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     # Mock the exchange_code_for_token to return just access_info
     with patch.object(
-        strava_service_alt.client, 'exchange_code_for_token'
+        strava_service_alt.client, "exchange_code_for_token"
     ) as mock_exchange:
         mock_exchange.return_value = mock_access_info
 
         # Mock _save_tokens to avoid file operations
-        with patch.object(strava_service_alt, '_save_tokens'):
+        with patch.object(strava_service_alt, "_save_tokens"):
             result = strava_service_alt.exchange_code_for_token("test_code")
 
             # Verify the result
@@ -737,7 +740,7 @@ def test_exchange_code_for_token_failure(strava_service_alt):
     """Test token exchange failure handling."""
     # Mock the client to raise an exception
     with patch.object(
-        strava_service_alt.client, 'exchange_code_for_token'
+        strava_service_alt.client, "exchange_code_for_token"
     ) as mock_exchange:
         mock_exchange.side_effect = Exception("API Error")
 
@@ -749,10 +752,10 @@ def test_exchange_code_for_token_failure(strava_service_alt):
 def test_refresh_access_token_no_refresh_token(strava_service_alt):
     """Test refresh access token when no refresh token is available."""
     # Mock _load_tokens to return tokens without refresh_token
-    with patch.object(strava_service_alt, '_load_tokens') as mock_load:
+    with patch.object(strava_service_alt, "_load_tokens") as mock_load:
         mock_load.return_value = {
             "access_token": "expired_token",
-            "expires_at": 1234567890
+            "expires_at": 1234567890,
             # No refresh_token
         }
 
@@ -763,7 +766,7 @@ def test_refresh_access_token_no_refresh_token(strava_service_alt):
 def test_refresh_access_token_no_tokens(strava_service_alt):
     """Test refresh access token when no tokens are available."""
     # Mock _load_tokens to return None
-    with patch.object(strava_service_alt, '_load_tokens') as mock_load:
+    with patch.object(strava_service_alt, "_load_tokens") as mock_load:
         mock_load.return_value = None
 
         result = strava_service_alt.refresh_access_token()
@@ -776,21 +779,22 @@ def test_ensure_authenticated_token_expired_refresh_fails(strava_service_alt, tm
     test_tokens = {
         "access_token": "expired_token",
         "refresh_token": "invalid_refresh_token",
-        "expires_at": 1234567890  # Past timestamp
+        "expires_at": 1234567890,  # Past timestamp
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock refresh_access_token to return False (refresh fails)
-    with patch.object(strava_service_alt, 'refresh_access_token') as mock_refresh:
+    with patch.object(strava_service_alt, "refresh_access_token") as mock_refresh:
         mock_refresh.return_value = False
 
         # This should raise AccessUnauthorized
         from stravalib.exc import AccessUnauthorized
+
         with pytest.raises(
             AccessUnauthorized, match="Token expired and refresh failed"
         ):
@@ -803,19 +807,20 @@ def test_get_activities_rate_limit_exceeded(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise RateLimitExceeded
     from stravalib.exc import RateLimitExceeded
+
     with patch.object(
-        strava_service_alt.client, 'get_activities'
+        strava_service_alt.client, "get_activities"
     ) as mock_get_activities:
         mock_get_activities.side_effect = RateLimitExceeded("Rate limit exceeded")
 
@@ -829,19 +834,20 @@ def test_get_activities_access_unauthorized(strava_service_alt):
     test_tokens = {
         "access_token": "invalid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise AccessUnauthorized
     from stravalib.exc import AccessUnauthorized
+
     with patch.object(
-        strava_service_alt.client, 'get_activities'
+        strava_service_alt.client, "get_activities"
     ) as mock_get_activities:
         mock_get_activities.side_effect = AccessUnauthorized()
 
@@ -855,18 +861,18 @@ def test_get_activities_general_exception(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise a general exception
     with patch.object(
-        strava_service_alt.client, 'get_activities'
+        strava_service_alt.client, "get_activities"
     ) as mock_get_activities:
         mock_get_activities.side_effect = Exception("Network error")
 
@@ -880,31 +886,32 @@ def test_get_activity_gpx_success(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock activity and streams
     mock_activity = Mock()
     mock_activity.name = "Test Activity"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     mock_streams = {
         "latlng": Mock(data=[[51.5074, -0.1278], [51.5084, -0.1288]]),
         "altitude": Mock(data=[10.0, 15.0]),
-        "time": Mock(data=[0, 30])
+        "time": Mock(data=[0, 30]),
     }
 
     # Mock the client methods
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         with patch.object(
-            strava_service_alt.client, 'get_activity_streams'
+            strava_service_alt.client, "get_activity_streams"
         ) as mock_get_streams:
             mock_get_activity.return_value = mock_activity
             mock_get_streams.return_value = mock_streams
@@ -923,31 +930,32 @@ def test_get_activity_gpx_no_data(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock activity and empty streams
     mock_activity = Mock()
     mock_activity.name = "Test Activity"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     mock_streams = {
         "latlng": Mock(data=[]),  # No GPS data
         "altitude": Mock(data=[]),
-        "time": Mock(data=[])
+        "time": Mock(data=[]),
     }
 
     # Mock the client methods
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         with patch.object(
-            strava_service_alt.client, 'get_activity_streams'
+            strava_service_alt.client, "get_activity_streams"
         ) as mock_get_streams:
             mock_get_activity.return_value = mock_activity
             mock_get_streams.return_value = mock_streams
@@ -966,18 +974,19 @@ def test_get_activity_gpx_rate_limit_exceeded(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise RateLimitExceeded
     from stravalib.exc import RateLimitExceeded
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         mock_get_activity.side_effect = RateLimitExceeded("Rate limit exceeded")
 
         with pytest.raises(RateLimitExceeded):
@@ -990,18 +999,19 @@ def test_get_activity_gpx_access_unauthorized(strava_service_alt):
     test_tokens = {
         "access_token": "invalid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise AccessUnauthorized
     from stravalib.exc import AccessUnauthorized
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         mock_get_activity.side_effect = AccessUnauthorized()
 
         with pytest.raises(AccessUnauthorized):
@@ -1014,17 +1024,17 @@ def test_get_activity_gpx_general_exception(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise a general exception
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         mock_get_activity.side_effect = Exception("Network error")
 
         with pytest.raises(Exception, match="Network error"):
@@ -1037,13 +1047,14 @@ def test_construct_gpx_no_time_data(strava_service_alt):
     mock_activity = Mock()
     mock_activity.name = "Test Activity"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     # Mock streams with no time data
     mock_streams = {
         "latlng": Mock(data=[[51.5074, -0.1278], [51.5084, -0.1288]]),
         "altitude": Mock(data=[10.0, 15.0]),
-        "time": Mock(data=None)  # No time data
+        "time": Mock(data=None),  # No time data
     }
 
     result = strava_service_alt._construct_gpx_from_streams(mock_activity, mock_streams)
@@ -1064,7 +1075,7 @@ def test_construct_gpx_exception_handling(strava_service_alt):
     mock_streams = {
         "latlng": Mock(data=[[51.5074, -0.1278]]),
         "altitude": Mock(data=[10.0]),
-        "time": Mock(data=[0])
+        "time": Mock(data=[0]),
     }
 
     # This should return None due to exception
@@ -1079,13 +1090,13 @@ def test_get_athlete_success(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock athlete object with all required attributes
@@ -1130,7 +1141,7 @@ def test_get_athlete_success(strava_service_alt):
     mock_athlete.email = "test@example.com"
 
     # Mock the client method
-    with patch.object(strava_service_alt.client, 'get_athlete') as mock_get_athlete:
+    with patch.object(strava_service_alt.client, "get_athlete") as mock_get_athlete:
         mock_get_athlete.return_value = mock_athlete
 
         athlete_data = strava_service_alt.get_athlete()
@@ -1158,18 +1169,19 @@ def test_get_athlete_rate_limit_exceeded(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise RateLimitExceeded
     from stravalib.exc import RateLimitExceeded
-    with patch.object(strava_service_alt.client, 'get_athlete') as mock_get_athlete:
+
+    with patch.object(strava_service_alt.client, "get_athlete") as mock_get_athlete:
         mock_get_athlete.side_effect = RateLimitExceeded("Rate limit exceeded")
 
         with pytest.raises(RateLimitExceeded):
@@ -1182,18 +1194,19 @@ def test_get_athlete_access_unauthorized(strava_service_alt):
     test_tokens = {
         "access_token": "invalid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise AccessUnauthorized
     from stravalib.exc import AccessUnauthorized
-    with patch.object(strava_service_alt.client, 'get_athlete') as mock_get_athlete:
+
+    with patch.object(strava_service_alt.client, "get_athlete") as mock_get_athlete:
         mock_get_athlete.side_effect = AccessUnauthorized()
 
         with pytest.raises(AccessUnauthorized):
@@ -1206,17 +1219,17 @@ def test_get_athlete_general_exception(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock the client to raise a general exception
-    with patch.object(strava_service_alt.client, 'get_athlete') as mock_get_athlete:
+    with patch.object(strava_service_alt.client, "get_athlete") as mock_get_athlete:
         mock_get_athlete.side_effect = Exception("Network error")
 
         with pytest.raises(Exception, match="Network error"):
@@ -1229,35 +1242,36 @@ def test_get_activity_gpx_construct_gpx_returns_none(strava_service_alt):
     test_tokens = {
         "access_token": "valid_token",
         "refresh_token": "valid_refresh_token",
-        "expires_at": 9999999999
+        "expires_at": 9999999999,
     }
 
     tokens_file = Path(strava_service_alt.tokens_file)
     tokens_file.parent.mkdir(parents=True, exist_ok=True)
 
-    with open(tokens_file, 'w') as f:
+    with open(tokens_file, "w") as f:
         json.dump(test_tokens, f)
 
     # Mock activity and streams
     mock_activity = Mock()
     mock_activity.name = "Test Activity"
     from datetime import datetime
+
     mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
 
     mock_streams = {
         "latlng": Mock(data=[[51.5074, -0.1278]]),
         "altitude": Mock(data=[10.0]),
-        "time": Mock(data=[0])
+        "time": Mock(data=[0]),
     }
 
     # Mock the client methods
-    with patch.object(strava_service_alt.client, 'get_activity') as mock_get_activity:
+    with patch.object(strava_service_alt.client, "get_activity") as mock_get_activity:
         with patch.object(
-            strava_service_alt.client, 'get_activity_streams'
+            strava_service_alt.client, "get_activity_streams"
         ) as mock_get_streams:
             # Mock _construct_gpx_from_streams to return None
             with patch.object(
-                strava_service_alt, '_construct_gpx_from_streams'
+                strava_service_alt, "_construct_gpx_from_streams"
             ) as mock_construct:
                 mock_get_activity.return_value = mock_activity
                 mock_get_streams.return_value = mock_streams

@@ -35,8 +35,8 @@ from .utils.storage import (
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 
 logger = logging.getLogger(__name__)
@@ -798,7 +798,7 @@ async def get_strava_activity_gpx(activity_id: str):
                 status_code=404, detail="No GPX data available for this activity"
             )
 
-        gpx_bytes = gpx_string.encode('utf-8')
+        gpx_bytes = gpx_string.encode("utf-8")
 
         # Save the GPX data to temporary file and process it
         file_id = str(uuid.uuid4())
@@ -829,9 +829,7 @@ async def get_strava_activity_gpx(activity_id: str):
 
         try:
             gpx_data = extract_from_gpx_file(gpx, file_id)
-            logger.info(
-                f"Parsed GPX file with {len(gpx_data.points)} points"
-            )
+            logger.info(f"Parsed GPX file with {len(gpx_data.points)} points")
         except Exception as e:
             if file_path.exists():
                 file_path.unlink()

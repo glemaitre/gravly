@@ -3377,14 +3377,19 @@ class TestStravaEndpoints:
     def test_get_strava_auth_url_success(self, client):
         """Test successful generation of Strava authorization URL."""
         with patch("src.main.strava.get_authorization_url") as mock_get_auth_url:
-            mock_get_auth_url.return_value = "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
+            mock_get_auth_url.return_value = (
+                "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
+            )
 
             response = client.get("/api/strava/auth-url")
 
             assert response.status_code == 200
             data = response.json()
             assert "auth_url" in data
-            assert data["auth_url"] == "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
+            assert (
+                data["auth_url"]
+                == "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
+            )
             mock_get_auth_url.assert_called_once_with(
                 "http://localhost:3000/strava-callback", "strava_auth"
             )
@@ -3425,8 +3430,8 @@ class TestStravaEndpoints:
                 "id": 12345,
                 "username": "test_user",
                 "firstname": "Test",
-                "lastname": "User"
-            }
+                "lastname": "User",
+            },
         }
 
         with patch("src.main.strava.exchange_code_for_token") as mock_exchange:
@@ -3503,7 +3508,7 @@ class TestStravaEndpoints:
                 "distance": 25000.0,
                 "moving_time": 3600,
                 "type": "Ride",
-                "start_date": "2023-01-01T10:00:00"
+                "start_date": "2023-01-01T10:00:00",
             },
             {
                 "id": "12346",
@@ -3511,8 +3516,8 @@ class TestStravaEndpoints:
                 "distance": 5000.0,
                 "moving_time": 1800,
                 "type": "Run",
-                "start_date": "2023-01-01T18:00:00"
-            }
+                "start_date": "2023-01-01T18:00:00",
+            },
         ]
 
         with patch("src.main.strava.get_activities") as mock_get_activities:
@@ -3575,7 +3580,7 @@ class TestStravaEndpoints:
 
     def test_get_strava_activity_gpx_success(self, client):
         """Test successful Strava activity GPX retrieval."""
-        mock_gpx_string = '''<?xml version="1.0" encoding="UTF-8"?>
+        mock_gpx_string = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1">
     <trk>
         <name>Test Activity</name>
@@ -3584,7 +3589,7 @@ class TestStravaEndpoints:
             <time>2023-01-01T10:00:00Z</time>
         </trkpt>
     </trk>
-</gpx>'''
+</gpx>"""
 
         # Create a mock GPXData object with proper structure
         class MockGPXData:
@@ -3596,7 +3601,7 @@ class TestStravaEndpoints:
                     "total_points": 1,
                     "total_distance": 0.0,
                     "total_elevation_gain": 0.0,
-                    "total_elevation_loss": 0.0
+                    "total_elevation_loss": 0.0,
                 }
                 self.bounds = {
                     "north": 51.5074,
@@ -3604,7 +3609,7 @@ class TestStravaEndpoints:
                     "east": -0.1278,
                     "west": -0.1278,
                     "min_elevation": 10.0,
-                    "max_elevation": 10.0
+                    "max_elevation": 10.0,
                 }
 
             def model_dump(self):
@@ -3613,7 +3618,7 @@ class TestStravaEndpoints:
                     "track_name": self.track_name,
                     "points": self.points,
                     "total_stats": self.total_stats,
-                    "bounds": self.bounds
+                    "bounds": self.bounds,
                 }
 
         mock_gpx_data = MockGPXData()
@@ -3625,7 +3630,7 @@ class TestStravaEndpoints:
             patch("src.main.gpxpy.parse"),
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.unlink")
+            patch("pathlib.Path.unlink"),
         ):
             mock_temp_dir.name = "/tmp/test_dir"
             mock_get_gpx.return_value = mock_gpx_string
@@ -3657,9 +3662,9 @@ class TestStravaEndpoints:
         """Test Strava activity GPX retrieval when temp directory not initialized."""
         with (
             patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir", None)
+            patch("src.main.temp_dir", None),
         ):
-            mock_get_gpx.return_value = "<?xml version=\"1.0\"?><gpx></gpx>"
+            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
 
             response = client.get("/api/strava/activities/12345/gpx")
 
@@ -3673,10 +3678,10 @@ class TestStravaEndpoints:
         with (
             patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
             patch("src.main.temp_dir") as mock_temp_dir,
-            patch("builtins.open", side_effect=OSError("Permission denied"))
+            patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             mock_temp_dir.name = "/tmp/test_dir"
-            mock_get_gpx.return_value = "<?xml version=\"1.0\"?><gpx></gpx>"
+            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
 
             response = client.get("/api/strava/activities/12345/gpx")
 
@@ -3693,7 +3698,7 @@ class TestStravaEndpoints:
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
-            patch("src.main.gpxpy.parse", side_effect=Exception("Invalid GPX"))
+            patch("src.main.gpxpy.parse", side_effect=Exception("Invalid GPX")),
         ):
             mock_temp_dir.name = "/tmp/test_dir"
             mock_get_gpx.return_value = "invalid gpx content"
@@ -3717,11 +3722,11 @@ class TestStravaEndpoints:
             patch("src.main.gpxpy.parse"),
             patch(
                 "src.main.extract_from_gpx_file",
-                side_effect=Exception("Processing error")
-            )
+                side_effect=Exception("Processing error"),
+            ),
         ):
             mock_temp_dir.name = "/tmp/test_dir"
-            mock_get_gpx.return_value = "<?xml version=\"1.0\"?><gpx></gpx>"
+            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
             mock_exists.return_value = True
 
             response = client.get("/api/strava/activities/12345/gpx")

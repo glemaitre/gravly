@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
-import { createI18n } from 'vue-i18n'
 
 // Mock the useStravaApi composable
 const mockUseStravaApi = vi.fn()
@@ -29,10 +28,6 @@ const mockConsole = {
 Object.defineProperty(console, 'info', { value: mockConsole.info })
 Object.defineProperty(console, 'error', { value: mockConsole.error })
 
-// Import locale files for i18n
-import en from '../i18n/locales/en'
-import fr from '../i18n/locales/fr'
-
 describe('Main.ts Router Authentication Guard', () => {
   let router: ReturnType<typeof createRouter>
   let mockStravaApi: any
@@ -60,7 +55,12 @@ describe('Main.ts Router Authentication Guard', () => {
           component: MockComponent,
           meta: { requiresAuth: true }
         },
-        { path: '/segment/:id', name: 'SegmentDetail', component: MockComponent, props: true },
+        {
+          path: '/segment/:id',
+          name: 'SegmentDetail',
+          component: MockComponent,
+          props: true
+        },
         { path: '/strava-callback', name: 'StravaCallback', component: MockComponent }
       ]
     })
@@ -74,7 +74,9 @@ describe('Main.ts Router Authentication Guard', () => {
           const { isAuthenticated, attemptTokenRefresh, getAuthUrl } = mockStravaApi
 
           if (!isAuthenticated()) {
-            console.info('Editor route requires authentication, attempting token refresh...')
+            console.info(
+              'Editor route requires authentication, attempting token refresh...'
+            )
 
             // Try to refresh the token first
             const refreshSuccess = await attemptTokenRefresh()
@@ -148,7 +150,7 @@ describe('Main.ts Router Authentication Guard', () => {
       // Setup: User is initially not authenticated
       mockStravaApi.isAuthenticated
         .mockReturnValueOnce(false) // First call: not authenticated
-        .mockReturnValueOnce(true)  // Second call: authenticated after refresh
+        .mockReturnValueOnce(true) // Second call: authenticated after refresh
 
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
 
@@ -159,15 +161,19 @@ describe('Main.ts Router Authentication Guard', () => {
       // Verify navigation succeeded
       expect(router.currentRoute.value.path).toBe('/editor')
       expect(mockStravaApi.attemptTokenRefresh).toHaveBeenCalledOnce()
-      expect(mockConsole.info).toHaveBeenCalledWith('Editor route requires authentication, attempting token refresh...')
-      expect(mockConsole.info).toHaveBeenCalledWith('Token refresh successful, continuing to editor')
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Editor route requires authentication, attempting token refresh...'
+      )
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Token refresh successful, continuing to editor'
+      )
     })
 
     it('should call token refresh when user is not authenticated', async () => {
       // Setup: User is initially not authenticated
       mockStravaApi.isAuthenticated
         .mockReturnValueOnce(false) // First call: not authenticated
-        .mockReturnValueOnce(true)  // Second call: authenticated after refresh
+        .mockReturnValueOnce(true) // Second call: authenticated after refresh
 
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
 
@@ -185,12 +191,14 @@ describe('Main.ts Router Authentication Guard', () => {
       // Setup: User is not authenticated and refresh fails
       mockStravaApi.isAuthenticated.mockReturnValue(false)
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(false)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation to protected route - this will redirect externally
       try {
         await router.push('/editor')
-      } catch (error) {
+      } catch {
         // Expected: navigation guard error when redirecting externally without calling next()
       }
 
@@ -198,20 +206,24 @@ describe('Main.ts Router Authentication Guard', () => {
       expect(mockStravaApi.attemptTokenRefresh).toHaveBeenCalledOnce()
       expect(mockStravaApi.getAuthUrl).toHaveBeenCalledWith('/editor')
       expect(mockLocation.href).toBe('https://strava.com/oauth/authorize?client_id=123')
-      expect(mockConsole.info).toHaveBeenCalledWith('Token refresh failed, redirecting to Strava login')
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Token refresh failed, redirecting to Strava login'
+      )
     })
 
     it('should pass the current route path to getAuthUrl', async () => {
       // Setup: User is not authenticated and refresh fails
       mockStravaApi.isAuthenticated.mockReturnValue(false)
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(false)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation to protected route with specific path
       const testPath = '/editor?tab=segments'
       try {
         await router.push(testPath)
-      } catch (error) {
+      } catch {
         // Expected: navigation is prevented when redirecting externally
       }
 
@@ -231,7 +243,10 @@ describe('Main.ts Router Authentication Guard', () => {
 
       // Verify fallback to home route
       expect(router.currentRoute.value.path).toBe('/')
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to get auth URL:', expect.any(Error))
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to get auth URL:',
+        expect.any(Error)
+      )
     })
 
     it('should handle auth URL generation errors gracefully', async () => {
@@ -246,7 +261,10 @@ describe('Main.ts Router Authentication Guard', () => {
       await router.isReady()
 
       // Verify error was logged and navigation redirected to home
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to get auth URL:', authError)
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to get auth URL:',
+        authError
+      )
       expect(router.currentRoute.value.path).toBe('/')
       expect(mockLocation.href).toBe('') // Should not have been set due to error
     })
@@ -302,7 +320,9 @@ describe('Main.ts Router Authentication Guard', () => {
       mockStravaApi.isAuthenticated.mockReturnValue(false)
       const refreshError = new Error('Network timeout')
       mockStravaApi.attemptTokenRefresh.mockRejectedValue(refreshError)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation to protected route - this will redirect to home due to the error
       await router.push('/editor')
@@ -311,7 +331,10 @@ describe('Main.ts Router Authentication Guard', () => {
       // Verify the error was handled by redirecting to home
       expect(mockStravaApi.attemptTokenRefresh).toHaveBeenCalledOnce()
       expect(router.currentRoute.value.path).toBe('/')
-      expect(mockConsole.error).toHaveBeenCalledWith('Navigation guard error:', refreshError)
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Navigation guard error:',
+        refreshError
+      )
     })
 
     it('should handle case where isAuthenticated returns different values', async () => {
@@ -321,12 +344,14 @@ describe('Main.ts Router Authentication Guard', () => {
         .mockReturnValueOnce(false) // Second call: still not authenticated after refresh
 
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation to protected route
       try {
         await router.push('/editor')
-      } catch (error) {
+      } catch {
         // Expected: navigation is prevented when redirecting externally
       }
 
@@ -340,13 +365,15 @@ describe('Main.ts Router Authentication Guard', () => {
       // Setup: User is not authenticated and refresh fails
       mockStravaApi.isAuthenticated.mockReturnValue(false)
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(false)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation with query parameters
       const testPath = '/editor?tab=segments&filter=recent'
       try {
         await router.push(testPath)
-      } catch (error) {
+      } catch {
         // Expected: navigation is prevented when redirecting externally
       }
 
@@ -360,18 +387,24 @@ describe('Main.ts Router Authentication Guard', () => {
       // Setup: User is not authenticated
       mockStravaApi.isAuthenticated.mockReturnValue(false)
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(false)
-      mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
+      mockStravaApi.getAuthUrl.mockResolvedValue(
+        'https://strava.com/oauth/authorize?client_id=123'
+      )
 
       // Test navigation to protected route
       try {
         await router.push('/editor')
-      } catch (error) {
+      } catch {
         // Expected: navigation guard error when redirecting externally without calling next()
       }
 
       // Verify all expected log messages
-      expect(mockConsole.info).toHaveBeenCalledWith('Editor route requires authentication, attempting token refresh...')
-      expect(mockConsole.info).toHaveBeenCalledWith('Token refresh failed, redirecting to Strava login')
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Editor route requires authentication, attempting token refresh...'
+      )
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Token refresh failed, redirecting to Strava login'
+      )
       // Note: mockConsole.error will be called due to the navigation guard error, which is expected
     })
 
@@ -387,9 +420,16 @@ describe('Main.ts Router Authentication Guard', () => {
       await router.isReady()
 
       // Verify error logging
-      expect(mockConsole.info).toHaveBeenCalledWith('Editor route requires authentication, attempting token refresh...')
-      expect(mockConsole.info).toHaveBeenCalledWith('Token refresh failed, redirecting to Strava login')
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to get auth URL:', authError)
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Editor route requires authentication, attempting token refresh...'
+      )
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Token refresh failed, redirecting to Strava login'
+      )
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to get auth URL:',
+        authError
+      )
     })
   })
 })

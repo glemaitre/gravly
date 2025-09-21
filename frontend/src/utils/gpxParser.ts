@@ -23,7 +23,7 @@ export function parseGPXData(gpxXml: string, fileId: string): GPXData | null {
 
     // Extract track points
     const trkptElements = doc.querySelectorAll('trkpt')
-    
+
     const points: GPXPoint[] = []
 
     for (let i = 0; i < trkptElements.length; i++) {

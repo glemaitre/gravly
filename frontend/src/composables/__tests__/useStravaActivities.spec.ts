@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref } from 'vue'
 import type { GPXData } from '../../types'
 import type { StravaActivity } from '../useStravaApi'
 
@@ -235,7 +234,7 @@ describe('useStravaActivities', () => {
       const filtered = composable.filteredActivities.value
 
       expect(filtered).toHaveLength(2)
-      expect(filtered.map(a => a.sport_type)).toEqual(['Ride', 'VirtualRide'])
+      expect(filtered.map((a) => a.sport_type)).toEqual(['Ride', 'VirtualRide'])
       expect(filtered).not.toContain(expect.objectContaining({ sport_type: 'Run' }))
     })
 
@@ -313,7 +312,10 @@ describe('useStravaActivities', () => {
 
       expect(composable.error.value).toBe('API Error')
       expect(composable.isLoading.value).toBe(false)
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to load activities:', error)
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to load activities:',
+        error
+      )
     })
 
     it('should handle errors without message', async () => {
@@ -350,7 +352,10 @@ describe('useStravaActivities', () => {
 
       expect(mockStravaApi.getActivities).toHaveBeenCalledWith(2, 30)
       expect(composable.activities.value).toHaveLength(3)
-      expect(composable.activities.value).toEqual([...sampleActivities.slice(0, 1), ...moreActivities])
+      expect(composable.activities.value).toEqual([
+        ...sampleActivities.slice(0, 1),
+        ...moreActivities
+      ])
       expect(mockConsole.info).toHaveBeenCalledWith('Loaded 2 more activities')
     })
 
@@ -369,7 +374,10 @@ describe('useStravaActivities', () => {
       await expect(composable.loadMoreActivities()).rejects.toThrow('Network error')
 
       expect(composable.error.value).toBe('Network error')
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to load more activities:', error)
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to load more activities:',
+        error
+      )
     })
 
     it('should not affect existing activities on error', async () => {
@@ -433,7 +441,9 @@ describe('useStravaActivities', () => {
       expect(result).toEqual(sampleGpxData)
       expect(composable.isLoading.value).toBe(false)
       expect(composable.error.value).toBe(null)
-      expect(mockConsole.info).toHaveBeenCalledWith('GPX data retrieved for activity activity-123')
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'GPX data retrieved for activity activity-123'
+      )
     })
 
     it('should set loading state correctly', async () => {
@@ -455,7 +465,10 @@ describe('useStravaActivities', () => {
       expect(result).toBe(null)
       expect(composable.error.value).toBe('GPX not found')
       expect(composable.isLoading.value).toBe(false)
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to get GPX for activity activity-123:', error)
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to get GPX for activity activity-123:',
+        error
+      )
     })
 
     it('should handle errors without message', async () => {
@@ -485,10 +498,7 @@ describe('useStravaActivities', () => {
         .mockResolvedValueOnce(sampleActivities.slice(0, 1))
         .mockResolvedValueOnce(sampleActivities.slice(1, 2))
 
-      const promises = [
-        composable.loadActivities(1),
-        composable.loadActivities(2)
-      ]
+      const promises = [composable.loadActivities(1), composable.loadActivities(2)]
 
       await Promise.all(promises)
 

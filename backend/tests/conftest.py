@@ -38,4 +38,5 @@ def mock_strava_api():
 def client():
     """Provide a stravalib Client instance for testing."""
     from stravalib import Client
+
     return Client()

@@ -9,7 +9,7 @@ export default defineConfig(() => {
   try {
     const envPath = resolve(process.cwd(), '../.env/strava')
     const envContent = readFileSync(envPath, 'utf-8')
-    envContent.split('\n').forEach(line => {
+    envContent.split('\n').forEach((line) => {
       const [key, ...valueParts] = line.split('=')
       if (key && valueParts.length > 0) {
         stravaEnv[key.trim()] = valueParts.join('=').trim()
@@ -18,53 +18,55 @@ export default defineConfig(() => {
   } catch (error) {
     console.warn('Could not load .env/strava file:', error.message)
   }
-  
+
   return {
-  plugins: [vue()],
-  server: {
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-                configure: (proxy, options) => {
-                  proxy.on('error', (err, req) => {
-                    console.error('Proxy error:', err.message, req.url)
-                  })
-                }
+    plugins: [vue()],
+    server: {
+      port: 3000,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+          configure: (proxy) => {
+            proxy.on('error', (err, req) => {
+              console.error('Proxy error:', err.message, req.url)
+            })
+          }
+        }
       }
-    }
-  },
-  logLevel: 'info',
-  build: {
-    rollupOptions: {
-      input: {
-        app: 'index.html',
-        editor: 'editor.html'
+    },
+    logLevel: 'info',
+    build: {
+      rollupOptions: {
+        input: {
+          app: 'index.html',
+          editor: 'editor.html'
+        }
       }
-    }
-  },
-  css: {
-    devSourcemap: true
-  },
-  optimizeDeps: {
-    include: ['vue', 'chart.js']
-  },
-  define: {
-    __VUE_OPTIONS_API__: true,
-    __VUE_PROD_DEVTOOLS__: false,
-    'import.meta.env.STRAVA_CLIENT_ID': JSON.stringify(stravaEnv.STRAVA_CLIENT_ID),
-    'import.meta.env.STRAVA_CLIENT_SECRET': JSON.stringify(stravaEnv.STRAVA_CLIENT_SECRET)
-  },
-  esbuild: {
-    sourcemap: true
-  },
-  resolve: {
-    alias: {
-      vue: 'vue/dist/vue.esm-bundler.js'
-    }
-  },
-  envDir: '../.env',
-  envPrefix: ['VITE_']
+    },
+    css: {
+      devSourcemap: true
+    },
+    optimizeDeps: {
+      include: ['vue', 'chart.js']
+    },
+    define: {
+      __VUE_OPTIONS_API__: true,
+      __VUE_PROD_DEVTOOLS__: false,
+      'import.meta.env.STRAVA_CLIENT_ID': JSON.stringify(stravaEnv.STRAVA_CLIENT_ID),
+      'import.meta.env.STRAVA_CLIENT_SECRET': JSON.stringify(
+        stravaEnv.STRAVA_CLIENT_SECRET
+      )
+    },
+    esbuild: {
+      sourcemap: true
+    },
+    resolve: {
+      alias: {
+        vue: 'vue/dist/vue.esm-bundler.js'
+      }
+    },
+    envDir: '../.env',
+    envPrefix: ['VITE_']
   }
 })

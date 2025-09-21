@@ -81,7 +81,7 @@ export function useStravaApi() {
       const response = await fetch(url.toString())
 
       if (!response.ok) {
-        const errorText = await response.text()
+        await response.text()
         throw new Error(`Failed to get auth URL: ${response.statusText}`)
       }
 
@@ -112,7 +112,7 @@ export function useStravaApi() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
+        await response.text()
         throw new Error(`Failed to exchange code: ${response.statusText}`)
       }
 
@@ -128,7 +128,6 @@ export function useStravaApi() {
 
       // Store in localStorage for persistence
       localStorage.setItem('strava_auth', JSON.stringify(authState.value))
-
     } catch (err: any) {
       error.value = err.message || 'Failed to exchange authorization code'
       throw err
@@ -225,7 +224,10 @@ export function useStravaApi() {
   /**
    * Get list of Strava activities
    */
-  async function getActivities(page: number = 1, perPage: number = 30): Promise<StravaActivity[]> {
+  async function getActivities(
+    page: number = 1,
+    perPage: number = 30
+  ): Promise<StravaActivity[]> {
     try {
       isLoading.value = true
       error.value = null
@@ -234,7 +236,7 @@ export function useStravaApi() {
       const response = await fetch(url)
 
       if (!response.ok) {
-        const errorText = await response.text()
+        await response.text()
         if (response.status === 401) {
           await handleAuthenticationError()
           throw new Error('Authentication failed - redirecting to login')
@@ -265,16 +267,20 @@ export function useStravaApi() {
       const response = await fetch(url)
 
       if (!response.ok) {
-        const errorText = await response.text()
+        await response.text()
         if (response.status === 401) {
           await handleAuthenticationError()
           throw new Error('Authentication failed - redirecting to login')
         }
-        throw new Error(`Failed to get GPX for activity ${activityId}: ${response.statusText}`)
+        throw new Error(
+          `Failed to get GPX for activity ${activityId}: ${response.statusText}`
+        )
       }
 
       const data = await response.json()
-      console.info(`Retrieved GPX data for activity ${activityId}: ${data.points?.length || 0} points`)
+      console.info(
+        `Retrieved GPX data for activity ${activityId}: ${data.points?.length || 0} points`
+      )
       return data
     } catch (err: any) {
       error.value = err.message || 'Failed to get activity GPX'

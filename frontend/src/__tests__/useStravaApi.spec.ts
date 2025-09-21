@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { ref } from 'vue'
-import { useStravaApi, type StravaActivity, type StravaAuthState } from '../composables/useStravaApi'
+import { useStravaApi, type StravaActivity } from '../composables/useStravaApi'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
@@ -42,7 +41,6 @@ Object.defineProperty(console, 'warn', { value: mockConsole.warn })
 
 describe('useStravaApi', () => {
   let composable: ReturnType<typeof useStravaApi>
-  let mockAuthState: StravaAuthState
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -55,14 +53,6 @@ describe('useStravaApi', () => {
 
     // Reset fetch mock
     mockFetch.mockClear()
-
-    // Default mock auth state
-    mockAuthState = {
-      isAuthenticated: false,
-      accessToken: null,
-      expiresAt: null,
-      athlete: null
-    }
   })
 
   afterEach(() => {
@@ -120,7 +110,9 @@ describe('useStravaApi', () => {
         expiresAt: null,
         athlete: null
       })
-      expect(mockConsole.log).toHaveBeenCalledWith('Strava token expired, clearing auth state')
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        'Strava token expired, clearing auth state'
+      )
     })
 
     it('should handle malformed localStorage data gracefully', () => {
@@ -182,8 +174,12 @@ describe('useStravaApi', () => {
       }
       mockFetch.mockResolvedValue(mockResponse)
 
-      await expect(composable.getAuthUrl()).rejects.toThrow('Failed to get auth URL: Internal Server Error')
-      expect(composable.error.value).toBe('Failed to get auth URL: Internal Server Error')
+      await expect(composable.getAuthUrl()).rejects.toThrow(
+        'Failed to get auth URL: Internal Server Error'
+      )
+      expect(composable.error.value).toBe(
+        'Failed to get auth URL: Internal Server Error'
+      )
       expect(composable.isLoading.value).toBe(false)
     })
 
@@ -260,7 +256,9 @@ describe('useStravaApi', () => {
       }
       mockFetch.mockResolvedValue(mockResponse)
 
-      await expect(composable.exchangeCode('invalid-code')).rejects.toThrow('Failed to exchange code: Bad Request')
+      await expect(composable.exchangeCode('invalid-code')).rejects.toThrow(
+        'Failed to exchange code: Bad Request'
+      )
       expect(composable.error.value).toBe('Failed to exchange code: Bad Request')
       expect(composable.isLoading.value).toBe(false)
     })
@@ -268,7 +266,9 @@ describe('useStravaApi', () => {
     it('should handle network errors during exchange', async () => {
       mockFetch.mockRejectedValue(new Error('Network timeout'))
 
-      await expect(composable.exchangeCode('mock-code')).rejects.toThrow('Network timeout')
+      await expect(composable.exchangeCode('mock-code')).rejects.toThrow(
+        'Network timeout'
+      )
       expect(composable.error.value).toBe('Network timeout')
       expect(composable.isLoading.value).toBe(false)
     })
@@ -318,7 +318,9 @@ describe('useStravaApi', () => {
       composable.loadAuthState()
 
       expect(composable.authState.value).toEqual(storedAuth)
-      expect(mockConsole.log).toHaveBeenCalledWith('Loaded Strava auth state from localStorage')
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        'Loaded Strava auth state from localStorage'
+      )
     })
 
     it('should handle missing localStorage data', () => {
@@ -390,7 +392,10 @@ describe('useStravaApi', () => {
       const result = await composable.attemptTokenRefresh()
 
       expect(result).toBe(false)
-      expect(mockConsole.warn).toHaveBeenCalledWith('Token refresh failed:', expect.any(Error))
+      expect(mockConsole.warn).toHaveBeenCalledWith(
+        'Token refresh failed:',
+        expect.any(Error)
+      )
     })
   })
 
@@ -402,7 +407,10 @@ describe('useStravaApi', () => {
 
       // Set up default mocks to prevent initialization errors
       mockLocalStorage.getItem.mockReturnValue(null)
-      mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ auth_url: 'test' }) })
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ auth_url: 'test' })
+      })
 
       composable = useStravaApi()
     })
@@ -420,7 +428,10 @@ describe('useStravaApi', () => {
       // Mock refresh to fail and auth URL to succeed
       mockFetch
         .mockResolvedValueOnce({ ok: false }) // refresh fails
-        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ auth_url: 'https://strava.com/auth' }) }) // auth URL succeeds
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ auth_url: 'https://strava.com/auth' })
+        }) // auth URL succeeds
 
       await composable.handleAuthenticationError()
 
@@ -437,7 +448,10 @@ describe('useStravaApi', () => {
         'Authentication failed and unable to redirect to login'
       )
 
-      expect(mockConsole.error).toHaveBeenCalledWith('Failed to get auth URL for redirect:', expect.any(Error))
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Failed to get auth URL for redirect:',
+        expect.any(Error)
+      )
     })
   })
 
@@ -502,7 +516,9 @@ describe('useStravaApi', () => {
 
       const result = await composable.getActivities(1, 30)
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/strava/activities?page=1&per_page=30')
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/strava/activities?page=1&per_page=30'
+      )
       expect(result).toEqual(mockActivities)
       expect(composable.isLoading.value).toBe(false)
       expect(composable.error.value).toBe(null)
@@ -518,7 +534,9 @@ describe('useStravaApi', () => {
 
       await composable.getActivities()
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/strava/activities?page=1&per_page=30')
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/strava/activities?page=1&per_page=30'
+      )
     })
 
     it('should handle authentication error', async () => {
@@ -530,9 +548,11 @@ describe('useStravaApi', () => {
       }
       mockFetch.mockResolvedValue(mockResponse)
 
-      const handleAuthErrorSpy = vi.spyOn(composable, 'handleAuthenticationError')
+      vi.spyOn(composable, 'handleAuthenticationError')
 
-      await expect(composable.getActivities()).rejects.toThrow('Authentication failed and unable to redirect to login')
+      await expect(composable.getActivities()).rejects.toThrow(
+        'Authentication failed and unable to redirect to login'
+      )
 
       expect(composable.isLoading.value).toBe(false)
     })
@@ -546,8 +566,12 @@ describe('useStravaApi', () => {
       }
       mockFetch.mockResolvedValue(mockResponse)
 
-      await expect(composable.getActivities()).rejects.toThrow('Failed to get activities: Internal Server Error')
-      expect(composable.error.value).toBe('Failed to get activities: Internal Server Error')
+      await expect(composable.getActivities()).rejects.toThrow(
+        'Failed to get activities: Internal Server Error'
+      )
+      expect(composable.error.value).toBe(
+        'Failed to get activities: Internal Server Error'
+      )
     })
 
     it('should handle network errors', async () => {
@@ -584,7 +608,9 @@ describe('useStravaApi', () => {
       expect(result).toEqual(mockGpxData)
       expect(composable.isLoading.value).toBe(false)
       expect(composable.error.value).toBe(null)
-      expect(mockConsole.info).toHaveBeenCalledWith('Retrieved GPX data for activity activity-123: 2 points')
+      expect(mockConsole.info).toHaveBeenCalledWith(
+        'Retrieved GPX data for activity activity-123: 2 points'
+      )
     })
 
     it('should handle authentication error', async () => {
@@ -596,9 +622,11 @@ describe('useStravaApi', () => {
       }
       mockFetch.mockResolvedValue(mockResponse)
 
-      const handleAuthErrorSpy = vi.spyOn(composable, 'handleAuthenticationError')
+      vi.spyOn(composable, 'handleAuthenticationError')
 
-      await expect(composable.getActivityGpx('activity-123')).rejects.toThrow('Authentication failed and unable to redirect to login')
+      await expect(composable.getActivityGpx('activity-123')).rejects.toThrow(
+        'Authentication failed and unable to redirect to login'
+      )
 
       expect(composable.isLoading.value).toBe(false)
     })
@@ -615,17 +643,20 @@ describe('useStravaApi', () => {
       await expect(composable.getActivityGpx('invalid-id')).rejects.toThrow(
         'Failed to get GPX for activity invalid-id: Not Found'
       )
-      expect(composable.error.value).toBe('Failed to get GPX for activity invalid-id: Not Found')
+      expect(composable.error.value).toBe(
+        'Failed to get GPX for activity invalid-id: Not Found'
+      )
     })
 
     it('should handle network errors', async () => {
       mockFetch.mockRejectedValue(new Error('Network timeout'))
 
-      await expect(composable.getActivityGpx('activity-123')).rejects.toThrow('Network timeout')
+      await expect(composable.getActivityGpx('activity-123')).rejects.toThrow(
+        'Network timeout'
+      )
       expect(composable.error.value).toBe('Network timeout')
     })
   })
-
 
   describe('isAuthenticated computed', () => {
     beforeEach(() => {

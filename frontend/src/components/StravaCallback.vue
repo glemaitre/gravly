@@ -66,7 +66,6 @@ onMounted(async () => {
     setTimeout(() => {
       window.location.href = '/' // Full page reload to refresh navbar
     }, 2000)
-
   } catch (err) {
     console.error('Strava callback error:', err)
   }

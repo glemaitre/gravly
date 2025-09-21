@@ -12,16 +12,20 @@ export function useStravaActivities() {
   const activities = ref<StravaActivity[]>([])
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const hasMore = ref(false)
 
   // Computed properties
   const filteredActivities = computed(() => {
-    return activities.value.filter(activity =>
+    return activities.value.filter((activity) =>
       ['Ride', 'VirtualRide', 'EBikeRide'].includes(activity.sport_type)
     )
   })
 
   // Load activities from backend
-  const loadActivities = async (page: number = 1, perPage: number = 30): Promise<void> => {
+  const loadActivities = async (
+    page: number = 1,
+    perPage: number = 30
+  ): Promise<void> => {
     try {
       isLoading.value = true
       error.value = null
@@ -88,6 +92,7 @@ export function useStravaActivities() {
     activities,
     isLoading,
     error,
+    hasMore,
 
     // Computed
     filteredActivities,

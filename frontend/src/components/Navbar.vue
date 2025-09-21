@@ -59,7 +59,9 @@
               :class="{ open: userDropdownOpen }"
             >
               <div class="user-info">
-                <div class="user-name">{{ athlete?.firstname }} {{ athlete?.lastname }}</div>
+                <div class="user-name">
+                  {{ athlete?.firstname }} {{ athlete?.lastname }}
+                </div>
                 <div class="user-location" v-if="athlete?.city">
                   {{ athlete.city }}, {{ athlete.country }}
                 </div>
@@ -191,10 +193,7 @@ function closeLanguageDropdown(event: MouseEvent) {
 }
 
 function closeUserDropdown(event: MouseEvent) {
-  if (
-    userDropdown.value &&
-    !userDropdown.value.contains(event.target as Node)
-  ) {
+  if (userDropdown.value && !userDropdown.value.contains(event.target as Node)) {
     userDropdownOpen.value = false
   }
 }

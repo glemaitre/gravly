@@ -10,8 +10,8 @@ import StravaCallback from './components/StravaCallback.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: LandingPage },
-  { 
-    path: '/editor', 
+  {
+    path: '/editor',
     component: Editor,
     meta: { requiresAuth: true }
   },
@@ -29,13 +29,13 @@ router.beforeEach(async (to, from, next) => {
   // Check if route requires authentication
   if (to.meta.requiresAuth) {
     const { isAuthenticated, attemptTokenRefresh, getAuthUrl } = useStravaApi()
-    
+
     if (!isAuthenticated()) {
       console.info('Editor route requires authentication, attempting token refresh...')
-      
+
       // Try to refresh the token first
       const refreshSuccess = await attemptTokenRefresh()
-      
+
       if (refreshSuccess && isAuthenticated()) {
         console.info('Token refresh successful, continuing to editor')
         next() // Continue with navigation

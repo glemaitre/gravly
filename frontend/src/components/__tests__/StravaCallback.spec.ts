@@ -51,7 +51,11 @@ describe('StravaCallback', () => {
       history: createWebHistory(),
       routes: [
         { path: '/', name: 'Home', component: { template: '<div>Home</div>' } },
-        { path: '/editor', name: 'Editor', component: { template: '<div>Editor</div>' } },
+        {
+          path: '/editor',
+          name: 'Editor',
+          component: { template: '<div>Editor</div>' }
+        },
         { path: '/strava-callback', name: 'StravaCallback', component: StravaCallback }
       ]
     })
@@ -183,7 +187,6 @@ describe('StravaCallback', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const loadingIcon = wrapper.find('.loading fa-solid')
       // The icon might be stubbed, so we just check that the loading section exists
       expect(wrapper.find('.loading').exists()).toBe(true)
     })

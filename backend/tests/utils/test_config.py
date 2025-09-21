@@ -652,13 +652,14 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json""")
         if str(self).endswith("/strava"):
             return False  # Main strava file doesn't exist
         elif str(self).endswith("/strava.example"):
-            return True   # Example file exists
+            return True  # Example file exists
         else:
             # For all other files, use the real exists method
             return self._real_exists()
 
     # Store the original exists method
     from pathlib import Path
+
     Path._real_exists = Path.exists
 
     # Apply the mock
