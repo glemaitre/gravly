@@ -40,7 +40,7 @@ describe('Main.ts Router Authentication Guard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocation.href = ''
-    
+
     // Reset the mock implementation
     mockStravaApi = {
       isAuthenticated: vi.fn(),
@@ -54,8 +54,8 @@ describe('Main.ts Router Authentication Guard', () => {
       history: createWebHistory(),
       routes: [
         { path: '/', name: 'Home', component: MockComponent },
-        { 
-          path: '/editor', 
+        {
+          path: '/editor',
           name: 'Editor',
           component: MockComponent,
           meta: { requiresAuth: true }
@@ -72,13 +72,13 @@ describe('Main.ts Router Authentication Guard', () => {
         // Check if route requires authentication
         if (to.meta.requiresAuth) {
           const { isAuthenticated, attemptTokenRefresh, getAuthUrl } = mockStravaApi
-          
+
           if (!isAuthenticated()) {
             console.info('Editor route requires authentication, attempting token refresh...')
-            
+
             // Try to refresh the token first
             const refreshSuccess = await attemptTokenRefresh()
-            
+
             if (refreshSuccess && isAuthenticated()) {
               console.info('Token refresh successful, continuing to editor')
               next() // Continue with navigation
@@ -87,8 +87,8 @@ describe('Main.ts Router Authentication Guard', () => {
               try {
                 const authUrl = await getAuthUrl(to.fullPath)
                 window.location.href = authUrl
-                // Don't call next() as we're redirecting away from the app
-                // This is the correct behavior - no next() call for external redirects
+                // Cancel navigation since we're redirecting externally
+                next(false)
               } catch (error) {
                 console.error('Failed to get auth URL:', error)
                 // If we can't get auth URL, redirect to home
@@ -149,7 +149,7 @@ describe('Main.ts Router Authentication Guard', () => {
       mockStravaApi.isAuthenticated
         .mockReturnValueOnce(false) // First call: not authenticated
         .mockReturnValueOnce(true)  // Second call: authenticated after refresh
-      
+
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
 
       // Test navigation to protected route
@@ -168,7 +168,7 @@ describe('Main.ts Router Authentication Guard', () => {
       mockStravaApi.isAuthenticated
         .mockReturnValueOnce(false) // First call: not authenticated
         .mockReturnValueOnce(true)  // Second call: authenticated after refresh
-      
+
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
 
       // Test navigation to protected route
@@ -319,7 +319,7 @@ describe('Main.ts Router Authentication Guard', () => {
       mockStravaApi.isAuthenticated
         .mockReturnValueOnce(false) // First call: not authenticated
         .mockReturnValueOnce(false) // Second call: still not authenticated after refresh
-      
+
       mockStravaApi.attemptTokenRefresh.mockResolvedValue(true)
       mockStravaApi.getAuthUrl.mockResolvedValue('https://strava.com/oauth/authorize?client_id=123')
 
