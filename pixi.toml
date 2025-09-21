@@ -103,7 +103,7 @@ depends-on = ["frontend-install"]
 cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing"
 
 [feature.tests.tasks.test-frontend]
-cmd = "npm install --no-audit --no-fund && npm run test:cov"
+cmd = "npm install --no-audit --no-fund && npm run test:cov -- --run"
 cwd = "frontend"
 
 # PostgreSQL database management tasks
