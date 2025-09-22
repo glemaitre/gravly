@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import gpxpy
+import httpx
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +43,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.info("Backend logging configured")
 
-db_config, storage_config, strava_config = load_environment_config()
+db_config, storage_config, strava_config, map_config = load_environment_config()
 
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
@@ -128,6 +129,67 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Cycling GPX API"}
+
+
+@app.get("/api/map-tiles/{z}/{x}/{y}.png")
+async def get_map_tiles(z: int, x: int, y: int):
+    """Proxy endpoint for Thunderforest map tiles to hide API key from frontend.
+
+    This endpoint fetches map tiles from Thunderforest API using the server-side
+    API key and returns them to the frontend, keeping the API key secure.
+
+    Parameters
+    ----------
+    z : int
+        Zoom level
+    x : int
+        Tile X coordinate
+    y : int
+        Tile Y coordinate
+
+    Returns
+    -------
+    Response
+        PNG image data of the map tile
+    """
+    try:
+        # Construct the Thunderforest API URL with our server-side API key
+        tile_url = f"https://{{s}}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey={map_config.thunderforest_api_key}"
+
+        # Use a random subdomain (s) for load balancing
+        import random
+
+        subdomain = random.choice(["a", "b", "c"])
+        tile_url = tile_url.replace("{s}", subdomain)
+
+        # Fetch the tile from Thunderforest
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(tile_url)
+            response.raise_for_status()
+
+            # Return the tile image with appropriate headers
+            return Response(
+                content=response.content,
+                media_type="image/png",
+                headers={
+                    "Cache-Control": "public, max-age=86400",  # Cache for 24 hours
+                    "Access-Control-Allow-Origin": "*",
+                },
+            )
+
+    except httpx.HTTPStatusError as e:
+        logger.warning(
+            f"HTTP error fetching tile {z}/{x}/{y}: {e.response.status_code}"
+        )
+        raise HTTPException(
+            status_code=e.response.status_code, detail="Failed to fetch map tile"
+        )
+    except httpx.RequestError as e:
+        logger.error(f"Request error fetching tile {z}/{x}/{y}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch map tile")
+    except Exception as e:
+        logger.error(f"Unexpected error fetching tile {z}/{x}/{y}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/storage/{file_path:path}")

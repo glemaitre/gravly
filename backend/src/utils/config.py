@@ -48,13 +48,19 @@ class StravaConfig(NamedTuple):
     tokens_file_path: str
 
 
+class MapConfig(NamedTuple):
+    """Map service configuration parameters."""
+
+    thunderforest_api_key: str
+
+
 # Union type for storage configurations
 StorageConfig = S3StorageConfig | LocalStorageConfig
 
 
 def load_environment_config(
     project_root: Path | None = None,
-) -> tuple[DatabaseConfig, StorageConfig, StravaConfig]:
+) -> tuple[DatabaseConfig, StorageConfig, StravaConfig, MapConfig]:
     """Load environment variables from separate storage, database, and Strava files.
 
     This function loads environment variables from .env/storage, .env/database, and
@@ -138,6 +144,26 @@ def load_environment_config(
         else:
             raise FileNotFoundError(
                 f"Strava configuration file not found at {strava_file} "
+                f"and no example file available."
+            )
+
+    # Load map configuration
+    map_file = env_folder / "thunderforest"
+    if map_file.exists():
+        load_dotenv(map_file, override=True)
+        logger.info(f"Loaded map environment variables from {map_file}")
+    else:
+        # Check if example file exists
+        map_example = env_folder / "thunderforest.example"
+        if map_example.exists():
+            raise FileNotFoundError(
+                f"Map configuration file not found at {map_file}. "
+                f"Please create a map configuration file based on "
+                f"{map_example}. Copy the example file and rename it to 'thunderforest'."
+            )
+        else:
+            raise FileNotFoundError(
+                f"Map configuration file not found at {map_file} "
                 f"and no example file available."
             )
 
@@ -225,4 +251,14 @@ def load_environment_config(
         tokens_file_path=tokens_file_path,
     )
 
-    return database_config, storage_config, strava_config
+    # Extract map configuration from environment variables
+    thunderforest_api_key = os.getenv("THUNDERFOREST_API_KEY")
+    if not thunderforest_api_key:
+        raise ValueError(
+            "Missing required map configuration parameter: THUNDERFOREST_API_KEY. "
+            "Please set this environment variable in your .env/thunderforest file."
+        )
+
+    map_config = MapConfig(thunderforest_api_key=thunderforest_api_key)
+
+    return database_config, storage_config, strava_config, map_config

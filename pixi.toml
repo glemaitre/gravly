@@ -18,6 +18,7 @@ python-dotenv = "*"
 pre-commit = "*"
 postgresql = "*"
 requests = "*"
+httpx = "*"
 polyline = "*"
 # dependencies for stravalib available in conda-forge
 arrow = "*"
