@@ -6,7 +6,7 @@
           <div class="menu-section">
             <div class="menu-section-title">
               {{ t('routePlanner.planning') }}
-            </div>
+    </div>
             <ul class="menu-list">
               <li class="menu-item" @click="clearRoute" :title="t('routePlanner.clearRoute')">
                 <span class="icon"><i class="fa-solid fa-trash"></i></span>
@@ -21,7 +21,7 @@
                 <span class="text">{{ t('routePlanner.loadRoute') }}</span>
               </li>
             </ul>
-          </div>
+    </div>
 
           <div class="menu-section">
             <div class="menu-section-title">
@@ -45,10 +45,10 @@
               </div>
             </div>
             <div v-else class="no-route">
-              <i class="fa-solid fa-route"></i>
+          <i class="fa-solid fa-route"></i>
               <span>{{ t('routePlanner.noRoute') }}</span>
-            </div>
-          </div>
+        </div>
+        </div>
 
         </div>
       </div>
@@ -61,14 +61,6 @@
           <div class="control-group">
             <button
               class="control-btn"
-              :class="{ active: isPlanningMode }"
-              @click="togglePlanningMode"
-              :title="t('routePlanner.togglePlanning')"
-            >
-              <i class="fa-solid fa-mouse-pointer"></i>
-            </button>
-            <button
-              class="control-btn"
               @click="centerMap"
               :title="t('routePlanner.centerMap')"
             >
@@ -79,7 +71,7 @@
       </div>
 
       <!-- Elevation Profile -->
-      <div class="elevation-profile" v-if="elevationProfile.length > 0">
+    <div class="elevation-profile" v-if="elevationProfile.length > 0">
         <div class="profile-header">
           <h3>{{ t('routePlanner.elevationProfile') }}</h3>
         </div>
@@ -117,11 +109,17 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
 const { t } = useI18n()
 
 // Map and routing state
-let map: L.Map | null = null
-let routingControl: L.Routing.Control | null = null
-let waypoints: L.Routing.Waypoint[] = []
-let isPlanningMode = ref(true)
-let isDragging = ref(false)
+let map: any = null
+let routingControl: any = null
+let waypoints: any[] = []
+let waypointMarkers: any[] = []
+let routeLine: any = null
+
+// Simplified state management for mouse interactions
+let mouseDownOnWaypoint = false
+let isPanning = false
+let draggedWaypoint: any = null
+let routeUpdateTimeout: any = null
 
 // Route information
 const routeInfo = ref<{
@@ -129,7 +127,6 @@ const routeInfo = ref<{
   totalDuration: number
   totalElevation: number
 } | null>(null)
-
 
 // Elevation profile
 const elevationProfile = ref<{ distance: number; elevation: number }[]>([])
@@ -168,25 +165,135 @@ function initializeMap() {
     maxZoom: 18
   }).addTo(map!)
 
-  // Initialize routing control
+  // Disable double-click waypoint addition
+  map.on('dblclick', (e: any) => {
+    console.log('Double-click disabled, preventing waypoint addition')
+    e.originalEvent.preventDefault()
+    e.originalEvent.stopPropagation()
+    return false
+  })
+
+  // Prevent context menu on right click
+  map.on('contextmenu', (e: any) => {
+    e.originalEvent.preventDefault()
+    return false
+  })
+
+  // Initialize routing control AFTER click handler
   initializeRoutingControl()
 
-  // Add click handler for adding waypoints
-  map.on('click', (e: L.LeafletMouseEvent) => {
-    if (isPlanningMode.value && !isDragging.value) {
+  // Simplified mouse interaction handlers - only mouse down + up for waypoint creation
+  map.on('mousedown', (e: any) => {
+    console.log('🖱️ MOUSE DOWN:', e.latlng)
+
+    // Check if clicking on a waypoint
+    const clickedWaypoint = findWaypointAtPosition(e.latlng)
+    if (clickedWaypoint) {
+      console.log('🖱️ Clicked on waypoint - starting drag')
+      mouseDownOnWaypoint = true
+      draggedWaypoint = clickedWaypoint
+      isPanning = false
+      return
+    }
+
+    // Regular map click - prepare for panning
+    console.log('🖱️ Clicked on map - preparing for pan')
+      mouseDownOnWaypoint = false
+    isPanning = true
+  })
+
+  map.on('mousemove', (e: any) => {
+    if (mouseDownOnWaypoint && draggedWaypoint) {
+      console.log('🖱️ DRAGGING WAYPOINT:', e.latlng)
+      // Rule: Move waypoint to new location and trigger recomputation
+      draggedWaypoint.setLatLng(e.latlng)
+      updateWaypointPosition(draggedWaypoint, e.latlng)
+      triggerRouteRecomputation()
+    } else if (isPanning) {
+      console.log('🖱️ PANNING MAP')
+      // Let Leaflet handle panning naturally
+    }
+  })
+
+  map.on('mouseup', (e: any) => {
+    console.log('🖱️ MOUSE UP:', e.latlng)
+
+    if (mouseDownOnWaypoint && draggedWaypoint) {
+      console.log('🖱️ Mouse up after dragging waypoint - finalizing')
+      // Rule: Finalize waypoint position and trigger recomputation
+      draggedWaypoint.setLatLng(e.latlng)
+      updateWaypointPosition(draggedWaypoint, e.latlng)
+      triggerRouteRecomputation()
+      mouseDownOnWaypoint = false
+      draggedWaypoint = null
+    } else if (isPanning) {
+      console.log('🖱️ Mouse up after panning - adding waypoint')
+      // Rule: Mouse down + mouse up not on waypoint -> create waypoint
+      addWaypoint(e.latlng)
+      isPanning = false
+    } else {
+      console.log('🖱️ Mouse up - adding waypoint')
+      // Rule: Mouse down + mouse up -> create waypoint
       addWaypoint(e.latlng)
     }
   })
 
-  // Add mouse events for better UX
-  map.on('mousedown', () => {
-    isDragging.value = true
-  })
+  // Set default crosshair cursor
+  map.getContainer().style.cursor = 'crosshair'
 
-  map.on('mouseup', () => {
-    setTimeout(() => {
-      isDragging.value = false
-    }, 100)
+  // Add zoom event listener to update marker sizes
+  map.on('zoomend', () => {
+    updateMarkerSizes()
+  })
+}
+
+// Function to update all marker sizes based on current zoom level
+function updateMarkerSizes() {
+  if (!map) return
+
+  const zoom = map.getZoom()
+  // Scale from 12px at zoom 8 to 24px at zoom 18
+  const baseSize = 12
+  const maxSize = 24
+  const minZoom = 8
+  const maxZoom = 18
+  const scale = Math.max(0, Math.min(1, (zoom - minZoom) / (maxZoom - minZoom)))
+  const markerSize = Math.round(baseSize + (maxSize - baseSize) * scale)
+  const halfSize = markerSize / 2
+
+  // Update all waypoint markers
+  waypointMarkers.forEach((marker, index) => {
+    if (!marker) return
+
+    const isStart = index === 0
+    const isEnd = index === waypointMarkers.length - 1
+    const isIntermediate = !isStart && !isEnd
+
+    let markerHtml = ''
+    if (isStart) {
+      markerHtml = `<div class="waypoint-marker waypoint-start" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                      <i class="fa-solid fa-play"></i>
+                    </div>`
+    } else if (isEnd) {
+      markerHtml = `<div class="waypoint-marker waypoint-end" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                      <i class="fa-solid fa-stop"></i>
+                    </div>`
+    } else {
+      markerHtml = `<div class="waypoint-marker waypoint-intermediate" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                      <i class="fa-solid fa-circle"></i>
+                    </div>`
+    }
+
+    // Create new icon with updated size
+    const newIcon = L.divIcon({
+      className: 'custom-waypoint-marker',
+      html: markerHtml,
+      iconSize: [markerSize, markerSize],
+      iconAnchor: [halfSize, halfSize]
+    })
+
+    // Update the marker icon
+    marker.setIcon(newIcon)
   })
 }
 
@@ -201,29 +308,66 @@ function initializeRoutingControl() {
       useHints: false
     }),
     waypoints: waypoints,
-    routeWhileDragging: true,
-    addWaypoints: true,
+    routeWhileDragging: false, // Disabled to prevent auto-zoom
+    addWaypoints: false, // Disable automatic waypoint addition
+    show: false, // Hide the routing control panel
+    // Disable all click handling
+    waypointMode: {
+      addWaypoints: false
+    },
+    // Disable auto-zoom but keep route calculation
+    fitSelectedRoutes: false,
     createMarker: (i: number, waypoint: L.Routing.Waypoint, n: number) => {
       // Create custom marker with better styling
+      const isStart = i === 0
+      const isEnd = i === n - 1
+      const isIntermediate = !isStart && !isEnd
+
+      // Calculate marker size based on zoom level
+      const getMarkerSize = () => {
+        const zoom = map?.getZoom() || 13
+        // Scale from 12px at zoom 8 to 24px at zoom 18
+        const baseSize = 12
+        const maxSize = 24
+        const minZoom = 8
+        const maxZoom = 18
+        const scale = Math.max(0, Math.min(1, (zoom - minZoom) / (maxZoom - minZoom)))
+        return Math.round(baseSize + (maxSize - baseSize) * scale)
+      }
+
+      const markerSize = getMarkerSize()
+      const halfSize = markerSize / 2
+
+      let markerHtml = ''
+      if (isStart) {
+        // Orange start marker (more visible)
+        markerHtml = `<div class="waypoint-marker waypoint-start" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                        <i class="fa-solid fa-play"></i>
+                      </div>`
+      } else if (isEnd) {
+        // Blue end marker
+        markerHtml = `<div class="waypoint-marker waypoint-end" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                        <i class="fa-solid fa-stop"></i>
+                      </div>`
+    } else {
+        // Gray intermediate marker
+        markerHtml = `<div class="waypoint-marker waypoint-intermediate" style="width: ${markerSize}px; height: ${markerSize}px; font-size: ${Math.max(8, markerSize * 0.5)}px;">
+                        <i class="fa-solid fa-circle"></i>
+                      </div>`
+      }
+
       const marker = L.marker(waypoint.latLng, {
         draggable: true,
         icon: L.divIcon({
           className: 'custom-waypoint-marker',
-          html: `<div class="waypoint-marker waypoint-${i === 0 ? 'start' : i === n - 1 ? 'end' : 'waypoint'}">
-                   <span class="waypoint-number">${i + 1}</span>
-                 </div>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15]
+          html: markerHtml,
+          iconSize: [markerSize, markerSize],
+          iconAnchor: [halfSize, halfSize]
         })
       })
 
       // Add drag events
-      marker.on('dragstart', () => {
-        isDragging.value = true
-      })
-
       marker.on('dragend', () => {
-        isDragging.value = false
         // Update waypoint position
         const newLatLng = marker.getLatLng()
         waypoints[i] = L.Routing.waypoint(newLatLng)
@@ -233,13 +377,15 @@ function initializeRoutingControl() {
       })
 
       // Add click handler to remove waypoint (except start and end)
-      marker.on('click', (e) => {
+      marker.on('click', (e: any) => {
         e.originalEvent.stopPropagation()
         if (i > 0 && i < n - 1) {
           removeWaypoint(i)
         }
       })
 
+      // Store marker reference
+      waypointMarkers[i] = marker
       return marker
     },
     lineOptions: {
@@ -252,32 +398,68 @@ function initializeRoutingControl() {
   routingControl = L.Routing.control(routingOptions).addTo(map!)
 
   // Listen for route changes
-  routingControl.on('routesfound', (e) => {
+  routingControl.on('routesfound', (e: any) => {
+    console.log('Routes found event:', e)
     const routes = e.routes
     if (routes && routes.length > 0) {
       const route = routes[0]
+      console.log('Route data:', route)
+      console.log('Route keys:', Object.keys(route))
       updateRouteInfo(route)
       generateElevationProfile(route)
+
+      // Create clickable route line
+      console.log('Creating new clickable route line')
+      setTimeout(() => {
+        createClickableRouteLine(route)
+      }, 100)
     }
   })
 
   // Listen for waypoint changes
-  routingControl.on('waypointsspliced', (e) => {
+  routingControl.on('waypointsspliced', (e: any) => {
     waypoints = e.waypoints
   })
 }
 
-function addWaypoint(latlng: L.LatLng) {
+function addWaypoint(latlng: any) {
+  console.log('Adding waypoint at:', latlng)
   const newWaypoint = L.Routing.waypoint(latlng)
   waypoints.push(newWaypoint)
+  console.log('Total waypoints:', waypoints.length)
   if (routingControl) {
+    console.log('Updating routing control with waypoints:', waypoints.length)
     routingControl.setWaypoints(waypoints)
+
+    // Force route calculation if we have at least 2 waypoints
+    if (waypoints.length >= 2) {
+      console.log('Forcing route calculation...')
+      // Trigger route calculation manually
+      setTimeout(() => {
+        try {
+          routingControl.route()
+        } catch (error) {
+          console.log('Error triggering route calculation:', error)
+        }
+      }, 100)
+    }
+  } else {
+    console.log('No routing control available')
+  }
+  // Clear marker array - it will be repopulated by the routing control
+  waypointMarkers = []
+
+  // Auto-center on the newly added waypoint (keeping current zoom level)
+  // Only auto-center for appended waypoints, not inserted ones
+  if (map) {
+    map.setView([latlng.lat, latlng.lng], map.getZoom())
   }
 }
 
 function removeWaypoint(index: number) {
   if (waypoints.length > 2) { // Keep at least start and end
     waypoints.splice(index, 1)
+    waypointMarkers.splice(index, 1) // Remove corresponding marker
     if (routingControl) {
       routingControl.setWaypoints(waypoints)
     }
@@ -286,8 +468,14 @@ function removeWaypoint(index: number) {
 
 function clearRoute() {
   waypoints = []
+  waypointMarkers = []
   if (routingControl) {
     routingControl.setWaypoints([])
+  }
+  // Remove route line
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
   }
   routeInfo.value = null
   elevationProfile.value = []
@@ -345,15 +533,140 @@ function loadRoute() {
   }
 }
 
-function togglePlanningMode() {
-  isPlanningMode.value = !isPlanningMode.value
+function centerMap() {
+  // Center map functionality disabled - user manages zoom manually
+  console.log('Center map functionality disabled')
 }
 
-function centerMap() {
-  if (map && waypoints.length > 0) {
-    const group = new L.featureGroup(waypoints.map(wp => L.marker(wp.latLng)))
-    map.fitBounds(group.getBounds().pad(0.1))
+// Helper functions for clean mouse interaction logic
+function findWaypointAtPosition(latlng: any): any {
+  // Find if there's a waypoint marker at the given position
+  for (let i = 0; i < waypointMarkers.length; i++) {
+    const marker = waypointMarkers[i]
+    if (marker && marker.getLatLng().distanceTo(latlng) < 20) { // 20 meter tolerance
+      return marker
+    }
   }
+  return null
+}
+
+function updateWaypointPosition(marker: any, newLatLng: any): void {
+  // Update the waypoint in the waypoints array
+  const index = waypointMarkers.indexOf(marker)
+  if (index !== -1) {
+    waypoints[index] = L.Routing.waypoint(newLatLng)
+  }
+}
+
+function triggerRouteRecomputation(): void {
+  // Clear any pending updates
+  if (routeUpdateTimeout) {
+    clearTimeout(routeUpdateTimeout)
+  }
+
+  // Trigger route recomputation with stabilization
+  routeUpdateTimeout = setTimeout(() => {
+    if (routingControl) {
+      routingControl.setWaypoints(waypoints)
+    }
+  }, 300)
+}
+
+// Create a clickable route line
+function createClickableRouteLine(route: any) {
+  // Remove existing route line
+  if (routeLine) {
+    map.removeLayer(routeLine)
+  }
+
+  console.log('Creating route line from route:', route)
+
+  // Try to find existing route polyline on the map
+  let existingPolyline = null
+  map.eachLayer((layer: any) => {
+    if (layer instanceof L.Polyline && layer.options.color === '#3388ff') {
+      // This is likely the routing control's polyline
+      existingPolyline = layer
+      console.log('Found existing route polyline:', layer)
+    }
+  })
+
+  if (existingPolyline) {
+    // Clone the existing polyline and make it clickable
+    const latLngs = (existingPolyline as any).getLatLngs()
+    console.log('Using existing polyline coordinates:', latLngs.length, 'points')
+
+    routeLine = L.polyline(latLngs, {
+      color: '#ff6b35', // Orange color
+      weight: 6,
+      opacity: 0.8,
+      interactive: true // Make it clickable
+    }).addTo(map)
+
+    console.log('Created clickable route line with', latLngs.length, 'points')
+    return
+  }
+
+  // Fallback: try to extract coordinates from route data
+  let coordinates = null
+
+  // Method 1: Direct coordinates array
+  if (route.coordinates && Array.isArray(route.coordinates)) {
+    coordinates = route.coordinates
+    console.log('Found coordinates directly:', coordinates.length)
+  }
+  // Method 2: Routes array with coordinates
+  else if (route.routes && Array.isArray(route.routes) && route.routes.length > 0) {
+    if (route.routes[0].coordinates) {
+      coordinates = route.routes[0].coordinates
+      console.log('Found coordinates in routes[0]:', coordinates.length)
+    }
+  }
+  // Method 3: Instructions with coordinates
+  else if (route.instructions && Array.isArray(route.instructions) && route.instructions.length > 0) {
+    if (route.instructions[0].coordinates) {
+      coordinates = route.instructions[0].coordinates
+      console.log('Found coordinates in instructions[0]:', coordinates.length)
+    }
+  }
+  // Method 4: Check if route has latlngs property
+  else if (route.latlngs && Array.isArray(route.latlngs)) {
+    coordinates = route.latlngs
+    console.log('Found latlngs directly:', coordinates.length)
+  }
+
+  if (!coordinates || coordinates.length < 2) {
+    console.log('No valid coordinates found for route line. Route structure:', Object.keys(route))
+    return
+  }
+
+  // Convert coordinates to LatLng array
+  let latLngs = []
+  try {
+    if (coordinates[0] && typeof coordinates[0] === 'object' && 'lat' in coordinates[0]) {
+      // Already LatLng objects
+      latLngs = coordinates
+    } else if (Array.isArray(coordinates[0]) && coordinates[0].length >= 2) {
+      // Array of [lat, lng] pairs
+      latLngs = coordinates.map((coord: any) => L.latLng(coord[0], coord[1]))
+    } else {
+      console.log('Unknown coordinate format:', coordinates[0])
+      return
+    }
+  } catch (error) {
+    console.log('Error converting coordinates:', error)
+    return
+  }
+
+  // Create polyline with click events
+    routeLine = L.polyline(latLngs, {
+    color: '#ff6b35', // Orange color to match the route
+      weight: 6,
+      opacity: 0.8,
+    interactive: true // Make it clickable
+    }).addTo(map)
+
+  console.log('Created clickable route line with', latLngs.length, 'points')
 }
 
 function updateRouteInfo(route: any) {
@@ -369,7 +682,6 @@ function calculateTotalElevation(route: any): number {
   // In a real implementation, you'd need elevation data from the route
   return 0 // Placeholder
 }
-
 
 async function generateElevationProfile(route: any) {
   if (!route.coordinates || route.coordinates.length === 0) {
@@ -437,7 +749,7 @@ async function generateElevationProfile(route: any) {
 
     if (elevationProfile.value.length > 0) {
       nextTick(() => {
-        renderElevationChart()
+    renderElevationChart()
       })
     }
   } catch (error) {
@@ -633,7 +945,6 @@ function formatElevation(meters: number): string {
   text-align: center;
 }
 
-
 .content {
   flex: 1;
   display: flex;
@@ -720,6 +1031,15 @@ function formatElevation(meters: number): string {
   display: none !important;
 }
 
+/* Map cursor styling */
+.map {
+  cursor: crosshair !important;
+}
+
+.map:active {
+  cursor: grabbing !important;
+}
+
 /* Custom waypoint markers */
 :global(.custom-waypoint-marker) {
   background: transparent;
@@ -727,43 +1047,48 @@ function formatElevation(meters: number): string {
 }
 
 :global(.waypoint-marker) {
-  width: 30px;
-  height: 30px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
+  font-size: 10px;
   color: white;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   transition: all 0.2s ease;
+  border: 2px solid white;
 }
 
 :global(.waypoint-marker:hover) {
-  transform: scale(1.1);
+  transform: scale(1.2);
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
 :global(.waypoint-start) {
-  background: #22c55e;
-  border: 3px solid white;
+  background: #f97316; /* Orange */
+  border: 2px solid white;
 }
 
 :global(.waypoint-end) {
-  background: #ef4444;
-  border: 3px solid white;
+  background: #3b82f6; /* Blue */
+  border: 2px solid white;
 }
 
-:global(.waypoint-waypoint) {
-  background: #ff6600;
-  border: 3px solid white;
+:global(.waypoint-intermediate) {
+  background: #6b7280; /* Gray */
+  border: 2px solid white;
 }
 
-:global(.waypoint-number) {
-  font-size: 11px;
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+:global(.waypoint-dragging) {
+  z-index: 1000;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 </style>
