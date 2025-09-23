@@ -239,10 +239,14 @@ function initializeMap() {
 
   // Add OpenCycleMap tiles
   const apiKey = import.meta.env.THUNDERFOREST_API_KEY || 'demo'
-  L.tileLayer(`https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`, {
-    attribution: 'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    maxZoom: 19
-  }).addTo(map)
+  L.tileLayer(
+    `https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`,
+    {
+      attribution:
+        'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }
+  ).addTo(map)
 
   // Set initial view - restore saved state or default to Lyon, France
   if (savedMapState.value) {

@@ -359,6 +359,187 @@ def test_get_activities_with_unit_mocks(strava_service_alt):
         assert activities[0]["moving_time"] == 3600
 
 
+def test_get_activities_pagination_page_2(strava_service_alt):
+    """Test getting activities for page 2 to cover pagination logic."""
+    # Save valid tokens first
+    test_tokens = {
+        "access_token": "test_access_token",
+        "refresh_token": "test_refresh_token",
+        "expires_at": 9999999999,  # Far in the future
+    }
+
+    tokens_file = Path(strava_service_alt.tokens_file)
+    tokens_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(tokens_file, "w") as f:
+        json.dump(test_tokens, f)
+
+    # Mock the client methods
+    mock_activities = []
+    from datetime import datetime
+
+    # Create 5 mock activities to simulate pagination
+    for i in range(5):
+        mock_activity = Mock()
+        mock_activity.id = 12345 + i
+        mock_activity.name = f"Test Activity {i}"
+        mock_activity.distance = 10000.0 + (i * 1000)
+        mock_activity.moving_time = Mock()
+        mock_activity.moving_time.timedelta.return_value.total_seconds.return_value = (
+            3600 + (i * 60)
+        )
+        mock_activity.elapsed_time = Mock()
+        mock_activity.elapsed_time.timedelta.return_value.total_seconds.return_value = (
+            3900 + (i * 60)
+        )
+        mock_activity.total_elevation_gain = 100.0 + (i * 10)
+        mock_activity.type = "Ride"
+        mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
+        mock_activity.start_date_local = datetime(2023, 1, 1, 11, 0, 0)
+        mock_activity.timezone = "UTC"
+        mock_activity.start_latlng = None
+        mock_activity.end_latlng = None
+        mock_activity.map = None
+        mock_activity.has_heartrate = False
+        mock_activity.average_heartrate = None
+        mock_activity.max_heartrate = None
+        mock_activity.has_kudoed = False
+        mock_activity.kudos_count = 0
+        mock_activity.comment_count = 0
+        mock_activity.athlete_count = 1
+        mock_activity.trainer = False
+        mock_activity.commute = False
+        mock_activity.manual = False
+        mock_activity.private = False
+        mock_activity.visibility = "everyone"
+        mock_activity.flagged = False
+        mock_activity.gear_id = None
+        mock_activity.external_id = None
+        mock_activity.upload_id = None
+        mock_activity.average_speed = None
+        mock_activity.max_speed = None
+        mock_activity.hide_from_home = False
+        mock_activity.from_accepted_tag = False
+        mock_activity.average_watts = None
+        mock_activity.weighted_average_watts = None
+        mock_activity.kilojoules = None
+        mock_activity.device_watts = False
+        mock_activity.elev_high = None
+        mock_activity.elev_low = None
+        mock_activity.pr_count = 0
+        mock_activity.total_photo_count = 0
+        mock_activity.suffer_score = None
+        mock_activities.append(mock_activity)
+
+    with patch.object(
+        strava_service_alt.client, "get_activities"
+    ) as mock_get_activities:
+        mock_get_activities.return_value = mock_activities
+
+        # Test page 2 with per_page=2
+        # This should fetch 4 activities (offset=2, limit=4) and return activities 2-3
+        activities = strava_service_alt.get_activities(page=2, per_page=2)
+
+        # Should return 2 activities (activities 2 and 3 from the list)
+        assert len(activities) == 2
+        assert activities[0]["id"] == "12347"  # Third activity (index 2)
+        assert activities[1]["id"] == "12348"  # Fourth activity (index 3)
+
+        # Verify the client was called with the correct limit for pagination
+        mock_get_activities.assert_called_once_with(limit=4)  # offset=2 + per_page=2
+
+
+def test_get_activities_pagination_page_3(strava_service_alt):
+    """Test getting activities for page 3 to further test pagination logic."""
+    # Save valid tokens first
+    test_tokens = {
+        "access_token": "test_access_token",
+        "refresh_token": "test_refresh_token",
+        "expires_at": 9999999999,  # Far in the future
+    }
+
+    tokens_file = Path(strava_service_alt.tokens_file)
+    tokens_file.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(tokens_file, "w") as f:
+        json.dump(test_tokens, f)
+
+    # Mock the client methods
+    mock_activities = []
+    from datetime import datetime
+
+    # Create 10 mock activities to simulate pagination
+    for i in range(10):
+        mock_activity = Mock()
+        mock_activity.id = 12345 + i
+        mock_activity.name = f"Test Activity {i}"
+        mock_activity.distance = 10000.0 + (i * 1000)
+        mock_activity.moving_time = Mock()
+        mock_activity.moving_time.timedelta.return_value.total_seconds.return_value = (
+            3600 + (i * 60)
+        )
+        mock_activity.elapsed_time = Mock()
+        mock_activity.elapsed_time.timedelta.return_value.total_seconds.return_value = (
+            3900 + (i * 60)
+        )
+        mock_activity.total_elevation_gain = 100.0 + (i * 10)
+        mock_activity.type = "Ride"
+        mock_activity.start_date = datetime(2023, 1, 1, 10, 0, 0)
+        mock_activity.start_date_local = datetime(2023, 1, 1, 11, 0, 0)
+        mock_activity.timezone = "UTC"
+        mock_activity.start_latlng = None
+        mock_activity.end_latlng = None
+        mock_activity.map = None
+        mock_activity.has_heartrate = False
+        mock_activity.average_heartrate = None
+        mock_activity.max_heartrate = None
+        mock_activity.has_kudoed = False
+        mock_activity.kudos_count = 0
+        mock_activity.comment_count = 0
+        mock_activity.athlete_count = 1
+        mock_activity.trainer = False
+        mock_activity.commute = False
+        mock_activity.manual = False
+        mock_activity.private = False
+        mock_activity.visibility = "everyone"
+        mock_activity.flagged = False
+        mock_activity.gear_id = None
+        mock_activity.external_id = None
+        mock_activity.upload_id = None
+        mock_activity.average_speed = None
+        mock_activity.max_speed = None
+        mock_activity.hide_from_home = False
+        mock_activity.from_accepted_tag = False
+        mock_activity.average_watts = None
+        mock_activity.weighted_average_watts = None
+        mock_activity.kilojoules = None
+        mock_activity.device_watts = False
+        mock_activity.elev_high = None
+        mock_activity.elev_low = None
+        mock_activity.pr_count = 0
+        mock_activity.total_photo_count = 0
+        mock_activity.suffer_score = None
+        mock_activities.append(mock_activity)
+
+    with patch.object(
+        strava_service_alt.client, "get_activities"
+    ) as mock_get_activities:
+        mock_get_activities.return_value = mock_activities
+
+        # Test page 3 with per_page=3
+        # This should fetch 9 activities (offset=6, limit=9) and return activities 6-8
+        activities = strava_service_alt.get_activities(page=3, per_page=3)
+
+        # Should return 3 activities (activities 6, 7, and 8 from the list)
+        assert len(activities) == 3
+        assert activities[0]["id"] == "12351"  # Seventh activity (index 6)
+        assert activities[1]["id"] == "12352"  # Eighth activity (index 7)
+        assert activities[2]["id"] == "12353"  # Ninth activity (index 8)
+
+        # Verify the client was called with the correct limit for pagination
+        mock_get_activities.assert_called_once_with(limit=9)  # offset=6 + per_page=3
+
+
 def test_convert_activity_to_dict_with_mock_data():
     """Test activity conversion with realistic mock data."""
     config = StravaConfig(

@@ -563,7 +563,7 @@ describe('LandingPage', () => {
       await wrapper.vm.$nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      expect(mockMapInstance.setView).toHaveBeenCalledWith([46.942728, 4.033681], 12)
+      expect(mockMapInstance.setView).toHaveBeenCalledWith([46.942728, 4.033681], 14)
     })
 
     it('should not initialize map if already exists', async () => {

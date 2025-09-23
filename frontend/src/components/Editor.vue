@@ -1301,10 +1301,14 @@ function renderMap() {
   map!.fitBounds(bounds, { padding: [20, 20] })
   if (!baseLayer) {
     const apiKey = import.meta.env.THUNDERFOREST_API_KEY || 'demo'
-    baseLayer = L.tileLayer(`https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`, {
-      maxZoom: 19,
-      attribution: 'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    })
+    baseLayer = L.tileLayer(
+      `https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`,
+      {
+        maxZoom: 19,
+        attribution:
+          'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    )
     baseLayer.addTo(map!)
   }
 

@@ -226,7 +226,7 @@ export default {
     noRoute: 'Aucune route planifiée',
     togglePlanning: 'Basculer le Mode Planification',
     centerMap: 'Centrer la Carte',
-    elevationProfile: 'Profil d\'Altitude',
+    elevationProfile: "Profil d'Altitude",
     routeSaved: 'Route sauvegardée avec succès',
     noSavedRoutes: 'Aucune route sauvegardée trouvée'
   },

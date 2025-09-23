@@ -197,9 +197,13 @@ const createMiniMap = async (activity: StravaActivity, containerId: string) => {
     })
 
     const apiKey = import.meta.env.THUNDERFOREST_API_KEY || 'demo'
-    L.tileLayer(`https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`, {
-      attribution: 'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map)
+    L.tileLayer(
+      `https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey=${apiKey}`,
+      {
+        attribution:
+          'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }
+    ).addTo(map)
 
     // Create polyline from summary polyline if available
     if (activity.map && activity.map.summary_polyline) {

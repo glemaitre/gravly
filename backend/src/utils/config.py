@@ -159,7 +159,8 @@ def load_environment_config(
             raise FileNotFoundError(
                 f"Map configuration file not found at {map_file}. "
                 f"Please create a map configuration file based on "
-                f"{map_example}. Copy the example file and rename it to 'thunderforest'."
+                f"{map_example}. Copy the example file and rename it to "
+                f"'thunderforest'."
             )
         else:
             raise FileNotFoundError(

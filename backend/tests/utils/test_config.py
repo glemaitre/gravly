@@ -7,6 +7,7 @@ import pytest
 from backend.src.utils.config import (
     DatabaseConfig,
     LocalStorageConfig,
+    MapConfig,
     S3StorageConfig,
     StravaConfig,
     load_environment_config,
@@ -39,7 +40,11 @@ STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
-    db_config, storage_config, strava_config = load_environment_config(
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
+    db_config, storage_config, strava_config, map_config = load_environment_config(
         project_root=tmp_path
     )
 
@@ -47,6 +52,7 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
     assert isinstance(db_config, DatabaseConfig)
     assert isinstance(storage_config, LocalStorageConfig)
     assert isinstance(strava_config, StravaConfig)
+    assert isinstance(map_config, MapConfig)
 
     # Check database configuration
     assert db_config.host == "localhost"
@@ -93,7 +99,11 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
-    db_config, storage_config, strava_config = load_environment_config(
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
+    db_config, storage_config, strava_config, map_config = load_environment_config(
         project_root=tmp_path
     )
 
@@ -126,6 +136,10 @@ DB_PORT=5432""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
     with pytest.raises(ValueError) as exc_info:
         load_environment_config(project_root=tmp_path)
@@ -160,6 +174,10 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
     # Clear any existing environment variables that might interfere
 
@@ -200,6 +218,10 @@ DB_USER=postgres""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
     with pytest.raises(ValueError) as exc_info:
         load_environment_config(project_root=tmp_path)
 
@@ -232,6 +254,10 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
     with pytest.raises(ValueError) as exc_info:
         load_environment_config(project_root=tmp_path)
@@ -368,6 +394,10 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
     with caplog.at_level("INFO"):
         load_environment_config(project_root=tmp_path)
 
@@ -403,7 +433,11 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
-    db_config, storage_config, strava_config = load_environment_config(
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
+    db_config, storage_config, strava_config, map_config = load_environment_config(
         project_root=subdir
     )
 
@@ -416,12 +450,13 @@ def test_default_project_root_behavior():
     # This test verifies the function doesn't crash with default behavior
     # Since we have actual .env files in the project, this should succeed
     # rather than raise an error
-    db_config, storage_config, strava_config = load_environment_config()
+    db_config, storage_config, strava_config, map_config = load_environment_config()
 
     # Verify we get valid configurations
     assert isinstance(db_config, DatabaseConfig)
     assert isinstance(storage_config, (LocalStorageConfig, S3StorageConfig))
     assert isinstance(strava_config, StravaConfig)
+    assert isinstance(map_config, MapConfig)
 
 
 def test_missing_strava_parameters(tmp_path):
@@ -446,6 +481,10 @@ DB_PASSWORD=password""")
     # Create Strava file with missing parameters
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id""")
+
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
     with pytest.raises(ValueError) as exc_info:
         load_environment_config(project_root=tmp_path)
@@ -512,7 +551,11 @@ STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
 STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
 
-    db_config, storage_config, strava_config = load_environment_config(
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
+
+    db_config, storage_config, strava_config, map_config = load_environment_config(
         project_root=tmp_path
     )
 
@@ -545,6 +588,10 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret""")
+
+    # Create thunderforest file
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
     with pytest.raises(ValueError) as exc_info:
         load_environment_config(project_root=tmp_path)
@@ -672,3 +719,162 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json""")
     assert "Strava configuration file not found at" in error_message
     assert "Please create a Strava configuration file based on" in error_message
     assert "Copy the example file and rename it to 'strava'" in error_message
+
+
+def test_thunderforest_file_not_found_with_example(tmp_path):
+    """Test error when thunderforest file is missing but example file exists."""
+    env_folder = tmp_path / ".env"
+    env_folder.mkdir()
+
+    # Create storage file
+    storage_file = env_folder / "storage"
+    storage_file.write_text("""STORAGE_TYPE=local
+LOCAL_STORAGE_ROOT=./storage
+LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
+
+    # Create database file
+    database_file = env_folder / "database"
+    database_file.write_text("""DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=cycling
+DB_USER=postgres
+DB_PASSWORD=password""")
+
+    # Create Strava file
+    strava_file = env_folder / "strava"
+    strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
+STRAVA_CLIENT_SECRET=test_client_secret
+STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest.example file but NOT the thunderforest file
+    thunderforest_example_file = env_folder / "thunderforest.example"
+    thunderforest_example_file.write_text("""THUNDERFOREST_API_KEY=your_api_key_here""")
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        load_environment_config(project_root=tmp_path)
+
+    error_message = str(exc_info.value)
+    assert "Map configuration file not found at" in error_message
+    assert "Please create a map configuration file based on" in error_message
+    assert "Copy the example file and rename it to 'thunderforest'" in error_message
+
+
+def test_thunderforest_file_not_found_without_example(tmp_path):
+    """Test error when thunderforest file is missing and no example file exists."""
+    env_folder = tmp_path / ".env"
+    env_folder.mkdir()
+
+    # Create storage file
+    storage_file = env_folder / "storage"
+    storage_file.write_text("""STORAGE_TYPE=local
+LOCAL_STORAGE_ROOT=./storage
+LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
+
+    # Create database file
+    database_file = env_folder / "database"
+    database_file.write_text("""DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=cycling
+DB_USER=postgres
+DB_PASSWORD=password""")
+
+    # Create Strava file
+    strava_file = env_folder / "strava"
+    strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
+STRAVA_CLIENT_SECRET=test_client_secret
+STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Do NOT create thunderforest file or thunderforest.example file
+
+    with pytest.raises(FileNotFoundError) as exc_info:
+        load_environment_config(project_root=tmp_path)
+
+    error_message = str(exc_info.value)
+    assert "Map configuration file not found at" in error_message
+    assert "and no example file available" in error_message
+
+
+def test_missing_thunderforest_api_key(tmp_path):
+    """Test error when thunderforest file exists but THUNDERFOREST_API_KEY is missing."""  # noqa: E501
+    env_folder = tmp_path / ".env"
+    env_folder.mkdir()
+
+    # Create storage file
+    storage_file = env_folder / "storage"
+    storage_file.write_text("""STORAGE_TYPE=local
+LOCAL_STORAGE_ROOT=./storage
+LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
+
+    # Create database file
+    database_file = env_folder / "database"
+    database_file.write_text("""DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=cycling
+DB_USER=postgres
+DB_PASSWORD=password""")
+
+    # Create Strava file
+    strava_file = env_folder / "strava"
+    strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
+STRAVA_CLIENT_SECRET=test_client_secret
+STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest file without THUNDERFOREST_API_KEY
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""# THUNDERFOREST_API_KEY is missing""")
+
+    with pytest.raises(ValueError) as exc_info:
+        load_environment_config(project_root=tmp_path)
+
+    error_message = str(exc_info.value)
+    assert (
+        "Missing required map configuration parameter: THUNDERFOREST_API_KEY"
+        in error_message
+    )
+    assert (
+        "Please set this environment variable in your .env/thunderforest file"
+        in error_message
+    )
+
+
+def test_empty_thunderforest_api_key(tmp_path):
+    """Test error when thunderforest file exists but THUNDERFOREST_API_KEY is empty."""
+    env_folder = tmp_path / ".env"
+    env_folder.mkdir()
+
+    # Create storage file
+    storage_file = env_folder / "storage"
+    storage_file.write_text("""STORAGE_TYPE=local
+LOCAL_STORAGE_ROOT=./storage
+LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
+
+    # Create database file
+    database_file = env_folder / "database"
+    database_file.write_text("""DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=cycling
+DB_USER=postgres
+DB_PASSWORD=password""")
+
+    # Create Strava file
+    strava_file = env_folder / "strava"
+    strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
+STRAVA_CLIENT_SECRET=test_client_secret
+STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create thunderforest file with empty THUNDERFOREST_API_KEY
+    thunderforest_file = env_folder / "thunderforest"
+    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=""")
+
+    with pytest.raises(ValueError) as exc_info:
+        load_environment_config(project_root=tmp_path)
+
+    error_message = str(exc_info.value)
+    assert (
+        "Missing required map configuration parameter: THUNDERFOREST_API_KEY"
+        in error_message
+    )
+    assert (
+        "Please set this environment variable in your .env/thunderforest file"
+        in error_message
+    )

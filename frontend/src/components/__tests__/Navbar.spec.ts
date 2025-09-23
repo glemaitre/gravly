@@ -82,15 +82,19 @@ describe('Navbar', () => {
       )
     })
 
-    it('displays Home and Editor links', () => {
+    it('displays Home, Editor, and Route Planner links', () => {
       const navLinks = wrapper.findAll('.nav-link')
-      expect(navLinks).toHaveLength(2)
+      expect(navLinks).toHaveLength(3)
 
       const homeLink = navLinks.find((link) => link.text().includes('Home'))
       const editorLink = navLinks.find((link) => link.text().includes('Editor'))
+      const routePlannerLink = navLinks.find((link) =>
+        link.text().includes('Route Planner')
+      )
 
       expect(homeLink?.exists()).toBe(true)
       expect(editorLink?.exists()).toBe(true)
+      expect(routePlannerLink?.exists()).toBe(true)
     })
 
     it('has correct router-link attributes', () => {

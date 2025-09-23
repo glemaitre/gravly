@@ -3781,3 +3781,233 @@ class TestStravaEndpoints:
 
             # This might return an error due to authentication, but we test the endpoint
             assert response.status_code in [200, 401, 404, 500]  # Accept error codes
+
+
+class TestMapTilesEndpoint:
+    """Test the map tiles proxy endpoint."""
+
+    def test_get_map_tile_success(self, client):
+        """Test successful map tile retrieval."""
+        from unittest.mock import AsyncMock, patch
+
+        # Mock PNG content
+        mock_png_content = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
+            b"\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+        # Mock the httpx client
+        mock_response = AsyncMock()
+        mock_response.content = mock_png_content
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "image/png"
+            assert response.headers["cache-control"] == "public, max-age=86400"
+            assert response.headers["access-control-allow-origin"] == "*"
+            assert response.content == mock_png_content
+
+    def test_get_map_tile_different_coordinates(self, client):
+        """Test map tile retrieval with different coordinates."""
+        from unittest.mock import AsyncMock, patch
+
+        # Mock PNG content
+        mock_png_content = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
+            b"\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+        # Mock the httpx client
+        mock_response = AsyncMock()
+        mock_response.content = mock_png_content
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+
+            # Test different coordinates
+            response = client.get("/api/map-tiles/15/16384/12288.png")
+
+            assert response.status_code == 200
+            assert response.headers["content-type"] == "image/png"
+            assert response.content == mock_png_content
+
+            # Verify the client was called with a URL containing the correct coordinates
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            tile_url = call_args[0][0]  # First positional argument
+            assert "/cycle/15/16384/12288.png" in tile_url
+            assert "apikey=" in tile_url
+
+    def test_get_map_tile_http_error(self, client):
+        """Test map tile retrieval with HTTP error."""
+        from unittest.mock import AsyncMock, patch
+
+        import httpx
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            # Mock HTTPStatusError
+            mock_response = AsyncMock()
+            mock_response.status_code = 404
+            http_error = httpx.HTTPStatusError(
+                "Not Found", request=AsyncMock(), response=mock_response
+            )
+            mock_client.get.side_effect = http_error
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert data["detail"] == "Failed to fetch map tile"
+
+    def test_get_map_tile_request_error(self, client):
+        """Test map tile retrieval with request error."""
+        from unittest.mock import AsyncMock, patch
+
+        import httpx
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            # Mock RequestError
+            request_error = httpx.RequestError("Connection failed")
+            mock_client.get.side_effect = request_error
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert data["detail"] == "Failed to fetch map tile"
+
+    def test_get_map_tile_unexpected_error(self, client):
+        """Test map tile retrieval with unexpected error."""
+        from unittest.mock import AsyncMock, patch
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+
+            # Mock unexpected error
+            unexpected_error = ValueError("Unexpected error")
+            mock_client.get.side_effect = unexpected_error
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert data["detail"] == "Internal server error"
+
+    def test_get_map_tile_subdomain_selection(self, client):
+        """Test that different subdomains are selected for load balancing."""
+        from unittest.mock import AsyncMock, patch
+
+        # Mock PNG content
+        mock_png_content = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
+            b"\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+        # Mock the httpx client
+        mock_response = AsyncMock()
+        mock_response.content = mock_png_content
+        mock_response.raise_for_status.return_value = None
+
+        with (
+            patch("httpx.AsyncClient") as mock_client_class,
+            patch("random.choice") as mock_choice,
+        ):
+            # Mock random choice to return specific subdomain
+            mock_choice.return_value = "b"
+
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 200
+
+            # Verify random.choice was called with the expected subdomains
+            mock_choice.assert_called_once_with(["a", "b", "c"])
+
+            # Verify the client was called with a URL containing the selected subdomain
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            tile_url = call_args[0][0]  # First positional argument
+            assert "b.tile.thunderforest.com" in tile_url
+
+    def test_get_map_tile_timeout_configuration(self, client):
+        """Test that httpx client is configured with correct timeout."""
+        from unittest.mock import AsyncMock, patch
+
+        # Mock PNG content
+        mock_png_content = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
+            b"\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+        # Mock the httpx client
+        mock_response = AsyncMock()
+        mock_response.content = mock_png_content
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 200
+
+            # Verify AsyncClient was called with correct timeout
+            mock_client_class.assert_called_once_with(timeout=10.0)
+
+    def test_get_map_tile_api_key_in_url(self, client):
+        """Test that API key is included in the tile URL."""
+        from unittest.mock import AsyncMock, patch
+
+        # Mock PNG content
+        mock_png_content = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00"
+            b"\x01\x00\x00\x05\x00\x01\r\n-\xdb\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+
+        # Mock the httpx client
+        mock_response = AsyncMock()
+        mock_response.content = mock_png_content
+        mock_response.raise_for_status.return_value = None
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client = AsyncMock()
+            mock_client_class.return_value.__aenter__.return_value = mock_client
+            mock_client.get.return_value = mock_response
+
+            response = client.get("/api/map-tiles/10/512/384.png")
+
+            assert response.status_code == 200
+
+            # Verify the client was called with a URL containing the API key
+            mock_client.get.assert_called_once()
+            call_args = mock_client.get.call_args
+            tile_url = call_args[0][0]  # First positional argument
+            assert "apikey=" in tile_url
+            assert "thunderforest.com" in tile_url
