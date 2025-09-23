@@ -94,6 +94,7 @@ let map: any = null
 let routingControl: any = null
 let waypoints: any[] = []
 let routeLine: any = null
+let routeToleranceBuffer: any = null // Invisible thick line for easier interaction
 let waypointMarkers: any[] = []
 
 // Mouse interaction state
@@ -113,6 +114,24 @@ const routeInfo = ref<{
   totalDistance: number
   totalDuration: number
 } | null>(null)
+
+// Helper function to calculate zoom-responsive route line weight
+function getZoomResponsiveWeight(zoomLevel: number): number {
+  // 7px at zoom 18, decrease 1px per zoom level: weight = zoom - 11
+  const baseWeight = zoomLevel - 11
+  const minWeight = 3 // Minimum weight to keep line visible
+  const maxWeight = 12 // Maximum weight to prevent too thick lines
+  return Math.max(minWeight, Math.min(baseWeight, maxWeight))
+}
+
+// Helper function to calculate tolerance buffer weight for easier interaction
+function getToleranceBufferWeight(zoomLevel: number): number {
+  // Much more tolerance when zoomed out, moderate when zoomed in
+  const baseBuffer = 30 - zoomLevel // Higher buffer at lower zoom levels
+  const minBuffer = 12 // Increased minimum buffer for interaction
+  const maxBuffer = 24 // Increased maximum buffer for better interaction
+  return Math.max(minBuffer, Math.min(baseBuffer, maxBuffer))
+}
 
 // Initialize map
 onMounted(async () => {
@@ -141,6 +160,41 @@ function initializeMap() {
     attribution: 'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 18
   }).addTo(map!)
+
+  // Add zoom change detection with logging
+  map.on('zoomstart', () => {
+    const currentZoom = map.getZoom()
+    console.log('🔍 Zoom change starting - current zoom:', currentZoom)
+  })
+
+  map.on('zoomend', () => {
+    const newZoom = map.getZoom()
+    const newWeight = getZoomResponsiveWeight(newZoom)
+    const newBufferWeight = getToleranceBufferWeight(newZoom)
+
+    let oldWeight = 'N/A (no route line)'
+    let oldBufferWeight = 'N/A (no buffer)'
+
+    if (routeLine && routeToleranceBuffer) {
+      oldWeight = routeLine.options.weight || 'unknown'
+      oldBufferWeight = routeToleranceBuffer.options.weight || 'unknown'
+
+      // Update both the visible route line and invisible tolerance buffer
+      routeLine.setStyle({ weight: newWeight })
+      routeToleranceBuffer.setStyle({ weight: newBufferWeight })
+
+      console.log('🔍 ⚡ ZOOM CHANGED - ROUTE LINE & TOLERANCE UPDATED:')
+      console.log('🔍   - Zoom level:', newZoom)
+      console.log('🔍   - Visible line: ', oldWeight, 'px →', newWeight, 'px')
+      console.log('🔍   - Tolerance buffer:', oldBufferWeight, 'px →', newBufferWeight, 'px')
+      console.log('🔍   - Tolerance formula: getToleranceBufferWeight(', newZoom, ') = max(12, min(30 -', newZoom, ', 24)) =', newBufferWeight)
+    } else {
+      console.log('🔍 ⚡ ZOOM CHANGED:')
+      console.log('🔍   - Zoom level:', newZoom)
+      console.log('🔍   - Would set visible weight to:', newWeight, 'px')
+      console.log('🔍   - Would set tolerance weight to:', newBufferWeight, 'px (no route lines exist yet)')
+    }
+  })
 
   // Disable double-click waypoint addition
   map.on('dblclick', (e: any) => {
@@ -172,12 +226,18 @@ function initializeMouseInteractions() {
 
   // Mouse down event handler
   map.on('mousedown', (e: any) => {
+    console.log('🗺️ GLOBAL MAP mousedown - currentDragTarget will be set to "map"')
     mouseDownStartPoint = e.containerPoint
     mouseDownStartTime = Date.now()
     isDragging = false
     currentDragTarget = 'map' // Default to map
 
     console.log('🖱️ Mouse down at:', e.latlng)
+
+    // Add a tiny delay to allow route line handlers to fire first
+    setTimeout(() => {
+      console.log('🗺️ Final currentDragTarget after potential route override:', currentDragTarget)
+    }, 1)
   })
 
   // Mouse move event handler
@@ -189,7 +249,11 @@ function initializeMouseInteractions() {
 
     if (!isDragging && distance > dragThreshold) {
       isDragging = true
-      console.log('🖱️ Drag started, target:', currentDragTarget)
+      console.log('🖱️ 🚀 Drag started, target:', currentDragTarget)
+      console.log('🖱️ 🚀 This will determine which handler gets called:')
+      console.log('🖱️ 🚀   - "waypoint" -> handleWaypointDragStart')
+      console.log('🖱️ 🚀   - "route" -> handleRouteDragStart')
+      console.log('🖱️ 🚀   - "map" -> normal map drag')
 
       // Handle different drag targets
       if (currentDragTarget === 'waypoint' && draggedWaypointIndex >= 0) {
@@ -397,6 +461,9 @@ function findBestInsertionPoint(clickLatLng: any): number {
   let bestIndex = 1 // Default to insert after first waypoint
   let minDistance = Infinity
 
+  console.log('🔍 Finding best insertion point for click at:', clickLatLng)
+  console.log('🔍 Checking', waypoints.length - 1, 'route segments')
+
   // Find the route segment closest to the click point
   for (let i = 0; i < waypoints.length - 1; i++) {
     const start = waypoints[i].latLng
@@ -405,20 +472,52 @@ function findBestInsertionPoint(clickLatLng: any): number {
     // Calculate perpendicular distance to line segment
     const distance = calculateDistanceToLineSegment(clickLatLng, start, end)
 
+    console.log(`🔍 Segment ${i}-${i+1}: distance = ${distance.toFixed(2)}m`)
+
     if (distance < minDistance) {
       minDistance = distance
       bestIndex = i + 1
+      console.log(`🔍 ✅ New best segment: ${i}-${i+1}, inserting at index ${bestIndex}`)
     }
   }
 
+  console.log(`🔍 Final insertion point: index ${bestIndex} (between waypoints ${bestIndex-1} and ${bestIndex})`)
   return bestIndex
 }
 
 function calculateDistanceToLineSegment(point: any, lineStart: any, lineEnd: any): number {
-  // Simple distance calculation - could be improved with more sophisticated geometry
-  const distToStart = map.distance(point, lineStart)
-  const distToEnd = map.distance(point, lineEnd)
-  return Math.min(distToStart, distToEnd)
+  // Calculate the perpendicular distance from point to line segment
+  const A = point.lat - lineStart.lat
+  const B = point.lng - lineStart.lng
+  const C = lineEnd.lat - lineStart.lat
+  const D = lineEnd.lng - lineStart.lng
+
+  const dot = A * C + B * D
+  const lenSq = C * C + D * D
+
+  // If the line segment has zero length, return distance to the point
+  if (lenSq === 0) {
+    return map.distance(point, lineStart)
+  }
+
+  let param = dot / lenSq
+
+  let closestPoint
+  if (param < 0) {
+    // Closest point is before the start of the line segment
+    closestPoint = lineStart
+  } else if (param > 1) {
+    // Closest point is after the end of the line segment
+    closestPoint = lineEnd
+  } else {
+    // Closest point is on the line segment
+    closestPoint = {
+      lat: lineStart.lat + param * C,
+      lng: lineStart.lng + param * D
+    }
+  }
+
+  return map.distance(point, closestPoint)
 }
 
 function debounceRouteUpdate() {
@@ -542,12 +641,13 @@ function createWaypointMarker(index: number, latlng: any) {
   const marker = L.marker(latlng, {
     icon: waypointIcon,
     interactive: true,
-    zIndexOffset: 1000
+    zIndexOffset: 500 // Lower z-index so route line (1500) can be clicked above it
   }).addTo(map)
 
   // Add mouse event handlers to the marker
   marker.on('mousedown', (e: any) => {
-    console.log('🔵 Waypoint mousedown, index:', index)
+    console.log('🔵 ⭐ Waypoint marker clicked, index:', index, 'at:', e.latlng)
+    console.log('🔵 ⭐ This means route line click was NOT detected - checking layering issue')
     L.DomEvent.stopPropagation(e)
     L.DomEvent.preventDefault(e)
 
@@ -595,7 +695,7 @@ function createWaypointMarkerDuringDrag(index: number, latlng: any) {
   const marker = L.marker(latlng, {
     icon: waypointIcon,
     interactive: false, // Disable interaction during drag to prevent conflicts
-    zIndexOffset: 2000 // Higher z-index during drag
+    zIndexOffset: 2000 // Higher z-index during drag to be above route line
   }).addTo(map)
 
   // Store marker reference
@@ -670,10 +770,14 @@ function clearRoute() {
     routingControl.setWaypoints([])
   }
 
-  // Remove route line
+  // Remove route lines (both visible line and tolerance buffer)
   if (routeLine) {
     map.removeLayer(routeLine)
     routeLine = null
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
+    routeToleranceBuffer = null
   }
 
   routeInfo.value = null
@@ -729,9 +833,12 @@ function centerMap() {
 
 // Create an interactive route line that supports dragging
 function createClickableRouteLine(route: any) {
-  // Remove existing route line
+  // Remove existing route lines (both visible line and tolerance buffer)
   if (routeLine) {
     map.removeLayer(routeLine)
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
   }
 
   console.log('Creating interactive route line from route:', route)
@@ -809,39 +916,90 @@ function createClickableRouteLine(route: any) {
     return
   }
 
-  // Create interactive polyline
-  routeLine = L.polyline(latLngs, {
-    color: '#ff6b35', // Orange color to distinguish from default
-    weight: 8,
-    opacity: 0.7,
+  // Create two-layer route line system for better interaction tolerance
+  const currentZoom = map.getZoom()
+  const initialWeight = getZoomResponsiveWeight(currentZoom)
+  const toleranceWeight = getToleranceBufferWeight(currentZoom)
+
+  // 1. Create invisible tolerance buffer (thick, handles all mouse interactions)
+  routeToleranceBuffer = L.polyline(latLngs, {
+    color: '#ff6b35',
+    weight: toleranceWeight,
+    opacity: 0, // Completely invisible
     interactive: true,
-    bubblingMouseEvents: false // Prevent event bubbling
+    bubblingMouseEvents: false,
+    pane: 'overlayPane'
   }).addTo(map)
 
-  // Add mouse event handlers for route dragging
-  routeLine.on('mousedown', (e: any) => {
-    console.log('🔶 Route mousedown at:', e.latlng)
+  // 2. Create visible route line (thin, just for display)
+  routeLine = L.polyline(latLngs, {
+    color: '#ff6b35', // Orange color to distinguish from default
+    weight: initialWeight,
+    opacity: 0.7,
+    interactive: false, // Not interactive - tolerance buffer handles interactions
+    bubblingMouseEvents: false,
+    pane: 'overlayPane'
+  }).addTo(map)
+
+  // Set higher z-index for both lines to be above waypoint markers
+  if (routeToleranceBuffer._path) {
+    routeToleranceBuffer._path.style.zIndex = '1500'
+  }
+  if (routeLine._path) {
+    routeLine._path.style.zIndex = '1501' // Visible line slightly above tolerance buffer
+  }
+
+  // Log initial route line creation
+  console.log('📍 ✨ ROUTE LINE SYSTEM CREATED:')
+  console.log('📍   - Visible line weight:', initialWeight, 'px (zoom-responsive)')
+  console.log('📍   - Tolerance buffer weight:', toleranceWeight, 'px (invisible, for interaction)')
+  console.log('📍   - Current zoom level:', currentZoom)
+  console.log('📍   - Color: #ff6b35 (orange)')
+  console.log('📍   - Z-index: 1501 (visible) / 1500 (buffer)')
+  console.log('📍   - Tolerance formula: max(12, min(30 - ', currentZoom, ', 24)) =', toleranceWeight)
+
+  // Add mouse event handlers to the invisible tolerance buffer (better hit detection)
+  routeToleranceBuffer.on('mousedown', (e: any) => {
+    console.log('🔶 ✅ TOLERANCE BUFFER mousedown - trying to override currentDragTarget to "route"')
+    console.log('🔶 ✅ Buffer weight:', toleranceWeight, 'px, visible line weight:', initialWeight, 'px')
+    console.log('🔶 ✅ Previous currentDragTarget was:', currentDragTarget)
+    console.log('🔶 ✅ Route clicked at:', e.latlng, '(zoom level:', currentZoom, ')')
+
+    // CRITICAL: Stop propagation immediately to prevent map handler interference
     L.DomEvent.stopPropagation(e)
     L.DomEvent.preventDefault(e)
 
-    // Update mouse interaction state for route dragging
+    // Force override the mouse interaction state for route dragging
     currentDragTarget = 'route'
     mouseDownStartPoint = e.containerPoint
     mouseDownStartTime = Date.now()
     isDragging = false
+
+    console.log('🔶 ⚡ Route click processed via tolerance buffer - currentDragTarget now set to:', currentDragTarget)
+
+    return false // Additional event blocking
   })
 
-  // Add hover effects
-  routeLine.on('mouseover', () => {
+  // Add hover effects - tolerance buffer detects hover, visible line changes appearance
+  routeToleranceBuffer.on('mouseover', () => {
     if (routeLine && !isDragging) {
-      routeLine.setStyle({ opacity: 1.0, weight: 10 })
+      const currentZoom = map.getZoom()
+      const baseWeight = getZoomResponsiveWeight(currentZoom)
+      const bufferWeight = getToleranceBufferWeight(currentZoom)
+      const hoverWeight = baseWeight + 5 // Add 5px for dramatic hover effect
+      routeLine.setStyle({ opacity: 1.0, weight: hoverWeight })
+      console.log('📍 Route HOVER detected by tolerance buffer (', bufferWeight + 'px) - visible line weight increased to', hoverWeight + 'px (zoom', currentZoom + ')')
       map.getContainer().style.cursor = 'grab'
     }
   })
 
-  routeLine.on('mouseout', () => {
+  routeToleranceBuffer.on('mouseout', () => {
     if (routeLine && !isDragging) {
-      routeLine.setStyle({ opacity: 0.7, weight: 8 })
+      const currentZoom = map.getZoom()
+      const baseWeight = getZoomResponsiveWeight(currentZoom)
+      const bufferWeight = getToleranceBufferWeight(currentZoom)
+      routeLine.setStyle({ opacity: 0.7, weight: baseWeight })
+      console.log('📍 Route UNHOVER detected by tolerance buffer (', bufferWeight + 'px) - visible line weight restored to', baseWeight + 'px (zoom', currentZoom + ')')
       map.getContainer().style.cursor = 'crosshair'
     }
   })
