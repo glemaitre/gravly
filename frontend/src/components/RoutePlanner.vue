@@ -94,9 +94,19 @@ let map: any = null
 let routingControl: any = null
 let waypoints: any[] = []
 let routeLine: any = null
+let waypointMarkers: any[] = []
 
-// Simplified state management for mouse interactions
+// Mouse interaction state
+let mouseDownStartPoint: any = null
+let mouseDownStartTime: number = 0
+let isDragging = false
+let dragThreshold = 5 // pixels
+let clickTimeThreshold = 300 // milliseconds
+let currentDragTarget: 'map' | 'waypoint' | 'route' | null = null
+let draggedWaypointIndex: number = -1
 let routeUpdateTimeout: any = null
+let isWaypointDragActive = false // Flag to prevent marker rebuilding during drag
+let markerUpdateTimeout: any = null // Throttle marker updates during drag
 
 // Route information
 const routeInfo = ref<{
@@ -149,15 +159,285 @@ function initializeMap() {
   // Initialize routing control AFTER click handler
   initializeRoutingControl()
 
-  // Simplified mouse interaction - just mouse up for waypoint creation
-  map.on('mouseup', (e: any) => {
-    console.log('🖱️ MOUSE UP - Adding waypoint at:', e.latlng)
-    addWaypoint(e.latlng)
-  })
+  // Initialize sophisticated mouse interaction system
+  initializeMouseInteractions()
 
   // Set default crosshair cursor
   map.getContainer().style.cursor = 'crosshair'
 
+}
+
+function initializeMouseInteractions() {
+  if (!map) return
+
+  // Mouse down event handler
+  map.on('mousedown', (e: any) => {
+    mouseDownStartPoint = e.containerPoint
+    mouseDownStartTime = Date.now()
+    isDragging = false
+    currentDragTarget = 'map' // Default to map
+
+    console.log('🖱️ Mouse down at:', e.latlng)
+  })
+
+  // Mouse move event handler
+  map.on('mousemove', (e: any) => {
+    if (!mouseDownStartPoint) return
+
+    const distance = e.containerPoint.distanceTo(mouseDownStartPoint)
+    const timeDiff = Date.now() - mouseDownStartTime
+
+    if (!isDragging && distance > dragThreshold) {
+      isDragging = true
+      console.log('🖱️ Drag started, target:', currentDragTarget)
+
+      // Handle different drag targets
+      if (currentDragTarget === 'waypoint' && draggedWaypointIndex >= 0) {
+        handleWaypointDragStart(draggedWaypointIndex)
+      } else if (currentDragTarget === 'route') {
+        handleRouteDragStart(e)
+      }
+      // For map dragging, Leaflet handles it automatically
+    }
+
+    // Update dragged waypoint position
+    if (isDragging && currentDragTarget === 'waypoint' && draggedWaypointIndex >= 0) {
+      console.log('🖱️ 🚀 Updating waypoint during drag, index:', draggedWaypointIndex, 'position:', e.latlng)
+      updateWaypointPosition(draggedWaypointIndex, e.latlng)
+    }
+  })
+
+  // Mouse up event handler
+  map.on('mouseup', (e: any) => {
+    const timeDiff = Date.now() - mouseDownStartTime
+
+    console.log('🖱️ Mouse up - isDragging:', isDragging, 'target:', currentDragTarget, 'time:', timeDiff)
+
+    if (!isDragging && timeDiff < clickTimeThreshold && currentDragTarget === 'map') {
+      // Simple click on map - add waypoint
+      console.log('🖱️ Adding waypoint at:', e.latlng)
+      addWaypoint(e.latlng)
+    } else if (isDragging) {
+      // Handle drag end
+      if (currentDragTarget === 'waypoint' && draggedWaypointIndex >= 0) {
+        handleWaypointDragEnd(draggedWaypointIndex, e.latlng)
+      } else if (currentDragTarget === 'route') {
+        handleRouteDragEnd(e.latlng)
+      }
+    }
+    // For clicks on waypoints or route lines, do nothing (as requested)
+
+    // Reset interaction state
+    resetMouseState()
+  })
+}
+
+function resetMouseState() {
+  // Clear any pending marker updates
+  if (markerUpdateTimeout) {
+    clearTimeout(markerUpdateTimeout)
+    markerUpdateTimeout = null
+  }
+
+  // Re-enable map dragging if it was disabled during waypoint drag
+  if (map && map.dragging && !map.dragging.enabled()) {
+    map.dragging.enable()
+    console.log('🔵 Map dragging re-enabled during state reset')
+  }
+
+  // Reset cursor
+  if (map) {
+    map.getContainer().style.cursor = 'crosshair'
+  }
+
+  mouseDownStartPoint = null
+  mouseDownStartTime = 0
+  isDragging = false
+  currentDragTarget = null
+  draggedWaypointIndex = -1
+  isWaypointDragActive = false // Reset drag active flag
+}
+
+function handleWaypointDragStart(waypointIndex: number) {
+  console.log('🔵 ⭐ STARTING waypoint drag for index:', waypointIndex)
+
+  // Set drag active flag to prevent marker rebuilding
+  isWaypointDragActive = true
+  console.log('🔵 ⭐ Waypoint drag active flag set to TRUE - no marker rebuilding should happen now!')
+
+  // CRITICAL: Disable map dragging to prevent interference
+  if (map && map.dragging) {
+    map.dragging.disable()
+    console.log('🔵 Map dragging disabled for waypoint drag')
+  }
+
+  // Verify marker exists before drag
+  if (waypointMarkers[waypointIndex]) {
+    console.log('🔵 ✅ Marker exists for index', waypointIndex, '- adding drag styling')
+    waypointMarkers[waypointIndex].getElement()?.classList.add('waypoint-dragging')
+  } else {
+    console.log('🔵 ❌ No marker found for index', waypointIndex, 'at drag start!')
+  }
+
+  // Change cursor to indicate dragging
+  map.getContainer().style.cursor = 'grabbing'
+}
+
+function updateWaypointPosition(waypointIndex: number, newLatLng: any) {
+  if (waypointIndex < 0 || waypointIndex >= waypoints.length) {
+    console.log('🔵 Invalid waypoint index for update:', waypointIndex)
+    return
+  }
+
+  console.log('🔵 Updating waypoint', waypointIndex, 'to position:', newLatLng)
+
+  // Update waypoint position
+  waypoints[waypointIndex] = L.Routing.waypoint(newLatLng)
+
+  // Throttle marker recreation to improve performance (but still be responsive)
+  if (markerUpdateTimeout) {
+    clearTimeout(markerUpdateTimeout)
+  }
+
+  markerUpdateTimeout = setTimeout(() => {
+    console.log('🔵 🔄 Recreating marker during drag to ensure visibility')
+
+    // Remove existing marker if it exists
+    if (waypointMarkers[waypointIndex] && map.hasLayer(waypointMarkers[waypointIndex])) {
+      map.removeLayer(waypointMarkers[waypointIndex])
+      console.log('🔵 Removed existing marker for recreation')
+    }
+
+    // Create new marker at the new position
+    createWaypointMarkerDuringDrag(waypointIndex, newLatLng)
+    console.log('🔵 ✅ Marker recreated and should be visible at waypoint', waypointIndex)
+  }, 16) // ~60fps update rate
+}
+
+function handleWaypointDragEnd(waypointIndex: number, finalLatLng: any) {
+  console.log('🔵 Ending waypoint drag for index:', waypointIndex, 'at:', finalLatLng)
+
+  // Clear any pending marker updates
+  if (markerUpdateTimeout) {
+    clearTimeout(markerUpdateTimeout)
+    markerUpdateTimeout = null
+  }
+
+  // Reset drag active flag to allow marker rebuilding
+  isWaypointDragActive = false
+  console.log('🔵 Waypoint drag active flag set to false')
+
+  // CRITICAL: Re-enable map dragging
+  if (map && map.dragging) {
+    map.dragging.enable()
+    console.log('🔵 Map dragging re-enabled after waypoint drag')
+  }
+
+  // Recreate the marker with full interactivity restored
+  console.log('🔵 🔄 Recreating final marker with full interactivity')
+  createWaypointMarker(waypointIndex, finalLatLng)
+
+  // Reset cursor
+  map.getContainer().style.cursor = 'crosshair'
+
+  // Force route update now that drag is complete
+  console.log('🔵 Forcing route update after drag completion')
+  if (routingControl) {
+    routingControl.setWaypoints(waypoints)
+  }
+}
+
+function handleRouteDragStart(e: any) {
+  console.log('🔶 Starting route drag at:', e.latlng)
+
+  // Disable map dragging for route drag operations too
+  if (map && map.dragging) {
+    map.dragging.disable()
+    console.log('🔶 Map dragging disabled for route drag')
+  }
+
+  // Find the best insertion point for a new waypoint
+  const insertIndex = findBestInsertionPoint(e.latlng)
+
+  // Create new waypoint at the drag start position
+  const newWaypoint = L.Routing.waypoint(e.latlng)
+  waypoints.splice(insertIndex, 0, newWaypoint)
+
+  // CRITICAL: Rebuild all waypoint markers to keep indices in sync
+  rebuildWaypointMarkers()
+
+  // Set this new waypoint as the one being dragged
+  draggedWaypointIndex = insertIndex
+  currentDragTarget = 'waypoint' // Switch to waypoint dragging mode
+
+  // Update routing control immediately with new waypoints
+  if (routingControl) {
+    routingControl.setWaypoints(waypoints)
+  }
+
+  // Change cursor
+  map.getContainer().style.cursor = 'grabbing'
+}
+
+function handleRouteDragEnd(finalLatLng: any) {
+  console.log('🔶 Ending route drag at:', finalLatLng)
+
+  // Re-enable map dragging (safety check, should be handled by waypoint drag end)
+  if (map && map.dragging && !map.dragging.enabled()) {
+    map.dragging.enable()
+    console.log('🔶 Map dragging re-enabled after route drag')
+  }
+
+  debounceRouteUpdate()
+}
+
+function findBestInsertionPoint(clickLatLng: any): number {
+  if (waypoints.length < 2) return waypoints.length
+
+  let bestIndex = 1 // Default to insert after first waypoint
+  let minDistance = Infinity
+
+  // Find the route segment closest to the click point
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const start = waypoints[i].latLng
+    const end = waypoints[i + 1].latLng
+
+    // Calculate perpendicular distance to line segment
+    const distance = calculateDistanceToLineSegment(clickLatLng, start, end)
+
+    if (distance < minDistance) {
+      minDistance = distance
+      bestIndex = i + 1
+    }
+  }
+
+  return bestIndex
+}
+
+function calculateDistanceToLineSegment(point: any, lineStart: any, lineEnd: any): number {
+  // Simple distance calculation - could be improved with more sophisticated geometry
+  const distToStart = map.distance(point, lineStart)
+  const distToEnd = map.distance(point, lineEnd)
+  return Math.min(distToStart, distToEnd)
+}
+
+function debounceRouteUpdate() {
+  if (routeUpdateTimeout) {
+    clearTimeout(routeUpdateTimeout)
+  }
+
+  // CRITICAL: Don't update route during active waypoint dragging
+  if (isWaypointDragActive) {
+    console.log('🔄 Skipping route update - waypoint drag is active')
+    return
+  }
+
+  routeUpdateTimeout = setTimeout(() => {
+    if (routingControl) {
+      console.log('🔄 Updating route with', waypoints.length, 'waypoints')
+      routingControl.setWaypoints(waypoints)
+    }
+  }, 200)
 }
 
 
@@ -175,9 +455,10 @@ function initializeRoutingControl() {
     routeWhileDragging: false, // Disabled to prevent auto-zoom
     addWaypoints: false, // Disable automatic waypoint addition
     show: false, // Hide the routing control panel
-    // Disable all click handling
-    waypointMode: {
-      addWaypoints: false
+    // Custom marker creation function to disable default markers
+    createMarker: function(i: number, waypoint: any, n: number) {
+      // Return null to disable default markers - we handle our own
+      return null
     },
     // Disable auto-zoom but keep route calculation
     fitSelectedRoutes: false,
@@ -199,10 +480,12 @@ function initializeRoutingControl() {
       console.log('Route data:', route)
       console.log('Route keys:', Object.keys(route))
       updateRouteInfo(route)
-      // generateElevationProfile(route) // Disabled for now
 
-      // Create clickable route line
-      console.log('Creating new clickable route line')
+      // Ensure all waypoints have markers - use rebuild to handle any index issues
+      rebuildWaypointMarkers()
+
+      // Create interactive route line
+      console.log('Creating new interactive route line')
       setTimeout(() => {
         createClickableRouteLine(route)
       }, 100)
@@ -218,8 +501,12 @@ function initializeRoutingControl() {
 function addWaypoint(latlng: any) {
   console.log('Adding waypoint at:', latlng)
   const newWaypoint = L.Routing.waypoint(latlng)
+  const waypointIndex = waypoints.length
   waypoints.push(newWaypoint)
   console.log('Total waypoints:', waypoints.length)
+
+  // Create draggable marker for this waypoint
+  createWaypointMarker(waypointIndex, latlng)
 
   if (routingControl) {
     routingControl.setWaypoints(waypoints)
@@ -231,17 +518,164 @@ function addWaypoint(latlng: any) {
   }
 }
 
+function createWaypointMarker(index: number, latlng: any) {
+  console.log('📍 Creating waypoint marker for index:', index, 'at position:', latlng, 'dragActive:', isWaypointDragActive)
+
+  // Remove existing marker at this index if it exists
+  if (waypointMarkers[index]) {
+    console.log('📍 Removing existing marker at index', index)
+    map.removeLayer(waypointMarkers[index])
+  }
+
+  // Create custom waypoint marker
+  const isStart = index === 0
+  const isEnd = index === waypoints.length - 1 && waypoints.length > 1
+  const markerClass = isStart ? 'waypoint-start' : (isEnd ? 'waypoint-end' : 'waypoint-intermediate')
+
+  const waypointIcon = L.divIcon({
+    html: `<div class="waypoint-marker ${markerClass}">${index + 1}</div>`,
+    className: 'custom-waypoint-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  })
+
+  const marker = L.marker(latlng, {
+    icon: waypointIcon,
+    interactive: true,
+    zIndexOffset: 1000
+  }).addTo(map)
+
+  // Add mouse event handlers to the marker
+  marker.on('mousedown', (e: any) => {
+    console.log('🔵 Waypoint mousedown, index:', index)
+    L.DomEvent.stopPropagation(e)
+    L.DomEvent.preventDefault(e)
+
+    // Update mouse interaction state
+    currentDragTarget = 'waypoint'
+    draggedWaypointIndex = index
+    mouseDownStartPoint = e.containerPoint
+    mouseDownStartTime = Date.now()
+    isDragging = false
+  })
+
+  // Add hover effects for waypoints
+  marker.on('mouseover', () => {
+    map.getContainer().style.cursor = 'grab'
+  })
+
+  marker.on('mouseout', () => {
+    map.getContainer().style.cursor = 'crosshair'
+  })
+
+  // Store marker reference
+  waypointMarkers[index] = marker
+
+  console.log('📍 ✅ Waypoint marker created and stored at index:', index)
+
+  // Update all existing markers to reflect new start/end positions
+  updateWaypointMarkerStyles()
+}
+
+function createWaypointMarkerDuringDrag(index: number, latlng: any) {
+  console.log('📍 🚀 Creating DRAG marker for index:', index, 'at position:', latlng)
+
+  // Create custom waypoint marker with drag styling
+  const isStart = index === 0
+  const isEnd = index === waypoints.length - 1 && waypoints.length > 1
+  const markerClass = isStart ? 'waypoint-start' : (isEnd ? 'waypoint-end' : 'waypoint-intermediate')
+
+  const waypointIcon = L.divIcon({
+    html: `<div class="waypoint-marker ${markerClass} waypoint-dragging">${index + 1}</div>`,
+    className: 'custom-waypoint-marker',
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  })
+
+  const marker = L.marker(latlng, {
+    icon: waypointIcon,
+    interactive: false, // Disable interaction during drag to prevent conflicts
+    zIndexOffset: 2000 // Higher z-index during drag
+  }).addTo(map)
+
+  // Store marker reference
+  waypointMarkers[index] = marker
+
+  console.log('📍 🚀 ✅ DRAG marker created and should be visible at index:', index)
+}
+
+function updateWaypointMarkerStyles() {
+  waypointMarkers.forEach((marker, index) => {
+    if (!marker) return
+
+    const isStart = index === 0
+    const isEnd = index === waypoints.length - 1 && waypoints.length > 1
+    const markerClass = isStart ? 'waypoint-start' : (isEnd ? 'waypoint-end' : 'waypoint-intermediate')
+
+    const waypointIcon = L.divIcon({
+      html: `<div class="waypoint-marker ${markerClass}">${index + 1}</div>`,
+      className: 'custom-waypoint-marker',
+      iconSize: [24, 24],
+      iconAnchor: [12, 12]
+    })
+
+    marker.setIcon(waypointIcon)
+  })
+}
+
+function rebuildWaypointMarkers() {
+  console.log('🔄 rebuildWaypointMarkers called, isWaypointDragActive:', isWaypointDragActive)
+
+  // CRITICAL: Don't rebuild markers during active waypoint dragging
+  if (isWaypointDragActive) {
+    console.log('🔄 ⚠️ SKIPPING marker rebuild - waypoint drag is active')
+    return
+  }
+
+  console.log('🔄 Rebuilding all waypoint markers, total waypoints:', waypoints.length)
+
+  // Clear all existing markers
+  waypointMarkers.forEach((marker, index) => {
+    if (marker && map.hasLayer(marker)) {
+      console.log('🔄 Removing marker', index, 'from map')
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
+  // Recreate markers for all waypoints
+  waypoints.forEach((waypoint, index) => {
+    if (waypoint && waypoint.latLng) {
+      console.log('🔄 Creating marker for waypoint', index)
+      createWaypointMarker(index, waypoint.latLng)
+    }
+  })
+
+  console.log('🔄 ✅ Rebuilt', waypointMarkers.length, 'waypoint markers')
+}
+
 
 function clearRoute() {
   waypoints = []
+
+  // Clear waypoint markers
+  waypointMarkers.forEach(marker => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
   if (routingControl) {
     routingControl.setWaypoints([])
   }
+
   // Remove route line
   if (routeLine) {
     map.removeLayer(routeLine)
     routeLine = null
   }
+
   routeInfo.value = null
 }
 
@@ -293,101 +727,126 @@ function centerMap() {
 // Helper functions for clean mouse interaction logic
 
 
-// Create a clickable route line
+// Create an interactive route line that supports dragging
 function createClickableRouteLine(route: any) {
   // Remove existing route line
   if (routeLine) {
     map.removeLayer(routeLine)
   }
 
-  console.log('Creating route line from route:', route)
+  console.log('Creating interactive route line from route:', route)
 
   // Try to find existing route polyline on the map
   let existingPolyline = null
   map.eachLayer((layer: any) => {
-    if (layer instanceof L.Polyline && layer.options.color === '#3388ff') {
+    if (layer instanceof L.Polyline && (layer.options.color === '#3388ff' || layer.options.color === '#ff6600')) {
       // This is likely the routing control's polyline
       existingPolyline = layer
       console.log('Found existing route polyline:', layer)
     }
   })
 
-  if (existingPolyline) {
-    // Clone the existing polyline and make it clickable
-    const latLngs = (existingPolyline as any).getLatLngs()
-    console.log('Using existing polyline coordinates:', latLngs.length, 'points')
-
-    routeLine = L.polyline(latLngs, {
-      color: '#ff6b35', // Orange color
-      weight: 6,
-      opacity: 0.8,
-      interactive: true // Make it clickable
-    }).addTo(map)
-
-    console.log('Created clickable route line with', latLngs.length, 'points')
-    return
-  }
-
-  // Fallback: try to extract coordinates from route data
-  let coordinates = null
-
-  // Method 1: Direct coordinates array
-  if (route.coordinates && Array.isArray(route.coordinates)) {
-    coordinates = route.coordinates
-    console.log('Found coordinates directly:', coordinates.length)
-  }
-  // Method 2: Routes array with coordinates
-  else if (route.routes && Array.isArray(route.routes) && route.routes.length > 0) {
-    if (route.routes[0].coordinates) {
-      coordinates = route.routes[0].coordinates
-      console.log('Found coordinates in routes[0]:', coordinates.length)
-    }
-  }
-  // Method 3: Instructions with coordinates
-  else if (route.instructions && Array.isArray(route.instructions) && route.instructions.length > 0) {
-    if (route.instructions[0].coordinates) {
-      coordinates = route.instructions[0].coordinates
-      console.log('Found coordinates in instructions[0]:', coordinates.length)
-    }
-  }
-  // Method 4: Check if route has latlngs property
-  else if (route.latlngs && Array.isArray(route.latlngs)) {
-    coordinates = route.latlngs
-    console.log('Found latlngs directly:', coordinates.length)
-  }
-
-  if (!coordinates || coordinates.length < 2) {
-    console.log('No valid coordinates found for route line. Route structure:', Object.keys(route))
-    return
-  }
-
-  // Convert coordinates to LatLng array
   let latLngs = []
-  try {
-    if (coordinates[0] && typeof coordinates[0] === 'object' && 'lat' in coordinates[0]) {
-      // Already LatLng objects
-      latLngs = coordinates
-    } else if (Array.isArray(coordinates[0]) && coordinates[0].length >= 2) {
-      // Array of [lat, lng] pairs
-      latLngs = coordinates.map((coord: any) => L.latLng(coord[0], coord[1]))
-    } else {
-      console.log('Unknown coordinate format:', coordinates[0])
+
+  if (existingPolyline) {
+    // Clone the existing polyline and make it interactive
+    latLngs = (existingPolyline as any).getLatLngs()
+    console.log('Using existing polyline coordinates:', latLngs.length, 'points')
+  } else {
+    // Fallback: try to extract coordinates from route data
+    let coordinates = null
+
+    // Method 1: Direct coordinates array
+    if (route.coordinates && Array.isArray(route.coordinates)) {
+      coordinates = route.coordinates
+      console.log('Found coordinates directly:', coordinates.length)
+    }
+    // Method 2: Routes array with coordinates
+    else if (route.routes && Array.isArray(route.routes) && route.routes.length > 0) {
+      if (route.routes[0].coordinates) {
+        coordinates = route.routes[0].coordinates
+        console.log('Found coordinates in routes[0]:', coordinates.length)
+      }
+    }
+    // Method 3: Instructions with coordinates
+    else if (route.instructions && Array.isArray(route.instructions) && route.instructions.length > 0) {
+      if (route.instructions[0].coordinates) {
+        coordinates = route.instructions[0].coordinates
+        console.log('Found coordinates in instructions[0]:', coordinates.length)
+      }
+    }
+    // Method 4: Check if route has latlngs property
+    else if (route.latlngs && Array.isArray(route.latlngs)) {
+      coordinates = route.latlngs
+      console.log('Found latlngs directly:', coordinates.length)
+    }
+
+    if (!coordinates || coordinates.length < 2) {
+      console.log('No valid coordinates found for route line. Route structure:', Object.keys(route))
       return
     }
-  } catch (error) {
-    console.log('Error converting coordinates:', error)
+
+    // Convert coordinates to LatLng array
+    try {
+      if (coordinates[0] && typeof coordinates[0] === 'object' && 'lat' in coordinates[0]) {
+        // Already LatLng objects
+        latLngs = coordinates
+      } else if (Array.isArray(coordinates[0]) && coordinates[0].length >= 2) {
+        // Array of [lat, lng] pairs
+        latLngs = coordinates.map((coord: any) => L.latLng(coord[0], coord[1]))
+      } else {
+        console.log('Unknown coordinate format:', coordinates[0])
+        return
+      }
+    } catch (error) {
+      console.log('Error converting coordinates:', error)
+      return
+    }
+  }
+
+  if (latLngs.length < 2) {
+    console.log('Not enough coordinates for route line')
     return
   }
 
-  // Create polyline with click events
-    routeLine = L.polyline(latLngs, {
-    color: '#ff6b35', // Orange color to match the route
-      weight: 6,
-      opacity: 0.8,
-    interactive: true // Make it clickable
-    }).addTo(map)
+  // Create interactive polyline
+  routeLine = L.polyline(latLngs, {
+    color: '#ff6b35', // Orange color to distinguish from default
+    weight: 8,
+    opacity: 0.7,
+    interactive: true,
+    bubblingMouseEvents: false // Prevent event bubbling
+  }).addTo(map)
 
-  console.log('Created clickable route line with', latLngs.length, 'points')
+  // Add mouse event handlers for route dragging
+  routeLine.on('mousedown', (e: any) => {
+    console.log('🔶 Route mousedown at:', e.latlng)
+    L.DomEvent.stopPropagation(e)
+    L.DomEvent.preventDefault(e)
+
+    // Update mouse interaction state for route dragging
+    currentDragTarget = 'route'
+    mouseDownStartPoint = e.containerPoint
+    mouseDownStartTime = Date.now()
+    isDragging = false
+  })
+
+  // Add hover effects
+  routeLine.on('mouseover', () => {
+    if (routeLine && !isDragging) {
+      routeLine.setStyle({ opacity: 1.0, weight: 10 })
+      map.getContainer().style.cursor = 'grab'
+    }
+  })
+
+  routeLine.on('mouseout', () => {
+    if (routeLine && !isDragging) {
+      routeLine.setStyle({ opacity: 0.7, weight: 8 })
+      map.getContainer().style.cursor = 'crosshair'
+    }
+  })
+
+  console.log('Created interactive route line with', latLngs.length, 'points')
 }
 
 function updateRouteInfo(route: any) {
