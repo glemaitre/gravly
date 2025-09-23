@@ -18,8 +18,8 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/route-planner',
-    component: RoutePlanner,
-    meta: { requiresAuth: true }
+    component: RoutePlanner
+    // No authentication required - route planner works standalone
   },
   { path: '/segment/:id', component: SegmentDetail, props: true },
   { path: '/strava-callback', component: StravaCallback }

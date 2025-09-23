@@ -1,70 +1,36 @@
 <template>
   <div class="route-planner">
-    <div class="sidebar">
-      <div class="sidebar-content">
-        <div class="card menu-card">
-          <div class="menu-section">
-            <div class="menu-section-title">
-              {{ t('routePlanner.planning') }}
-    </div>
-            <ul class="menu-list">
-              <li class="menu-item" @click="clearRoute" :title="t('routePlanner.clearRoute')">
-                <span class="icon"><i class="fa-solid fa-trash"></i></span>
-                <span class="text">{{ t('routePlanner.clearRoute') }}</span>
-              </li>
-              <li class="menu-item" @click="saveRoute" :title="t('routePlanner.saveRoute')">
-                <span class="icon"><i class="fa-solid fa-save"></i></span>
-                <span class="text">{{ t('routePlanner.saveRoute') }}</span>
-              </li>
-              <li class="menu-item" @click="loadRoute" :title="t('routePlanner.loadRoute')">
-                <span class="icon"><i class="fa-solid fa-folder-open"></i></span>
-                <span class="text">{{ t('routePlanner.loadRoute') }}</span>
-              </li>
-            </ul>
-    </div>
+    <div class="map-container">
+      <div id="route-map" class="map"></div>
 
-          <div class="menu-section">
-            <div class="menu-section-title">
-              {{ t('routePlanner.routeInfo') }}
-            </div>
-            <div class="route-stats" v-if="routeInfo">
-              <div class="stat-item">
-                <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                <span class="label">{{ t('routePlanner.distance') }}:</span>
-                <span class="value">{{ formatDistance(routeInfo.totalDistance) }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                <span class="label">{{ t('routePlanner.duration') }}:</span>
-                <span class="value">{{ formatDuration(routeInfo.totalDuration) }}</span>
-              </div>
-            </div>
-            <div v-else class="no-route">
-          <i class="fa-solid fa-route"></i>
-              <span>{{ t('routePlanner.noRoute') }}</span>
-        </div>
-        </div>
-
+      <!-- Top right corner controls -->
+      <div class="map-controls">
+        <div class="control-group">
+          <button
+            class="control-btn"
+            @click="clearMap"
+            :title="'Clear Map'"
+          >
+            <i class="fa-solid fa-trash"></i>
+          </button>
+          <button
+            class="control-btn"
+            @click="undo"
+            :disabled="!canUndo"
+            :title="'Undo'"
+          >
+            <i class="fa-solid fa-undo"></i>
+          </button>
+          <button
+            class="control-btn"
+            @click="redo"
+            :disabled="!canRedo"
+            :title="'Redo'"
+          >
+            <i class="fa-solid fa-redo"></i>
+          </button>
         </div>
       </div>
-    </div>
-
-    <div class="content">
-      <div class="map-container">
-        <div id="route-map" class="map"></div>
-        <div class="map-controls">
-          <div class="control-group">
-            <button
-              class="control-btn"
-              @click="centerMap"
-              :title="t('routePlanner.centerMap')"
-            >
-              <i class="fa-solid fa-crosshairs"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </template>
@@ -97,6 +63,17 @@ let routeLine: any = null
 let routeToleranceBuffer: any = null // Invisible thick line for easier interaction
 let waypointMarkers: any[] = []
 
+// Undo/Redo state management
+const undoStack: any[][] = []
+const redoStack: any[][] = []
+const canUndo = ref(false)
+const canRedo = ref(false)
+const maxHistorySize = 50 // Limit history to prevent memory issues
+
+// Route persistence keys
+const ROUTE_STORAGE_KEY = 'routePlanner_currentRoute'
+const MAP_STATE_STORAGE_KEY = 'routePlanner_mapState'
+
 // Mouse interaction state
 let mouseDownStartPoint: any = null
 let mouseDownStartTime: number = 0
@@ -109,11 +86,6 @@ let routeUpdateTimeout: any = null
 let isWaypointDragActive = false // Flag to prevent marker rebuilding during drag
 let markerUpdateTimeout: any = null // Throttle marker updates during drag
 
-// Route information
-const routeInfo = ref<{
-  totalDistance: number
-  totalDuration: number
-} | null>(null)
 
 // Helper function to calculate zoom-responsive route line weight
 function getZoomResponsiveWeight(zoomLevel: number): number {
@@ -135,11 +107,25 @@ function getToleranceBufferWeight(zoomLevel: number): number {
 
 // Initialize map
 onMounted(async () => {
+  // Add CSS class to prevent scrollbars on the entire page
+  document.body.classList.add('route-planner-active')
+  document.documentElement.classList.add('route-planner-active')
+
   await nextTick()
   initializeMap()
+
+  // Load saved route after map is initialized
+  loadSavedRoute()
 })
 
 onUnmounted(() => {
+  // Remove CSS class to restore normal scrolling
+  document.body.classList.remove('route-planner-active')
+  document.documentElement.classList.remove('route-planner-active')
+
+  // Save current route before unmounting
+  saveCurrentRoute()
+
   if (map) {
     map.remove()
   }
@@ -151,8 +137,8 @@ function initializeMap() {
 
   // Initialize map with OpenCycleMap tiles
   map = L.map('route-map', {
-    center: [46.5197, 6.6323], // Default to Lausanne area
-    zoom: 13
+    center: [46.942728, 4.033681], // Mont-Beuvray parce que ca pique! (same as landing page)
+    zoom: 14
   })
 
   // Add OpenCycleMap tiles via backend proxy (secure API key handling)
@@ -381,6 +367,9 @@ function updateWaypointPosition(waypointIndex: number, newLatLng: any) {
 function handleWaypointDragEnd(waypointIndex: number, finalLatLng: any) {
   console.log('🔵 Ending waypoint drag for index:', waypointIndex, 'at:', finalLatLng)
 
+  // Save state after waypoint drag completes (position changed)
+  saveState()
+
   // Clear any pending marker updates
   if (markerUpdateTimeout) {
     clearTimeout(markerUpdateTimeout)
@@ -420,6 +409,9 @@ function handleRouteDragStart(e: any) {
     console.log('🔶 Map dragging disabled for route drag')
   }
 
+  // Save state before modifying waypoints
+  saveState()
+
   // Find the best insertion point for a new waypoint
   const insertIndex = findBestInsertionPoint(e.latlng)
 
@@ -429,6 +421,9 @@ function handleRouteDragStart(e: any) {
 
   // CRITICAL: Rebuild all waypoint markers to keep indices in sync
   rebuildWaypointMarkers()
+
+  // Save route after inserting waypoint
+  saveCurrentRoute()
 
   // Set this new waypoint as the one being dragged
   draggedWaypointIndex = insertIndex
@@ -578,7 +573,6 @@ function initializeRoutingControl() {
       const route = routes[0]
       console.log('Route data:', route)
       console.log('Route keys:', Object.keys(route))
-      updateRouteInfo(route)
 
       // Ensure all waypoints have markers - use rebuild to handle any index issues
       rebuildWaypointMarkers()
@@ -594,15 +588,25 @@ function initializeRoutingControl() {
   // Listen for waypoint changes
   routingControl.on('waypointsspliced', (e: any) => {
     waypoints = e.waypoints
+
+    // Save route when waypoints are modified by routing control
+    saveCurrentRoute()
   })
 }
 
 function addWaypoint(latlng: any) {
   console.log('Adding waypoint at:', latlng)
+
+  // Save state for undo functionality
+  saveState()
+
   const newWaypoint = L.Routing.waypoint(latlng)
   const waypointIndex = waypoints.length
   waypoints.push(newWaypoint)
   console.log('Total waypoints:', waypoints.length)
+
+  // Save route after adding waypoint
+  saveCurrentRoute()
 
   // Create draggable marker for this waypoint
   createWaypointMarker(waypointIndex, latlng)
@@ -754,79 +758,6 @@ function rebuildWaypointMarkers() {
   console.log('🔄 ✅ Rebuilt', waypointMarkers.length, 'waypoint markers')
 }
 
-
-function clearRoute() {
-  waypoints = []
-
-  // Clear waypoint markers
-  waypointMarkers.forEach(marker => {
-    if (marker && map.hasLayer(marker)) {
-      map.removeLayer(marker)
-    }
-  })
-  waypointMarkers = []
-
-  if (routingControl) {
-    routingControl.setWaypoints([])
-  }
-
-  // Remove route lines (both visible line and tolerance buffer)
-  if (routeLine) {
-    map.removeLayer(routeLine)
-    routeLine = null
-  }
-  if (routeToleranceBuffer) {
-    map.removeLayer(routeToleranceBuffer)
-    routeToleranceBuffer = null
-  }
-
-  routeInfo.value = null
-}
-
-function saveRoute() {
-  if (!routeInfo.value || waypoints.length < 2) return
-
-  const routeData = {
-    waypoints: waypoints.map(wp => ({
-      lat: wp.latLng.lat,
-      lng: wp.latLng.lng,
-      name: wp.name || ''
-    })),
-    routeInfo: routeInfo.value,
-    timestamp: new Date().toISOString(),
-    name: `Route ${new Date().toLocaleDateString()}`
-  }
-
-  // Save to localStorage for now
-  const savedRoutes = JSON.parse(localStorage.getItem('savedRoutes') || '[]')
-  savedRoutes.push(routeData)
-  localStorage.setItem('savedRoutes', JSON.stringify(savedRoutes))
-
-  alert(t('routePlanner.routeSaved'))
-}
-
-function loadRoute() {
-  const savedRoutes = JSON.parse(localStorage.getItem('savedRoutes') || '[]')
-  if (savedRoutes.length === 0) {
-    alert(t('routePlanner.noSavedRoutes'))
-    return
-  }
-
-  // For now, load the most recent route
-  const routeData = savedRoutes[savedRoutes.length - 1]
-  waypoints = routeData.waypoints.map((wp: any) => L.Routing.waypoint(L.latLng(wp.lat, wp.lng), wp.name))
-
-  if (routingControl) {
-    routingControl.setWaypoints(waypoints)
-  }
-
-  routeInfo.value = routeData.routeInfo
-}
-
-function centerMap() {
-  // Center map functionality disabled - user manages zoom manually
-  console.log('Center map functionality disabled')
-}
 
 // Helper functions for clean mouse interaction logic
 
@@ -1007,191 +938,290 @@ function createClickableRouteLine(route: any) {
   console.log('Created interactive route line with', latLngs.length, 'points')
 }
 
-function updateRouteInfo(route: any) {
-  routeInfo.value = {
-    totalDistance: route.summary.totalDistance / 1000, // Convert to km
-    totalDuration: route.summary.totalTime / 60 // Convert to minutes
-  }
-}
 
 
 // Utility functions
-function formatDistance(km: number): string {
-  return `${km.toFixed(1)} km`
+
+// Route persistence functions
+function saveCurrentRoute() {
+  if (waypoints.length === 0) {
+    // Clear saved route if no waypoints
+    localStorage.removeItem(ROUTE_STORAGE_KEY)
+    return
+  }
+
+  const routeData = {
+    waypoints: waypoints.map(wp => ({
+      lat: wp.latLng.lat,
+      lng: wp.latLng.lng,
+      name: wp.name || ''
+    })),
+    timestamp: new Date().toISOString()
+  }
+
+  try {
+    localStorage.setItem(ROUTE_STORAGE_KEY, JSON.stringify(routeData))
+    console.log('💾 Route saved to localStorage:', routeData)
+  } catch (error) {
+    console.error('Failed to save route to localStorage:', error)
+  }
 }
 
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60)
-  const mins = Math.round(minutes % 60)
-  return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+function loadSavedRoute() {
+  try {
+    const savedRoute = localStorage.getItem(ROUTE_STORAGE_KEY)
+    if (!savedRoute) {
+      console.log('💾 No saved route found in localStorage')
+      return
+    }
+
+    const routeData = JSON.parse(savedRoute)
+    if (!routeData.waypoints || routeData.waypoints.length === 0) {
+      console.log('💾 Saved route has no waypoints')
+      return
+    }
+
+    console.log('💾 Loading saved route from localStorage:', routeData)
+
+    // Restore waypoints
+    waypoints = routeData.waypoints.map((wpData: any) =>
+      L.Routing.waypoint(L.latLng(wpData.lat, wpData.lng), wpData.name)
+    )
+
+    // Update routing control
+    if (routingControl) {
+      routingControl.setWaypoints(waypoints)
+    }
+
+    // Rebuild markers
+    rebuildWaypointMarkers()
+
+    // Center map on the restored route
+    centerMapOnRoute()
+
+    // Clear history stacks since we're loading a saved state
+    undoStack.length = 0
+    redoStack.length = 0
+    updateHistoryButtonStates()
+
+    console.log('💾 ✅ Route restored successfully with', waypoints.length, 'waypoints')
+
+  } catch (error) {
+    console.error('Failed to load saved route from localStorage:', error)
+  }
 }
+
+function centerMapOnRoute() {
+  if (!map || waypoints.length === 0) {
+    console.log('🗺️ Cannot center map - no map or waypoints')
+    return
+  }
+
+  try {
+    // Create bounds from all waypoints
+    const bounds = L.latLngBounds(
+      waypoints.map(wp => wp.latLng)
+    )
+
+    // Fit map to show all waypoints with some padding
+    map.fitBounds(bounds, {
+      padding: [20, 20], // Add 20px padding around the route
+      maxZoom: 16 // Don't zoom in too much for very short routes
+    })
+
+    console.log('🗺️ ✅ Map centered on route with', waypoints.length, 'waypoints')
+
+  } catch (error) {
+    console.error('Failed to center map on route:', error)
+  }
+}
+
+// History management functions
+function saveState() {
+  // Create deep copy of current waypoints
+  const currentState = waypoints.map(wp => ({
+    lat: wp.latLng.lat,
+    lng: wp.latLng.lng,
+    name: wp.name || ''
+  }))
+
+  // Add to undo stack
+  undoStack.push(currentState)
+
+  // Limit stack size
+  if (undoStack.length > maxHistorySize) {
+    undoStack.shift()
+  }
+
+  // Clear redo stack when new action is performed
+  redoStack.length = 0
+
+  // Update button states
+  updateHistoryButtonStates()
+}
+
+function undo() {
+  if (undoStack.length === 0) return
+
+  // Save current state to redo stack
+  const currentState = waypoints.map(wp => ({
+    lat: wp.latLng.lat,
+    lng: wp.latLng.lng,
+    name: wp.name || ''
+  }))
+  redoStack.push(currentState)
+
+  // Restore previous state
+  const previousState = undoStack.pop()
+  restoreWaypointsFromState(previousState!)
+
+  updateHistoryButtonStates()
+}
+
+function redo() {
+  if (redoStack.length === 0) return
+
+  // Save current state to undo stack
+  const currentState = waypoints.map(wp => ({
+    lat: wp.latLng.lat,
+    lng: wp.latLng.lng,
+    name: wp.name || ''
+  }))
+  undoStack.push(currentState)
+
+  // Restore next state
+  const nextState = redoStack.pop()
+  restoreWaypointsFromState(nextState!)
+
+  updateHistoryButtonStates()
+}
+
+function restoreWaypointsFromState(state: any[]) {
+  // Clear current waypoints
+  waypoints = []
+
+  // Clear existing markers and routes
+  waypointMarkers.forEach(marker => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
+    routeToleranceBuffer = null
+  }
+
+  // Restore waypoints from state
+  state.forEach((wpData: any) => {
+    waypoints.push(L.Routing.waypoint(L.latLng(wpData.lat, wpData.lng), wpData.name))
+  })
+
+  // Update routing control
+  if (routingControl) {
+    routingControl.setWaypoints(waypoints)
+  }
+
+}
+
+function updateHistoryButtonStates() {
+  canUndo.value = undoStack.length > 0
+  canRedo.value = redoStack.length > 0
+}
+
+function clearMap() {
+  // Save state before clearing
+  if (waypoints.length > 0) {
+    saveState()
+  }
+
+  // Clear everything
+  clearRoute()
+}
+
+// Enhanced clearRoute to work with history
+function clearRoute() {
+  waypoints = []
+
+  // Clear saved route from localStorage
+  localStorage.removeItem(ROUTE_STORAGE_KEY)
+
+  // Clear waypoint markers
+  waypointMarkers.forEach(marker => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
+  if (routingControl) {
+    routingControl.setWaypoints([])
+  }
+
+  // Remove route lines (both visible line and tolerance buffer)
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
+    routeToleranceBuffer = null
+  }
+
+}
+
 
 </script>
 
 <style scoped>
-.route-planner {
-  display: flex;
+/* Global styles for route planner page - prevent scrollbars */
+:global(body.route-planner-active) {
+  overflow: hidden;
   height: 100vh;
-  background: #f8fafc;
+  max-height: 100vh;
 }
 
-.sidebar {
-  width: 300px;
-  background: white;
-  border-right: 1px solid #e5e7eb;
-  overflow-y: auto;
+:global(html.route-planner-active) {
+  overflow: hidden;
+  height: 100vh;
+  max-height: 100vh;
 }
-
-.sidebar-content {
-  padding: 1rem;
-}
-
-.menu-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.menu-section {
-  margin-bottom: 1.5rem;
-}
-
-.menu-section:last-child {
-  margin-bottom: 0;
-}
-
-.menu-section-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 0.75rem;
-}
-
-.menu-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.menu-item:hover {
-  background: #f3f4f6;
-}
-
-.menu-item .icon {
-  width: 20px;
-  text-align: center;
-  color: #6b7280;
-}
-
-.menu-item .text {
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-.route-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-
-.stat-item .icon {
-  width: 16px;
-  color: #6b7280;
-}
-
-.stat-item .label {
-  font-size: 0.875rem;
-  color: #6b7280;
-  flex: 1;
-}
-
-.stat-item .value {
-  font-weight: 600;
-  color: #111827;
-}
-
-.no-route {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 2rem;
-  color: #9ca3af;
-  text-align: center;
-}
-
-.content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.route-planner {
+  /* Use calc to subtract navbar height from viewport height */
+  height: calc(100vh - var(--navbar-height));
+  /* Use 100vw but ensure no horizontal overflow */
+  width: 100vw;
+  max-width: 100vw;
+  /* Position absolutely to break out of normal flow */
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Ensure no scrollbars */
+  overflow: hidden;
 }
 
 .map-container {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   position: relative;
+  /* Ensure no overflow */
+  overflow: hidden;
 }
 
 .map {
   width: 100%;
   height: 100%;
+  /* Ensure map doesn't cause overflow */
+  overflow: hidden;
 }
 
-.map-controls {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 1000;
-}
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.control-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 6px;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-
-.control-btn:hover {
-  background: #f3f4f6;
-  transform: translateY(-1px);
-}
-
-.control-btn.active {
-  background: #ff6600;
-  color: white;
-}
 
 
 /* Hide Leaflet Routing Machine control panel */
@@ -1259,4 +1289,62 @@ function formatDuration(minutes: number): string {
   50% { transform: scale(1.2); }
   100% { transform: scale(1); }
 }
+
+/* Map controls in top right corner */
+.map-controls {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1000;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #374151;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.control-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  color: #9ca3af;
+}
+
+/* Special styling for clear button */
+.control-btn:first-child {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.control-btn:first-child:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 </style>

@@ -249,7 +249,7 @@ function initializeMap() {
     applyMapState(map, savedMapState.value)
   } else {
     // Mont-Beuvray parce que ca pique!
-    map.setView([46.942728, 4.033681], 12)
+    map.setView([46.942728, 4.033681], 14)
   }
 
   // Add scale control
