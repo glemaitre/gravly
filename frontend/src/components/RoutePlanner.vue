@@ -57,6 +57,12 @@
 
         <!-- Elevation content -->
         <div class="elevation-content" v-if="showElevation">
+          <!-- Elevation error message -->
+          <div v-if="elevationError" class="elevation-error">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>{{ elevationError }}</span>
+          </div>
+
           <!-- Elevation chart -->
           <div class="elevation-chart">
             <div class="chart-container">
@@ -137,6 +143,7 @@ const elevationStats = ref({
   maxElevation: 0,
   minElevation: 0
 })
+const elevationError = ref<string | null>(null)
 
 // Chart data
 const elevationChartRef = ref<HTMLCanvasElement | null>(null)
@@ -169,8 +176,10 @@ interface ElevationSegment {
   }>
   isProcessed: boolean
   lastUpdated: number
+  segmentHash: string // Unique hash for this segment
 }
 
+// Enhanced caching system with persistent storage
 const elevationSegments = ref<ElevationSegment[]>([])
 const elevationCache = new Map<
   string,
@@ -178,9 +187,193 @@ const elevationCache = new Map<
 >()
 const actualRouteCoordinates = ref<Array<{ lat: number; lng: number }>>([]) // Store actual OSRM route coordinates
 
+// Cache configuration
+const CACHE_VERSION = '1.0'
+const CACHE_KEY = 'elevation_cache_v' + CACHE_VERSION
+const MAX_SEGMENT_LENGTH = 5000 // 5km - segments longer than this will be chunked
+const CHUNK_SIZE = 100 // Maximum points per API call
+
 // Route persistence keys
 const ROUTE_STORAGE_KEY = 'routePlanner_currentRoute'
 const MAP_STATE_STORAGE_KEY = 'routePlanner_mapState' // eslint-disable-line no-unused-vars
+
+// Cache management functions
+function saveElevationCache() {
+  try {
+    const cacheData = {
+      version: CACHE_VERSION,
+      timestamp: Date.now(),
+      cache: Object.fromEntries(elevationCache)
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData))
+  } catch (error) {
+    console.warn('Failed to save elevation cache:', error)
+  }
+}
+
+function loadElevationCache() {
+  try {
+    const cacheData = localStorage.getItem(CACHE_KEY)
+    if (cacheData) {
+      const parsed = JSON.parse(cacheData)
+      if (parsed.version === CACHE_VERSION && parsed.cache) {
+        elevationCache.clear()
+        Object.entries(parsed.cache).forEach(([key, value]) => {
+          elevationCache.set(
+            key,
+            value as Array<{
+              lat: number
+              lng: number
+              elevation: number
+              distance: number
+            }>
+          )
+        })
+        console.log(`Loaded ${elevationCache.size} cached elevation segments`)
+      }
+    }
+  } catch (error) {
+    console.warn('Failed to load elevation cache:', error)
+  }
+}
+
+function createSegmentHash(
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number
+): string {
+  // Create a more precise hash using 7 decimal places for better accuracy
+  const precision = 7
+  const hash = `${startLat.toFixed(precision)},${startLng.toFixed(precision)}-${endLat.toFixed(precision)},${endLng.toFixed(precision)}`
+  return hash
+}
+
+function shouldChunkSegment(distance: number): boolean {
+  return distance > MAX_SEGMENT_LENGTH
+}
+
+function calculateOptimalSamplingDistance(distance: number): number {
+  // Adaptive sampling: shorter segments get higher resolution
+  if (distance < 1000) return 50 // 50m for < 1km
+  if (distance < 5000) return 100 // 100m for 1-5km
+  if (distance < 10000) return 200 // 200m for 5-10km
+  return 300 // 300m for > 10km
+}
+
+function splitRouteIntoWaypointSegments(
+  routeCoordinates: Array<{ lat: number; lng: number }>,
+  waypoints: Array<{ latLng: any }>
+): Array<Array<{ lat: number; lng: number }>> {
+  const segments: Array<Array<{ lat: number; lng: number }>> = []
+
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const startWaypoint = waypoints[i].latLng
+    const endWaypoint = waypoints[i + 1].latLng
+
+    // Find the closest route points to each waypoint
+    const startIndex = findClosestRoutePoint(routeCoordinates, startWaypoint)
+    const endIndex = findClosestRoutePoint(routeCoordinates, endWaypoint)
+
+    // Extract the segment between these points
+    const segment = routeCoordinates.slice(startIndex, endIndex + 1)
+    segments.push(segment)
+  }
+
+  return segments
+}
+
+function findClosestRoutePoint(
+  routeCoordinates: Array<{ lat: number; lng: number }>,
+  waypoint: { lat: number; lng: number }
+): number {
+  let closestIndex = 0
+  let minDistance = Number.MAX_VALUE
+
+  for (let i = 0; i < routeCoordinates.length; i++) {
+    const distance =
+      map?.distance(
+        [routeCoordinates[i].lat, routeCoordinates[i].lng],
+        [waypoint.lat, waypoint.lng]
+      ) || Number.MAX_VALUE
+
+    if (distance < minDistance) {
+      minDistance = distance
+      closestIndex = i
+    }
+  }
+
+  return closestIndex
+}
+
+function sampleRouteSegmentEvery100Meters(
+  segmentCoordinates: Array<{ lat: number; lng: number }>,
+  startDistance: number
+): Array<{ lat: number; lng: number; distance: number }> {
+  if (segmentCoordinates.length < 2) {
+    return []
+  }
+
+  const sampledPoints: Array<{ lat: number; lng: number; distance: number }> = []
+  const targetInterval = 100 // 100 meters
+  let totalDistance = startDistance
+  let nextSampleDistance = Math.ceil(startDistance / targetInterval) * targetInterval // Round up to next 100m interval
+
+  // Always include the first point if it's at the start distance
+  if (startDistance === 0 || startDistance % targetInterval === 0) {
+    sampledPoints.push({
+      lat: segmentCoordinates[0].lat,
+      lng: segmentCoordinates[0].lng,
+      distance: startDistance
+    })
+  }
+
+  for (let i = 1; i < segmentCoordinates.length; i++) {
+    const prev = segmentCoordinates[i - 1]
+    const curr = segmentCoordinates[i]
+
+    // Calculate distance between consecutive points
+    const segmentDistance = calculateDistance(prev.lat, prev.lng, curr.lat, curr.lng)
+    const segmentStartDistance = totalDistance
+    const segmentEndDistance = totalDistance + segmentDistance
+
+    // Check if we need to sample points within this segment
+    while (nextSampleDistance <= segmentEndDistance) {
+      if (nextSampleDistance > segmentStartDistance) {
+        // Interpolate point within this segment
+        const ratio = (nextSampleDistance - segmentStartDistance) / segmentDistance
+        const interpolatedLat = prev.lat + (curr.lat - prev.lat) * ratio
+        const interpolatedLng = prev.lng + (curr.lng - prev.lng) * ratio
+
+        sampledPoints.push({
+          lat: interpolatedLat,
+          lng: interpolatedLng,
+          distance: nextSampleDistance
+        })
+      }
+      nextSampleDistance += targetInterval
+    }
+
+    totalDistance += segmentDistance
+  }
+
+  // Always include the last point if it's not already included
+  const lastCoord = segmentCoordinates[segmentCoordinates.length - 1]
+  const lastSampledPoint = sampledPoints[sampledPoints.length - 1]
+  if (
+    !lastSampledPoint ||
+    lastSampledPoint.lat !== lastCoord.lat ||
+    lastSampledPoint.lng !== lastCoord.lng
+  ) {
+    sampledPoints.push({
+      lat: lastCoord.lat,
+      lng: lastCoord.lng,
+      distance: totalDistance
+    })
+  }
+
+  return sampledPoints
+}
 
 // Mouse interaction state
 let mouseDownStartPoint: any = null
@@ -218,6 +411,9 @@ onMounted(async () => {
   document.body.classList.add('route-planner-active')
   document.documentElement.classList.add('route-planner-active')
 
+  // Load elevation cache first
+  loadElevationCache()
+
   await nextTick()
   initializeMap()
 
@@ -236,8 +432,9 @@ onUnmounted(() => {
   document.body.classList.remove('route-planner-active')
   document.documentElement.classList.remove('route-planner-active')
 
-  // Save current route before unmounting
+  // Save current route and elevation cache before unmounting
   saveCurrentRoute()
+  saveElevationCache()
 
   if (map) {
     map.remove()
@@ -1222,17 +1419,17 @@ async function calculateElevationStats() {
   }
 
   try {
-    // Use actual OSRM route coordinates if available, otherwise fall back to segment approach
+    // Clear any previous elevation errors
+    elevationError.value = null
+
+    // Use intelligent elevation calculation with caching
     if (actualRouteCoordinates.value.length >= 2) {
-      await calculateElevationFromActualRoute()
+      // Use actual route coordinates for better accuracy, but with caching
+      await calculateElevationFromActualRouteWithCaching()
     } else {
-      // Update segments based on current waypoints
+      // Fall back to waypoint-based segments
       await updateElevationSegments()
-
-      // Calculate stats from all processed segments
       await calculateStatsFromSegments()
-
-      // Update chart with all segment data
       await updateChartFromSegments()
     }
   } catch (error) {
@@ -1244,10 +1441,9 @@ async function calculateElevationStats() {
       maxElevation: 0,
       minElevation: 0
     }
-    // You could also show a user-friendly error message here
-    console.error(
+    // Show user-friendly error message
+    elevationError.value =
       'Elevation data unavailable. Please check your internet connection and try again.'
-    )
   }
 }
 
@@ -1645,24 +1841,33 @@ function updateCursorPosition(latlng: any) {
 
 // Segment-based elevation functions
 async function updateElevationSegments() {
+  console.log('Updating elevation segments with intelligent caching...')
   const newSegments: ElevationSegment[] = []
+  let segmentsProcessed = 0
+  let segmentsFromCache = 0
 
   for (let i = 0; i < waypoints.length - 1; i++) {
     const startPoint = waypoints[i].latLng
     const endPoint = waypoints[i + 1].latLng
     const distance = map?.distance(startPoint, endPoint) || 1000
 
-    // Create segment key for caching
-    const segmentKey = `${startPoint.lat.toFixed(6)},${startPoint.lng.toFixed(6)}-${endPoint.lat.toFixed(6)},${endPoint.lng.toFixed(6)}`
-
-    // Check if we already have this segment processed
-    const existingSegment = elevationSegments.value.find(
-      (seg) => seg.startWaypointIndex === i && seg.endWaypointIndex === i + 1
+    // Create unique segment hash
+    const segmentHash = createSegmentHash(
+      startPoint.lat,
+      startPoint.lng,
+      endPoint.lat,
+      endPoint.lng
     )
 
-    if (existingSegment && existingSegment.isProcessed) {
-      // Segment already processed, keep it
+    // Check if we already have this exact segment processed
+    const existingSegment = elevationSegments.value.find(
+      (seg) => seg.segmentHash === segmentHash && seg.isProcessed
+    )
+
+    if (existingSegment) {
+      // Segment is identical and processed, reuse it
       newSegments.push(existingSegment)
+      segmentsFromCache++
       continue
     }
 
@@ -1675,24 +1880,34 @@ async function updateElevationSegments() {
       distance,
       sampledPoints: [],
       isProcessed: false,
-      lastUpdated: Date.now()
+      lastUpdated: Date.now(),
+      segmentHash
     }
 
     // Check cache first
-    if (elevationCache.has(segmentKey)) {
-      segment.sampledPoints = elevationCache.get(segmentKey)!
+    if (elevationCache.has(segmentHash)) {
+      segment.sampledPoints = elevationCache.get(segmentHash)!
       segment.isProcessed = true
+      segmentsFromCache++
+      console.log(`Loaded segment ${i}-${i + 1} from cache`)
     } else {
-      // Process new segment
+      // Process new segment with intelligent chunking
       try {
-        segment.sampledPoints = await processSegmentElevation(segment)
-        elevationCache.set(segmentKey, segment.sampledPoints)
+        segment.sampledPoints = await processSegmentElevationIntelligent(segment)
+        elevationCache.set(segmentHash, segment.sampledPoints)
         segment.isProcessed = true
+        segmentsProcessed++
+        console.log(
+          `Processed new segment ${i}-${i + 1} (${segment.sampledPoints.length} points)`
+        )
+
+        // Save cache after each successful segment
+        saveElevationCache()
       } catch (error) {
         console.error(`Failed to process segment ${i}-${i + 1}:`, error)
-        throw new Error(
-          `Failed to process elevation segment ${i}-${i + 1}: ${error instanceof Error ? error.message : String(error)}`
-        )
+        // Don't throw error, continue with other segments
+        segment.sampledPoints = []
+        segment.isProcessed = false
       }
     }
 
@@ -1700,13 +1915,27 @@ async function updateElevationSegments() {
   }
 
   elevationSegments.value = newSegments
+  console.log(
+    `Segment update complete: ${segmentsFromCache} from cache, ${segmentsProcessed} newly processed`
+  )
 }
 
-async function processSegmentElevation(
+async function processSegmentElevationIntelligent(
   segment: ElevationSegment
 ): Promise<Array<{ lat: number; lng: number; elevation: number; distance: number }>> {
-  const samplingDistance = 100 // 100m resolution
+  // Use adaptive sampling based on segment length
+  const samplingDistance = calculateOptimalSamplingDistance(segment.distance)
   const numSamples = Math.max(2, Math.ceil(segment.distance / samplingDistance))
+
+  console.log(
+    `Processing segment ${segment.startWaypointIndex}-${segment.endWaypointIndex}: ${segment.distance.toFixed(0)}m with ${numSamples} samples`
+  )
+
+  // Check if we need to chunk this segment
+  if (shouldChunkSegment(segment.distance)) {
+    return await processChunkedSegmentElevation(segment, numSamples)
+  }
+
   const sampledPoints: Array<{ lat: number; lng: number; distance: number }> = []
 
   // Generate sample points along the segment
@@ -1731,7 +1960,77 @@ async function processSegmentElevation(
   }))
 }
 
+async function processChunkedSegmentElevation(
+  segment: ElevationSegment,
+  totalSamples: number
+): Promise<Array<{ lat: number; lng: number; elevation: number; distance: number }>> {
+  console.log(
+    `Chunking large segment ${segment.startWaypointIndex}-${segment.endWaypointIndex} (${totalSamples} samples)`
+  )
+
+  const allSampledPoints: Array<{
+    lat: number
+    lng: number
+    elevation: number
+    distance: number
+  }> = []
+
+  // Split into chunks
+  const chunkSize = CHUNK_SIZE
+  const numChunks = Math.ceil(totalSamples / chunkSize)
+
+  for (let chunkIndex = 0; chunkIndex < numChunks; chunkIndex++) {
+    const startIndex = chunkIndex * chunkSize
+    const endIndex = Math.min(startIndex + chunkSize, totalSamples)
+    const chunkSamples = endIndex - startIndex
+
+    if (chunkSamples < 1) continue
+
+    // Generate points for this chunk
+    const chunkPoints: Array<{ lat: number; lng: number; distance: number }> = []
+
+    for (let i = 0; i < chunkSamples; i++) {
+      const globalIndex = startIndex + i
+      const t = globalIndex / (totalSamples - 1)
+      const lat =
+        segment.startLatLng.lat + (segment.endLatLng.lat - segment.startLatLng.lat) * t
+      const lng =
+        segment.startLatLng.lng + (segment.endLatLng.lng - segment.startLatLng.lng) * t
+      const distance = segment.distance * t
+
+      chunkPoints.push({ lat, lng, distance })
+    }
+
+    // Get elevation data for this chunk
+    try {
+      const chunkElevations = await getElevationData(chunkPoints)
+      const chunkWithElevations = chunkPoints.map((point, index) => ({
+        ...point,
+        elevation: chunkElevations[index] || 0
+      }))
+
+      allSampledPoints.push(...chunkWithElevations)
+
+      // Small delay between chunks to respect rate limits
+      if (chunkIndex < numChunks - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      }
+    } catch (error) {
+      console.error(`Failed to process chunk ${chunkIndex + 1}/${numChunks}:`, error)
+      // Fill with zeros for failed chunks
+      const chunkWithZeros = chunkPoints.map((point) => ({ ...point, elevation: 0 }))
+      allSampledPoints.push(...chunkWithZeros)
+    }
+  }
+
+  return allSampledPoints
+}
+
 async function updateAffectedSegments(changedWaypointIndex: number) {
+  console.log(
+    `Updating affected segments due to waypoint ${changedWaypointIndex} change`
+  )
+
   // Find segments that need to be updated based on the changed waypoint
   const segmentsToUpdate: number[] = []
 
@@ -1750,28 +2049,50 @@ async function updateAffectedSegments(changedWaypointIndex: number) {
       const startPoint = waypoints[segmentIndex].latLng
       const endPoint = waypoints[segmentIndex + 1].latLng
 
-      // Create new segment key
-      const segmentKey = `${startPoint.lat.toFixed(6)},${startPoint.lng.toFixed(6)}-${endPoint.lat.toFixed(6)},${endPoint.lng.toFixed(6)}`
+      // Create new segment hash
+      const newSegmentHash = createSegmentHash(
+        startPoint.lat,
+        startPoint.lng,
+        endPoint.lat,
+        endPoint.lng
+      )
 
-      // Clear cache for this segment
-      elevationCache.delete(segmentKey)
+      // Check if the segment has actually changed
+      if (segment.segmentHash === newSegmentHash && segment.isProcessed) {
+        console.log(`Segment ${segmentIndex} unchanged, skipping`)
+        continue
+      }
+
+      // Clear old cache entry if hash changed
+      if (segment.segmentHash && segment.segmentHash !== newSegmentHash) {
+        elevationCache.delete(segment.segmentHash)
+        console.log(`Cleared cache for changed segment ${segmentIndex}`)
+      }
 
       // Update segment data
       segment.startLatLng = startPoint
       segment.endLatLng = endPoint
       segment.distance = map?.distance(startPoint, endPoint) || 1000
+      segment.segmentHash = newSegmentHash
       segment.isProcessed = false
+      segment.lastUpdated = Date.now()
 
       // Process the updated segment
       try {
-        segment.sampledPoints = await processSegmentElevation(segment)
-        elevationCache.set(segmentKey, segment.sampledPoints)
+        segment.sampledPoints = await processSegmentElevationIntelligent(segment)
+        elevationCache.set(newSegmentHash, segment.sampledPoints)
         segment.isProcessed = true
+
+        // Save cache after successful update
+        saveElevationCache()
+        console.log(
+          `Updated segment ${segmentIndex} with ${segment.sampledPoints.length} points`
+        )
       } catch (error) {
         console.error(`Failed to update segment ${segmentIndex}:`, error)
-        throw new Error(
-          `Failed to update elevation segment ${segmentIndex}: ${error instanceof Error ? error.message : String(error)}`
-        )
+        // Don't throw error, continue with other segments
+        segment.sampledPoints = []
+        segment.isProcessed = false
       }
     }
   }
@@ -1871,44 +2192,84 @@ async function getElevationData(
     // Use OpenTopoData API (free elevation service)
     const elevations: number[] = []
 
-    // Batch requests to avoid rate limits (max 100 points per request)
-    const batchSize = 100
+    // Use the configured chunk size for consistency
+    const batchSize = CHUNK_SIZE
     const batches = []
 
     for (let i = 0; i < points.length; i += batchSize) {
       batches.push(points.slice(i, i + batchSize))
     }
 
+    console.log(
+      `Processing ${points.length} elevation points in ${batches.length} batches of ${batchSize} points each`
+    )
+
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
       const locations = batch.map((p) => `${p.lat},${p.lng}`).join('|')
       const url = `https://api.open-elevation.com/api/v1/lookup?locations=${locations}`
 
-      try {
-        const response = await fetch(url)
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      let retryCount = 0
+      const maxRetries = 3
+      let success = false
+
+      while (!success && retryCount <= maxRetries) {
+        try {
+          if (retryCount > 0) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, retryCount - 1) * 1000
+            console.log(
+              `Retrying batch ${batchIndex + 1} after ${delay}ms delay (attempt ${retryCount + 1}/${maxRetries + 1})`
+            )
+            await new Promise((resolve) => setTimeout(resolve, delay))
+          }
+
+          const response = await fetch(url)
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              // Rate limited - wait longer before retry
+              if (retryCount < maxRetries) {
+                retryCount++
+                continue
+              }
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+
+          const data = await response.json()
+
+          if (!data.results || !Array.isArray(data.results)) {
+            throw new Error('Invalid API response format - missing results array')
+          }
+
+          const batchElevations = data.results.map((result: any) => result.elevation)
+          elevations.push(...batchElevations)
+          success = true
+
+          console.log(
+            `Successfully fetched elevation data for batch ${batchIndex + 1}/${batches.length}`
+          )
+        } catch (error) {
+          retryCount++
+          if (retryCount > maxRetries) {
+            console.error(
+              `Failed to fetch elevation data for batch ${batchIndex + 1} after ${maxRetries} retries:`,
+              error
+            )
+            // For now, fill with zeros for failed batches to allow partial functionality
+            // In production, you might want to use a fallback elevation service
+            const batchElevations = new Array(batch.length).fill(0)
+            elevations.push(...batchElevations)
+            console.warn(`Using zero elevations for failed batch ${batchIndex + 1}`)
+            success = true
+          }
         }
+      }
 
-        const data = await response.json()
-
-        if (!data.results || !Array.isArray(data.results)) {
-          throw new Error('Invalid API response format - missing results array')
-        }
-
-        const batchElevations = data.results.map((result: any) => result.elevation)
-        elevations.push(...batchElevations)
-
-        // Small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 100))
-      } catch (error) {
-        console.error(
-          `Failed to fetch elevation data for batch ${batchIndex + 1}:`,
-          error
-        )
-        throw new Error(
-          `Failed to fetch elevation data for batch ${batchIndex + 1}: ${error instanceof Error ? error.message : String(error)}`
-        )
+      // Increased delay between batches to respect rate limits
+      if (batchIndex < batches.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
       }
     }
 
@@ -1980,8 +2341,18 @@ function clearRoute() {
 function toggleElevation() {
   showElevation.value = !showElevation.value
   if (showElevation.value) {
-    // Only calculate elevation stats if we have route data ready
-    if (actualRouteCoordinates.value.length >= 2) {
+    // Show existing elevation data if available, don't recompute
+    if (
+      elevationSegments.value.length > 0 &&
+      elevationSegments.value.some((seg) => seg.isProcessed)
+    ) {
+      console.log('Showing cached elevation data from segments')
+      // Just display the existing data - no recomputation needed
+      nextTick(() => {
+        updateChartFromSegments()
+      })
+    } else if (actualRouteCoordinates.value.length >= 2) {
+      console.log('No cached elevation data, calculating for first time')
       calculateElevationStats()
     } else {
       console.log(
@@ -2004,54 +2375,127 @@ function toggleElevation() {
   }
 }
 
-// Calculate elevation using actual OSRM route coordinates
-async function calculateElevationFromActualRoute() {
-  if (actualRouteCoordinates.value.length < 2) {
+// Calculate elevation using actual OSRM route coordinates with intelligent segment-based caching
+async function calculateElevationFromActualRouteWithCaching() {
+  if (actualRouteCoordinates.value.length < 2 || waypoints.length < 2) {
     return
   }
 
+  console.log('Calculating elevation from actual route with segment-based caching...')
+
   try {
-    // Sample points every 100 meters along the actual route
-    const sampledPoints = sampleRouteEvery100Meters(actualRouteCoordinates.value)
+    // Split the actual route into segments based on waypoints
+    const routeSegments = splitRouteIntoWaypointSegments(
+      actualRouteCoordinates.value,
+      waypoints
+    )
 
-    // Get elevation data for sampled points
-    const elevations = await getElevationData(sampledPoints)
+    const allElevationData: Array<{
+      lat: number
+      lng: number
+      elevation: number
+      distance: number
+    }> = []
+    let segmentsFromCache = 0
+    let segmentsProcessed = 0
+    let cumulativeDistance = 0
 
-    // Combine elevations with sampled points to create full elevation data
-    const elevationData = sampledPoints.map((point, index) => ({
-      ...point,
-      elevation: elevations[index] || 0
-    }))
+    for (let i = 0; i < routeSegments.length; i++) {
+      const segment = routeSegments[i]
+      const waypointStart = waypoints[i].latLng
+      const waypointEnd = waypoints[i + 1].latLng
 
-    // Apply smoothing to elevation data for both stats and chart
+      // Create segment hash based on waypoint coordinates
+      const segmentHash = createSegmentHash(
+        waypointStart.lat,
+        waypointStart.lng,
+        waypointEnd.lat,
+        waypointEnd.lng
+      )
+
+      let segmentElevationData: Array<{
+        lat: number
+        lng: number
+        elevation: number
+        distance: number
+      }>
+
+      // Check cache first
+      if (elevationCache.has(segmentHash)) {
+        segmentElevationData = elevationCache.get(segmentHash)!
+        segmentsFromCache++
+        console.log(
+          `Loaded segment ${i}-${i + 1} from cache (${segmentElevationData.length} points)`
+        )
+      } else {
+        // Process new segment
+        console.log(
+          `Processing new segment ${i}-${i + 1} (${segment.length} route points)`
+        )
+
+        // Sample points along this segment of the actual route
+        const sampledPoints = sampleRouteSegmentEvery100Meters(
+          segment,
+          cumulativeDistance
+        )
+
+        // Get elevation data for sampled points
+        const elevations = await getElevationData(sampledPoints)
+
+        // Combine elevations with sampled points
+        segmentElevationData = sampledPoints.map((point, index) => ({
+          ...point,
+          elevation: elevations[index] || 0
+        }))
+
+        // Store in cache
+        elevationCache.set(segmentHash, segmentElevationData)
+        segmentsProcessed++
+        console.log(
+          `Processed and cached segment ${i}-${i + 1} (${segmentElevationData.length} points)`
+        )
+      }
+
+      // Add to combined data (distances are already cumulative from the sampling function)
+      allElevationData.push(...segmentElevationData)
+
+      // Update cumulative distance for next segment
+      if (segmentElevationData.length > 0) {
+        cumulativeDistance =
+          segmentElevationData[segmentElevationData.length - 1].distance
+      }
+    }
+
+    // Save cache after processing all segments
+    if (segmentsProcessed > 0) {
+      saveElevationCache()
+    }
+
+    console.log(
+      `Segment processing complete: ${segmentsFromCache} from cache, ${segmentsProcessed} newly processed`
+    )
+
+    if (allElevationData.length === 0) {
+      console.warn('No elevation data available')
+      return
+    }
+
+    // Extract elevations for stats calculation
+    const elevations = allElevationData.map((point) => point.elevation)
+
+    // Apply smoothing and calculate stats
     const smoothedElevations = smoothElevationData(elevations, 5)
+    await calculateStatsFromElevations(elevations)
 
-    // Calculate statistics using smoothed data
-    await calculateStatsFromElevations(elevations) // This function now handles smoothing internally
-
-    // Update chart with smoothed elevation values and sampled points
-    const smoothedElevationData = elevationData.map((point, index) => ({
+    // Update chart with smoothed data
+    const smoothedElevationData = allElevationData.map((point, index) => ({
       ...point,
       elevation: smoothedElevations[index] || point.elevation
     }))
     await updateElevationChart(smoothedElevations, smoothedElevationData)
-
-    // Update route distance
-    const calculatedDistance =
-      elevationData.length > 0
-        ? elevationData[elevationData.length - 1].distance / 1000
-        : 0
-    routeDistance.value = calculatedDistance
   } catch (error) {
     console.error('Error calculating elevation from actual route:', error)
-    // Show error to user instead of using mock data
-    elevationStats.value = {
-      totalGain: 0,
-      totalLoss: 0,
-      maxElevation: 0,
-      minElevation: 0
-    }
-    throw error // Re-throw to let calling code handle the error
+    throw error
   }
 }
 
@@ -2528,6 +2972,25 @@ async function calculateStatsFromElevations(elevations: number[]) {
   /* Use flexbox to manage content layout */
   display: flex;
   flex-direction: column;
+}
+
+.elevation-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem;
+  border-radius: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.elevation-error i {
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
 .elevation-chart {

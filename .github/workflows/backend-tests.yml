@@ -42,6 +42,7 @@ jobs:
           echo "STRAVA_CLIENT_ID=${{ secrets.STRAVA_CLIENT_ID }}" >> .env/strava
           echo "STRAVA_CLIENT_SECRET=${{ secrets.STRAVA_CLIENT_SECRET }}" >> .env/strava
           echo "STRAVA_TOKENS_FILE_PATH=${{ secrets.STRAVA_TOKENS_FILE_PATH }}" >> .env/strava
+          echo "THUNDERFOREST_API_KEY=${{ secrets.THUNDERFOREST_API_KEY }}" >> .env/thunderforest
 
       - name: Setup database
         run: pixi run pg-setup
