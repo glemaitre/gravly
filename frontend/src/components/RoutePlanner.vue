@@ -30,6 +30,17 @@
 
       <!-- Bottom elevation section -->
       <div class="elevation-section" :class="{ 'elevation-expanded': showElevation }">
+        <!-- Resize Handle - Always visible when elevation is expanded -->
+        <div
+          v-if="showElevation"
+          class="elevation-resize-handle"
+          @mousedown="startElevationResize"
+          @touchstart="startElevationResize"
+          title="Drag up or down to resize elevation section height"
+        >
+          <div class="elevation-resize-handle-bar"></div>
+        </div>
+
         <!-- Toggle button with integrated stats -->
         <div class="elevation-toggle" @click="toggleElevation">
           <div class="elevation-toggle-content">
@@ -56,7 +67,7 @@
         </div>
 
         <!-- Elevation content -->
-        <div class="elevation-content" v-if="showElevation">
+        <div class="elevation-content" v-if="showElevation" :style="{ height: elevationHeight + 'px' }">
           <!-- Elevation error message -->
           <div v-if="elevationError" class="elevation-error">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -76,7 +87,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
@@ -144,6 +155,14 @@ const elevationStats = ref({
   minElevation: 0
 })
 const elevationError = ref<string | null>(null)
+
+// Elevation section resize state
+const elevationHeight = ref<number>(300) // Default height in pixels
+const minElevationHeight = 150
+const maxElevationHeight = 600
+let isElevationResizing = false
+let startY = 0
+let startHeight = 0
 
 // Chart data
 const elevationChartRef = ref<HTMLCanvasElement | null>(null)
@@ -406,6 +425,15 @@ function getToleranceBufferWeight(zoomLevel: number): number {
 }
 
 // Initialize map
+// Watch for elevation height changes to redraw chart
+watch(elevationHeight, () => {
+  if (elevationChart.value && showElevation.value) {
+    setTimeout(() => {
+      elevationChart.value?.resize()
+    }, 100) // Small delay to ensure DOM has updated
+  }
+})
+
 onMounted(async () => {
   // Add CSS class to prevent scrollbars on the entire page
   document.body.classList.add('route-planner-active')
@@ -435,6 +463,9 @@ onUnmounted(() => {
   // Save current route and elevation cache before unmounting
   saveCurrentRoute()
   saveElevationCache()
+
+  // Clean up elevation resize event listeners
+  stopElevationResize()
 
   if (map) {
     map.remove()
@@ -2684,6 +2715,60 @@ async function calculateStatsFromElevations(elevations: number[]) {
 
   elevationStats.value = finalStats
 }
+
+// Elevation section resize functionality
+function startElevationResize(event: MouseEvent | TouchEvent) {
+  isElevationResizing = true
+  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  startY = clientY
+  startHeight = elevationHeight.value
+
+  // Add global event listeners
+  document.addEventListener('mousemove', handleElevationResize)
+  document.addEventListener('mouseup', stopElevationResize)
+  document.addEventListener('touchmove', handleElevationResize)
+  document.addEventListener('touchend', stopElevationResize)
+
+  // Prevent default to avoid text selection
+  event.preventDefault()
+}
+
+function handleElevationResize(event: MouseEvent | TouchEvent) {
+  if (!isElevationResizing) return
+
+  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  const deltaY = startY - clientY // Inverted because we're resizing from bottom
+  const newHeight = startHeight + deltaY
+
+  // Constrain height within bounds
+  elevationHeight.value = Math.max(minElevationHeight, Math.min(maxElevationHeight, newHeight))
+
+  // Invalidate map size to ensure proper rendering
+  if (map) {
+    setTimeout(() => {
+      map.invalidateSize()
+    }, 0)
+  }
+
+  // Update chart if it exists
+  if (elevationChart.value) {
+    setTimeout(() => {
+      elevationChart.value?.resize()
+    }, 0)
+  }
+
+  event.preventDefault()
+}
+
+function stopElevationResize() {
+  isElevationResizing = false
+
+  // Remove global event listeners
+  document.removeEventListener('mousemove', handleElevationResize)
+  document.removeEventListener('mouseup', stopElevationResize)
+  document.removeEventListener('touchmove', handleElevationResize)
+  document.removeEventListener('touchend', stopElevationResize)
+}
 </script>
 
 <style scoped>
@@ -2878,6 +2963,9 @@ async function calculateStatsFromElevations(elevations: number[]) {
   max-height: calc(
     100vh - var(--navbar-height) - 100px
   ); /* Reserve space for map controls */
+  overflow: hidden; /* Prevent content overflow */
+  display: flex;
+  flex-direction: column;
 }
 
 .elevation-expanded {
@@ -2963,15 +3051,86 @@ async function calculateStatsFromElevations(elevations: number[]) {
 }
 
 .elevation-content {
-  /* Remove fixed max-height and overflow to let content determine height */
   background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(4px);
-  /* Content will determine the height naturally */
-  /* Ensure content doesn't cause overflow */
-  overflow: visible;
-  /* Use flexbox to manage content layout */
+  overflow: hidden; /* Prevent content overflow */
   display: flex;
   flex-direction: column;
+  /* Height is now controlled by the :style binding */
+}
+
+/* Elevation Resize Handle */
+.elevation-resize-handle {
+  height: 8px;
+  background: #ff6600;
+  cursor: ns-resize;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(255, 102, 0, 0.2);
+  border-radius: 4px;
+  margin: 2px 8px; /* Reduced margin for smaller handle */
+}
+
+.elevation-resize-handle:hover {
+  background: #e55a00;
+  box-shadow: 0 2px 6px rgba(255, 102, 0, 0.3);
+  transform: scaleY(1.2);
+}
+
+.elevation-resize-handle:active {
+  background: #cc4d00;
+  box-shadow: 0 1px 2px rgba(255, 102, 0, 0.4);
+  transform: scaleY(1.1);
+}
+
+.elevation-resize-handle-bar {
+  width: 40px;
+  height: 4px;
+  background: white;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.elevation-resize-handle:hover .elevation-resize-handle-bar {
+  background: #fff5f0;
+  transform: scale(1.05);
+}
+
+/* Vertical arrows to indicate resize direction */
+.elevation-resize-handle-bar::before,
+.elevation-resize-handle-bar::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+}
+
+.elevation-resize-handle-bar::before {
+  top: -4px;
+  border-bottom: 4px solid white;
+}
+
+.elevation-resize-handle-bar::after {
+  bottom: -4px;
+  border-top: 4px solid white;
+}
+
+.elevation-resize-handle:hover .elevation-resize-handle-bar::before,
+.elevation-resize-handle:hover .elevation-resize-handle-bar::after {
+  border-bottom-color: #fff5f0;
+  border-top-color: #fff5f0;
 }
 
 .elevation-error {
@@ -2995,8 +3154,10 @@ async function calculateStatsFromElevations(elevations: number[]) {
 
 .elevation-chart {
   padding: 0.3rem;
-  /* Remove flex: 1 to prevent expansion */
-  flex-shrink: 0;
+  flex: 1; /* Take remaining space in elevation-content */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 .chart-container {
@@ -3004,8 +3165,9 @@ async function calculateStatsFromElevations(elevations: number[]) {
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
-  height: 20vh; /* Fixed height to prevent expansion */
+  flex: 1; /* Take remaining space in elevation-chart */
   position: relative;
+  min-height: 120px; /* Minimum height for chart visibility */
 }
 
 .elevation-chart-canvas {
