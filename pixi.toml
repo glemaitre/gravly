@@ -19,6 +19,8 @@ pre-commit = "*"
 postgresql = "*"
 requests = "*"
 httpx = "*"
+werkzeug = "*"
+pillow = "*"
 polyline = "*"
 # dependencies for stravalib available in conda-forge
 arrow = "*"

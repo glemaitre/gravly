@@ -39,6 +39,20 @@ class StorageManager(Protocol):
         """Generate a URL for accessing a GPX segment file."""
         ...
 
+    def upload_image(
+        self, local_file_path: Path, file_id: str, prefix: str = "images-segments"
+    ) -> str:
+        """Upload an image file to storage."""
+        ...
+
+    def delete_image(self, storage_key: str) -> bool:
+        """Delete an image file from storage."""
+        ...
+
+    def get_image_url(self, storage_key: str, expiration: int = 3600) -> str | None:
+        """Generate a URL for accessing an image file."""
+        ...
+
     def bucket_exists(self) -> bool:
         """Check if the storage bucket/container exists and is accessible."""
         ...
@@ -269,6 +283,137 @@ class S3Manager:
             logger.error(f"Failed to load GPX data from S3 URL {url}: {str(e)}")
             return None
 
+    def upload_image(
+        self,
+        local_file_path: Path,
+        file_id: str,
+        prefix: str = "images-segments",
+    ) -> str:
+        """Upload an image file to S3.
+
+        Parameters
+        ----------
+        local_file_path : Path
+            Path to the local image file to upload.
+        file_id : str
+            Unique identifier for the file.
+        prefix : str
+            S3 prefix to organize files. Defaults to "images-segments".
+
+        Returns
+        -------
+        str
+            S3 key (path) where the file was uploaded.
+
+        Raises
+        ------
+        ClientError
+            If the upload fails.
+        FileNotFoundError
+            If the local file doesn't exist.
+        """
+        if not local_file_path.exists():
+            raise FileNotFoundError(f"Local file not found: {local_file_path}")
+
+        # Get file extension from original file
+        file_extension = local_file_path.suffix.lower()
+        s3_key = f"{prefix}/{file_id}{file_extension}"
+
+        # Determine content type based on file extension
+        content_type = "image/jpeg"  # default
+        if file_extension in [".png"]:
+            content_type = "image/png"
+        elif file_extension in [".gif"]:
+            content_type = "image/gif"
+        elif file_extension in [".webp"]:
+            content_type = "image/webp"
+
+        try:
+            logger.info(
+                f"Uploading {local_file_path} to s3://{self.bucket_name}/{s3_key}"
+            )
+
+            self.s3_client.upload_file(
+                str(local_file_path),
+                self.bucket_name,
+                s3_key,
+                ExtraArgs={
+                    "ContentType": content_type,
+                    "Metadata": {
+                        "file-id": file_id,
+                        "file-type": "image",
+                    },
+                },
+            )
+
+            logger.info(
+                f"Successfully uploaded image to s3://{self.bucket_name}/{s3_key}"
+            )
+            return s3_key
+
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            error_message = e.response["Error"]["Message"]
+            logger.error(f"Failed to upload to S3: {error_code} - {error_message}")
+            raise
+
+    def delete_image(self, s3_key: str) -> bool:
+        """Delete an image file from S3.
+
+        Parameters
+        ----------
+        s3_key : str
+            S3 key (path) of the file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            logger.info(f"Deleting s3://{self.bucket_name}/{s3_key}")
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
+            logger.info(f"Successfully deleted s3://{self.bucket_name}/{s3_key}")
+            return True
+
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            error_message = e.response["Error"]["Message"]
+            logger.error(f"Failed to delete from S3: {error_code} - {error_message}")
+            return False
+
+    def get_image_url(self, s3_key: str, expiration: int = 3600) -> str | None:
+        """Generate a presigned URL for an image file.
+
+        Parameters
+        ----------
+        s3_key : str
+            S3 key (path) of the file.
+        expiration : int
+            URL expiration time in seconds. Defaults to 1 hour.
+
+        Returns
+        -------
+        Optional[str]
+            Presigned URL if successful, None otherwise.
+        """
+        try:
+            url = self.s3_client.generate_presigned_url(
+                "get_object",
+                Params={"Bucket": self.bucket_name, "Key": s3_key},
+                ExpiresIn=expiration,
+            )
+            logger.info(f"Generated presigned URL for s3://{self.bucket_name}/{s3_key}")
+            return url
+
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            error_message = e.response["Error"]["Message"]
+            logger.error(
+                f"Failed to generate presigned URL: {error_code} - {error_message}"
+            )
+            return None
+
 
 class LocalStorageManager:
     """Local filesystem storage manager that mimics S3 API."""
@@ -394,6 +539,132 @@ original-path: {local_file_path}
         """
         try:
             # If it's a storage URL (e.g., "local:///gpx-segments/file.gpx"),
+            # extract the key
+            if storage_key.startswith("local:///"):
+                # Remove "local:///" prefix to get the storage key
+                actual_key = storage_key[9:]  # Remove "local:///" (9 characters)
+            else:
+                # It's already a storage key
+                actual_key = storage_key
+
+            target_path = self.storage_root / actual_key
+            if not target_path.exists():
+                logger.warning(f"File not found in local storage: {target_path}")
+                return None
+
+            url = urljoin(self.base_url + "/", actual_key)
+            logger.info(f"Generated local storage URL: {url}")
+            return url
+
+        except Exception as e:
+            logger.error(f"Failed to generate local storage URL: {str(e)}")
+            return None
+
+    def upload_image(
+        self,
+        local_file_path: Path,
+        file_id: str,
+        prefix: str = "images-segments",
+    ) -> str:
+        """Upload an image file to local storage.
+
+        Parameters
+        ----------
+        local_file_path : Path
+            Path to the local image file to upload.
+        file_id : str
+            Unique identifier for the file.
+        prefix : str
+            Storage prefix to organize files. Defaults to "images-segments".
+
+        Returns
+        -------
+        str
+            Storage key (path) where the file was stored.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the local file doesn't exist.
+        """
+        if not local_file_path.exists():
+            raise FileNotFoundError(f"Local file not found: {local_file_path}")
+
+        # Get file extension from original file
+        file_extension = local_file_path.suffix.lower()
+        storage_key = f"{prefix}/{file_id}{file_extension}"
+        target_path = self.storage_root / storage_key
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            logger.info(f"Uploading {local_file_path} to local storage: {target_path}")
+
+            shutil.copy2(local_file_path, target_path)
+
+            metadata_path = target_path.with_suffix(f"{file_extension}.metadata")
+            metadata_content = f"""file-id: {file_id}
+file-type: image
+content-type: image/jpeg
+original-path: {local_file_path}
+"""
+            metadata_path.write_text(metadata_content)
+
+            logger.info(f"Successfully uploaded image to local storage: {target_path}")
+            return storage_key
+
+        except Exception as e:
+            logger.error(f"Failed to upload to local storage: {str(e)}")
+            raise
+
+    def delete_image(self, storage_key: str) -> bool:
+        """Delete an image file from local storage.
+
+        Parameters
+        ----------
+        storage_key : str
+            Storage key (path) of the file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            target_path = self.storage_root / storage_key
+            metadata_path = target_path.with_suffix(target_path.suffix + ".metadata")
+
+            logger.info(f"Deleting from local storage: {target_path}")
+
+            if target_path.exists():
+                target_path.unlink()
+
+            if metadata_path.exists():
+                metadata_path.unlink()
+
+            logger.info(f"Successfully deleted from local storage: {target_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to delete from local storage: {str(e)}")
+            return False
+
+    def get_image_url(self, storage_key: str, expiration: int = 3600) -> str | None:
+        """Generate a URL for accessing an image file.
+
+        Parameters
+        ----------
+        storage_key : str
+            Storage key (path) of the file, or full storage URL.
+        expiration : int
+            URL expiration time in seconds (ignored for local storage).
+
+        Returns
+        -------
+        str
+            URL for accessing the file.
+        """
+        try:
+            # If it's a storage URL (e.g., "local:///images-segments/file.jpg"),
             # extract the key
             if storage_key.startswith("local:///"):
                 # Remove "local:///" prefix to get the storage key

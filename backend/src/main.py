@@ -1,3 +1,4 @@
+import io
 import json
 import logging
 import uuid
@@ -11,8 +12,10 @@ import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
+from PIL import Image
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from werkzeug.utils import secure_filename
 
 from .models.auth_user import AuthUser, AuthUserResponse, AuthUserSummary
 from .models.base import Base
@@ -286,6 +289,114 @@ async def upload_gpx(file: UploadFile = File(...)):
     gpx_data_dict["file_id"] = file_id
 
     return gpx_data_dict
+
+
+@app.post("/api/upload-image")
+async def upload_image(file: UploadFile = File(...)):
+    """Upload an image file to storage manager and return the URL.
+
+    Enhanced Security Features:
+    - PIL-based image validation to verify real image format
+    - Secure filename sanitization using werkzeug
+    - Content-type and file format verification
+    - Support for common image formats: JPEG, PNG, GIF, WebP
+
+    Parameters
+    ----------
+    file: UploadFile
+        The image file to upload.
+
+    Returns
+    -------
+    dict
+        Dictionary containing image_id and image_url.
+    """
+    global temp_dir, storage_manager
+
+    # Basic content-type validation
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    if not temp_dir:
+        raise HTTPException(
+            status_code=500, detail="Temporary directory not initialized"
+        )
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
+
+    image_file_id = str(uuid.uuid4())
+
+    # Secure filename sanitization
+    sanitized_original_name = (
+        secure_filename(file.filename or "") if file.filename else ""
+    )
+    file_extension = Path(sanitized_original_name).suffix.lower() or ".jpg"
+    temp_image_path = Path(temp_dir.name) / f"{image_file_id}{file_extension}"
+
+    try:
+        # Read file content for validation
+        content = await file.read()
+
+        # PIL-based image validation
+        try:
+            # Verify the image using PIL
+            image_stream = io.BytesIO(content)
+            with Image.open(image_stream) as img:
+                # Verify it's a real image format
+                if img.format not in ["JPEG", "PNG", "GIF", "WEBP"]:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Unsupported image format: {img.format}. "
+                        f"Supported: JPEG, PNG, GIF, WebP",
+                    )
+
+                # Verify image is not corrupted
+                img.verify()
+
+            # Reset the stream for further processing
+            image_stream.seek(0)
+
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise e
+            raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
+
+        # Save file temporarily
+        with open(temp_image_path, "wb") as temp_file:
+            temp_file.write(content)
+
+        # Upload to storage using the storage manager
+        storage_key = storage_manager.upload_image(
+            local_file_path=temp_image_path,
+            file_id=image_file_id,
+            prefix="images-segments",
+        )
+
+        # Generate URL for the image
+        image_url = storage_manager.get_image_url(storage_key)
+
+        # Clean up temp file
+        cleanup_local_file(temp_image_path)
+
+        logger.info(
+            f"Successfully uploaded and validated image to storage: {storage_key}"
+        )
+
+        return {
+            "image_id": image_file_id,
+            "image_url": image_url,
+            "storage_key": storage_key,
+        }
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        cleanup_local_file(temp_image_path)
+        raise
+    except Exception as e:
+        cleanup_local_file(temp_image_path)
+        logger.error(f"Failed to upload image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {str(e)}")
 
 
 @app.post("/api/segments", response_model=TrackResponse)

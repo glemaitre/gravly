@@ -516,3 +516,238 @@ def test_load_gpx_data_with_special_characters(mock_s3_manager):
     result = mock_s3_manager.load_gpx_data(s3_url)
 
     assert result == test_content
+
+
+# ============== NEW IMAGE UPLOAD TESTS ==============
+
+
+def test_upload_image_png_file(mock_s3_manager, tmp_path):
+    """Test upload_image for PNG file."""
+    image_content = b"fake-png-data"
+    test_image_file = tmp_path / "test.png"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(
+        test_image_file, "test-image-id", "images-segments"
+    )
+
+    expected_key = "images-segments/test-image-id.png"
+    assert result == expected_key
+
+    # Verify the file was uploaded
+    try:
+        response = mock_s3_manager.s3_client.get_object(
+            Bucket="test-cycling-gpx-bucket", Key=expected_key
+        )
+        assert response["ContentType"] == "image/png"
+        assert response["Metadata"]["file-id"] == "test-image-id"
+        assert response["Metadata"]["file-type"] == "image"
+    except Exception:
+        pytest.fail("Image file was not uploaded properly")
+
+
+def test_upload_image_jpeg_file(mock_s3_manager, tmp_path):
+    """Test upload_image for JPEG file."""
+    image_content = b"fake-jpeg-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_key = "images-segments/test-image-id.jpg"
+    assert result == expected_key
+
+    # Verify the file was uploaded
+    try:
+        response = mock_s3_manager.s3_client.get_object(
+            Bucket="test-cycling-gpx-bucket", Key=expected_key
+        )
+        assert response["ContentType"] == "image/jpeg"
+        assert response["Metadata"]["file-id"] == "test-image-id"
+        assert response["Metadata"]["file-type"] == "image"
+    except Exception:
+        pytest.fail("Image file was not uploaded properly")
+
+
+def test_upload_image_gif_file(mock_s3_manager, tmp_path):
+    """Test upload_image for GIF file."""
+    image_content = b"fake-gif-data"
+    test_image_file = tmp_path / "test.gif"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_key = "images-segments/test-image-id.gif"
+    assert result == expected_key
+
+    # Verify the file was uploaded
+    try:
+        response = mock_s3_manager.s3_client.get_object(
+            Bucket="test-cycling-gpx-bucket", Key=expected_key
+        )
+        assert response["ContentType"] == "image/gif"
+        assert response["Metadata"]["file-id"] == "test-image-id"
+        assert response["Metadata"]["file-type"] == "image"
+    except Exception:
+        pytest.fail("Image file was not uploaded properly")
+
+
+def test_upload_image_webp_file(mock_s3_manager, tmp_path):
+    """Test upload_image for WebP file."""
+    image_content = b"fake-webp-data"
+    test_image_file = tmp_path / "test.webp"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_key = "images-segments/test-image-id.webp"
+    assert result == expected_key
+
+    # Verify the file was uploaded
+    try:
+        response = mock_s3_manager.s3_client.get_object(
+            Bucket="test-cycling-gpx-bucket", Key=expected_key
+        )
+        assert response["ContentType"] == "image/webp"
+        assert response["Metadata"]["file-id"] == "test-image-id"
+        assert response["Metadata"]["file-type"] == "image"
+    except Exception:
+        pytest.fail("Image file was not uploaded properly")
+
+
+def test_upload_image_unknown_extension_defaults_to_jpeg(mock_s3_manager, tmp_path):
+    """Test upload_image with unknown file extension defaults to JPEG."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.bmp"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_key = "images-segments/test-image-id.bmp"
+    assert result == expected_key
+
+    # Verify the file was uploaded
+    try:
+        response = mock_s3_manager.s3_client.get_object(
+            Bucket="test-cycling-gpx-bucket", Key=expected_key
+        )
+        assert response["ContentType"] == "image/jpeg"  # Should default to JPEG
+        assert response["Metadata"]["file-id"] == "test-image-id"
+        assert response["Metadata"]["file-type"] == "image"
+    except Exception:
+        pytest.fail("Image file was not uploaded properly")
+
+
+def test_upload_image_custom_prefix(mock_s3_manager, tmp_path):
+    """Test upload_image with custom prefix."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    result = mock_s3_manager.upload_image(
+        test_image_file, "test-image-id", "custom-images"
+    )
+
+    expected_key = "custom-images/test-image-id.jpg"
+    assert result == expected_key
+
+
+def test_upload_image_file_not_found(mock_s3_manager):
+    """Test upload_image when file doesn't exist."""
+    non_existent_file = Path("non_existent_image.jpg")
+
+    with pytest.raises(FileNotFoundError):
+        mock_s3_manager.upload_image(non_existent_file, "test-image-id")
+
+
+def test_upload_image_s3_client_error(mock_s3_manager, tmp_path):
+    """Test upload_image with S3 client error."""
+    with patch.object(mock_s3_manager.s3_client, "upload_file") as mock_upload:
+        mock_upload.side_effect = ClientError(
+            error_response={
+                "Error": {
+                    "Code": "NoSuchBucket",
+                    "Message": "The bucket does not exist",
+                }
+            },
+            operation_name="upload_file",
+        )
+
+        image_content = b"fake-image-data"
+        test_image_file = tmp_path / "test.jpg"
+        test_image_file.write_bytes(image_content)
+
+        with pytest.raises(ClientError):
+            mock_s3_manager.upload_image(test_image_file, "test-image-id")
+
+
+def test_delete_image_success(mock_s3_manager):
+    """Test delete_image successful deletion."""
+    # First upload an image
+    mock_s3_manager.s3_client.put_object(
+        Bucket="test-cycling-gpx-bucket",
+        Key="images-segments/test-image.jpg",
+        Body=b"fake-image-data",
+    )
+
+    result = mock_s3_manager.delete_image("images-segments/test-image.jpg")
+    assert result is True
+
+
+def test_delete_image_no_file(mock_s3_manager):
+    """Test delete_image with non-existent file."""
+    result = mock_s3_manager.delete_image("images-segments/nonexistent.jpg")
+    # S3 delete expects to succeed even if key doesn't exist
+    assert result is True
+
+
+def test_delete_image_s3_client_error(mock_s3_manager):
+    """Test delete_image with S3 client error."""
+    with patch.object(mock_s3_manager.s3_client, "delete_object") as mock_delete:
+        mock_delete.side_effect = ClientError(
+            error_response={
+                "Error": {"Code": "AccessDenied", "Message": "Access denied"}
+            },
+            operation_name="delete_object",
+        )
+
+        result = mock_s3_manager.delete_image("images-segments/test-image.jpg")
+        assert result is False
+
+
+def test_get_image_url_success(mock_s3_manager):
+    """Test get_image_url successful generation."""
+    result = mock_s3_manager.get_image_url("images-segments/test-image.jpg")
+
+    # Should return a presigned URL
+    assert result is not None
+    assert isinstance(result, str)
+    assert "images-segments/test-image.jpg" in result
+
+
+def test_get_image_url_custom_expiration(mock_s3_manager):
+    """Test get_image_url with custom expiration time."""
+    result = mock_s3_manager.get_image_url(
+        "images-segments/test-image.jpg", expiration=7200
+    )
+
+    # Should return a presigned URL
+    assert result is not None
+    assert isinstance(result, str)
+    assert "images-segments/test-image.jpg" in result
+
+
+def test_get_image_url_s3_client_error(mock_s3_manager):
+    """Test get_image_url with S3 client error."""
+    with patch.object(
+        mock_s3_manager.s3_client, "generate_presigned_url"
+    ) as mock_presigned:
+        mock_presigned.side_effect = ClientError(
+            error_response={
+                "Error": {"Code": "AccessDenied", "Message": "Access denied"}
+            },
+            operation_name="generate_presigned_url",
+        )
+
+        result = mock_s3_manager.get_image_url("images-segments/test-image.jpg")
+        assert result is None

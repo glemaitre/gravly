@@ -598,3 +598,273 @@ def test_get_gpx_segment_url_with_local_prefix(local_storage_manager, real_gpx_f
     assert url is not None
     assert local_storage_manager.base_url in url
     assert storage_key in url
+
+
+# ============== NEW IMAGE UPLOAD TESTS ==============
+
+
+def test_upload_image_png_file(local_storage_manager, tmp_path):
+    """Test upload_image for PNG file."""
+    image_content = b"fake-png-data"
+    test_image_file = tmp_path / "test.png"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(
+        test_image_file, "test-image-id", "images-segments"
+    )
+
+    expected_storage_key = "images-segments/test-image-id.png"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_jpeg_file(local_storage_manager, tmp_path):
+    """Test upload_image for JPEG file."""
+    image_content = b"fake-jpeg-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_storage_key = "images-segments/test-image-id.jpg"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_gif_file(local_storage_manager, tmp_path):
+    """Test upload_image for GIF file."""
+    image_content = b"fake-gif-data"
+    test_image_file = tmp_path / "test.gif"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_storage_key = "images-segments/test-image-id.gif"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_webp_file(local_storage_manager, tmp_path):
+    """Test upload_image for WebP file."""
+    image_content = b"fake-webp-data"
+    test_image_file = tmp_path / "test.webp"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_storage_key = "images-segments/test-image-id.webp"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_unknown_extension_defaults_to_jpeg(
+    local_storage_manager, tmp_path
+):
+    """Test upload_image with unknown file extension defaults to JPEG."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.bmp"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    expected_storage_key = "images-segments/test-image-id.bmp"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_custom_prefix(local_storage_manager, tmp_path):
+    """Test upload_image with custom prefix."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    result = local_storage_manager.upload_image(
+        test_image_file, "test-image-id", "custom-images"
+    )
+
+    expected_storage_key = "custom-images/test-image-id.jpg"
+    assert result == expected_storage_key
+
+    # Check if file was actually created
+    full_path = local_storage_manager.storage_root / expected_storage_key
+    assert full_path.exists()
+    assert full_path.read_bytes() == image_content
+
+
+def test_upload_image_file_not_found(local_storage_manager, tmp_path):
+    """Test upload_image when file doesn't exist."""
+    non_existent_file = tmp_path / "non_existent_image.jpg"
+
+    with pytest.raises(FileNotFoundError):
+        local_storage_manager.upload_image(non_existent_file, "test-image-id")
+
+
+def test_delete_image_success(local_storage_manager, tmp_path):
+    """Test delete_image successful deletion."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    # First upload an image
+    storage_key = local_storage_manager.upload_image(test_image_file, "test-image-id")
+    full_path = local_storage_manager.storage_root / storage_key
+    assert full_path.exists()  # Verify it exists before deletion
+
+    result = local_storage_manager.delete_image(storage_key)
+    assert result is True
+    assert not full_path.exists()  # Verify it was deleted
+
+
+def test_delete_image_no_file(local_storage_manager):
+    """Test delete_image with non-existent file."""
+    result = local_storage_manager.delete_image("images-segments/nonexistent.jpg")
+    assert (
+        result is True
+    )  # Local storage delete is successful even if file doesn't exist
+
+
+def test_get_image_url_success(local_storage_manager, tmp_path):
+    """Test get_image_url successful generation."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    # First upload an image
+    storage_key = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    result = local_storage_manager.get_image_url(storage_key)
+
+    # Should return a local URL
+    assert result is not None
+    assert local_storage_manager.base_url in result
+    assert storage_key in result
+
+
+def test_get_image_url_custom_expiration(local_storage_manager, tmp_path):
+    """Test get_image_url with custom expiration time."""
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    # First upload an image
+    storage_key = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    result = local_storage_manager.get_image_url(storage_key, expiration=7200)
+
+    # Should return a local URL
+    assert result is not None
+    assert local_storage_manager.base_url in result
+    assert storage_key in result
+
+
+def test_get_image_url_nonexistent_file(local_storage_manager):
+    """Test get_image_url with non-existent file."""
+    result = local_storage_manager.get_image_url("images-segments/nonexistent.jpg")
+
+    # Should return None for non-existent file
+    assert result is None
+
+
+def test_upload_image_local_storage_exception_handling(local_storage_manager, tmp_path):
+    """Test upload_image handles exceptions during local storage operations.
+
+    Covers lines 615-617.
+    """
+    # Create a valid image file
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    # Mock shutil.copy2 to raise an exception during the copy operation
+    with patch(
+        "src.utils.storage.shutil.copy2", side_effect=OSError("Permission denied")
+    ):
+        # This should trigger the exception handling on lines 615-617
+        with pytest.raises(OSError, match="Permission denied"):
+            local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+
+def test_delete_image_local_storage_exception_handling(local_storage_manager, tmp_path):
+    """Test delete_image handles exceptions during local storage operations.
+
+    Covers lines 647-649.
+    """
+    # First upload a valid image
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    # Upload successfully first
+    storage_key = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    # Mock Path.exists to return True but Path.unlink to raise an exception
+    with (
+        patch("src.utils.storage.Path.exists", return_value=True),
+        patch(
+            "src.utils.storage.Path.unlink", side_effect=OSError("Permission denied")
+        ),
+    ):
+        # This should trigger the exception handling on lines 647-649
+        result = local_storage_manager.delete_image(storage_key)
+        assert result is False
+
+
+def test_get_image_url_with_local_prefix(local_storage_manager, tmp_path):
+    """Test get_image_url with 'local:///' prefix - covers line 671."""
+    # First upload an image
+    image_content = b"fake-image-data"
+    test_image_file = tmp_path / "test.jpg"
+    test_image_file.write_bytes(image_content)
+
+    storage_key = local_storage_manager.upload_image(test_image_file, "test-image-id")
+
+    # Test with "local:///" prefix (this should trigger line 671)
+    local_url = f"local:///{storage_key}"
+    url = local_storage_manager.get_image_url(local_url)
+
+    # Should successfully remove the prefix and return the URL
+    assert url is not None
+    assert local_storage_manager.base_url in url
+    assert storage_key in url
+
+
+def test_get_image_url_local_storage_exception_handling(
+    local_storage_manager, tmp_path
+):
+    """Test get_image_url handles exceptions - covers lines 685-687."""
+    # Add a mock side effect to simulate an exception during URL generation
+    with patch("src.utils.storage.urljoin", side_effect=Exception("urljoin failed")):
+        # Upload a valid image first
+        image_content = b"fake-image-data"
+        test_image_file = tmp_path / "test.jpg"
+        test_image_file.write_bytes(image_content)
+
+        storage_key = local_storage_manager.upload_image(
+            test_image_file, "test-image-id"
+        )
+
+        # Try to get URL - should handle the exception gracefully
+        result = local_storage_manager.get_image_url(storage_key)
+
+        # Should return None due to exception (lines 686-687)
+        assert result is None

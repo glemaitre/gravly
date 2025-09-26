@@ -1232,4 +1232,195 @@ describe('Editor', () => {
       document.body.removeChild(mapContainer)
     })
   })
+
+  // ============== IMAGE UPLOAD TESTS ==============
+
+  it('handles drag and drop image uploads through UI events', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    const dropZone = wrapper.find('.image-upload-area')
+    if (dropZone.exists()) {
+      const mockFiles = [
+        new File(['test1'], 'test1.jpg', { type: 'image/jpeg' }),
+        new File(['test2'], 'test2.txt', { type: 'text/plain' })
+      ]
+
+      const mockEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: {
+          files: Array.from(mockFiles)
+        }
+      }
+
+      // Trigger drag over event first
+      await dropZone.trigger('dragover', mockEvent)
+      expect(vm.isDragOver).toBe(true)
+
+      // Trigger drop event
+      await dropZone.trigger('drop', mockEvent)
+      expect(vm.isDragOver).toBe(false)
+      expect(mockEvent.preventDefault).toHaveBeenCalled()
+    }
+  })
+
+  it('handles image input selection through file input', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    const fileInput = wrapper.find('input[type="file"][accept="image/*"]')
+    if (fileInput.exists()) {
+      const mockFiles = [
+        new File(['test1'], 'test1.jpg', { type: 'image/jpeg' }),
+        new File(['test2'], 'test2.png', { type: 'image/png' })
+      ]
+
+      // Modify the event target files to simulate selection
+      const mockEvent = {
+        target: {
+          files: Array.from(mockFiles)
+        }
+      }
+
+      // Notice that we're directly calling the method like other tests in this file
+      await vm.handleImageSelect(mockEvent)
+
+      // This should not throw any errors
+      expect(fileInput.attributes('accept')).toBe('image/*')
+    }
+  })
+
+  it('uploads images successfully and updates commentary state', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    const originalFetch = global.fetch
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          image_id: 'test-image-id',
+          image_url: 'https://storage.example.com/test.jpg',
+          storage_key: 'images-segments/test-image-id.jpg'
+        })
+    })
+
+    global.fetch = mockFetch
+
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+    const mockImageId = 'mock-image-id'
+
+    // Add an image to commentary first
+    vm.commentary.images.push({
+      id: mockImageId,
+      file: mockFile,
+      preview: 'data:test',
+      uploaded: false,
+      image_url: '',
+      image_id: ''
+    })
+
+    await vm.uploadImageToStorage(mockFile, mockImageId)
+
+    const updatedImage = vm.commentary.images.find((img: any) => img.id === mockImageId)
+    expect(updatedImage.uploaded).toBe(true)
+    expect(updatedImage.image_url).toBe('https://storage.example.com/test.jpg')
+    expect(updatedImage.image_id).toBe('test-image-id')
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/upload-image',
+      expect.objectContaining({
+        method: 'POST'
+      })
+    )
+
+    // Cleanup
+    global.fetch = originalFetch
+  })
+
+  it('handles image upload failures gracefully', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    const originalFetch = global.fetch
+    // Mock fetch failure
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500
+    })
+    global.fetch = mockFetch
+
+    // Mock console error
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(vi.fn())
+
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+    const mockImageId = 'mock-image-id'
+
+    // Add an image to commentary first
+    vm.commentary.images.push({
+      id: mockImageId,
+      file: mockFile,
+      preview: 'data:test',
+      uploaded: false,
+      image_url: '',
+      image_id: ''
+    })
+
+    await vm.uploadImageToStorage(mockFile, mockImageId)
+
+    // Verify error handling
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Failed to upload image to storage')
+    expect(consoleError).toHaveBeenCalled()
+
+    // Image should remain in commentary but not uploaded
+    const image = vm.commentary.images.find((img: any) => img.id === mockImageId)
+    expect(image.uploaded).toBe(false)
+
+    // Cleanup
+    global.fetch = originalFetch
+  })
+
+  it('handles image drag over and leave events correctly', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    const mockEvent = { preventDefault: vi.fn() }
+
+    await vm.handleDragOver(mockEvent)
+    expect(vm.isDragOver).toBe(true)
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+
+    await vm.handleDragLeave(mockEvent)
+    expect(vm.isDragOver).toBe(false)
+    expect(mockEvent.preventDefault).toHaveBeenCalled()
+  })
+
+  it('removes images from commentary array properly', async () => {
+    const wrapper = mountEditor()
+    const vm = wrapper.vm as any
+
+    // Initially add two images
+    vm.commentary.images.push({
+      id: 'test-image-1',
+      file: new File(['test1'], 'test1.jpg', { type: 'image/jpeg' }),
+      preview: 'data:test1'
+    })
+
+    vm.commentary.images.push({
+      id: 'test-image-2',
+      file: new File(['test2'], 'test2.jpg', { type: 'image/jpeg' }),
+      preview: 'data:test2'
+    })
+
+    expect(vm.commentary.images.length).toBe(2)
+
+    // Remove first image
+    vm.removeImage(0)
+    expect(vm.commentary.images.length).toBe(1)
+    expect(vm.commentary.images[0].id).toBe('test-image-2')
+
+    // Remove remaining image
+    vm.removeImage(0)
+    expect(vm.commentary.images.length).toBe(0)
+  })
 })

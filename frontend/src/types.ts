@@ -106,6 +106,9 @@ export interface CommentaryImage {
   file: File
   preview: string
   caption?: string
+  uploaded?: boolean
+  image_url?: string
+  image_id?: string
 }
 
 export interface TrailConditions {

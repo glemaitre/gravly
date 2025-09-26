@@ -1203,19 +1203,63 @@ function handleImageDrop(event: DragEvent) {
 function processImageFiles(files: File[]) {
   files.forEach((file) => {
     if (file.type.startsWith('image/')) {
+      // Create preview from file immediately
       const reader = new FileReader()
       reader.onload = (e) => {
         const preview = e.target?.result as string
-        commentary.value.images.push({
-          id: generateId(),
+        const imageId = generateId()
+
+        // Add to commentary with temporary preview and upload structure
+        const newImage = {
+          id: imageId,
           file,
           preview,
-          caption: ''
-        })
+          caption: '',
+          uploaded: false,
+          image_url: '',
+          image_id: ''
+        }
+        commentary.value.images.push(newImage)
+
+        // Upload to storage manager immediately
+        uploadImageToStorage(file, imageId)
       }
       reader.readAsDataURL(file)
     }
   })
+}
+
+async function uploadImageToStorage(file: File, imageId: string) {
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image to storage')
+    }
+
+    const result = await response.json()
+
+    // Update the image in commentary with the stored URL
+    const imageIndex = commentary.value.images.findIndex((img) => img.id === imageId)
+    if (imageIndex !== -1) {
+      commentary.value.images[imageIndex].uploaded = true
+      commentary.value.images[imageIndex].image_url = result.image_url
+      commentary.value.images[imageIndex].image_id = result.image_id
+    }
+
+    console.info(`Successfully uploaded image to storage: ${result.storage_key}`)
+  } catch (error) {
+    console.error('Failed to upload image to storage:', error)
+    // Keep the image with local preview even if upload failed
+    showError.value = true
+    currentErrorMessage.value = 'Failed to upload image to storage'
+  }
 }
 
 function removeImage(index: number) {
@@ -1894,11 +1938,8 @@ async function onSubmit() {
     formData.append('commentary_text', commentary.value.text)
     formData.append('video_links', JSON.stringify(commentary.value.video_links))
 
-    // Add images
-    commentary.value.images.forEach((image, index) => {
-      formData.append(`image_${index}`, image.file)
-      formData.append(`image_${index}_caption`, image.caption || '')
-    })
+    // Images are already uploaded to storage when selected
+    // No need to send them again
 
     const res = await fetch('/api/segments', { method: 'POST', body: formData })
     if (!res.ok) {
