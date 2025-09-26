@@ -6,14 +6,14 @@
       <!-- Top right corner controls -->
       <div class="map-controls">
         <div class="control-group">
-          <button class="control-btn" @click="clearMap" :title="'Clear Map'">
+          <button class="control-btn" @click="clearMap" :title="t('routePlanner.clearMap')">
             <i class="fa-solid fa-trash"></i>
           </button>
           <button
             class="control-btn"
             @click="undo"
             :disabled="!canUndo"
-            :title="'Undo'"
+            :title="t('routePlanner.undo')"
           >
             <i class="fa-solid fa-undo"></i>
           </button>
@@ -21,7 +21,7 @@
             class="control-btn"
             @click="redo"
             :disabled="!canRedo"
-            :title="'Redo'"
+            :title="t('routePlanner.redo')"
           >
             <i class="fa-solid fa-redo"></i>
           </button>
@@ -36,7 +36,7 @@
           class="elevation-resize-handle"
           @mousedown="startElevationResize"
           @touchstart="startElevationResize"
-          title="Drag up or down to resize elevation section height"
+          :title="t('routePlanner.resizeHandle')"
         >
           <div class="elevation-resize-handle-bar"></div>
         </div>
@@ -46,19 +46,19 @@
           <div class="elevation-toggle-content">
             <div class="toggle-left">
               <i class="fa-solid fa-mountain"></i>
-              <span class="elevation-toggle-text">Elevation Profile</span>
+              <span class="elevation-toggle-text">{{ t('routePlanner.profile') }}</span>
               <div class="toggle-stats">
-                <div class="toggle-stat" title="Total Distance">
+                <div class="toggle-stat" :title="t('routePlanner.totalDistance')">
                   <i class="fa-solid fa-route"></i>
-                  <span>{{ routeDistance.toFixed(1) }} km</span>
+                  <span>{{ routeDistance.toFixed(1) }} {{ t('routePlanner.km') }}</span>
                 </div>
-                <div class="toggle-stat" title="Elevation Gain">
+                <div class="toggle-stat" :title="t('routePlanner.elevationGain')">
                   <i class="fa-solid fa-arrow-trend-up"></i>
-                  <span>{{ elevationStats.totalGain }}m</span>
+                  <span>{{ elevationStats.totalGain }}{{ t('routePlanner.m') }}</span>
                 </div>
-                <div class="toggle-stat" title="Elevation Loss">
+                <div class="toggle-stat" :title="t('routePlanner.elevationLoss')">
                   <i class="fa-solid fa-arrow-trend-down"></i>
-                  <span>{{ elevationStats.totalLoss }}m</span>
+                  <span>{{ elevationStats.totalLoss }}{{ t('routePlanner.m') }}</span>
                 </div>
               </div>
             </div>
@@ -127,8 +127,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow
 })
 
-// eslint-disable-next-line no-unused-vars
-const { t: _t } = useI18n()
+const { t } = useI18n()
 
 // Map and routing state
 let map: any = null
@@ -1473,8 +1472,7 @@ async function calculateElevationStats() {
       minElevation: 0
     }
     // Show user-friendly error message
-    elevationError.value =
-      'Elevation data unavailable. Please check your internet connection and try again.'
+    elevationError.value = t('routePlanner.elevationDataUnavailable')
   }
 }
 
@@ -1636,7 +1634,7 @@ async function initializeElevationChart(
     data: {
       datasets: [
         {
-          label: 'Elevation',
+          label: t('routePlanner.chartElevationLabel'),
           data: chartData,
           borderColor: '#ff6600',
           backgroundColor: 'rgba(255, 102, 0, 0.1)',
@@ -1678,13 +1676,13 @@ async function initializeElevationChart(
           display: true,
           title: {
             display: true,
-            text: 'Distance (km)'
+            text: t('routePlanner.chartDistance')
           },
           min: 0,
           max: chartData[chartData.length - 1]?.x || 1,
           ticks: {
             callback: function (value: any) {
-              return `${Number(value).toFixed(1)} km`
+              return `${Number(value).toFixed(1)} ${t('routePlanner.km')}`
             }
           }
         },
@@ -1692,7 +1690,7 @@ async function initializeElevationChart(
           display: true,
           title: {
             display: true,
-            text: 'Elevation (m)'
+            text: t('routePlanner.chartElevation')
           },
           ...calculateNiceElevationScale(elevations)
         }

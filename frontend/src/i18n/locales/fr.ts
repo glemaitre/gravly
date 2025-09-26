@@ -228,7 +228,27 @@ export default {
     centerMap: 'Centrer la Carte',
     elevationProfile: "Profil d'Altitude",
     routeSaved: 'Route sauvegardée avec succès',
-    noSavedRoutes: 'Aucune route sauvegardée trouvée'
+    noSavedRoutes: 'Aucune route sauvegardée trouvée',
+    // Map Control Buttons
+    clearMap: 'Effacer la Carte',
+    undo: 'Annuler',
+    redo: 'Rétablir',
+    // Toggle Labels
+    profile: 'Profil',
+    totalDistance: 'Distance Totale',
+    elevationGain: 'Gain de Dénivelé',
+    elevationLoss: 'Perte de Dénivelé',
+    // Resize Handle
+    resizeHandle: 'Glisser vers le haut ou le bas pour redimensionner la hauteur de la section d\'élévation',
+    // Chart Labels
+    chartDistance: 'Distance (km)',
+    chartElevation: 'Altitude (m)',
+    chartElevationLabel: 'Altitude',
+    // Error Messages
+    elevationDataUnavailable: 'Données d\'élévation indisponibles. Veuillez vérifier votre connexion internet et réessayer.',
+    // Units
+    km: 'km',
+    m: 'm'
   },
 
   // Common

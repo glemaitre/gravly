@@ -227,7 +227,27 @@ export default {
     centerMap: 'Center Map',
     elevationProfile: 'Elevation Profile',
     routeSaved: 'Route saved successfully',
-    noSavedRoutes: 'No saved routes found'
+    noSavedRoutes: 'No saved routes found',
+    // Map Control Buttons
+    clearMap: 'Clear Map',
+    undo: 'Undo',
+    redo: 'Redo',
+    // Toggle Labels
+    profile: 'Profile',
+    totalDistance: 'Total Distance',
+    elevationGain: 'Elevation Gain',
+    elevationLoss: 'Elevation Loss',
+    // Resize Handle
+    resizeHandle: 'Drag up or down to resize elevation section height',
+    // Chart Labels
+    chartDistance: 'Distance (km)',
+    chartElevation: 'Elevation (m)',
+    chartElevationLabel: 'Elevation',
+    // Error Messages
+    elevationDataUnavailable: 'Elevation data unavailable. Please check your internet connection and try again.',
+    // Units
+    km: 'km',
+    m: 'm'
   },
 
   // Common
