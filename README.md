@@ -131,7 +131,13 @@ backend automatically loads environment variables from `.env/storage` and
    STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json
    ```
 
-5. **Never commit actual `.env` files** - they contain sensitive information and are
+5. **Create the authorization configuration file** (`.env/auth_users`):
+   ```bash
+   # Editor Authorization - Authorized Strava Users
+   AUTHORIZED_STRAVA_USERS=820773,123456,789012
+   ```
+
+6. **Never commit actual `.env` files** - they contain sensitive information and are
    already in `.gitignore`.
 
 ### Storage Configuration
@@ -275,6 +281,7 @@ The Strava integration uses a sophisticated authentication system:
   charts, segment selection, and metadata editing
 - **Backend Processing**: GPX data is processed on the backend using the same pipeline
   as local file uploads
+- **Editor Authorization**: Restrictive access control for editor features based on authorized Strava user IDs
 
 ### User Experience Improvements
 
@@ -375,6 +382,7 @@ data for development and testing purposes.
 - **`scripts/database_seeding.py`**: Generates 1,000 realistic 5km cycling segments
   across 13 French regions
 - **`scripts/test_seeding.py`**: Generates 5 segments for quick testing
+- **`scripts/seed_auth_users.py`**: Seeds authorized users from `.env/auth_users` file
 
 ### Features of Generated Data
 
@@ -398,6 +406,9 @@ pixi run python scripts/database_seeding.py
 
 # Quick test seeding (5 segments) - takes seconds
 pixi run python scripts/test_seeding.py
+
+# Auth users seeding (if authorization enabled)
+pixi run python scripts/seed_auth_users.py
 ```
 
 ### Customization
@@ -411,6 +422,159 @@ await seed_database(
     batch_size=50           # Number of segments per batch
 )
 ```
+
+## Editor Authorization System
+
+The application includes a sophisticated authorization system that controls access to the route editor based on authorized Strava user IDs. This enables selective access to premium editing features while maintaining security.
+
+### Overview
+
+The authorization system provides fine-grained control over who can access the GPX route editor:
+- **Strava Authentication**: Users must be authenticated with Strava
+- **Authorization Check**: Backend validates authorized user IDs against database
+- **Frontend UI Control**: Editor button only visible to authenticated and authorized users
+- **Environment Configuration**: Authorized users configured via `.env/auth_users` file
+
+### Setup Editor Authorization
+
+1. **Create the authorization configuration file**:
+   ```bash
+   # Create from example template
+   cp .env/auth_users.example .env/auth_users
+   ```
+
+2. **Configure authorized users** in `.env/auth_users`:
+   ```bash
+   # List of Strava user IDs with editor access
+   # Format: comma-separated Strava IDs (no spaces)
+   AUTHORIZED_STRAVA_USERS=820773,123456,789012
+   ```
+
+3. **Seed the database** with authorized users:
+   ```bash
+   # Run the authorization seeder
+   pixi run python scripts/seed_auth_users.py
+   ```
+
+### Authorization Features
+
+- **Database-driven Control**: Authorized users stored in PostgreSQL `auth_users` table
+- **Automatic Checking**: Frontend automatically validates authorization on Strava authentication
+- **UI Hiding**: Editor button hidden from unauthorized users (not shown at all)
+- **Error Prevention**: Unauthorized users cannot access editor routes
+- **Secure Backend**: All authorization checks validated server-side
+- **Environment Configuration**: Easy management via `.env/auth_users` file
+
+### Authorization Flow
+
+1. **User Authentication**: User logs in with Strava OAuth
+2. **Authorization Request**: Frontend calls `/api/auth/check-authorization?strava_id=<ID>`
+3. **Database Check**: Backend validates Strava ID against `auth_users` table
+4. **Response**: Returns authorization status and user information
+5. **UI Update**: Editor button appears/disappears based on authorization
+6. **Real-time Updates**: Authorization checked on any authentication state changes
+
+### Backend API Endpoints
+
+#### Check Authorization
+```
+GET /api/auth/check-authorization?strava_id=820773
+```
+
+**Response:**
+```json
+{
+  "authorized": true,
+  "user": {
+    "strava_id": 820773,
+    "firstname": "Test",
+    "lastname": "User"
+  }
+}
+```
+
+#### List Authorized Users (Admin)
+```
+GET /api/auth/users
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "strava_id": 820773,
+    "firstname": "Test", 
+    "lastname": "User",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+]
+```
+
+### Security Features
+
+- **Database Validation**: Server-side authorization checks against PostgreSQL
+- **Environment Security**: No sensitive data hardcoded in repository
+- **Token Protection**: OAuth tokens managed securely by backend
+- **UI Protection**: Frontend UI prevents unauthorized access to editor
+- **Route Protection**: Backend validates authorization on editor access
+- **Error Handling**: Proper HTTP status codes and error messages
+- **Cache Management**: Frontend caching with automatic refresh on auth changes
+
+### Development Configuration
+
+#### Example Configuration
+The `.env/auth_users.example` template shows:
+```bash
+# Default authorization setup with test user
+AUTHORIZED_STRAVA_USERS=820773
+
+# For additional users, use comma separation:
+# AUTHORIZED_STRAVA_USERS=820773,123456,789012
+```
+
+#### Manual Database Management
+You can also manually add authorized users directly to the database:
+```sql
+INSERT INTO auth_users (strava_id, firstname, lastname) 
+VALUES (123456, 'Test', 'User');
+```
+
+### Troubleshooting
+
+#### Common Issues
+- **Editor button not showing**: Verify user's Strava ID exists in `auth_users` table
+- **Database errors**: Ensure `auth_users` table has been created (run seeder)
+- **Environment not loaded**: Check `.env/auth_users` file exists and has valid Strava IDs
+- **No authorization response**: Check backend authorization endpoints are working
+- **Authentication failures**: Ensure Strava OAuth integration is properly configured
+
+#### Verification Commands
+```bash
+# Check if authorization endpoint is working
+curl "http://localhost:8000/api/auth/check-authorization?strava_id=820773"
+
+# Verify authorized users in database
+curl "http://localhost:8000/api/auth/users"
+
+# Check if environment is loaded correctly
+pixi run python -c "
+import os
+print('AUTHORIZED_STRAVA_USERS:', os.getenv('AUTHORIZED_STRAVA_USERS', 'Not found'))
+"
+```
+
+### Authorization vs Authentication
+
+| Feature | Authentication | Authorization |
+|---------|---------------|---------------|
+| **Purpose** | Verify Strava login | Control feature access |
+| **Scope** | Global login state | Specific feature (editor) |
+| **Storage** | OAuth tokens (secure) | Authorized users (database) |
+| **UI Impact** | Login/logout buttons | Editor button visibility |
+| **Validation** | Backend Strava API | Backend authorization DB |
+| **Security** | OAuth 2.0 tokens | Database-driven user list |
 
 ### Running the Application
 
@@ -513,12 +677,14 @@ website_cycling/
 ├── .env/                   # Environment configuration files
 │   ├── database            # Database configuration
 │   ├── storage             # Storage configuration
-│   ├── strava              # Strava API configuration
+│   ├── strava              # Strava API configuration  
+│   ├── auth_users          # Editor authorization configuration
 │   └── strava_tokens.json  # Strava OAuth tokens (auto-generated, git-ignored)
 ├── scripts/                # Database seeding and utility scripts
 │   ├── database_seeding.py # Generate 1,000 realistic cycling segments
 │   ├── test_seeding.py     # Generate 5 test segments
-│   └── README.md           # Scripts documentation
+│   ├── seed_auth_users.py  # Authorized users for editor access
+│   └── README_auth_users.md # Authorization documentation
 ├── backend/tests/data/     # Test GPX files
 ├── postgres_data/          # PostgreSQL data directory (created by pg-setup)
 ├── scratch/                # Local storage directory
@@ -545,6 +711,10 @@ website_cycling/
   Strava activities
 - `GET /api/strava/activities/{activity_id}/gpx` - Get GPX data for a specific Strava
   activity
+
+### Editor Authorization
+- `GET /api/auth/check-authorization?strava_id={strava_id}` - Check if Strava user is authorized for editor access
+- `GET /api/auth/users` - List all authorized users (admin endpoint)
 
 **Features**:
 - **OAuth 2.0 Authentication**: Complete OAuth flow with secure token management
@@ -713,6 +883,14 @@ summaries.
 - **Smart Redirects**: Users return to original page after authentication
 - **Full Page Reload**: Ensures proper navbar state updates
 - **Mobile Responsive**: Adaptive authentication UI for all screen sizes
+
+### Authorization System
+- **Editor Access Control**: Restrictive editor access based on authorized Strava user IDs
+- **Database-driven Control**: PostgreSQL-stored authorized user list
+- **Environment Configuration**: Easy management via `.env/auth_users` file
+- **Frontend UI Control**: Editor button shown/hidden based on authorization
+- **Backend Validation**: Server-side authorization checks for security
+- **Seamless Integration**: Works with existing Strava authentication system
 
 ### Storage & Database
 - **Dual Storage**: Support for both local filesystem and AWS S3

@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from .models.auth_user import AuthUser, AuthUserResponse, AuthUserSummary
 from .models.base import Base
 from .models.track import (
     GPXDataResponse,
@@ -909,6 +910,69 @@ async def get_strava_activity_gpx(activity_id: str):
     except Exception as e:
         logger.error(f"Error fetching Strava GPX for activity {activity_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch GPX: {str(e)}")
+
+
+# Authorization endpoints
+@app.get("/api/auth/check-authorization")
+async def check_strava_authorization(strava_id: int):
+    """Check if a Strava user is authorized to access editor feature."""
+    if SessionLocal is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    try:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(AuthUser).where(AuthUser.strava_id == strava_id)
+            )
+            auth_user = result.scalar_one_or_none()
+
+            if auth_user:
+                return {
+                    "authorized": True,
+                    "user": AuthUserSummary(
+                        strava_id=auth_user.strava_id,
+                        firstname=auth_user.firstname,
+                        lastname=auth_user.lastname,
+                    ),
+                }
+            else:
+                return {"authorized": False, "user": None}
+    except Exception as e:
+        logger.error(
+            f"Error checking authorization for Strava ID {strava_id}: {str(e)}"
+        )
+        raise HTTPException(
+            status_code=500, detail=f"Failed to check authorization: {str(e)}"
+        )
+
+
+@app.get("/api/auth/users", response_model=list[AuthUserResponse])
+async def list_authorized_users():
+    """List all authorized users (admin function)."""
+    if SessionLocal is None:
+        raise HTTPException(status_code=503, detail="Database not initialized")
+
+    try:
+        async with SessionLocal() as session:
+            result = await session.execute(
+                select(AuthUser).order_by(AuthUser.created_at)
+            )
+            auth_users = result.scalars().all()
+
+            return [
+                AuthUserResponse(
+                    id=auth_user.id,
+                    strava_id=auth_user.strava_id,
+                    firstname=auth_user.firstname,
+                    lastname=auth_user.lastname,
+                    created_at=auth_user.created_at,
+                    updated_at=auth_user.updated_at,
+                )
+                for auth_user in auth_users
+            ]
+    except Exception as e:
+        logger.error(f"Error listing authorized users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list users: {str(e)}")
 
 
 if __name__ == "__main__":

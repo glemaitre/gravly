@@ -4,25 +4,19 @@ globs:
 alwaysApply: true
 ---
 
-WHENEVER YOU ARE DOING A TODO LIST, YOU SHOULD ALWAYS TAKE INTO ACCOUNT THE RULES BELOW.
+ALWAYS FOLLOW THIS VERIFICATION WORKFLOW when adding ANY source code:
 
-When adding code to the frontend, you should always write unit tests as well.
-
-You can start the frontend and backend with `pixi run -e dev start-backend` and
-`pixi run -e dev start-frontend` respectively.
-
-Then, you should run test to get coverage and failures to fix using
-`pixi run -e dev test-frontend`. Once everything works, you should check for linting
-issue with `pixi run -e dev lint-frontend`. Then, make sure that the type are correct
-with `pixi run -e dev type-check-frontend`. And finally, you can reformat using
-`pixi run -e dev format-frontend`.
-
-When adding code to the backend, you should always write unit tests as well.
-
-You can start the frontend and backend with `pixi run -e dev start-backend` and
-`pixi run -e dev start-frontend` respectively.
-
-Then, you should run test to get coverage and failures to fix using
-`pixi run -e dev test-backend`. Once everything works, you should check for linting
-issue with `pixi run -e dev lint-backend`. And finally, you can reformat using
-`pixi run -e dev format-backend`.
+1. WRITE CODE FIRST - Create/modify source files
+2. ALWAYS WRITE UNIT TESTS for new functionality
+3. RUN MANDATORY TESTING PIPELINE:
+   - For frontend changes:
+       - First run pixi run -e dev test-frontend
+       - Second run pixi run -e dev lint-frontend
+       - Third run pixi run -e dev type-check-frontend
+       - Finally run pixi run -e dev format-frontend
+   - For backend changes:
+       - First run pixi run -e dev test-backend
+       - Second run pixi run -e dev lint-backend
+       - Finally run pixi run -e dev format-backend
+4. ONLY MARK TASKS COMPLETE after ALL tests pass and linting is clean
+5. VERIFY: No failing tests, no linting issues, no type errors before claiming completion

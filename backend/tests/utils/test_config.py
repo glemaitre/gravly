@@ -117,6 +117,13 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
 def test_missing_database_parameters(tmp_path):
     """Test error when database parameters are missing."""
+    import os
+
+    # Clear any existing database environment variables to avoid interference
+    for param in ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]:
+        if param in os.environ:
+            del os.environ[param]
+
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 
@@ -196,6 +203,13 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
 def test_missing_single_database_parameter(tmp_path):
     """Test error when a single database parameter is missing."""
+    import os
+
+    # Clear any existing database environment variables to avoid interference
+    for param in ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]:
+        if param in os.environ:
+            del os.environ[param]
+
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 
@@ -461,6 +475,18 @@ def test_default_project_root_behavior():
 
 def test_missing_strava_parameters(tmp_path):
     """Test error when Strava parameters are missing."""
+    import os
+
+    # Clear any existing Strava environment variables to avoid interference
+    strava_env_vars = [
+        "STRAVA_CLIENT_ID",
+        "STRAVA_CLIENT_SECRET",
+        "STRAVA_TOKENS_FILE_PATH",
+    ]
+    for param in strava_env_vars:
+        if param in os.environ:
+            del os.environ[param]
+
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 
@@ -567,6 +593,18 @@ STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
 
 def test_missing_strava_tokens_file_path(tmp_path):
     """Test error when STRAVA_TOKENS_FILE_PATH is missing."""
+    import os
+
+    # Clear any existing Strava environment variables to avoid interference
+    strava_env_vars = [
+        "STRAVA_CLIENT_ID",
+        "STRAVA_CLIENT_SECRET",
+        "STRAVA_TOKENS_FILE_PATH",
+    ]
+    for param in strava_env_vars:
+        if param in os.environ:
+            del os.environ[param]
+
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 
@@ -796,6 +834,12 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
 def test_missing_thunderforest_api_key(tmp_path):
     """Test error when thunderforest file exists but THUNDERFOREST_API_KEY is missing."""  # noqa: E501
+    import os
+
+    # Clear any existing Thunderforest environment variables to avoid interference
+    if "THUNDERFOREST_API_KEY" in os.environ:
+        del os.environ["THUNDERFOREST_API_KEY"]
+
     env_folder = tmp_path / ".env"
     env_folder.mkdir()
 

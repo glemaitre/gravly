@@ -15,7 +15,12 @@
             <i class="fa-solid fa-map"></i>
             <span>{{ $t('navbar.routePlanner') }}</span>
           </router-link>
-          <router-link to="/editor" class="nav-link" active-class="active">
+          <router-link
+            v-if="isEditorAuthorized"
+            to="/editor"
+            class="nav-link"
+            active-class="active"
+          >
             <i class="fa-solid fa-edit"></i>
             <span>{{ $t('navbar.editor') }}</span>
           </router-link>
@@ -133,6 +138,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { setLanguage, type MessageLanguages } from '../i18n'
 import { useStravaApi } from '../composables/useStravaApi'
+import { useAuthorization } from '../composables/useAuthorization'
 import logoUrl from '../assets/images/logo.svg'
 
 // i18n setup
@@ -149,9 +155,15 @@ const {
   clearAuth
 } = useStravaApi()
 
+// Editor authorization
+const { isAuthorizedForEditor } = useAuthorization()
+
 // Computed properties for authentication
 const isAuthenticated = computed(() => isAuthenticatedFn())
 const athlete = computed(() => authState.value.athlete)
+const isEditorAuthorized = computed(
+  () => isAuthenticated.value && isAuthorizedForEditor.value
+)
 
 // Watch for locale changes to update currentLanguage
 watch(

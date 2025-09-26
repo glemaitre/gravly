@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
 import { createRouter, createWebHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
+import { ref } from 'vue'
 import Navbar from '../Navbar.vue'
 import LandingPage from '../LandingPage.vue'
 import Editor from '../Editor.vue'
@@ -11,9 +12,26 @@ vi.mock('../../assets/images/logo.svg', () => ({
   default: 'mocked-logo.svg'
 }))
 
+// Mock useStravaApi
+vi.mock('../../composables/useStravaApi', () => ({
+  useStravaApi: vi.fn()
+}))
+
+// Mock useAuthorization
+vi.mock('../../composables/useAuthorization', () => ({
+  useAuthorization: vi.fn()
+}))
+
 // Import real locale files
 import en from '../../i18n/locales/en'
 import fr from '../../i18n/locales/fr'
+
+// Import the composable providers after mocking
+import { useStravaApi } from '../../composables/useStravaApi'
+import { useAuthorization } from '../../composables/useAuthorization'
+
+const mockUseStravaApi = vi.mocked(useStravaApi)
+const mockUseAuthorization = vi.mocked(useAuthorization)
 
 describe('Navbar', () => {
   let wrapper: VueWrapper<any>
@@ -21,6 +39,38 @@ describe('Navbar', () => {
   let i18n: any
 
   beforeEach(() => {
+    vi.clearAllMocks()
+
+    // Setup mock Strava API to always be authenticated for editor visibility
+    mockUseStravaApi.mockReturnValue({
+      authState: ref({
+        isAuthenticated: true,
+        accessToken: 'test-token',
+        expiresAt: Date.now() + 3600,
+        athlete: { id: 820773, firstname: 'Test', lastname: 'User' }
+      }),
+      isLoading: ref(false),
+      error: ref(null),
+      isAuthenticated: vi.fn(() => true),
+      getAuthUrl: vi.fn(),
+      clearAuth: vi.fn(),
+      exchangeCode: vi.fn(),
+      loadAuthState: vi.fn(),
+      getActivities: vi.fn(),
+      getActivityGpx: vi.fn(),
+      handleAuthenticationError: vi.fn(),
+      attemptTokenRefresh: vi.fn()
+    })
+
+    // Setup mock authorization to always allow editor access
+    mockUseAuthorization.mockReturnValue({
+      isAuthorizedForEditor: ref(true),
+      isLoadingAuthorization: ref(false),
+      authorizationError: ref(null),
+      checkAuthorizationStatus: vi.fn(),
+      clearAuthorizationCache: vi.fn()
+    })
+
     // Create router
     router = createRouter({
       history: createWebHistory(),

@@ -1,0 +1,7 @@
+# Template file for authorized Strava users configuration
+# Copy this file to 'auth_users' and modify the AUTHORIZED_STRAVA_USERS value
+
+# List of Strava user IDs authorized to access editor functionality
+# Format: comma-separated list of Strava user IDs (no spaces between IDs)
+# Example: 820773,123456,789012
+AUTHORIZED_STRAVA_USERS=some_ids
