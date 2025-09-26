@@ -244,7 +244,8 @@ export default {
     chartElevation: 'Elevation (m)',
     chartElevationLabel: 'Elevation',
     // Error Messages
-    elevationDataUnavailable: 'Elevation data unavailable. Please check your internet connection and try again.',
+    elevationDataUnavailable:
+      'Elevation data unavailable. Please check your internet connection and try again.',
     // Units
     km: 'km',
     m: 'm'

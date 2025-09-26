@@ -16,12 +16,16 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
+// Import RoutePlanner component for testing
+import RoutePlanner from '../components/RoutePlanner.vue'
+
 // Create router for testing
 const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', component: Editor },
-    { path: '/editor', component: Editor }
+    { path: '/editor', component: Editor },
+    { path: '/route-planner', component: RoutePlanner }
   ]
 })
 

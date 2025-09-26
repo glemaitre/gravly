@@ -239,13 +239,15 @@ export default {
     elevationGain: 'Gain de Dénivelé',
     elevationLoss: 'Perte de Dénivelé',
     // Resize Handle
-    resizeHandle: 'Glisser vers le haut ou le bas pour redimensionner la hauteur de la section d\'élévation',
+    resizeHandle:
+      "Glisser vers le haut ou le bas pour redimensionner la hauteur de la section d'élévation",
     // Chart Labels
     chartDistance: 'Distance (km)',
     chartElevation: 'Altitude (m)',
     chartElevationLabel: 'Altitude',
     // Error Messages
-    elevationDataUnavailable: 'Données d\'élévation indisponibles. Veuillez vérifier votre connexion internet et réessayer.',
+    elevationDataUnavailable:
+      "Données d'élévation indisponibles. Veuillez vérifier votre connexion internet et réessayer.",
     // Units
     km: 'km',
     m: 'm'

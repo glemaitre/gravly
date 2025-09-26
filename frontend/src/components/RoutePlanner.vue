@@ -6,7 +6,11 @@
       <!-- Top right corner controls -->
       <div class="map-controls">
         <div class="control-group">
-          <button class="control-btn" @click="clearMap" :title="t('routePlanner.clearMap')">
+          <button
+            class="control-btn"
+            @click="clearMap"
+            :title="t('routePlanner.clearMap')"
+          >
             <i class="fa-solid fa-trash"></i>
           </button>
           <button
@@ -67,7 +71,11 @@
         </div>
 
         <!-- Elevation content -->
-        <div class="elevation-content" v-if="showElevation" :style="{ height: elevationHeight + 'px' }">
+        <div
+          class="elevation-content"
+          v-if="showElevation"
+          :style="{ height: elevationHeight + 'px' }"
+        >
           <!-- Elevation error message -->
           <div v-if="elevationError" class="elevation-error">
             <i class="fa-solid fa-triangle-exclamation"></i>
@@ -2739,7 +2747,10 @@ function handleElevationResize(event: MouseEvent | TouchEvent) {
   const newHeight = startHeight + deltaY
 
   // Constrain height within bounds
-  elevationHeight.value = Math.max(minElevationHeight, Math.min(maxElevationHeight, newHeight))
+  elevationHeight.value = Math.max(
+    minElevationHeight,
+    Math.min(maxElevationHeight, newHeight)
+  )
 
   // Invalidate map size to ensure proper rendering
   if (map) {
