@@ -1,0 +1,26 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+When adding code to the frontend, you should always write unit tests as well.
+
+You can start the frontend and backend with `pixi run -e dev start-backend` and
+`pixi run -e dev start-frontend` respectively.
+
+Then, you should run test to get coverage and failures to fix using
+`pixi run -e dev test-frontend`. Once everything works, you should check for linting
+issue with `pixi run -e dev lint-frontend`. Then, make sure that the type are correct
+with `pixi run -e dev type-check-frontend`. And finally, you can reformat using
+`pixi run -e dev format-frontend`.
+
+When adding code to the backend, you should always write unit tests as well.
+
+You can start the frontend and backend with `pixi run -e dev start-backend` and
+`pixi run -e dev start-frontend` respectively.
+
+Then, you should run test to get coverage and failures to fix using
+`pixi run -e dev test-backend`. Once everything works, you should check for linting
+issue with `pixi run -e dev lint-backend`. And finally, you can reformat using
+`pixi run -e dev format-backend`.
