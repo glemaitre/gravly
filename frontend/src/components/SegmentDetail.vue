@@ -36,7 +36,7 @@
     <!-- Main content -->
     <div v-else-if="segment && gpxData" class="detail-content">
       <div class="content-wrapper">
-        <div class="content-grid">
+        <div class="content-grid" :class="{ 'with-comments': segment?.comments }">
           <!-- Map Section -->
           <div class="map-section">
             <div class="card map-card">
@@ -208,6 +208,23 @@
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Comments Section - Only shown when comments are available -->
+          <div v-if="segment?.comments" class="comments-section">
+            <div class="card comments-card">
+              <div class="card-header">
+                <h3>
+                  <i class="fa-solid fa-comments"></i>
+                  {{ t('segmentDetail.comments') }}
+                </h3>
+              </div>
+              <div class="card-content">
+                <div class="comments-content">
+                  <div class="comment-text">{{ segment.comments }}</div>
                 </div>
               </div>
             </div>
@@ -441,29 +458,37 @@ async function initializeMap() {
       opacity: 0.8
     }).addTo(map.value)
 
-    // Fit map to track bounds
-    map.value.fitBounds(trackPolyline.value.getBounds(), { padding: [20, 20] })
+    // Fit map to track bounds (safe call)
+    if (map.value && map.value.fitBounds && trackPolyline.value) {
+      map.value.fitBounds(trackPolyline.value.getBounds(), { padding: [20, 20] })
+    }
 
     // Add click handler for cursor sync
-    trackPolyline.value.on('click', (e: any) => {
-      updateCursorPosition(e.latlng)
-    })
+    if (trackPolyline.value) {
+      trackPolyline.value.on('click', (e: any) => {
+        updateCursorPosition(e.latlng)
+      })
 
-    // Add mouse move handler for cursor sync
-    trackPolyline.value.on('mousemove', (e: any) => {
-      updateCursorPosition(e.latlng)
-    })
+      // Add mouse move handler for cursor sync
+      trackPolyline.value.on('mousemove', (e: any) => {
+        updateCursorPosition(e.latlng)
+      })
+    }
 
     // Create marker
-    const firstPoint = gpxData.value.points[0]
-    mapMarker.value = L.circleMarker([firstPoint.latitude, firstPoint.longitude], {
-      radius: 8,
-      fillColor: '#ff6600',
-      color: '#ffffff',
-      weight: 3,
-      opacity: 1,
-      fillOpacity: 0.8
-    }).addTo(map.value)
+    if (gpxData.value.points.length > 0) {
+      const firstPoint = gpxData.value.points[0]
+      if (map.value) {
+        mapMarker.value = L.circleMarker([firstPoint.latitude, firstPoint.longitude], {
+          radius: 8,
+          fillColor: '#ff6600',
+          color: '#ffffff',
+          weight: 3,
+          opacity: 1,
+          fillOpacity: 0.8
+        }).addTo(map.value)
+      }
+    }
   }
 
   // Set initial position
@@ -479,18 +504,34 @@ async function initializeMap() {
 }
 
 async function initializeElevationChart() {
-  console.log('Initializing elevation chart...')
-  console.log('gpxData.value:', gpxData.value)
-  console.log('elevationChartRef.value:', elevationChartRef.value)
+  // Only show debug logs in production/development, not during tests
+  // Check if we're in a test environment by checking for the vi mock object
+  const isTestEnv = (() => {
+    try {
+      return typeof (globalThis as any).vi !== 'undefined'
+    } catch {
+      return false
+    }
+  })()
+
+  if (!isTestEnv) {
+    console.log('Initializing elevation chart...')
+    console.log('gpxData.value:', gpxData.value)
+    console.log('elevationChartRef.value:', elevationChartRef.value)
+  }
 
   if (!gpxData.value || !elevationChartRef.value) {
-    console.log('Missing required data for chart initialization')
+    if (!isTestEnv) {
+      console.log('Missing required data for chart initialization')
+    }
     return
   }
 
   // Check if chart is already initialized
   if (elevationChart.value) {
-    console.log('Destroying existing chart')
+    if (!isTestEnv) {
+      console.log('Destroying existing chart')
+    }
     elevationChart.value.destroy()
     elevationChart.value = null
   }
@@ -507,17 +548,23 @@ async function initializeElevationChart() {
   if (container) {
     canvas.width = container.clientWidth
     canvas.height = container.clientHeight
-    console.log('Canvas dimensions set:', canvas.width, 'x', canvas.height)
+    if (!isTestEnv) {
+      console.log('Canvas dimensions set:', canvas.width, 'x', canvas.height)
+    }
   }
 
   const points = gpxData.value.points
   if (points.length === 0) {
-    console.log('No points data available for chart')
+    if (!isTestEnv) {
+      console.log('No points data available for chart')
+    }
     return
   }
 
-  console.log('Points data:', points.length, 'points')
-  console.log('First few points:', points.slice(0, 3))
+  if (!isTestEnv) {
+    console.log('Points data:', points.length, 'points')
+    console.log('First few points:', points.slice(0, 3))
+  }
 
   // Calculate cumulative distances in kilometers
   const cumulativeKm: number[] = [0]
@@ -540,17 +587,18 @@ async function initializeElevationChart() {
     y: point.elevation
   }))
 
-  console.log('Chart data sample:', chartData.slice(0, 5))
-  console.log(
-    'Elevation range:',
-    Math.min(...points.map((p) => p.elevation)),
-    'to',
-    Math.max(...points.map((p) => p.elevation))
-  )
-  console.log('Distance range:', 0, 'to', cumulativeKm[cumulativeKm.length - 1])
-
-  // Create chart
-  console.log('Creating chart with data points:', chartData.length)
+  if (!isTestEnv) {
+    console.log('Chart data sample:', chartData.slice(0, 5))
+    console.log(
+      'Elevation range:',
+      Math.min(...points.map((p) => p.elevation)),
+      'to',
+      Math.max(...points.map((p) => p.elevation))
+    )
+    console.log('Distance range:', 0, 'to', cumulativeKm[cumulativeKm.length - 1])
+    // Create chart
+    console.log('Creating chart with data points:', chartData.length)
+  }
   elevationChart.value = new Chart(elevationChartRef.value, {
     type: 'line',
     data: {
@@ -625,7 +673,9 @@ async function initializeElevationChart() {
     }
   })
 
-  console.log('Chart created successfully:', elevationChart.value)
+  if (!isTestEnv) {
+    console.log('Chart created successfully:', elevationChart.value)
+  }
 }
 
 function updateCursorPosition(latlng: any) {
@@ -952,12 +1002,22 @@ onUnmounted(() => {
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 33% 33% 33%;
+  grid-template-rows: 33% 33% 34%;
   gap: 1rem;
   flex: 1;
   grid-template-areas:
     'map info'
     'elevation elevation'
+    'media media';
+}
+
+/* Dynamic grid layout when comments are present */
+.content-grid.with-comments {
+  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'comments comments'
     'media media';
 }
 
@@ -971,6 +1031,10 @@ onUnmounted(() => {
 
 .info-section {
   grid-area: info;
+}
+
+.comments-section {
+  grid-area: comments;
 }
 
 .media-section {
@@ -992,6 +1056,16 @@ onUnmounted(() => {
       'elevation'
       'media';
     gap: 1.5rem; /* Increase gap for better spacing when stacked */
+  }
+
+  .content-grid.with-comments {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'comments'
+      'media';
   }
 
   .content-wrapper {
@@ -1470,5 +1544,21 @@ onUnmounted(() => {
 .feature-item i {
   font-size: 1.5rem;
   color: #d1d5db;
+}
+
+/* Comments Section Styles */
+.comments-content {
+  padding: 1rem;
+}
+
+.comment-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #374151;
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  white-space: pre-wrap; /* Preserve line breaks and format text */
 }
 </style>

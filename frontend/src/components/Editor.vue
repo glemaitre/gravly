@@ -1253,7 +1253,18 @@ async function uploadImageToStorage(file: File, imageId: string) {
       commentary.value.images[imageIndex].image_id = result.image_id
     }
 
-    console.info(`Successfully uploaded image to storage: ${result.storage_key}`)
+    // Only show upload success log in development, not during tests
+    // Check if we're in a test environment by checking for the vi mock object
+    const isTestEnv = (() => {
+      try {
+        return typeof (globalThis as any).vi !== 'undefined'
+      } catch {
+        return false
+      }
+    })()
+    if (!isTestEnv) {
+      console.info(`Successfully uploaded image to storage: ${result.storage_key}`)
+    }
   } catch (error) {
     console.error('Failed to upload image to storage:', error)
     // Keep the image with local preview even if upload failed

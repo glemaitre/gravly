@@ -161,6 +161,7 @@ export default {
     over5: 'plus de 5',
     dry: 'Sec',
     wet: 'Humide',
+    comments: 'Commentaires',
     photosVideos: 'Photos & Vidéos',
     photoGallery: 'Galerie photo',
     youtubeVideos: 'Vidéos YouTube',
