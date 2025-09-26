@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 from pydantic import BaseModel
 from sqlalchemy import DateTime, Enum, Float, Index, Integer, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
 
@@ -57,6 +57,11 @@ class Track(Base):
     comments: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(UTC), nullable=False
+    )
+
+    # Relationship to images
+    images = relationship(
+        "TrackImage", back_populates="track", cascade="all, delete-orphan"
     )
 
 

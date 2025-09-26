@@ -19,6 +19,7 @@ from werkzeug.utils import secure_filename
 
 from .models.auth_user import AuthUser, AuthUserResponse, AuthUserSummary
 from .models.base import Base
+from .models.image import TrackImage
 from .models.track import (
     GPXDataResponse,
     SurfaceType,
@@ -412,6 +413,7 @@ async def create_segment(
     difficulty_level: int = Form(...),
     commentary_text: str = Form(""),
     video_links: str = Form("[]"),
+    image_data: str = Form("[]"),
 ):
     """Create a new segment: process uploaded GPX file with indices, upload to storage,
     and store metadata in DB.
@@ -515,6 +517,39 @@ async def create_segment(
                 session.add(track)
                 await session.commit()
                 await session.refresh(track)
+
+                # Process image data and create TrackImage records
+                if image_data and image_data != "[]":
+                    try:
+                        image_info_list = json.loads(image_data)
+
+                        for image_info in image_info_list:
+                            if isinstance(image_info, dict) and all(
+                                key in image_info
+                                for key in ["image_id", "image_url", "storage_key"]
+                            ):
+                                track_image = TrackImage(
+                                    track_id=track.id,
+                                    image_id=image_info["image_id"],
+                                    image_url=image_info["image_url"],
+                                    storage_key=image_info["storage_key"],
+                                    filename=image_info.get("filename"),
+                                    original_filename=image_info.get(
+                                        "original_filename"
+                                    ),
+                                )
+                                session.add(track_image)
+
+                        await session.commit()
+                        logger.info(
+                            f"Successfully linked {len(image_info_list)} "
+                            f"images to track {track.id}"
+                        )
+
+                    except (json.JSONDecodeError, Exception) as e:
+                        logger.warning(f"Failed to process image data: {str(e)}")
+                        # Continue without images
+
                 return TrackResponse(
                     id=track.id,
                     file_path=str(processed_file_path),
