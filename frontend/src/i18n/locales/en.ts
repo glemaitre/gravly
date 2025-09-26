@@ -101,9 +101,9 @@ export default {
 
   // Navbar
   navbar: {
-    home: 'Home',
+    home: 'Explorer',
     editor: 'Editor',
-    routePlanner: 'Route Planner',
+    routePlanner: 'Planner',
     login: 'Login with Strava',
     logout: 'Logout'
   },

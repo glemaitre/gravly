@@ -8,16 +8,16 @@
         <!-- Navigation Menu -->
         <div class="nav-menu">
           <router-link to="/" class="nav-link" active-class="active">
-            <i class="fa-solid fa-home"></i>
+            <i class="fa-solid fa-route"></i>
             <span>{{ $t('navbar.home') }}</span>
+          </router-link>
+          <router-link to="/route-planner" class="nav-link" active-class="active">
+            <i class="fa-solid fa-map"></i>
+            <span>{{ $t('navbar.routePlanner') }}</span>
           </router-link>
           <router-link to="/editor" class="nav-link" active-class="active">
             <i class="fa-solid fa-edit"></i>
             <span>{{ $t('navbar.editor') }}</span>
-          </router-link>
-          <router-link to="/route-planner" class="nav-link" active-class="active">
-            <i class="fa-solid fa-route"></i>
-            <span>{{ $t('navbar.routePlanner') }}</span>
           </router-link>
         </div>
       </div>

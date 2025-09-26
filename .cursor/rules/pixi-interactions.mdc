@@ -4,6 +4,8 @@ globs:
 alwaysApply: true
 ---
 
+WHENEVER YOU ARE DOING A TODO LIST, YOU SHOULD ALWAYS TAKE INTO ACCOUNT THE RULES BELOW.
+
 When adding code to the frontend, you should always write unit tests as well.
 
 You can start the frontend and backend with `pixi run -e dev start-backend` and
