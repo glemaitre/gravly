@@ -214,10 +214,13 @@ const elevationCache = new Map<
 const actualRouteCoordinates = ref<Array<{ lat: number; lng: number }>>([]) // Store actual OSRM route coordinates
 
 // Cache configuration
-const CACHE_VERSION = '1.0'
+const CACHE_VERSION = '1.1' // Increment version to invalidate old cache with zeros
 const CACHE_KEY = 'elevation_cache_v' + CACHE_VERSION
 const MAX_SEGMENT_LENGTH = 5000 // 5km - segments longer than this will be chunked
-const CHUNK_SIZE = 100 // Maximum points per API call
+const CHUNK_SIZE = 128 // Maximum points per API call
+
+// Sentinel value to indicate failed elevation requests
+const ELEVATION_FAILURE_SENTINEL = -9999
 
 // Route persistence keys
 const ROUTE_STORAGE_KEY = 'routePlanner_currentRoute'
@@ -235,6 +238,12 @@ function saveElevationCache() {
   } catch (error) {
     console.warn('Failed to save elevation cache:', error)
   }
+}
+
+function segmentHasFailedElevations(
+  points: Array<{ lat: number; lng: number; elevation: number; distance: number }>
+): boolean {
+  return points.some((point) => point.elevation === ELEVATION_FAILURE_SENTINEL)
 }
 
 function loadElevationCache() {
@@ -1567,7 +1576,12 @@ function _getWaypointColor(index: number): string {
 }
 
 function calculateNiceElevationScale(elevations: number[]) {
-  if (elevations.length === 0) {
+  // Filter out sentinel values before calculating scale
+  const validElevations = elevations.filter(
+    (elevation) => elevation !== ELEVATION_FAILURE_SENTINEL
+  )
+
+  if (validElevations.length === 0) {
     return {
       min: 0,
       max: 100,
@@ -1580,8 +1594,8 @@ function calculateNiceElevationScale(elevations: number[]) {
     }
   }
 
-  const minElev = Math.min(...elevations)
-  const maxElev = Math.max(...elevations)
+  const minElev = Math.min(...validElevations)
+  const maxElev = Math.max(...validElevations)
 
   // Use a fixed range to prevent chart expansion
   // Add padding but keep it reasonable
@@ -1923,10 +1937,37 @@ async function updateElevationSegments() {
 
     // Check cache first
     if (elevationCache.has(segmentHash)) {
-      segment.sampledPoints = elevationCache.get(segmentHash)!
-      segment.isProcessed = true
-      segmentsFromCache++
-      console.log(`Loaded segment ${i}-${i + 1} from cache`)
+      const cachedPoints = elevationCache.get(segmentHash)!
+
+      // Check if cached segment contains failed elevation requests
+      if (segmentHasFailedElevations(cachedPoints)) {
+        console.log(`Segment ${i}-${i + 1} has failed elevations, retrying`)
+        // Process segment to retry failed elevation requests
+        try {
+          segment.sampledPoints = await processSegmentElevationIntelligent(segment)
+          elevationCache.set(segmentHash, segment.sampledPoints)
+          segment.isProcessed = true
+          segmentsProcessed++
+          console.log(
+            `Retried and updated segment ${i}-${i + 1} with ${segment.sampledPoints.length} points`
+          )
+          // Save cache after successful retry
+          saveElevationCache()
+        } catch (error) {
+          // If retry fails, keep using cached data (including sentinel values)
+          console.error(
+            `Retry failed for segment ${i}-${i + 1}, using cached data:`,
+            error
+          )
+          segment.sampledPoints = cachedPoints
+          segment.isProcessed = true
+        }
+      } else {
+        segment.sampledPoints = cachedPoints
+        segment.isProcessed = true
+        segmentsFromCache++
+        console.log(`Loaded segment ${i}-${i + 1} from cache`)
+      }
     } else {
       // Process new segment with intelligent chunking
       try {
@@ -2294,11 +2335,15 @@ async function getElevationData(
               `Failed to fetch elevation data for batch ${batchIndex + 1} after ${maxRetries} retries:`,
               error
             )
-            // For now, fill with zeros for failed batches to allow partial functionality
-            // In production, you might want to use a fallback elevation service
-            const batchElevations = new Array(batch.length).fill(0)
+            // Fill with sentinel values to indicate failed elevation requests
+            // This allows us to retry these specific points later when conditions improve
+            const batchElevations = new Array(batch.length).fill(
+              ELEVATION_FAILURE_SENTINEL
+            )
             elevations.push(...batchElevations)
-            console.warn(`Using zero elevations for failed batch ${batchIndex + 1}`)
+            console.warn(
+              `Using sentinel values for failed batch ${batchIndex + 1} - will retry later`
+            )
             success = true
           }
         }
@@ -2459,11 +2504,44 @@ async function calculateElevationFromActualRouteWithCaching() {
 
       // Check cache first
       if (elevationCache.has(segmentHash)) {
-        segmentElevationData = elevationCache.get(segmentHash)!
-        segmentsFromCache++
-        console.log(
-          `Loaded segment ${i}-${i + 1} from cache (${segmentElevationData.length} points)`
-        )
+        const cachedData = elevationCache.get(segmentHash)!
+
+        // Check if cached segment contains failed elevation requests
+        if (segmentHasFailedElevations(cachedData)) {
+          console.log(
+            `Segment ${i}-${i + 1} has failed elevations, retrying for stats calculation`
+          )
+          try {
+            // Retry elevation data for failed segments
+            const sampledPoints = sampleRouteSegmentEvery100Meters(
+              segment,
+              cumulativeDistance
+            )
+            const elevations = await getElevationData(sampledPoints)
+            segmentElevationData = sampledPoints.map((point: any, index: number) => ({
+              ...point,
+              elevation: elevations[index] || ELEVATION_FAILURE_SENTINEL
+            }))
+
+            // Update cache with retried data
+            elevationCache.set(segmentHash, segmentElevationData)
+            console.log(
+              `Retried and cached segment ${i}-${i + 1} (${segmentElevationData.length} points)`
+            )
+          } catch (error) {
+            console.error(
+              `Retry failed for segment ${i}-${i + 1} stats, using cached data:`,
+              error
+            )
+            segmentElevationData = cachedData
+          }
+        } else {
+          segmentElevationData = cachedData
+          segmentsFromCache++
+          console.log(
+            `Loaded segment ${i}-${i + 1} from cache (${segmentElevationData.length} points)`
+          )
+        }
       } else {
         // Process new segment
         console.log(
@@ -2681,7 +2759,12 @@ function smoothElevationData(elevations: number[], windowSize: number = 5): numb
 
 // Calculate statistics from elevation array
 async function calculateStatsFromElevations(elevations: number[]) {
-  if (elevations.length === 0) {
+  // Filter out sentinel values (failed elevation requests)
+  const validElevations = elevations.filter(
+    (elevation) => elevation !== ELEVATION_FAILURE_SENTINEL
+  )
+
+  if (validElevations.length === 0) {
     elevationStats.value = {
       totalGain: 0,
       totalLoss: 0,
@@ -2692,7 +2775,7 @@ async function calculateStatsFromElevations(elevations: number[]) {
   }
 
   // Apply smoothing to reduce noise before calculating statistics
-  const smoothedElevations = smoothElevationData(elevations, 5) // 5-point moving average
+  const smoothedElevations = smoothElevationData(validElevations, 5) // 5-point moving average
 
   let totalGain = 0
   let totalLoss = 0
