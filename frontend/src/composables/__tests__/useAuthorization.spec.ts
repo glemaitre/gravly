@@ -73,7 +73,8 @@ describe('useAuthorization', () => {
   })
 
   it('should handle unauthenticated user', async () => {
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } = useAuthorization()
+    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+      useAuthorization()
 
     // When not authenticated
     expect(isAuthorizedForEditor.value).toBe(false)
@@ -89,7 +90,8 @@ describe('useAuthorization', () => {
     mockStravaAuthState.isAuthenticated = true
     mockStravaAuthState.athlete = null
 
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } = useAuthorization()
+    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+      useAuthorization()
 
     await checkAuthorizationStatus()
 
@@ -160,7 +162,9 @@ describe('useAuthorization', () => {
     await checkAuthorizationStatus()
 
     expect(isAuthorizedForEditor.value).toBe(false)
-    expect(authorizationError.value).toBe('Authorization check failed: Internal Server Error')
+    expect(authorizationError.value).toBe(
+      'Authorization check failed: Internal Server Error'
+    )
   })
 
   it('should clear authorization cache', () => {
