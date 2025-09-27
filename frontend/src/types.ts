@@ -109,6 +109,9 @@ export interface CommentaryImage {
   uploaded?: boolean
   image_url?: string
   image_id?: string
+  storage_key?: string
+  filename?: string
+  original_filename?: string
 }
 
 export interface TrailConditions {

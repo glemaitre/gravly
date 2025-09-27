@@ -1209,7 +1209,7 @@ function processImageFiles(files: File[]) {
         const preview = e.target?.result as string
         const imageId = generateId()
 
-        // Add to commentary with temporary preview and upload structure
+        // Add to commentary with temporary preview - upload will happen on save
         const newImage = {
           id: imageId,
           file,
@@ -1217,12 +1217,14 @@ function processImageFiles(files: File[]) {
           caption: '',
           uploaded: false,
           image_url: '',
-          image_id: ''
+          image_id: '',
+          storage_key: '',
+          filename: file.name,
+          original_filename: file.name
         }
         commentary.value.images.push(newImage)
 
-        // Upload to storage manager immediately
-        uploadImageToStorage(file, imageId)
+        // Don't upload to storage immediately - wait for segment save
       }
       reader.readAsDataURL(file)
     }
@@ -1251,6 +1253,7 @@ async function uploadImageToStorage(file: File, imageId: string) {
       commentary.value.images[imageIndex].uploaded = true
       commentary.value.images[imageIndex].image_url = result.image_url
       commentary.value.images[imageIndex].image_id = result.image_id
+      commentary.value.images[imageIndex].storage_key = result.storage_key
     }
 
     // Only show upload success log in development, not during tests
@@ -1949,8 +1952,36 @@ async function onSubmit() {
     formData.append('commentary_text', commentary.value.text)
     formData.append('video_links', JSON.stringify(commentary.value.video_links))
 
-    // Images are already uploaded to storage when selected
-    // No need to send them again
+    // Upload images to storage and collect their metadata
+    const imageData = []
+    for (const image of commentary.value.images) {
+      if (!image.uploaded && image.file) {
+        // Upload image to storage
+        await uploadImageToStorage(image.file, image.id)
+
+        // Find the updated image in the commentary
+        const updatedImage = commentary.value.images.find((img) => img.id === image.id)
+        if (updatedImage && updatedImage.uploaded) {
+          imageData.push({
+            image_id: updatedImage.image_id,
+            image_url: updatedImage.image_url,
+            storage_key: updatedImage.storage_key || '',
+            filename: updatedImage.filename,
+            original_filename: updatedImage.original_filename
+          })
+        }
+      } else if (image.uploaded) {
+        // Image was already uploaded (shouldn't happen with new flow, but keep for safety)
+        imageData.push({
+          image_id: image.image_id,
+          image_url: image.image_url,
+          storage_key: image.storage_key || '',
+          filename: image.filename,
+          original_filename: image.original_filename
+        })
+      }
+    }
+    formData.append('image_data', JSON.stringify(imageData))
 
     const res = await fetch('/api/segments', { method: 'POST', body: formData })
     if (!res.ok) {

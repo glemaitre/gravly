@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import SegmentDetail from '../SegmentDetail.vue'
 import type { TrackResponse } from '../../types'
+
+// Mock fetch globally
+const mockFetch = vi.fn()
+global.fetch = mockFetch
+
+// Mock fetch in the component context
+vi.stubGlobal('fetch', mockFetch)
 
 // Mock console.error to suppress expected error messages during tests
 const originalConsoleError = console.error
@@ -23,11 +31,11 @@ const mockRouter = {
 }
 
 const mockRoute = {
-  params: { id: '123' },
+  params: { id: '1' },
   query: {},
-  path: '/segment/123',
+  path: '/segment/1',
   name: 'segment-detail',
-  id: '123'
+  id: '1'
 }
 
 // Mock useRouter and useRoute composables
@@ -332,5 +340,659 @@ describe('SegmentDetail', () => {
 
       expect(wrapper.find('.error-container').exists()).toBe(true)
     })
+  })
+})
+
+describe('SegmentDetail Image Gallery', () => {
+  let wrapper: any
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFetch.mockClear()
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+  })
+
+  it('should render image gallery when images are available', async () => {
+    // Mock successful API responses with images
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'test-image-1',
+              image_url: 'https://example.com/image1.jpg',
+              storage_key: 'images-segments/test-image-1.jpg',
+              filename: 'image1.jpg',
+              original_filename: 'original-image1.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            },
+            {
+              id: 2,
+              track_id: 1,
+              image_id: 'test-image-2',
+              image_url: 'https://example.com/image2.jpg',
+              storage_key: 'images-segments/test-image-2.jpg',
+              filename: 'image2.jpg',
+              original_filename: 'original-image2.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that images section is rendered
+    const imagesSection = wrapper.find('.images-section')
+    expect(imagesSection.exists()).toBe(true)
+
+    // Check that gallery items are rendered
+    const galleryItems = wrapper.findAll('.gallery-item')
+    expect(galleryItems).toHaveLength(2)
+
+    // Check image sources
+    const images = wrapper.findAll('.gallery-image')
+    expect(images[0].attributes('src')).toBe('https://example.com/image1.jpg')
+    expect(images[1].attributes('src')).toBe('https://example.com/image2.jpg')
+
+    // Check alt attributes
+    expect(images[0].attributes('alt')).toBe('original-image1.jpg')
+    expect(images[1].attributes('alt')).toBe('original-image2.jpg')
+  })
+
+  it('should not render image gallery when no images are available', async () => {
+    // Mock empty images response
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Debug: log the HTML to see what's actually rendered
+    // console.log('Rendered HTML:', wrapper.html())
+
+    // Check that images section is not rendered
+    const imagesSection = wrapper.find('.images-section')
+    expect(imagesSection.exists()).toBe(false)
+  })
+
+  it('should open image modal when gallery item is clicked', async () => {
+    // Mock successful API responses with images
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'test-image-1',
+              image_url: 'https://example.com/image1.jpg',
+              storage_key: 'images-segments/test-image-1.jpg',
+              filename: 'image1.jpg',
+              original_filename: 'original-image1.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Find first gallery item and click it
+    const galleryItem = wrapper.find('.gallery-item')
+    expect(galleryItem.exists()).toBe(true)
+
+    await galleryItem.trigger('click')
+
+    // Check that modal is opened
+    const modal = wrapper.find('.image-modal')
+    expect(modal.exists()).toBe(true)
+
+    // Check that correct image is displayed in modal
+    const modalImage = wrapper.find('.modal-image')
+    expect(modalImage.exists()).toBe(true)
+    expect(modalImage.attributes('src')).toBe('https://example.com/image1.jpg')
+    expect(modalImage.attributes('alt')).toBe('original-image1.jpg')
+
+    // Check that filename is displayed
+    const filename = wrapper.find('.image-filename')
+    expect(filename.exists()).toBe(true)
+    expect(filename.text()).toBe('original-image1.jpg')
+  })
+
+  it('should close image modal when close button is clicked', async () => {
+    // Mock successful API responses with images
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'test-image-1',
+              image_url: 'https://example.com/image1.jpg',
+              storage_key: 'images-segments/test-image-1.jpg',
+              filename: 'image1.jpg',
+              original_filename: 'original-image1.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Open modal
+    const galleryItem = wrapper.find('.gallery-item')
+    await galleryItem.trigger('click')
+
+    // Check that modal is open
+    expect(wrapper.find('.image-modal').exists()).toBe(true)
+
+    // Click close button
+    const closeButton = wrapper.find('.modal-close')
+    expect(closeButton.exists()).toBe(true)
+    await closeButton.trigger('click')
+
+    // Check that modal is closed
+    expect(wrapper.find('.image-modal').exists()).toBe(false)
+  })
+
+  it('should close image modal when clicking outside modal content', async () => {
+    // Mock successful API responses with images
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'test-image-1',
+              image_url: 'https://example.com/image1.jpg',
+              storage_key: 'images-segments/test-image-1.jpg',
+              filename: 'image1.jpg',
+              original_filename: 'original-image1.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Open modal
+    const galleryItem = wrapper.find('.gallery-item')
+    await galleryItem.trigger('click')
+
+    // Check that modal is open
+    expect(wrapper.find('.image-modal').exists()).toBe(true)
+
+    // Click on modal background (not on modal content)
+    const modal = wrapper.find('.image-modal')
+    await modal.trigger('click')
+
+    // Check that modal is closed
+    expect(wrapper.find('.image-modal').exists()).toBe(false)
+  })
+
+  it('should not close modal when clicking on modal content', async () => {
+    // Mock successful API responses with images
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'test-image-1',
+              image_url: 'https://example.com/image1.jpg',
+              storage_key: 'images-segments/test-image-1.jpg',
+              filename: 'image1.jpg',
+              original_filename: 'original-image1.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Open modal
+    const galleryItem = wrapper.find('.gallery-item')
+    await galleryItem.trigger('click')
+
+    // Check that modal is open
+    expect(wrapper.find('.image-modal').exists()).toBe(true)
+
+    // Click on modal content (should not close modal)
+    const modalContent = wrapper.find('.modal-content')
+    await modalContent.trigger('click')
+
+    // Check that modal is still open
+    expect(wrapper.find('.image-modal').exists()).toBe(true)
+  })
+
+  it('should handle images API error gracefully', async () => {
+    // Mock images API error
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      })
+
+    // Mock console.warn to avoid test output noise
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that images section is not rendered (empty array)
+    const imagesSection = wrapper.find('.images-section')
+    expect(imagesSection.exists()).toBe(false)
+
+    // Check that warning was logged
+    expect(consoleSpy).toHaveBeenCalledWith(
+      'Failed to load track images:',
+      'Internal Server Error'
+    )
+
+    consoleSpy.mockRestore()
+  })
+
+  it('should display single image correctly', async () => {
+    // Mock single image response
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              image_id: 'single-image',
+              image_url: 'https://example.com/single.jpg',
+              storage_key: 'images-segments/single-image.jpg',
+              filename: 'single.jpg',
+              original_filename: 'single.jpg',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that images section is rendered
+    const imagesSection = wrapper.find('.images-section')
+    expect(imagesSection.exists()).toBe(true)
+
+    // Check that only one gallery item is rendered
+    const galleryItems = wrapper.findAll('.gallery-item')
+    expect(galleryItems).toHaveLength(1)
+
+    // Check image source
+    const image = wrapper.find('.gallery-image')
+    expect(image.attributes('src')).toBe('https://example.com/single.jpg')
+    expect(image.attributes('alt')).toBe('single.jpg')
   })
 })

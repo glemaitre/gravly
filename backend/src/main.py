@@ -19,7 +19,7 @@ from werkzeug.utils import secure_filename
 
 from .models.auth_user import AuthUser, AuthUserResponse, AuthUserSummary
 from .models.base import Base
-from .models.image import TrackImage
+from .models.image import TrackImage, TrackImageResponse
 from .models.track import (
     GPXDataResponse,
     SurfaceType,
@@ -918,6 +918,63 @@ async def get_track_parsed_data(track_id: int):
         raise
     except Exception as e:
         logger.error(f"Error fetching parsed data for track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/api/segments/{track_id}/images", response_model=list[TrackImageResponse])
+async def get_track_images(track_id: int):
+    """Get all images associated with a specific track by ID.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to fetch images for
+
+    Returns
+    -------
+    list[TrackImageResponse]
+        List of track images with their metadata
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        async with SessionLocal() as session:
+            # First verify the track exists
+            track_stmt = select(Track).filter(Track.id == track_id)
+            track_result = await session.execute(track_stmt)
+            track = track_result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            # Get all images for this track
+            images_stmt = select(TrackImage).filter(TrackImage.track_id == track_id)
+            images_result = await session.execute(images_stmt)
+            images = images_result.scalars().all()
+
+            # Convert to response models
+            image_responses = []
+            for image in images:
+                image_response = TrackImageResponse(
+                    id=image.id,
+                    track_id=image.track_id,
+                    image_id=image.image_id,
+                    image_url=image.image_url,
+                    storage_key=image.storage_key,
+                    filename=image.filename,
+                    original_filename=image.original_filename,
+                    created_at=image.created_at,
+                )
+                image_responses.append(image_response)
+
+            logger.info(f"Retrieved {len(image_responses)} images for track {track_id}")
+            return image_responses
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching images for track {track_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 

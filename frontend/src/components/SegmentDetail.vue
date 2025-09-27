@@ -36,7 +36,13 @@
     <!-- Main content -->
     <div v-else-if="segment && gpxData" class="detail-content">
       <div class="content-wrapper">
-        <div class="content-grid" :class="{ 'with-comments': segment?.comments }">
+        <div
+          class="content-grid"
+          :class="{
+            'with-comments': segment?.comments,
+            'with-images': trackImages && trackImages.length > 0
+          }"
+        >
           <!-- Map Section -->
           <div class="map-section">
             <div class="card map-card">
@@ -230,6 +236,38 @@
             </div>
           </div>
 
+          <!-- Images Gallery Section - Only shown when images are available -->
+          <div v-if="trackImages && trackImages.length > 0" class="images-section">
+            <div class="card images-card">
+              <div class="card-header">
+                <h3>
+                  <i class="fa-solid fa-images"></i>
+                  {{ t('segmentDetail.images') }}
+                </h3>
+              </div>
+              <div class="card-content">
+                <div class="images-gallery">
+                  <div
+                    v-for="image in trackImages"
+                    :key="image.id"
+                    class="gallery-item"
+                    @click="openImageModal(image)"
+                  >
+                    <img
+                      :src="image.image_url"
+                      :alt="image.original_filename || 'Segment image'"
+                      class="gallery-image"
+                      loading="lazy"
+                    />
+                    <div class="gallery-overlay">
+                      <i class="fa-solid fa-expand"></i>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Media Section -->
           <div class="media-section">
             <div class="card media-card">
@@ -267,6 +305,25 @@
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div v-if="selectedImage" class="image-modal" @click="closeImageModal">
+      <div class="modal-content" @click.stop>
+        <button class="modal-close" @click="closeImageModal">
+          <i class="fa-solid fa-times"></i>
+        </button>
+        <img
+          :src="selectedImage.image_url"
+          :alt="selectedImage.original_filename || 'Segment image'"
+          class="modal-image"
+        />
+        <div class="modal-info">
+          <p v-if="selectedImage.original_filename" class="image-filename">
+            {{ selectedImage.original_filename }}
+          </p>
         </div>
       </div>
     </div>
@@ -324,6 +381,8 @@ const { t } = useI18n()
 // Reactive data
 const segment = ref<TrackResponse | null>(null)
 const gpxData = ref<GPXData | null>(null)
+const trackImages = ref<any[]>([])
+const selectedImage = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const map = ref<any>(null)
@@ -395,6 +454,18 @@ async function loadSegmentData() {
 
     if (!gpxData.value) {
       throw new Error('Failed to load GPX data')
+    }
+
+    // Load track images
+    const imagesResponse = await fetch(
+      `http://localhost:8000/api/segments/${segmentId.value}/images`
+    )
+    if (imagesResponse.ok) {
+      trackImages.value = await imagesResponse.json()
+    } else {
+      // Images are optional, so don't throw error if they fail to load
+      console.warn('Failed to load track images:', imagesResponse.statusText)
+      trackImages.value = []
     }
 
     // Initialize map and chart after data is loaded
@@ -846,6 +917,14 @@ function getTrackTypeIcon(trackType: string): string {
   }
 }
 
+function openImageModal(image: any) {
+  selectedImage.value = image
+}
+
+function closeImageModal() {
+  selectedImage.value = null
+}
+
 // Lifecycle
 onMounted(() => {
   loadSegmentData()
@@ -1021,6 +1100,27 @@ onUnmounted(() => {
     'media media';
 }
 
+/* Dynamic grid layout when images are present */
+.content-grid.with-images {
+  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'images images'
+    'media media';
+}
+
+/* Dynamic grid layout when both comments and images are present */
+.content-grid.with-comments.with-images {
+  grid-template-rows: 20% 20% 20% 20% 20%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'comments comments'
+    'images images'
+    'media media';
+}
+
 .map-section {
   grid-area: map;
 }
@@ -1065,6 +1165,27 @@ onUnmounted(() => {
       'info'
       'elevation'
       'comments'
+      'media';
+  }
+
+  .content-grid.with-images {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'images'
+      'media';
+  }
+
+  .content-grid.with-comments.with-images {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'comments'
+      'images'
       'media';
   }
 
@@ -1560,5 +1681,142 @@ onUnmounted(() => {
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   white-space: pre-wrap; /* Preserve line breaks and format text */
+}
+
+/* Images Gallery Styles */
+.images-section {
+  grid-area: images;
+}
+
+.images-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.gallery-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.gallery-item:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+  opacity: 1;
+}
+
+.gallery-overlay i {
+  color: white;
+  font-size: 1.5rem;
+}
+
+/* Image Modal Styles */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modal-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modal-close {
+  position: absolute;
+  top: -3rem;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.modal-info {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.image-filename {
+  color: white;
+  font-size: 0.875rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Responsive adjustments for images */
+@media (max-width: 768px) {
+  .images-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .image-modal {
+    padding: 1rem;
+  }
+
+  .modal-close {
+    top: -2.5rem;
+    font-size: 1.25rem;
+  }
 }
 </style>

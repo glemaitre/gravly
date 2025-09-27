@@ -4,8 +4,9 @@ import asyncio
 import io
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import boto3
 import pytest
@@ -5229,3 +5230,240 @@ def test_create_segment_trackimage_session_exception(client, tmp_path, main_modu
 
         finally:
             main_module.SessionLocal = original_session_local
+
+
+# ============== TRACK IMAGES ENDPOINT TESTS ==============
+
+
+def test_get_track_images_success(client, main_module):
+    """Test successful retrieval of track images."""
+    # Mock database session and track images
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    mock_image1 = Mock()
+    mock_image1.id = 1
+    mock_image1.track_id = 1
+    mock_image1.image_id = "test-image-1"
+    mock_image1.image_url = "https://example.com/image1.jpg"
+    mock_image1.storage_key = "images-segments/test-image-1.jpg"
+    mock_image1.filename = "image1.jpg"
+    mock_image1.original_filename = "original-image1.jpg"
+    mock_image1.created_at = datetime.now(UTC)
+
+    mock_image2 = Mock()
+    mock_image2.id = 2
+    mock_image2.track_id = 1
+    mock_image2.image_id = "test-image-2"
+    mock_image2.image_url = "https://example.com/image2.jpg"
+    mock_image2.storage_key = "images-segments/test-image-2.jpg"
+    mock_image2.filename = "image2.jpg"
+    mock_image2.original_filename = "original-image2.jpg"
+    mock_image2.created_at = datetime.now(UTC)
+
+    mock_images = [mock_image1, mock_image2]
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=mock_images)))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/images")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+    # Check first image
+    assert data[0]["id"] == 1
+    assert data[0]["track_id"] == 1
+    assert data[0]["image_id"] == "test-image-1"
+    assert data[0]["image_url"] == "https://example.com/image1.jpg"
+    assert data[0]["storage_key"] == "images-segments/test-image-1.jpg"
+    assert data[0]["filename"] == "image1.jpg"
+    assert data[0]["original_filename"] == "original-image1.jpg"
+
+    # Check second image
+    assert data[1]["id"] == 2
+    assert data[1]["track_id"] == 1
+    assert data[1]["image_id"] == "test-image-2"
+    assert data[1]["image_url"] == "https://example.com/image2.jpg"
+    assert data[1]["storage_key"] == "images-segments/test-image-2.jpg"
+    assert data[1]["filename"] == "image2.jpg"
+    assert data[1]["original_filename"] == "original-image2.jpg"
+
+
+def test_get_track_images_track_not_found(client, main_module):
+    """Test retrieval of images for non-existent track."""
+    # Mock database session
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = Mock(scalar_one_or_none=Mock(return_value=None))
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/999/images")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert "Track not found" in data["detail"]
+
+
+def test_get_track_images_no_images(client, main_module):
+    """Test retrieval when track has no images."""
+    # Mock database session
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=[])))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/images")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 0
+
+
+def test_get_track_images_database_not_available(client, main_module):
+    """Test retrieval when database is not available."""
+    # Mock SessionLocal to return None
+    main_module.SessionLocal = None
+
+    response = client.get("/api/segments/1/images")
+
+    assert response.status_code == 500
+    data = response.json()
+    assert "Database not available" in data["detail"]
+
+
+def test_get_track_images_database_exception(client, main_module):
+    """Test retrieval when database throws an exception."""
+    # Mock database session that throws exception
+    mock_session = AsyncMock()
+    mock_session.execute.side_effect = Exception("Database connection failed")
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/images")
+
+    assert response.status_code == 500
+    data = response.json()
+    assert "Internal server error" in data["detail"]
+
+
+def test_get_track_images_invalid_track_id(client):
+    """Test retrieval with invalid track ID."""
+    response = client.get("/api/segments/invalid/images")
+
+    assert response.status_code == 422  # Validation error for invalid integer
+
+
+def test_get_track_images_single_image(client, main_module):
+    """Test retrieval of single track image."""
+    # Mock database session and track image
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    mock_image = Mock()
+    mock_image.id = 1
+    mock_image.track_id = 1
+    mock_image.image_id = "single-image"
+    mock_image.image_url = "https://example.com/single.jpg"
+    mock_image.storage_key = "images-segments/single-image.jpg"
+    mock_image.filename = "single.jpg"
+    mock_image.original_filename = "original-single.jpg"
+    mock_image.created_at = datetime.now(UTC)
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=[mock_image])))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/images")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+
+    # Check image data
+    assert data[0]["id"] == 1
+    assert data[0]["track_id"] == 1
+    assert data[0]["image_id"] == "single-image"
+    assert data[0]["image_url"] == "https://example.com/single.jpg"
+    assert data[0]["storage_key"] == "images-segments/single-image.jpg"
+    assert data[0]["filename"] == "single.jpg"
+    assert data[0]["original_filename"] == "original-single.jpg"

@@ -4,6 +4,22 @@ import { nextTick } from 'vue'
 import Editor from '../Editor.vue'
 import { createI18n } from 'vue-i18n'
 
+// Mock fetch globally
+const mockFetch = vi.fn()
+global.fetch = mockFetch
+
+// Mock fetch in the component context
+vi.stubGlobal('fetch', mockFetch)
+
+// Mock FileReader
+const mockFileReader = {
+  readAsDataURL: vi.fn(),
+  result: 'data:image/jpeg;base64,test-image-data',
+  onload: null as any
+}
+
+global.FileReader = vi.fn(() => mockFileReader) as any
+
 // Mock Leaflet
 vi.mock('leaflet', () => ({
   default: {
@@ -1422,5 +1438,431 @@ describe('Editor', () => {
     // Remove remaining image
     vm.removeImage(0)
     expect(vm.commentary.images.length).toBe(0)
+  })
+})
+
+describe('Editor Image Upload', () => {
+  let wrapper: any
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          image_id: 'test-image-id',
+          image_url: 'https://example.com/test-image.jpg',
+          storage_key: 'images-segments/test-image-id.jpg'
+        })
+    })
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+  })
+
+  it('should render image upload section', async () => {
+    wrapper = mountEditor()
+
+    // Set loaded to true to show the form
+    const vm = wrapper.vm
+    vm.loaded = true
+
+    await nextTick()
+
+    // Debug: log the HTML to see what's actually rendered
+    // console.log('Rendered HTML:', wrapper.html())
+
+    // Check if the form exists
+    const form = wrapper.find('form.card.meta')
+    expect(form.exists()).toBe(true)
+
+    // Check if media section exists
+    const mediaSection = wrapper.find('.media-section')
+    expect(mediaSection.exists()).toBe(true)
+
+    // Find the image upload media field (second .media-field)
+    const mediaFields = wrapper.findAll('.media-field')
+    expect(mediaFields).toHaveLength(2) // Video links and image upload
+
+    const imageUploadMediaField = mediaFields[1] // Second media field is for images
+    const imageUploadSection = imageUploadMediaField.find('.image-upload-container')
+    expect(imageUploadSection.exists()).toBe(true)
+  })
+
+  it('should handle image file selection', async () => {
+    wrapper = mountEditor()
+
+    // Set loaded to true to show the form
+    const vm = wrapper.vm
+    vm.loaded = true
+
+    await nextTick()
+
+    // Create a mock file
+    const mockFile = new File(['test-image-content'], 'test-image.jpg', {
+      type: 'image/jpeg'
+    })
+
+    // Find the image upload media field (second .media-field)
+    const mediaFields = wrapper.findAll('.media-field')
+    const imageUploadMediaField = mediaFields[1] // Second media field is for images
+
+    const imageUploadArea = imageUploadMediaField.find('.image-upload-area')
+    expect(imageUploadArea.exists()).toBe(true)
+
+    const fileInput = imageUploadMediaField.find('input[type="file"][accept="image/*"]')
+    expect(fileInput.exists()).toBe(true)
+
+    // Simulate file selection
+    const fileList = {
+      0: mockFile,
+      length: 1,
+      item: (index: number) => (index === 0 ? mockFile : null),
+      [Symbol.iterator]: function* () {
+        yield mockFile
+      }
+    } as FileList
+
+    // Mock FileReader behavior
+    mockFileReader.readAsDataURL.mockImplementation(() => {
+      setTimeout(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({
+            target: { result: 'data:image/jpeg;base64,test' }
+          } as any)
+        }
+      }, 0)
+    })
+
+    // Simulate file selection by directly calling the handler
+    wrapper.vm.handleImageSelect({ target: { files: fileList } } as any)
+
+    // Wait for async operations
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    // Check that fetch was NOT called for image upload yet (images are uploaded on save)
+    expect(mockFetch).not.toHaveBeenCalledWith('/api/upload-image', {
+      method: 'POST',
+      body: expect.any(FormData)
+    })
+  })
+
+  it('should add image to commentary without uploading immediately', async () => {
+    wrapper = mountEditor()
+
+    // Set loaded to true to show the form
+    const vm = wrapper.vm
+    vm.loaded = true
+
+    await nextTick()
+
+    // Create a mock file
+    const mockFile = new File(['test-image-content'], 'test-image.jpg', {
+      type: 'image/jpeg'
+    })
+
+    // Mock FileReader behavior
+    mockFileReader.readAsDataURL.mockImplementation(() => {
+      setTimeout(() => {
+        if (mockFileReader.onload) {
+          mockFileReader.onload({
+            target: { result: 'data:image/jpeg;base64,test' }
+          } as any)
+        }
+      }, 0)
+    })
+
+    // Simulate file selection
+    const fileList = {
+      0: mockFile,
+      length: 1,
+      item: (index: number) => (index === 0 ? mockFile : null),
+      [Symbol.iterator]: function* () {
+        yield mockFile
+      }
+    } as FileList
+
+    // Simulate file selection by directly calling the handler
+    wrapper.vm.handleImageSelect({ target: { files: fileList } } as any)
+
+    // Wait for async operations
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    // Check that the image was added to the commentary but not uploaded yet
+    expect(vm.commentary.images).toHaveLength(1)
+    expect(vm.commentary.images[0].uploaded).toBe(false)
+    expect(vm.commentary.images[0].file).toBe(mockFile)
+    expect(vm.commentary.images[0].filename).toBe('test-image.jpg')
+  })
+
+  it('should upload images during segment submission', async () => {
+    wrapper = mountEditor()
+
+    // Mock successful image upload and segment creation
+    const originalFetch = global.fetch
+    const mockFetchLocal = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            image_id: 'test-image-id',
+            image_url: 'https://example.com/test-image.jpg',
+            storage_key: 'images-segments/test-image-id.jpg'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 1, name: 'Test Segment' })
+      })
+    global.fetch = mockFetchLocal
+
+    await nextTick()
+
+    // Set up component state for segment creation
+    const vm = wrapper.vm
+    vm.name = 'Test Segment'
+    vm.loaded = true
+    vm.points = [
+      { lat: 0, lng: 0 },
+      { lat: 1, lng: 1 }
+    ]
+    vm.uploadedFileId = 'test-file-id'
+
+    // Add an image to commentary (not uploaded yet)
+    const mockFile = new File(['test-image-content'], 'test-image.jpg', {
+      type: 'image/jpeg'
+    })
+    vm.commentary.images.push({
+      id: 'test-image-1',
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test',
+      caption: '',
+      uploaded: false,
+      image_url: '',
+      image_id: '',
+      storage_key: '',
+      filename: 'test-image.jpg',
+      original_filename: 'test-image.jpg'
+    })
+
+    await nextTick()
+
+    // Submit the form
+    await vm.onSubmit()
+
+    // Check that both image upload and segment creation were called
+    expect(mockFetchLocal).toHaveBeenCalledTimes(2)
+
+    // First call should be image upload
+    const imageUploadCall = mockFetchLocal.mock.calls[0]
+    expect(imageUploadCall[0]).toBe('/api/upload-image')
+    expect(imageUploadCall[1].method).toBe('POST')
+
+    // Second call should be segment creation
+    const segmentCreationCall = mockFetchLocal.mock.calls[1]
+    expect(segmentCreationCall[0]).toBe('/api/segments')
+    expect(segmentCreationCall[1].method).toBe('POST')
+
+    // Check that FormData contains image data
+    const formData = segmentCreationCall[1].body as FormData
+    const imageData = formData.get('image_data')
+    expect(imageData).toBeTruthy()
+
+    const parsedImageData = JSON.parse(imageData as string)
+    expect(parsedImageData).toHaveLength(1)
+    expect(parsedImageData[0].image_id).toBe('test-image-id')
+    expect(parsedImageData[0].image_url).toBe('https://example.com/test-image.jpg')
+    expect(parsedImageData[0].storage_key).toBe('images-segments/test-image-id.jpg')
+
+    // Cleanup
+    global.fetch = originalFetch
+  })
+
+  it('should remove image when remove button is clicked', async () => {
+    wrapper = mountEditor()
+
+    // Set loaded to true to show the form
+    const vm = wrapper.vm
+    vm.loaded = true
+
+    await nextTick()
+
+    // Add an image to commentary
+    vm.commentary.images.push({
+      id: 'test-image-1',
+      file: new File(['test'], 'test.jpg', { type: 'image/jpeg' }),
+      preview: 'data:image/jpeg;base64,test',
+      caption: '',
+      uploaded: true,
+      image_url: 'https://example.com/test.jpg',
+      image_id: 'test-image-id',
+      storage_key: 'images-segments/test-image-id.jpg',
+      filename: 'test.jpg',
+      original_filename: 'test.jpg'
+    })
+
+    await nextTick()
+
+    // Find and click remove button
+    const removeButton = wrapper.find('.remove-image-btn')
+    expect(removeButton.exists()).toBe(true)
+
+    await removeButton.trigger('click')
+
+    // Check that image was removed
+    expect(vm.commentary.images).toHaveLength(0)
+  })
+
+  it('should not upload images that are removed before submission', async () => {
+    wrapper = mountEditor()
+
+    // Mock segment creation response
+    const originalFetch = global.fetch
+    const mockFetchLocal = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ id: 1, name: 'Test Segment' })
+    })
+    global.fetch = mockFetchLocal
+
+    // Set up component state for segment creation
+    const vm = wrapper.vm
+    vm.name = 'Test Segment'
+    vm.loaded = true
+    vm.points = [
+      { lat: 0, lng: 0 },
+      { lat: 1, lng: 1 }
+    ]
+    vm.uploadedFileId = 'test-file-id'
+
+    await nextTick()
+
+    // Add an image to commentary
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+    vm.commentary.images.push({
+      id: 'test-image-1',
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test',
+      caption: '',
+      uploaded: false,
+      image_url: '',
+      image_id: '',
+      storage_key: '',
+      filename: 'test.jpg',
+      original_filename: 'test.jpg'
+    })
+
+    // Remove the image before submission
+    vm.commentary.images = []
+
+    await nextTick()
+
+    // Submit the form
+    await vm.onSubmit()
+
+    // Check that only segment creation was called (no image upload)
+    expect(mockFetchLocal).toHaveBeenCalledTimes(1)
+
+    const segmentCreationCall = mockFetchLocal.mock.calls[0]
+    expect(segmentCreationCall[0]).toBe('/api/segments')
+    expect(segmentCreationCall[1].method).toBe('POST')
+
+    // Check that FormData contains empty image data
+    const formData = segmentCreationCall[1].body as FormData
+    const imageData = formData.get('image_data')
+    expect(imageData).toBeTruthy()
+
+    const parsedImageData = JSON.parse(imageData as string)
+    expect(parsedImageData).toHaveLength(0)
+
+    // Cleanup
+    global.fetch = originalFetch
+  })
+
+  it('should upload images only when segment is saved (deferred upload)', async () => {
+    wrapper = mountEditor()
+
+    // Mock successful image upload and segment creation
+    const originalFetch = global.fetch
+    const mockFetchLocal = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            image_id: 'test-image-id',
+            image_url: 'https://example.com/test-image.jpg',
+            storage_key: 'images-segments/test-image-id.jpg'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ id: 1, name: 'Test Segment' })
+      })
+    global.fetch = mockFetchLocal
+
+    // Set up component state for segment creation
+    const vm = wrapper.vm
+    vm.name = 'Test Segment'
+    vm.loaded = true
+    vm.points = [
+      { lat: 0, lng: 0 },
+      { lat: 1, lng: 1 }
+    ]
+    vm.uploadedFileId = 'test-file-id'
+
+    await nextTick()
+
+    // Add an image to commentary (not uploaded yet)
+    const mockFile = new File(['test-image-content'], 'test-image.jpg', {
+      type: 'image/jpeg'
+    })
+    vm.commentary.images.push({
+      id: 'test-image-1',
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test',
+      caption: '',
+      uploaded: false,
+      image_url: '',
+      image_id: '',
+      storage_key: '',
+      filename: 'test-image.jpg',
+      original_filename: 'test-image.jpg'
+    })
+
+    await nextTick()
+
+    // Submit the form
+    await vm.onSubmit()
+
+    // Check that both image upload and segment creation were called
+    expect(mockFetchLocal).toHaveBeenCalledTimes(2)
+
+    // First call should be image upload
+    const imageUploadCall = mockFetchLocal.mock.calls[0]
+    expect(imageUploadCall[0]).toBe('/api/upload-image')
+    expect(imageUploadCall[1].method).toBe('POST')
+
+    // Second call should be segment creation
+    const segmentCreationCall = mockFetchLocal.mock.calls[1]
+    expect(segmentCreationCall[0]).toBe('/api/segments')
+    expect(segmentCreationCall[1].method).toBe('POST')
+
+    // Check that FormData contains image data
+    const formData = segmentCreationCall[1].body as FormData
+    const imageData = formData.get('image_data')
+    expect(imageData).toBeTruthy()
+
+    const parsedImageData = JSON.parse(imageData as string)
+    expect(parsedImageData).toHaveLength(1)
+    expect(parsedImageData[0].image_id).toBe('test-image-id')
+    expect(parsedImageData[0].image_url).toBe('https://example.com/test-image.jpg')
+    expect(parsedImageData[0].storage_key).toBe('images-segments/test-image-id.jpg')
+
+    // Cleanup
+    global.fetch = originalFetch
   })
 })

@@ -162,6 +162,7 @@ export default {
     dry: 'Sec',
     wet: 'Humide',
     comments: 'Commentaires',
+    images: 'Images',
     photosVideos: 'Photos & Vidéos',
     photoGallery: 'Galerie photo',
     youtubeVideos: 'Vidéos YouTube',
