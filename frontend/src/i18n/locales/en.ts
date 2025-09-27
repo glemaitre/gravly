@@ -43,7 +43,6 @@ export default {
     videoLinks: 'Video links',
     addVideoLink: 'Add video link',
     videoUrlPlaceholder: 'https://youtube.com/watch?v=...',
-    videoTitlePlaceholder: 'Video title (optional)',
     removeVideo: 'Remove video',
     images: 'Images',
     uploadImages: 'Upload images',

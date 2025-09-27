@@ -343,14 +343,11 @@
                         ></iframe>
                         <div v-else class="video-placeholder">
                           <i class="fa-solid fa-video"></i>
-                          <p>{{ video.video_title || 'Video' }}</p>
+                          <p>Video</p>
                           <a :href="video.video_url" target="_blank" class="video-link">
                             {{ t('segmentDetail.openVideo') }}
                           </a>
                         </div>
-                      </div>
-                      <div v-if="video.video_title" class="video-title">
-                        {{ video.video_title }}
                       </div>
                     </div>
                   </div>
@@ -2372,14 +2369,6 @@ onUnmounted(() => {
 
 .video-link:hover {
   background: var(--brand-600);
-}
-
-.video-title {
-  padding: 0.75rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  border-top: 1px solid #f3f4f6;
 }
 
 /* Responsive adjustments for images and videos */

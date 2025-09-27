@@ -614,12 +614,6 @@
                           class="video-url-input"
                           @input="validateVideoUrl(video)"
                         />
-                        <input
-                          v-model="video.title"
-                          type="text"
-                          :placeholder="t('form.videoTitlePlaceholder')"
-                          class="video-title-input"
-                        />
                       </div>
                       <button
                         type="button"
@@ -1123,7 +1117,6 @@ function addVideoLink() {
   commentary.value.video_links.push({
     id: generateId(),
     url: '',
-    title: '',
     platform: 'youtube'
   })
 }
@@ -3546,8 +3539,7 @@ async function onSubmit() {
   font-weight: 500;
 }
 
-.video-url-input,
-.video-title-input {
+.video-url-input {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #d1d5db;
@@ -3556,8 +3548,7 @@ async function onSubmit() {
   box-sizing: border-box;
 }
 
-.video-url-input:focus,
-.video-title-input:focus {
+.video-url-input:focus {
   outline: none;
   border-color: var(--brand-500);
   box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);

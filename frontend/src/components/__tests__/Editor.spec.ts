@@ -528,12 +528,6 @@ describe('Editor', () => {
       const videoUrlInput = wrapper.find('input[placeholder*="youtube.com"]')
       if (videoUrlInput.exists()) {
         await videoUrlInput.setValue('https://youtube.com/watch?v=test')
-
-        const videoTitleInput = wrapper.find('input[placeholder*="Video title"]')
-        if (videoTitleInput.exists()) {
-          await videoTitleInput.setValue('Test Video')
-          expect((videoTitleInput.element as any).value).toBe('Test Video')
-        }
       }
     }
   })

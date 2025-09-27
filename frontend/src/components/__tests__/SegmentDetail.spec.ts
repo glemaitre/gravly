@@ -1488,12 +1488,6 @@ describe('SegmentDetail Video Gallery', () => {
     // Check Vimeo video iframe
     const vimeoIframe = wrapper.find('iframe[src*="player.vimeo.com/video/456789"]')
     expect(vimeoIframe.exists()).toBe(true)
-
-    // Check video titles
-    const videoTitles = wrapper.findAll('.video-title')
-    expect(videoTitles).toHaveLength(2)
-    expect(videoTitles[0].text()).toBe('Test Video 1')
-    expect(videoTitles[1].text()).toBe('Test Video 2')
   })
 
   it('should not render video gallery when no videos are available', async () => {
@@ -1653,7 +1647,7 @@ describe('SegmentDetail Video Gallery', () => {
     expect(videoPlaceholder.exists()).toBe(true)
 
     // Check placeholder content
-    expect(videoPlaceholder.find('p').text()).toBe('Other Platform Video')
+    expect(videoPlaceholder.find('p').text()).toBe('Video')
 
     // Check video link
     const videoLink = videoPlaceholder.find('.video-link')

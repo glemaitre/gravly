@@ -97,7 +97,6 @@ export interface Commentary {
 export interface VideoLink {
   id: string
   url: string
-  title: string
   platform: 'youtube' | 'vimeo' | 'other'
 }
 

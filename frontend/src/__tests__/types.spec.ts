@@ -259,7 +259,6 @@ describe('Type Definitions', () => {
       const videoLink: VideoLink = {
         id: 'video-123',
         url: 'https://youtube.com/watch?v=123',
-        title: 'Test Video',
         platform: 'youtube'
       }
 
@@ -272,21 +271,18 @@ describe('Type Definitions', () => {
       const youtubeLink: VideoLink = {
         id: '1',
         url: 'https://youtube.com/watch?v=123',
-        title: 'YouTube Video',
         platform: 'youtube'
       }
 
       const vimeoLink: VideoLink = {
         id: '2',
         url: 'https://vimeo.com/123456',
-        title: 'Vimeo Video',
         platform: 'vimeo'
       }
 
       const otherLink: VideoLink = {
         id: '3',
         url: 'https://example.com/video',
-        title: 'Other Video',
         platform: 'other'
       }
 
@@ -334,7 +330,6 @@ describe('Type Definitions', () => {
           {
             id: 'video-1',
             url: 'https://youtube.com/watch?v=123',
-            title: 'Test Video',
             platform: 'youtube'
           }
         ],
