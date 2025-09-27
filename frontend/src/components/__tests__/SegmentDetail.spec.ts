@@ -330,7 +330,7 @@ describe('SegmentDetail', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(mockSegment)
-        })
+        } as Response)
         .mockRejectedValueOnce(new Error('GPX data not found'))
 
       wrapper = mount(SegmentDetail)
@@ -359,79 +359,102 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should render image gallery when images are available', async () => {
     // Mock successful API responses with images
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'test-image-1',
-              image_url: 'https://example.com/image1.jpg',
-              storage_key: 'images-segments/test-image-1.jpg',
-              filename: 'image1.jpg',
-              original_filename: 'original-image1.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            },
-            {
-              id: 2,
-              track_id: 1,
-              image_id: 'test-image-2',
-              image_url: 'https://example.com/image2.jpg',
-              storage_key: 'images-segments/test-image-2.jpg',
-              filename: 'image2.jpg',
-              original_filename: 'original-image2.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'test-image-1',
+                image_url: 'https://example.com/image1.jpg',
+                storage_key: 'images-segments/test-image-1.jpg',
+                filename: 'image1.jpg',
+                original_filename: 'original-image1.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                image_id: 'test-image-2',
+                image_url: 'https://example.com/image2.jpg',
+                storage_key: 'images-segments/test-image-2.jpg',
+                filename: 'image2.jpg',
+                original_filename: 'original-image2.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that images section is rendered
     const imagesSection = wrapper.find('.images-section')
@@ -453,60 +476,69 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should not render image gallery when no images are available', async () => {
     // Mock empty images response
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([])
-      })
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // Debug: log the HTML to see what's actually rendered
-    // console.log('Rendered HTML:', wrapper.html())
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that images section is not rendered
     const imagesSection = wrapper.find('.images-section')
@@ -515,69 +547,81 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should open image modal when gallery item is clicked', async () => {
     // Mock successful API responses with images
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'test-image-1',
-              image_url: 'https://example.com/image1.jpg',
-              storage_key: 'images-segments/test-image-1.jpg',
-              filename: 'image1.jpg',
-              original_filename: 'original-image1.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'test-image-1',
+                image_url: 'https://example.com/image1.jpg',
+                storage_key: 'images-segments/test-image-1.jpg',
+                filename: 'image1.jpg',
+                original_filename: 'original-image1.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Find first gallery item and click it
     const galleryItem = wrapper.find('.gallery-item')
@@ -603,69 +647,81 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should close image modal when close button is clicked', async () => {
     // Mock successful API responses with images
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'test-image-1',
-              image_url: 'https://example.com/image1.jpg',
-              storage_key: 'images-segments/test-image-1.jpg',
-              filename: 'image1.jpg',
-              original_filename: 'original-image1.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'test-image-1',
+                image_url: 'https://example.com/image1.jpg',
+                storage_key: 'images-segments/test-image-1.jpg',
+                filename: 'image1.jpg',
+                original_filename: 'original-image1.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Open modal
     const galleryItem = wrapper.find('.gallery-item')
@@ -685,69 +741,81 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should close image modal when clicking outside modal content', async () => {
     // Mock successful API responses with images
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'test-image-1',
-              image_url: 'https://example.com/image1.jpg',
-              storage_key: 'images-segments/test-image-1.jpg',
-              filename: 'image1.jpg',
-              original_filename: 'original-image1.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'test-image-1',
+                image_url: 'https://example.com/image1.jpg',
+                storage_key: 'images-segments/test-image-1.jpg',
+                filename: 'image1.jpg',
+                original_filename: 'original-image1.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Open modal
     const galleryItem = wrapper.find('.gallery-item')
@@ -766,69 +834,81 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should not close modal when clicking on modal content', async () => {
     // Mock successful API responses with images
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'test-image-1',
-              image_url: 'https://example.com/image1.jpg',
-              storage_key: 'images-segments/test-image-1.jpg',
-              filename: 'image1.jpg',
-              original_filename: 'original-image1.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'test-image-1',
+                image_url: 'https://example.com/image1.jpg',
+                storage_key: 'images-segments/test-image-1.jpg',
+                filename: 'image1.jpg',
+                original_filename: 'original-image1.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Open modal
     const galleryItem = wrapper.find('.gallery-item')
@@ -847,52 +927,64 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should handle images API error gracefully', async () => {
     // Mock images API error
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error'
-      })
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error'
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     // Mock console.warn to avoid test output noise
     const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -901,7 +993,7 @@ describe('SegmentDetail Image Gallery', () => {
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that images section is not rendered (empty array)
     const imagesSection = wrapper.find('.images-section')
@@ -918,69 +1010,81 @@ describe('SegmentDetail Image Gallery', () => {
 
   it('should display single image correctly', async () => {
     // Mock single image response
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              image_id: 'single-image',
-              image_url: 'https://example.com/single.jpg',
-              storage_key: 'images-segments/single-image.jpg',
-              filename: 'single.jpg',
-              original_filename: 'single.jpg',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                image_id: 'single-image',
+                image_url: 'https://example.com/single.jpg',
+                storage_key: 'images-segments/single-image.jpg',
+                filename: 'single.jpg',
+                original_filename: 'single.jpg',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that images section is rendered
     const imagesSection = wrapper.find('.images-section')
@@ -1013,81 +1117,89 @@ describe('SegmentDetail Video Gallery', () => {
 
   it('should render video gallery when videos are available', async () => {
     // Mock successful API responses with videos
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]) // No images
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              video_id: 'test-video-1',
-              video_url: 'https://youtube.com/watch?v=test123',
-              video_title: 'Test Video 1',
-              platform: 'youtube',
-              created_at: '2023-01-01T00:00:00Z'
-            },
-            {
-              id: 2,
-              track_id: 1,
-              video_id: 'test-video-2',
-              video_url: 'https://vimeo.com/456789',
-              video_title: 'Test Video 2',
-              platform: 'vimeo',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]) // No images
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test123',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://vimeo.com/456789',
+                video_title: 'Test Video 2',
+                platform: 'vimeo',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that videos section is rendered
     const videosSection = wrapper.find('.videos-section')
@@ -1114,61 +1226,69 @@ describe('SegmentDetail Video Gallery', () => {
 
   it('should not render video gallery when no videos are available', async () => {
     // Mock empty videos response
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]) // No images
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]) // No videos
-      })
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]) // No images
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]) // No videos
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that videos section is not rendered
     const videosSection = wrapper.find('.videos-section')
@@ -1177,72 +1297,80 @@ describe('SegmentDetail Video Gallery', () => {
 
   it('should handle other video platforms with placeholder', async () => {
     // Mock successful API responses with other platform video
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]) // No images
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
               id: 1,
-              track_id: 1,
-              video_id: 'test-video-1',
-              video_url: 'https://example.com/video',
-              video_title: 'Other Platform Video',
-              platform: 'other',
-              created_at: '2023-01-01T00:00:00Z'
-            }
-          ])
-      })
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]) // No images
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://example.com/video',
+                video_title: 'Other Platform Video',
+                platform: 'other',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Check that videos section is rendered
     const videosSection = wrapper.find('.videos-section')
@@ -1291,61 +1419,69 @@ describe('SegmentDetail Video Gallery', () => {
 
   it('should handle video fetch errors gracefully', async () => {
     // Mock successful segment and GPX responses, but failed video fetch
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            id: 1,
-            name: 'Test Segment',
-            track_type: 'segment',
-            difficulty_level: 3,
-            surface_type: 'forest-trail',
-            tire_dry: 'slick',
-            tire_wet: 'slick',
-            comments: 'Test comments'
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            points: [
-              { lat: 0, lng: 0, elevation: 100, distance: 0 },
-              { lat: 1, lng: 1, elevation: 200, distance: 1 }
-            ],
-            stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            total_stats: {
-              total_distance: 1,
-              elevation_gain: 100,
-              elevation_loss: 0
-            },
-            bounds: {
-              north: 1,
-              south: 0,
-              east: 1,
-              west: 0
-            }
-          })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve([]) // No images
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 404
-      }) // Failed video fetch
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 0, lng: 0, elevation: 100, distance: 0 },
+                { lat: 1, lng: 1, elevation: 200, distance: 1 }
+              ],
+              stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              total_stats: {
+                total_distance: 1,
+                elevation_gain: 100,
+                elevation_loss: 0
+              },
+              bounds: {
+                north: 1,
+                south: 0,
+                east: 1,
+                west: 0
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([]) // No images
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: false,
+          status: 404
+        } as Response) // Failed video fetch
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
 
     wrapper = mount(SegmentDetail)
 
     // Wait for component to load data
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Should not crash and videos section should not be rendered
     const videosSection = wrapper.find('.videos-section')

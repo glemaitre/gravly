@@ -314,44 +314,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Media Section -->
-          <div class="media-section">
-            <div class="card media-card">
-              <div class="card-header">
-                <h3>
-                  <i class="fa-solid fa-photo-film"></i>
-                  Media
-                </h3>
-              </div>
-              <div class="card-content">
-                <div class="media-placeholder">
-                  <div class="placeholder-content">
-                    <i class="fa-solid fa-image"></i>
-                    <h4>{{ t('segmentDetail.photosVideos') }}</h4>
-                    <p>
-                      This section will contain photos and YouTube videos related to
-                      this segment.
-                    </p>
-                    <div class="placeholder-features">
-                      <div class="feature-item">
-                        <i class="fa-solid fa-camera"></i>
-                        <span>{{ t('segmentDetail.photoGallery') }}</span>
-                      </div>
-                      <div class="feature-item">
-                        <i class="fa-brands fa-youtube"></i>
-                        <span>{{ t('segmentDetail.youtubeVideos') }}</span>
-                      </div>
-                      <div class="feature-item">
-                        <i class="fa-solid fa-play"></i>
-                        <span>{{ t('segmentDetail.videoPlayback') }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -1181,90 +1143,80 @@ onUnmounted(() => {
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 33% 33% 34%;
+  grid-template-rows: 50% 50%;
   gap: 1rem;
   flex: 1;
   grid-template-areas:
     'map info'
-    'elevation elevation'
-    'media media';
+    'elevation elevation';
 }
 
 /* Dynamic grid layout when comments are present */
 .content-grid.with-comments {
-  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-rows: 33.33% 33.33% 33.33%;
   grid-template-areas:
     'map info'
     'elevation elevation'
-    'comments comments'
-    'media media';
+    'comments comments';
 }
 
 /* Dynamic grid layout when images are present */
 .content-grid.with-images {
-  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-rows: 33.33% 33.33% 33.33%;
   grid-template-areas:
     'map info'
     'elevation elevation'
-    'images images'
-    'media media';
+    'images images';
 }
 
 /* Dynamic grid layout when both comments and images are present */
 .content-grid.with-comments.with-images {
-  grid-template-rows: 20% 20% 20% 20% 20%;
-  grid-template-areas:
-    'map info'
-    'elevation elevation'
-    'comments comments'
-    'images images'
-    'media media';
-}
-
-/* Dynamic grid layout when videos are present */
-.content-grid.with-videos {
   grid-template-rows: 25% 25% 25% 25%;
   grid-template-areas:
     'map info'
     'elevation elevation'
-    'videos videos'
-    'media media';
+    'comments comments'
+    'images images';
+}
+
+/* Dynamic grid layout when videos are present */
+.content-grid.with-videos {
+  grid-template-rows: 33.33% 33.33% 33.33%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'videos videos';
 }
 
 /* Dynamic grid layout when comments and videos are present */
 .content-grid.with-comments.with-videos {
+  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'comments comments'
+    'videos videos';
+}
+
+/* Dynamic grid layout when images and videos are present */
+.content-grid.with-images.with-videos {
+  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'images images'
+    'videos videos';
+}
+
+/* Dynamic grid layout when comments, images and videos are present */
+.content-grid.with-comments.with-images.with-videos {
   grid-template-rows: 20% 20% 20% 20% 20%;
   grid-template-areas:
     'map info'
     'elevation elevation'
     'comments comments'
-    'videos videos'
-    'media media';
-}
-
-/* Dynamic grid layout when images and videos are present */
-.content-grid.with-images.with-videos {
-  grid-template-rows: 16.67% 16.67% 16.67% 16.67% 16.67% 16.67%;
-  grid-template-areas:
-    'map info'
-    'elevation elevation'
     'images images'
-    'videos videos'
-    'media media'
-    'media media';
-}
-
-/* Dynamic grid layout when comments, images and videos are present */
-.content-grid.with-comments.with-images.with-videos {
-  grid-template-rows: 14.29% 14.29% 14.29% 14.29% 14.29% 14.29% 14.29%;
-  grid-template-areas:
-    'map info'
-    'elevation elevation'
-    'comments comments'
-    'images images'
-    'videos videos'
-    'media media'
-    'media media';
+    'videos videos';
 }
 
 .map-section {
@@ -1283,10 +1235,6 @@ onUnmounted(() => {
   grid-area: comments;
 }
 
-.media-section {
-  grid-area: media;
-}
-
 /* Responsive layout adjustments */
 @media (max-width: 768px) {
   .segment-detail {
@@ -1295,88 +1243,80 @@ onUnmounted(() => {
 
   .content-grid {
     grid-template-columns: 1fr;
+    grid-template-rows: minmax(300px, auto) auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation';
+    gap: 1.5rem; /* Increase gap for better spacing when stacked */
+  }
+
+  .content-grid.with-comments {
     grid-template-rows: minmax(300px, auto) auto auto auto;
     grid-template-areas:
       'map'
       'info'
       'elevation'
-      'media';
-    gap: 1.5rem; /* Increase gap for better spacing when stacked */
-  }
-
-  .content-grid.with-comments {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto;
-    grid-template-areas:
-      'map'
-      'info'
-      'elevation'
-      'comments'
-      'media';
+      'comments';
   }
 
   .content-grid.with-images {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-rows: minmax(300px, auto) auto auto auto;
     grid-template-areas:
       'map'
       'info'
       'elevation'
-      'images'
-      'media';
+      'images';
   }
 
   .content-grid.with-comments.with-images {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
-    grid-template-areas:
-      'map'
-      'info'
-      'elevation'
-      'comments'
-      'images'
-      'media';
-  }
-
-  .content-grid.with-videos {
     grid-template-rows: minmax(300px, auto) auto auto auto auto;
     grid-template-areas:
       'map'
       'info'
       'elevation'
-      'videos'
-      'media';
+      'comments'
+      'images';
+  }
+
+  .content-grid.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'videos';
   }
 
   .content-grid.with-comments.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'comments'
+      'videos';
+  }
+
+  .content-grid.with-images.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'images'
+      'videos';
+  }
+
+  .content-grid.with-comments.with-images.with-videos {
     grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
     grid-template-areas:
       'map'
       'info'
       'elevation'
       'comments'
-      'videos'
-      'media';
-  }
-
-  .content-grid.with-images.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto auto auto;
-    grid-template-areas:
-      'map'
-      'info'
-      'elevation'
       'images'
-      'videos'
-      'media';
-  }
-
-  .content-grid.with-comments.with-images.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto auto auto auto;
-    grid-template-areas:
-      'map'
-      'info'
-      'elevation'
-      'comments'
-      'images'
-      'videos'
-      'media';
+      'videos';
   }
 
   .content-wrapper {
@@ -1801,60 +1741,6 @@ onUnmounted(() => {
   font-weight: 600;
   color: #111827;
   text-align: center;
-}
-
-.media-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  background: #f8fafc;
-  border: 2px dashed #d1d5db;
-  border-radius: 8px;
-}
-
-.placeholder-content {
-  text-align: center;
-  color: #6b7280;
-}
-
-.placeholder-content i {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  color: #d1d5db;
-}
-
-.placeholder-content h4 {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #374151;
-}
-
-.placeholder-content p {
-  margin: 0 0 1.5rem 0;
-  font-size: 0.875rem;
-}
-
-.placeholder-features {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
-.feature-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.feature-item i {
-  font-size: 1.5rem;
-  color: #d1d5db;
 }
 
 /* Comments Section Styles */
