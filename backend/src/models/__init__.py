@@ -1,11 +1,15 @@
 from .auth_user import AuthUser, AuthUserResponse, AuthUserSummary
 from .image import TrackImage, TrackImageCreateRequest, TrackImageResponse
 from .track import GPXDataResponse, Track, TrackResponse, TrackWithGPXDataResponse
+from .video import TrackVideo, TrackVideoCreateRequest, TrackVideoResponse
 
 __all__ = [
     "TrackImage",
     "TrackImageResponse",
     "TrackImageCreateRequest",
+    "TrackVideo",
+    "TrackVideoResponse",
+    "TrackVideoCreateRequest",
     "Track",
     "TrackResponse",
     "TrackWithGPXDataResponse",

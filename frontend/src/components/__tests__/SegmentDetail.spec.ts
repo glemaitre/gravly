@@ -996,3 +996,359 @@ describe('SegmentDetail Image Gallery', () => {
     expect(image.attributes('alt')).toBe('single.jpg')
   })
 })
+
+describe('SegmentDetail Video Gallery', () => {
+  let wrapper: any
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFetch.mockClear()
+  })
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+  })
+
+  it('should render video gallery when videos are available', async () => {
+    // Mock successful API responses with videos
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]) // No images
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              video_id: 'test-video-1',
+              video_url: 'https://youtube.com/watch?v=test123',
+              video_title: 'Test Video 1',
+              platform: 'youtube',
+              created_at: '2023-01-01T00:00:00Z'
+            },
+            {
+              id: 2,
+              track_id: 1,
+              video_id: 'test-video-2',
+              video_url: 'https://vimeo.com/456789',
+              video_title: 'Test Video 2',
+              platform: 'vimeo',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that videos section is rendered
+    const videosSection = wrapper.find('.videos-section')
+    expect(videosSection.exists()).toBe(true)
+
+    // Check that video items are rendered
+    const videoItems = wrapper.findAll('.video-item')
+    expect(videoItems).toHaveLength(2)
+
+    // Check YouTube video iframe
+    const youtubeIframe = wrapper.find('iframe[src*="youtube.com/embed/test123"]')
+    expect(youtubeIframe.exists()).toBe(true)
+
+    // Check Vimeo video iframe
+    const vimeoIframe = wrapper.find('iframe[src*="player.vimeo.com/video/456789"]')
+    expect(vimeoIframe.exists()).toBe(true)
+
+    // Check video titles
+    const videoTitles = wrapper.findAll('.video-title')
+    expect(videoTitles).toHaveLength(2)
+    expect(videoTitles[0].text()).toBe('Test Video 1')
+    expect(videoTitles[1].text()).toBe('Test Video 2')
+  })
+
+  it('should not render video gallery when no videos are available', async () => {
+    // Mock empty videos response
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]) // No images
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]) // No videos
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that videos section is not rendered
+    const videosSection = wrapper.find('.videos-section')
+    expect(videosSection.exists()).toBe(false)
+  })
+
+  it('should handle other video platforms with placeholder', async () => {
+    // Mock successful API responses with other platform video
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]) // No images
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              id: 1,
+              track_id: 1,
+              video_id: 'test-video-1',
+              video_url: 'https://example.com/video',
+              video_title: 'Other Platform Video',
+              platform: 'other',
+              created_at: '2023-01-01T00:00:00Z'
+            }
+          ])
+      })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that videos section is rendered
+    const videosSection = wrapper.find('.videos-section')
+    expect(videosSection.exists()).toBe(true)
+
+    // Check that placeholder is rendered for other platform
+    const videoPlaceholder = wrapper.find('.video-placeholder')
+    expect(videoPlaceholder.exists()).toBe(true)
+
+    // Check placeholder content
+    expect(videoPlaceholder.find('p').text()).toBe('Other Platform Video')
+
+    // Check video link
+    const videoLink = videoPlaceholder.find('.video-link')
+    expect(videoLink.exists()).toBe(true)
+    expect(videoLink.attributes('href')).toBe('https://example.com/video')
+    expect(videoLink.attributes('target')).toBe('_blank')
+  })
+
+  it('should handle video URL conversion for YouTube', async () => {
+    wrapper = mount(SegmentDetail)
+
+    // Test YouTube URL conversion
+    expect(wrapper.vm.getYouTubeEmbedUrl('https://youtube.com/watch?v=test123')).toBe(
+      'https://www.youtube.com/embed/test123'
+    )
+    expect(wrapper.vm.getYouTubeEmbedUrl('https://youtu.be/test123')).toBe(
+      'https://www.youtube.com/embed/test123'
+    )
+    expect(wrapper.vm.getYouTubeEmbedUrl('https://www.youtube.com/embed/test123')).toBe(
+      'https://www.youtube.com/embed/test123'
+    )
+  })
+
+  it('should handle video URL conversion for Vimeo', async () => {
+    wrapper = mount(SegmentDetail)
+
+    // Test Vimeo URL conversion
+    expect(wrapper.vm.getVimeoEmbedUrl('https://vimeo.com/123456')).toBe(
+      'https://player.vimeo.com/video/123456'
+    )
+    expect(wrapper.vm.getVimeoEmbedUrl('https://player.vimeo.com/video/123456')).toBe(
+      'https://player.vimeo.com/video/123456'
+    )
+  })
+
+  it('should handle video fetch errors gracefully', async () => {
+    // Mock successful segment and GPX responses, but failed video fetch
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: 1,
+            name: 'Test Segment',
+            track_type: 'segment',
+            difficulty_level: 3,
+            surface_type: 'forest-trail',
+            tire_dry: 'slick',
+            tire_wet: 'slick',
+            comments: 'Test comments'
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            points: [
+              { lat: 0, lng: 0, elevation: 100, distance: 0 },
+              { lat: 1, lng: 1, elevation: 200, distance: 1 }
+            ],
+            stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            total_stats: {
+              total_distance: 1,
+              elevation_gain: 100,
+              elevation_loss: 0
+            },
+            bounds: {
+              north: 1,
+              south: 0,
+              east: 1,
+              west: 0
+            }
+          })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve([]) // No images
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404
+      }) // Failed video fetch
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Should not crash and videos section should not be rendered
+    const videosSection = wrapper.find('.videos-section')
+    expect(videosSection.exists()).toBe(false)
+  })
+})

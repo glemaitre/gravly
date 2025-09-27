@@ -163,10 +163,12 @@ export default {
     wet: 'Wet',
     comments: 'Comments',
     images: 'Images',
+    videos: 'Videos',
     photosVideos: 'Photos & Videos',
     photoGallery: 'Photo Gallery',
     youtubeVideos: 'YouTube Videos',
-    videoPlayback: 'Video Playback'
+    videoPlayback: 'Video Playback',
+    openVideo: 'Open Video'
   },
 
   // Strava integration

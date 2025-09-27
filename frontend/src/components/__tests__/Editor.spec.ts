@@ -1605,7 +1605,8 @@ describe('Editor Image Upload', () => {
 
     // Mock successful image upload and segment creation
     const originalFetch = global.fetch
-    const mockFetchLocal = vi.fn()
+    const mockFetchLocal = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () =>
@@ -1788,7 +1789,8 @@ describe('Editor Image Upload', () => {
 
     // Mock successful image upload and segment creation
     const originalFetch = global.fetch
-    const mockFetchLocal = vi.fn()
+    const mockFetchLocal = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () =>

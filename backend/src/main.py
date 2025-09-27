@@ -28,6 +28,7 @@ from .models.track import (
     TrackResponse,
     TrackType,
 )
+from .models.video import TrackVideo, TrackVideoResponse
 from .services.strava import StravaService
 from .utils.config import load_environment_config
 from .utils.gpx import GPXData, extract_from_gpx_file, generate_gpx_segment
@@ -550,6 +551,37 @@ async def create_segment(
                         logger.warning(f"Failed to process image data: {str(e)}")
                         # Continue without images
 
+                # Process video data and create TrackVideo records
+                if video_links and video_links != "[]":
+                    try:
+                        video_info_list = json.loads(video_links)
+
+                        for video_info in video_info_list:
+                            if isinstance(video_info, dict) and all(
+                                key in video_info for key in ["url", "platform"]
+                            ):
+                                # Generate unique video_id
+                                video_id = str(uuid.uuid4())
+
+                                track_video = TrackVideo(
+                                    track_id=track.id,
+                                    video_id=video_id,
+                                    video_url=video_info["url"],
+                                    video_title=video_info.get("title", ""),
+                                    platform=video_info["platform"],
+                                )
+                                session.add(track_video)
+
+                        await session.commit()
+                        logger.info(
+                            f"Successfully linked {len(video_info_list)} "
+                            f"videos to track {track.id}"
+                        )
+
+                    except (json.JSONDecodeError, Exception) as e:
+                        logger.warning(f"Failed to process video data: {str(e)}")
+                        # Continue without videos
+
                 return TrackResponse(
                     id=track.id,
                     file_path=str(processed_file_path),
@@ -975,6 +1007,62 @@ async def get_track_images(track_id: int):
         raise
     except Exception as e:
         logger.error(f"Error fetching images for track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.get("/api/segments/{track_id}/videos", response_model=list[TrackVideoResponse])
+async def get_track_videos(track_id: int):
+    """Get all videos associated with a specific track by ID.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to fetch videos for
+
+    Returns
+    -------
+    list[TrackVideoResponse]
+        List of track videos with their metadata
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    try:
+        async with SessionLocal() as session:
+            # First verify the track exists
+            track_stmt = select(Track).filter(Track.id == track_id)
+            track_result = await session.execute(track_stmt)
+            track = track_result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            # Get all videos for this track
+            videos_stmt = select(TrackVideo).filter(TrackVideo.track_id == track_id)
+            videos_result = await session.execute(videos_stmt)
+            videos = videos_result.scalars().all()
+
+            # Convert to response models
+            video_responses = []
+            for video in videos:
+                video_response = TrackVideoResponse(
+                    id=video.id,
+                    track_id=video.track_id,
+                    video_id=video.video_id,
+                    video_url=video.video_url,
+                    video_title=video.video_title,
+                    platform=video.platform,
+                    created_at=video.created_at,
+                )
+                video_responses.append(video_response)
+
+            logger.info(f"Retrieved {len(video_responses)} videos for track {track_id}")
+            return video_responses
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching videos for track {track_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 

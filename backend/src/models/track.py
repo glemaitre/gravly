@@ -64,6 +64,11 @@ class Track(Base):
         "TrackImage", back_populates="track", cascade="all, delete-orphan"
     )
 
+    # Relationship to videos
+    videos = relationship(
+        "TrackVideo", back_populates="track", cascade="all, delete-orphan"
+    )
+
 
 class TrackResponse(BaseModel):
     id: int

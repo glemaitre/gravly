@@ -114,6 +114,16 @@ export interface CommentaryImage {
   original_filename?: string
 }
 
+export interface TrackVideoResponse {
+  id: number
+  track_id: number
+  video_id: string
+  video_url: string
+  video_title: string | null
+  platform: string
+  created_at: string
+}
+
 export interface TrailConditions {
   tire_dry: 'slick' | 'semi-slick' | 'knobs'
   tire_wet: 'slick' | 'semi-slick' | 'knobs'

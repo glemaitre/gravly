@@ -40,7 +40,8 @@
           class="content-grid"
           :class="{
             'with-comments': segment?.comments,
-            'with-images': trackImages && trackImages.length > 0
+            'with-images': trackImages && trackImages.length > 0,
+            'with-videos': trackVideos && trackVideos.length > 0
           }"
         >
           <!-- Map Section -->
@@ -268,6 +269,52 @@
             </div>
           </div>
 
+          <!-- Videos Gallery Section - Only shown when videos are available -->
+          <div v-if="trackVideos && trackVideos.length > 0" class="videos-section">
+            <div class="card videos-card">
+              <div class="card-header">
+                <h3>
+                  <i class="fa-solid fa-video"></i>
+                  {{ t('segmentDetail.videos') }}
+                </h3>
+              </div>
+              <div class="card-content">
+                <div class="videos-gallery">
+                  <div v-for="video in trackVideos" :key="video.id" class="video-item">
+                    <div class="video-embed">
+                      <iframe
+                        v-if="video.platform === 'youtube'"
+                        :src="getYouTubeEmbedUrl(video.video_url)"
+                        frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                        class="video-iframe"
+                      ></iframe>
+                      <iframe
+                        v-else-if="video.platform === 'vimeo'"
+                        :src="getVimeoEmbedUrl(video.video_url)"
+                        frameborder="0"
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowfullscreen
+                        class="video-iframe"
+                      ></iframe>
+                      <div v-else class="video-placeholder">
+                        <i class="fa-solid fa-video"></i>
+                        <p>{{ video.video_title || 'Video' }}</p>
+                        <a :href="video.video_url" target="_blank" class="video-link">
+                          {{ t('segmentDetail.openVideo') }}
+                        </a>
+                      </div>
+                    </div>
+                    <div v-if="video.video_title" class="video-title">
+                      {{ video.video_title }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Media Section -->
           <div class="media-section">
             <div class="card media-card">
@@ -347,7 +394,7 @@ import {
   Tooltip
 } from 'chart.js'
 import annotationPlugin from 'chartjs-plugin-annotation'
-import type { TrackResponse, GPXData } from '../types'
+import type { TrackResponse, GPXData, TrackVideoResponse } from '../types'
 
 // Import images
 import tireSlickUrl from '../assets/images/slick.png'
@@ -382,6 +429,7 @@ const { t } = useI18n()
 const segment = ref<TrackResponse | null>(null)
 const gpxData = ref<GPXData | null>(null)
 const trackImages = ref<any[]>([])
+const trackVideos = ref<TrackVideoResponse[]>([])
 const selectedImage = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -466,6 +514,18 @@ async function loadSegmentData() {
       // Images are optional, so don't throw error if they fail to load
       console.warn('Failed to load track images:', imagesResponse.statusText)
       trackImages.value = []
+    }
+
+    // Load track videos
+    const videosResponse = await fetch(
+      `http://localhost:8000/api/segments/${segmentId.value}/videos`
+    )
+    if (videosResponse.ok) {
+      trackVideos.value = await videosResponse.json()
+    } else {
+      // Videos are optional, so don't throw error if they fail to load
+      console.warn('Failed to load track videos:', videosResponse.statusText)
+      trackVideos.value = []
     }
 
     // Initialize map and chart after data is loaded
@@ -925,6 +985,46 @@ function closeImageModal() {
   selectedImage.value = null
 }
 
+// Video helper functions
+function getYouTubeEmbedUrl(url: string): string {
+  // Extract video ID from various YouTube URL formats
+  let videoId = null
+
+  // Handle different YouTube URL formats
+  if (url.includes('youtube.com/watch?v=')) {
+    const match = url.match(/[?&]v=([^&]+)/)
+    videoId = match ? match[1] : null
+  } else if (url.includes('youtu.be/')) {
+    const match = url.match(/youtu\.be\/([^?&]+)/)
+    videoId = match ? match[1] : null
+  } else if (url.includes('youtube.com/embed/')) {
+    const match = url.match(/embed\/([^?&]+)/)
+    videoId = match ? match[1] : null
+  }
+
+  if (videoId) {
+    return `https://www.youtube.com/embed/${videoId}`
+  }
+
+  // Fallback for direct embed URLs
+  return url
+    .replace('watch?v=', 'embed/')
+    .replace('youtu.be/', 'www.youtube.com/embed/')
+}
+
+function getVimeoEmbedUrl(url: string): string {
+  // Extract video ID from Vimeo URL
+  const regExp = /vimeo\.com\/(\d+)/
+  const match = url.match(regExp)
+  const videoId = match ? match[1] : null
+
+  if (videoId) {
+    return `https://player.vimeo.com/video/${videoId}`
+  }
+
+  return url
+}
+
 // Lifecycle
 onMounted(() => {
   loadSegmentData()
@@ -1121,6 +1221,52 @@ onUnmounted(() => {
     'media media';
 }
 
+/* Dynamic grid layout when videos are present */
+.content-grid.with-videos {
+  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'videos videos'
+    'media media';
+}
+
+/* Dynamic grid layout when comments and videos are present */
+.content-grid.with-comments.with-videos {
+  grid-template-rows: 20% 20% 20% 20% 20%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'comments comments'
+    'videos videos'
+    'media media';
+}
+
+/* Dynamic grid layout when images and videos are present */
+.content-grid.with-images.with-videos {
+  grid-template-rows: 16.67% 16.67% 16.67% 16.67% 16.67% 16.67%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'images images'
+    'videos videos'
+    'media media'
+    'media media';
+}
+
+/* Dynamic grid layout when comments, images and videos are present */
+.content-grid.with-comments.with-images.with-videos {
+  grid-template-rows: 14.29% 14.29% 14.29% 14.29% 14.29% 14.29% 14.29%;
+  grid-template-areas:
+    'map info'
+    'elevation elevation'
+    'comments comments'
+    'images images'
+    'videos videos'
+    'media media'
+    'media media';
+}
+
 .map-section {
   grid-area: map;
 }
@@ -1186,6 +1332,50 @@ onUnmounted(() => {
       'elevation'
       'comments'
       'images'
+      'media';
+  }
+
+  .content-grid.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'videos'
+      'media';
+  }
+
+  .content-grid.with-comments.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'comments'
+      'videos'
+      'media';
+  }
+
+  .content-grid.with-images.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'images'
+      'videos'
+      'media';
+  }
+
+  .content-grid.with-comments.with-images.with-videos {
+    grid-template-rows: minmax(300px, auto) auto auto auto auto auto auto auto;
+    grid-template-areas:
+      'map'
+      'info'
+      'elevation'
+      'comments'
+      'images'
+      'videos'
       'media';
   }
 
@@ -1802,11 +1992,109 @@ onUnmounted(() => {
   opacity: 0.8;
 }
 
-/* Responsive adjustments for images */
+/* Videos Gallery Styles */
+.videos-section {
+  grid-area: videos;
+}
+
+.videos-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem;
+}
+
+.video-item {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s ease;
+}
+
+.video-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.video-embed {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+  overflow: hidden;
+}
+
+.video-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.video-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f9fafb;
+  color: #6b7280;
+  text-align: center;
+  padding: 1rem;
+}
+
+.video-placeholder i {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.video-placeholder p {
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+.video-link {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--brand-500);
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.video-link:hover {
+  background: var(--brand-600);
+}
+
+.video-title {
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Responsive adjustments for images and videos */
 @media (max-width: 768px) {
   .images-gallery {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .videos-gallery {
+    grid-template-columns: 1fr;
+    gap: 1rem;
     padding: 0.75rem;
   }
 

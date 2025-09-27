@@ -5467,3 +5467,846 @@ def test_get_track_images_single_image(client, main_module):
     assert data[0]["storage_key"] == "images-segments/single-image.jpg"
     assert data[0]["filename"] == "single.jpg"
     assert data[0]["original_filename"] == "original-single.jpg"
+
+
+# Video endpoint tests
+def test_get_track_videos_success(client, main_module):
+    """Test successful retrieval of track videos."""
+    # Mock database session and track videos
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    mock_video1 = Mock()
+    mock_video1.id = 1
+    mock_video1.track_id = 1
+    mock_video1.video_id = "test-video-1"
+    mock_video1.video_url = "https://youtube.com/watch?v=test1"
+    mock_video1.video_title = "Test Video 1"
+    mock_video1.platform = "youtube"
+    mock_video1.created_at = datetime.now(UTC)
+
+    mock_video2 = Mock()
+    mock_video2.id = 2
+    mock_video2.track_id = 1
+    mock_video2.video_id = "test-video-2"
+    mock_video2.video_url = "https://vimeo.com/123456"
+    mock_video2.video_title = "Test Video 2"
+    mock_video2.platform = "vimeo"
+    mock_video2.created_at = datetime.now(UTC)
+
+    mock_videos = [mock_video1, mock_video2]
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=mock_videos)))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/videos")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+    # Check first video
+    assert data[0]["id"] == 1
+    assert data[0]["track_id"] == 1
+    assert data[0]["video_id"] == "test-video-1"
+    assert data[0]["video_url"] == "https://youtube.com/watch?v=test1"
+    assert data[0]["video_title"] == "Test Video 1"
+    assert data[0]["platform"] == "youtube"
+
+    # Check second video
+    assert data[1]["id"] == 2
+    assert data[1]["track_id"] == 1
+    assert data[1]["video_id"] == "test-video-2"
+    assert data[1]["video_url"] == "https://vimeo.com/123456"
+    assert data[1]["video_title"] == "Test Video 2"
+    assert data[1]["platform"] == "vimeo"
+
+
+def test_get_track_videos_track_not_found(client, main_module):
+    """Test retrieval of videos for non-existent track."""
+    # Mock database session
+    mock_session = AsyncMock()
+    mock_session.execute.return_value = Mock(scalar_one_or_none=Mock(return_value=None))
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/999/videos")
+
+    assert response.status_code == 404
+    data = response.json()
+    assert "Track not found" in data["detail"]
+
+
+def test_get_track_videos_no_videos(client, main_module):
+    """Test retrieval when track has no videos."""
+    # Mock database session
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=[])))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/videos")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 0
+
+
+def test_get_track_videos_database_not_available(client, main_module):
+    """Test retrieval when database is not available."""
+    # Mock SessionLocal to return None
+    main_module.SessionLocal = None
+
+    response = client.get("/api/segments/1/videos")
+
+    assert response.status_code == 500
+    data = response.json()
+    assert "Database not available" in data["detail"]
+
+
+def test_get_track_videos_database_exception(client, main_module):
+    """Test retrieval when database throws an exception."""
+    # Mock database session that throws exception
+    mock_session = AsyncMock()
+    mock_session.execute.side_effect = Exception("Database connection failed")
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/videos")
+
+    assert response.status_code == 500
+    data = response.json()
+    assert "Internal server error" in data["detail"]
+
+
+def test_get_track_videos_invalid_track_id(client):
+    """Test retrieval with invalid track ID."""
+    response = client.get("/api/segments/invalid/videos")
+
+    assert response.status_code == 422  # Validation error for invalid integer
+
+
+def test_get_track_videos_single_video(client, main_module):
+    """Test retrieval of single track video."""
+    # Mock database session and track video
+    mock_session = AsyncMock()
+    mock_track = Mock()
+    mock_track.id = 1
+
+    mock_video = Mock()
+    mock_video.id = 1
+    mock_video.track_id = 1
+    mock_video.video_id = "single-video"
+    mock_video.video_url = "https://youtube.com/watch?v=single"
+    mock_video.video_title = "Single Video"
+    mock_video.platform = "youtube"
+    mock_video.created_at = datetime.now(UTC)
+
+    # Mock database operations
+    mock_session.execute.side_effect = [
+        Mock(scalar_one_or_none=Mock(return_value=mock_track)),
+        Mock(scalars=Mock(return_value=Mock(all=Mock(return_value=[mock_video])))),
+    ]
+
+    # Mock SessionLocal to return an async context manager
+    class MockAsyncContextManager:
+        def __init__(self, session):
+            self.session = session
+
+        async def __aenter__(self):
+            return self.session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
+    main_module.SessionLocal = mock_session_local
+
+    response = client.get("/api/segments/1/videos")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+
+    # Check video data
+    assert data[0]["id"] == 1
+    assert data[0]["track_id"] == 1
+    assert data[0]["video_id"] == "single-video"
+    assert data[0]["video_url"] == "https://youtube.com/watch?v=single"
+    assert data[0]["video_title"] == "Single Video"
+    assert data[0]["platform"] == "youtube"
+
+
+# Note: Video processing in create_segment endpoint is tested indirectly through
+# the video endpoint tests and the existing create_segment tests with images.
+# The video processing logic follows the same pattern as image processing.
+
+
+def test_create_segment_with_video_data(client, tmp_path):
+    """Test create_segment correctly processes video_links data (lines 556-579)."""
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Test with valid video data to cover video processing lines
+        video_data = json.dumps(
+            [
+                {
+                    "url": "https://youtube.com/watch?v=test123",
+                    "platform": "youtube",
+                    "title": "Test Video 1",
+                },
+                {
+                    "url": "https://vimeo.com/123456",
+                    "platform": "vimeo",
+                    "title": "Test Video 2",
+                },
+            ]
+        )
+
+        segment_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Segment With Videos",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "0",
+                "surface_type": "broken-paved-road",
+                "difficulty_level": "2",
+                "commentary_text": "Test video processing",
+                "video_links": video_data,
+                "image_data": "[]",
+            },
+        )
+
+    # Should succeed and process videos
+    assert segment_response.status_code == 200
+    segment_data = segment_response.json()
+    assert segment_data["name"] == "Test Segment With Videos"
+
+
+def test_create_segment_video_data_json_decode_error(client, tmp_path):
+    """Test create_segment handles malformed video_links JSON gracefully."""
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Test with invalid JSON in video_links to cover JSON decode error path
+        segment_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Video JSON Error",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "0",
+                "surface_type": "broken-paved-road",
+                "difficulty_level": "2",
+                "commentary_text": "Test video JSON parsing error",
+                "video_links": "{invalid_json_format",  # Malformed JSON
+                "image_data": "[]",
+            },
+        )
+
+    # Should succeed despite bad JSON in video_links
+    assert segment_response.status_code == 200
+    segment_data = segment_response.json()
+    assert segment_data["name"] == "Test Video JSON Error"
+
+
+def test_create_segment_video_data_with_invalid_structure(client, tmp_path):
+    """Test create_segment handles video_links with invalid structure gracefully."""
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Test with valid JSON but invalid video structure (missing required fields)
+        invalid_video_data = json.dumps(
+            [
+                {
+                    "url": "https://youtube.com/watch?v=test123",
+                    # Missing "platform" field
+                    "title": "Test Video",
+                },
+                {
+                    # Missing "url" field
+                    "platform": "youtube",
+                    "title": "Test Video 2",
+                },
+            ]
+        )
+
+        segment_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Test Video Invalid Structure",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "0",
+                "surface_type": "broken-paved-road",
+                "difficulty_level": "2",
+                "commentary_text": "Test video invalid structure",
+                "video_links": invalid_video_data,
+                "image_data": "[]",
+            },
+        )
+
+    # Should succeed but skip invalid video entries
+    assert segment_response.status_code == 200
+    segment_data = segment_response.json()
+    assert segment_data["name"] == "Test Video Invalid Structure"
+
+
+@mock_aws
+def test_create_segment_with_video_data_database_coverage(
+    client, tmp_path, main_module
+):
+    """Test video processing lines 556-582 in main.py with mock SessionLocal."""
+
+    # Setup S3 like other working tests
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+            <trkpt lat="45.6" lon="-73.5">
+                <ele>105.0</ele>
+                <time>2023-01-01T12:01:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Setup mock database Session to reach video processing lines
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def add(self, obj):
+            # Give track an ID if it's a Track object
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = 1
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        def execute(self, stmt):
+            # Mock result for track query
+            class MockResult:
+                def scalar_one_or_none(self):
+                    # Return a mock track object
+                    class MockTrack:
+                        id = 1
+                        bound_north = 45.6
+                        bound_south = 45.5
+                        bound_east = -73.5
+                        bound_west = -73.6
+                        elevation_gain = 5.0
+                        elevation_loss = 0.0
+                        distance = 100.0
+                        surface_type = "broken-paved-road"
+                        difficulty_level = 2
+                        tire_dry = "slick"
+                        tire_wet = "slick"
+                        track_type = "segment"
+                        name = "Test Track"
+                        commentary_text = "Test commentary"
+                        file_path = "test.gpx"
+                        start_index = 0
+                        end_index = 1
+
+                    return MockTrack()
+
+            return MockResult()
+
+    # Store original SessionLocal and replace with mock
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSessionLocal()
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            # Test with valid video data to cover video processing lines 556-582
+            video_data = json.dumps(
+                [
+                    {
+                        "url": "https://youtube.com/watch?v=test123",
+                        "platform": "youtube",
+                        "title": "Test Video 1",
+                    },
+                    {
+                        "url": "https://vimeo.com/123456",
+                        "platform": "vimeo",
+                        "title": "Test Video 2",
+                    },
+                ]
+            )
+
+            segment_response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Segment With Videos Database",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "1",
+                    "surface_type": "broken-paved-road",
+                    "difficulty_level": "2",
+                    "commentary_text": "Test video processing with database",
+                    "video_links": video_data,
+                    "image_data": "[]",
+                },
+            )
+
+        # Should succeed and process videos
+        assert segment_response.status_code == 200
+        segment_data = segment_response.json()
+        assert segment_data["name"] == "Test Segment With Videos Database"
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_create_segment_video_data_json_decode_error_database_coverage(
+    client, tmp_path, main_module
+):
+    """Test video JSON decode error lines 581-582 in main.py with mock SessionLocal."""
+
+    # Setup S3 like other working tests
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+            <trkpt lat="45.6" lon="-73.5">
+                <ele>105.0</ele>
+                <time>2023-01-01T12:01:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Setup mock database Session to reach video processing lines
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def add(self, obj):
+            # Give track an ID if it's a Track object
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = 1
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        def execute(self, stmt):
+            # Mock result for track query
+            class MockResult:
+                def scalar_one_or_none(self):
+                    # Return a mock track object
+                    class MockTrack:
+                        id = 1
+                        bound_north = 45.6
+                        bound_south = 45.5
+                        bound_east = -73.5
+                        bound_west = -73.6
+                        elevation_gain = 5.0
+                        elevation_loss = 0.0
+                        distance = 100.0
+                        surface_type = "broken-paved-road"
+                        difficulty_level = 2
+                        tire_dry = "slick"
+                        tire_wet = "slick"
+                        track_type = "segment"
+                        name = "Test Track"
+                        commentary_text = "Test commentary"
+                        file_path = "test.gpx"
+                        start_index = 0
+                        end_index = 1
+
+                    return MockTrack()
+
+            return MockResult()
+
+    # Store original SessionLocal and replace with mock
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSessionLocal()
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            # Test with invalid JSON in video_links to cover JSON decode error path
+            segment_response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Video JSON Error Database",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "1",
+                    "surface_type": "broken-paved-road",
+                    "difficulty_level": "2",
+                    "commentary_text": "Test video JSON parsing error with database",
+                    "video_links": "{invalid_json_format",  # Malformed JSON
+                    "image_data": "[]",
+                },
+            )
+
+        # Should succeed despite bad JSON in video_links
+        assert segment_response.status_code == 200
+        segment_data = segment_response.json()
+        assert segment_data["name"] == "Test Video JSON Error Database"
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_create_segment_image_data_json_decode_error_database_coverage(
+    client, tmp_path, main_module
+):
+    """Test image JSON decode error lines 550-551 in main.py with mock SessionLocal."""
+
+    # Setup S3 like other working tests
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+            <trkpt lat="45.6" lon="-73.5">
+                <ele>105.0</ele>
+                <time>2023-01-01T12:01:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Setup mock database Session to reach image processing lines
+    class MockSessionLocal:
+        def __call__(self):
+            return MockSession()
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        def add(self, obj):
+            # Give track an ID if it's a Track object
+            if hasattr(obj, "id") and obj.id is None:
+                obj.id = 1
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        def execute(self, stmt):
+            # Mock result for track query
+            class MockResult:
+                def scalar_one_or_none(self):
+                    # Return a mock track object
+                    class MockTrack:
+                        id = 1
+                        bound_north = 45.6
+                        bound_south = 45.5
+                        bound_east = -73.5
+                        bound_west = -73.6
+                        elevation_gain = 5.0
+                        elevation_loss = 0.0
+                        distance = 100.0
+                        surface_type = "broken-paved-road"
+                        difficulty_level = 2
+                        tire_dry = "slick"
+                        tire_wet = "slick"
+                        track_type = "segment"
+                        name = "Test Track"
+                        commentary_text = "Test commentary"
+                        file_path = "test.gpx"
+                        start_index = 0
+                        end_index = 1
+
+                    return MockTrack()
+
+            return MockResult()
+
+    # Store original SessionLocal and replace with mock
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSessionLocal()
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            # Test with invalid JSON in image_data to cover JSON decode error path
+            segment_response = client.post(
+                "/api/segments",
+                data={
+                    "name": "Test Image JSON Error Database",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "1",
+                    "surface_type": "broken-paved-road",
+                    "difficulty_level": "2",
+                    "commentary_text": "Test image JSON parsing error with database",
+                    "image_data": "{invalid_json_format",  # Malformed JSON
+                    "video_links": "[]",
+                },
+            )
+
+        # Should succeed despite bad JSON in image_data
+        assert segment_response.status_code == 200
+        segment_data = segment_response.json()
+        assert segment_data["name"] == "Test Image JSON Error Database"
+
+    finally:
+        main_module.SessionLocal = original_session_local
