@@ -297,53 +297,67 @@
                 </h3>
               </div>
               <div class="card-content">
-                <div class="videos-gallery">
-                  <div
-                    v-for="video in paginatedVideos"
-                    :key="video.id"
-                    class="video-item"
+                <div class="videos-carousel">
+                  <!-- Carousel Navigation Buttons -->
+                  <button
+                    v-if="canScrollVideosLeft"
+                    @click="scrollVideosLeft"
+                    class="carousel-btn carousel-btn-left"
+                    :title="t('pagination.previous')"
                   >
-                    <div class="video-embed">
-                      <iframe
-                        v-if="video.platform === 'youtube'"
-                        :src="getYouTubeEmbedUrl(video.video_url)"
-                        frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen
-                        class="video-iframe"
-                      ></iframe>
-                      <iframe
-                        v-else-if="video.platform === 'vimeo'"
-                        :src="getVimeoEmbedUrl(video.video_url)"
-                        frameborder="0"
-                        allow="autoplay; fullscreen; picture-in-picture"
-                        allowfullscreen
-                        class="video-iframe"
-                      ></iframe>
-                      <div v-else class="video-placeholder">
-                        <i class="fa-solid fa-video"></i>
-                        <p>{{ video.video_title || 'Video' }}</p>
-                        <a :href="video.video_url" target="_blank" class="video-link">
-                          {{ t('segmentDetail.openVideo') }}
-                        </a>
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+
+                  <button
+                    v-if="canScrollVideosRight"
+                    @click="scrollVideosRight"
+                    class="carousel-btn carousel-btn-right"
+                    :title="t('pagination.next')"
+                  >
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+
+                  <!-- Videos Gallery -->
+                  <div class="videos-gallery">
+                    <div
+                      v-for="video in visibleVideos"
+                      :key="video.id"
+                      class="video-item"
+                    >
+                      <div class="video-embed">
+                        <iframe
+                          v-if="video.platform === 'youtube'"
+                          :src="getYouTubeEmbedUrl(video.video_url)"
+                          frameborder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowfullscreen
+                          class="video-iframe"
+                        ></iframe>
+                        <iframe
+                          v-else-if="video.platform === 'vimeo'"
+                          :src="getVimeoEmbedUrl(video.video_url)"
+                          frameborder="0"
+                          allow="autoplay; fullscreen; picture-in-picture"
+                          allowfullscreen
+                          class="video-iframe"
+                        ></iframe>
+                        <div v-else class="video-placeholder">
+                          <i class="fa-solid fa-video"></i>
+                          <p>{{ video.video_title || 'Video' }}</p>
+                          <a :href="video.video_url" target="_blank" class="video-link">
+                            {{ t('segmentDetail.openVideo') }}
+                          </a>
+                        </div>
                       </div>
-                    </div>
-                    <div v-if="video.video_title" class="video-title">
-                      {{ video.video_title }}
+                      <div v-if="video.video_title" class="video-title">
+                        {{ video.video_title }}
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <!-- Videos Pagination -->
                 <div v-if="totalVideosPages > 1" class="pagination">
-                  <div class="pagination-info">
-                    {{ t('pagination.showing') }}
-                    {{ (currentVideosPage - 1) * videosPerPage + 1 }}-{{
-                      Math.min(currentVideosPage * videosPerPage, trackVideos.length)
-                    }}
-                    {{ t('pagination.of') }} {{ trackVideos.length }}
-                    {{ t('pagination.items') }}
-                  </div>
                   <div class="pagination-controls">
                     <button
                       @click="previousVideosPage"
@@ -485,9 +499,11 @@ const trackPolyline = ref<any>(null)
 
 // Carousel state
 const imagesPerView = ref(4) // Number of images visible at once
-const videosPerPage = 4
+const videosPerPage = ref(3) // Number of videos per page (dynamic)
+const videosPerView = ref(3) // Number of videos visible at once in current page
 const currentImagesStart = ref(0) // Starting index for visible images
 const currentVideosPage = ref(1)
+const currentVideosStart = ref(0) // Starting index for visible videos in current page
 const currentModalImageIndex = ref(0) // Index of currently viewed image in modal
 
 // Current position tracking for cursor sync
@@ -518,10 +534,6 @@ const surfaceImages = {
 const segmentId = computed(() => route.params.id as string)
 
 // Carousel computed properties
-const totalVideosPages = computed(() =>
-  Math.ceil(trackVideos.value.length / videosPerPage)
-)
-
 const visibleImages = computed(() => {
   const end = Math.min(
     currentImagesStart.value + imagesPerView.value,
@@ -530,16 +542,33 @@ const visibleImages = computed(() => {
   return trackImages.value.slice(currentImagesStart.value, end)
 })
 
-const paginatedVideos = computed(() => {
-  const start = (currentVideosPage.value - 1) * videosPerPage
-  const end = start + videosPerPage
-  return trackVideos.value.slice(start, end)
-})
-
 const canScrollImagesLeft = computed(() => currentImagesStart.value > 0)
 const canScrollImagesRight = computed(
   () => currentImagesStart.value + imagesPerView.value < trackImages.value.length
 )
+
+const totalVideosPages = computed(() =>
+  Math.ceil(trackVideos.value.length / videosPerPage.value)
+)
+
+const paginatedVideos = computed(() => {
+  const start = (currentVideosPage.value - 1) * videosPerPage.value
+  const end = start + videosPerPage.value
+  return trackVideos.value.slice(start, end)
+})
+
+const visibleVideos = computed(() => {
+  const end = Math.min(
+    currentVideosStart.value + videosPerView.value,
+    paginatedVideos.value.length
+  )
+  return paginatedVideos.value.slice(currentVideosStart.value, end)
+})
+
+const canScrollVideosLeft = computed(() => currentVideosStart.value > 0)
+const canScrollVideosRight = computed(() => {
+  return currentVideosStart.value + videosPerView.value < paginatedVideos.value.length
+})
 
 const currentModalImage = computed(
   () => trackImages.value[currentModalImageIndex.value]
@@ -1086,18 +1115,36 @@ function scrollImagesRight() {
 function goToVideosPage(page: number) {
   if (page >= 1 && page <= totalVideosPages.value) {
     currentVideosPage.value = page
+    currentVideosStart.value = 0 // Reset to first video in new page
   }
 }
 
 function nextVideosPage() {
   if (currentVideosPage.value < totalVideosPages.value) {
     currentVideosPage.value++
+    currentVideosStart.value = 0 // Reset to first video in new page
   }
 }
 
 function previousVideosPage() {
   if (currentVideosPage.value > 1) {
     currentVideosPage.value--
+    currentVideosStart.value = 0 // Reset to first video in new page
+  }
+}
+
+function scrollVideosLeft() {
+  if (canScrollVideosLeft.value) {
+    currentVideosStart.value = Math.max(0, currentVideosStart.value - 1)
+  }
+}
+
+function scrollVideosRight() {
+  if (canScrollVideosRight.value) {
+    currentVideosStart.value = Math.min(
+      paginatedVideos.value.length - videosPerView.value,
+      currentVideosStart.value + 1
+    )
   }
 }
 
@@ -1190,12 +1237,45 @@ function updateImagesPerView() {
   }
 }
 
+function updateVideosPerView() {
+  // Use a more robust width detection that works in test environments
+  const width = window.innerWidth || 1024 // Default to desktop width in test environments
+
+  if (width <= 620) {
+    videosPerView.value = 1
+    videosPerPage.value = 1 // Match videos per page with videos per view for small screens
+  } else if (width <= 1020) {
+    videosPerView.value = 2
+    videosPerPage.value = 2 // Match videos per page with videos per view for medium screens
+  } else {
+    videosPerView.value = 3
+    videosPerPage.value = 3 // Match videos per page with videos per view for large screens
+  }
+
+  // Reset carousel position if current start is beyond available videos in current page
+  if (currentVideosStart.value + videosPerView.value > paginatedVideos.value.length) {
+    currentVideosStart.value = Math.max(
+      0,
+      paginatedVideos.value.length - videosPerView.value
+    )
+  }
+
+  // Reset to page 1 if current page is beyond available pages with new page size
+  const newTotalPages = Math.ceil(trackVideos.value.length / videosPerPage.value)
+  if (currentVideosPage.value > newTotalPages) {
+    currentVideosPage.value = 1
+    currentVideosStart.value = 0
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   loadSegmentData()
   document.addEventListener('keydown', handleKeydown)
   window.addEventListener('resize', updateImagesPerView)
+  window.addEventListener('resize', updateVideosPerView)
   updateImagesPerView()
+  updateVideosPerView()
 })
 
 onUnmounted(() => {
@@ -1210,6 +1290,7 @@ onUnmounted(() => {
   }
   document.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('resize', updateImagesPerView)
+  window.removeEventListener('resize', updateVideosPerView)
 })
 </script>
 
@@ -2202,17 +2283,29 @@ onUnmounted(() => {
   grid-area: videos;
 }
 
-.videos-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+.videos-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   padding: 1rem;
+}
+
+.videos-gallery {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+  padding: 0 1rem;
 }
 
 .video-item {
   display: flex;
   flex-direction: column;
   border-radius: 8px;
+  flex-shrink: 0;
+  width: 320px; /* Larger width for 3 videos on large screens */
   overflow: hidden;
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -2290,7 +2383,7 @@ onUnmounted(() => {
 }
 
 /* Responsive adjustments for images and videos */
-@media (max-width: 768px) {
+@media (max-width: 1020px) {
   .images-carousel {
     padding: 0.75rem;
   }
@@ -2317,6 +2410,19 @@ onUnmounted(() => {
     right: 0.25rem;
   }
 
+  .videos-carousel {
+    padding: 0.75rem;
+  }
+
+  .videos-gallery {
+    justify-content: space-evenly;
+    padding: 0 0.5rem;
+  }
+
+  .video-item {
+    width: 300px; /* Larger width for 2 videos on medium screens */
+  }
+
   .modal-nav-btn {
     width: 2.5rem;
     height: 2.5rem;
@@ -2339,12 +2445,6 @@ onUnmounted(() => {
     right: 1rem;
   }
 
-  .videos-gallery {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    padding: 0.75rem;
-  }
-
   .image-modal {
     padding: 1rem;
   }
@@ -2364,15 +2464,8 @@ onUnmounted(() => {
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  justify-content: center;
   align-items: center;
-}
-
-.pagination-info {
-  font-size: 0.875rem;
-  color: #6b7280;
-  text-align: center;
 }
 
 .pagination-controls {
@@ -2458,10 +2551,6 @@ onUnmounted(() => {
     gap: 0.75rem;
   }
 
-  .pagination-info {
-    font-size: 0.8rem;
-  }
-
   .pagination-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
@@ -2482,7 +2571,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 620px) {
   .images-gallery {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2494,6 +2583,19 @@ onUnmounted(() => {
 
   .carousel-btn i {
     font-size: 0.625rem;
+  }
+
+  .videos-carousel {
+    padding: 0.5rem;
+  }
+
+  .videos-gallery {
+    justify-content: center;
+    padding: 0 0.25rem;
+  }
+
+  .video-item {
+    width: 280px; /* Full width for 1 video on small screens */
   }
 
   .modal-nav-btn {

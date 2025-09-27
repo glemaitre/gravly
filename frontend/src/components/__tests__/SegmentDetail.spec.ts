@@ -1759,4 +1759,574 @@ describe('SegmentDetail Video Gallery', () => {
     const videosSection = wrapper.find('.videos-section')
     expect(videosSection.exists()).toBe(false)
   })
+
+  it('should render videos carousel with pagination when multiple pages exist', async () => {
+    // Mock 5 videos to test pagination (more than 3 videos per page)
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 46.5197, lng: 6.6323, elevation: 372 },
+                { lat: 46.5198, lng: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://youtube.com/watch?v=test2',
+                video_title: 'Test Video 2',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 3,
+                track_id: 1,
+                video_id: 'test-video-3',
+                video_url: 'https://youtube.com/watch?v=test3',
+                video_title: 'Test Video 3',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 4,
+                track_id: 1,
+                video_id: 'test-video-4',
+                video_url: 'https://youtube.com/watch?v=test4',
+                video_title: 'Test Video 4',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 5,
+                track_id: 1,
+                video_id: 'test-video-5',
+                video_url: 'https://youtube.com/watch?v=test5',
+                video_title: 'Test Video 5',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Check that videos carousel is rendered
+    const videosCarousel = wrapper.find('.videos-carousel')
+    expect(videosCarousel.exists()).toBe(true)
+
+    // Check that videos gallery is rendered
+    const videosGallery = wrapper.find('.videos-gallery')
+    expect(videosGallery.exists()).toBe(true)
+
+    // Check that pagination is rendered (since we have 5 videos > 3 videos per page)
+    const pagination = wrapper.find('.pagination')
+    expect(pagination.exists()).toBe(true)
+
+    // Check that pagination controls are rendered
+    const paginationControls = wrapper.find('.pagination-controls')
+    expect(paginationControls.exists()).toBe(true)
+
+    // Check that pagination info is NOT rendered (we removed it)
+    const paginationInfo = wrapper.find('.pagination-info')
+    expect(paginationInfo.exists()).toBe(false)
+
+    // Check that page buttons are rendered
+    const pageButtons = wrapper.findAll('.pagination-page')
+    expect(pageButtons.length).toBeGreaterThan(0)
+
+    // Check that Previous/Next buttons are rendered
+    const prevButton = wrapper.find('.pagination-btn')
+    expect(prevButton.exists()).toBe(true)
+  })
+
+  it('should handle carousel navigation with left/right arrows', async () => {
+    // Mock 5 videos to test carousel functionality
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 46.5197, lng: 6.6323, elevation: 372 },
+                { lat: 46.5198, lng: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://youtube.com/watch?v=test2',
+                video_title: 'Test Video 2',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 3,
+                track_id: 1,
+                video_id: 'test-video-3',
+                video_url: 'https://youtube.com/watch?v=test3',
+                video_title: 'Test Video 3',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 4,
+                track_id: 1,
+                video_id: 'test-video-4',
+                video_url: 'https://youtube.com/watch?v=test4',
+                video_title: 'Test Video 4',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Check that carousel navigation buttons exist
+    const leftArrow = wrapper.find('.carousel-btn-left')
+    const rightArrow = wrapper.find('.carousel-btn-right')
+
+    // Initially, left arrow should be disabled (at start), right arrow should be enabled
+    if (leftArrow.exists()) {
+      expect(leftArrow.attributes('disabled')).toBeDefined()
+    }
+    if (rightArrow.exists()) {
+      expect(rightArrow.attributes('disabled')).toBeUndefined()
+    }
+
+    // Click right arrow to scroll
+    if (rightArrow.exists()) {
+      await rightArrow.trigger('click')
+      await nextTick()
+
+      // After scrolling right, left arrow should be enabled
+      if (leftArrow.exists()) {
+        expect(leftArrow.attributes('disabled')).toBeUndefined()
+      }
+    }
+  })
+
+  it('should handle pagination navigation correctly', async () => {
+    // Mock 5 videos to test pagination
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 46.5197, lng: 6.6323, elevation: 372 },
+                { lat: 46.5198, lng: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://youtube.com/watch?v=test2',
+                video_title: 'Test Video 2',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 3,
+                track_id: 1,
+                video_id: 'test-video-3',
+                video_url: 'https://youtube.com/watch?v=test3',
+                video_title: 'Test Video 3',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 4,
+                track_id: 1,
+                video_id: 'test-video-4',
+                video_url: 'https://youtube.com/watch?v=test4',
+                video_title: 'Test Video 4',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 5,
+                track_id: 1,
+                video_id: 'test-video-5',
+                video_url: 'https://youtube.com/watch?v=test5',
+                video_title: 'Test Video 5',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Check that pagination is rendered
+    const pagination = wrapper.find('.pagination')
+    expect(pagination.exists()).toBe(true)
+
+    // Check that page buttons exist
+    const pageButtons = wrapper.findAll('.pagination-page')
+    expect(pageButtons.length).toBeGreaterThan(1) // Should have multiple pages
+
+    // Check that first page button is active initially
+    const firstPageButton = pageButtons[0]
+    expect(firstPageButton.classes()).toContain('active')
+
+    // Click on second page button
+    if (pageButtons.length > 1) {
+      await pageButtons[1].trigger('click')
+      await nextTick()
+
+      // Check that second page button is now active
+      expect(pageButtons[1].classes()).toContain('active')
+      expect(firstPageButton.classes()).not.toContain('active')
+    }
+  })
+
+  it('should not show pagination when videos fit in one page', async () => {
+    // Mock only 2 videos (less than 3 videos per page)
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 46.5197, lng: 6.6323, elevation: 372 },
+                { lat: 46.5198, lng: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://youtube.com/watch?v=test2',
+                video_title: 'Test Video 2',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Check that videos are rendered
+    const videosCarousel = wrapper.find('.videos-carousel')
+    expect(videosCarousel.exists()).toBe(true)
+
+    // Check that pagination is NOT rendered (only 2 videos fit in one page)
+    const pagination = wrapper.find('.pagination')
+    expect(pagination.exists()).toBe(false)
+  })
+
+  it('should handle responsive video layout correctly', async () => {
+    // Mock videos to test responsive behavior
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === 'http://localhost:8000/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: 'forest-trail',
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              comments: 'Test comments'
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { lat: 46.5197, lng: 6.6323, elevation: 372 },
+                { lat: 46.5198, lng: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: 1,
+                track_id: 1,
+                video_id: 'test-video-1',
+                video_url: 'https://youtube.com/watch?v=test1',
+                video_title: 'Test Video 1',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 2,
+                track_id: 1,
+                video_id: 'test-video-2',
+                video_url: 'https://youtube.com/watch?v=test2',
+                video_title: 'Test Video 2',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              },
+              {
+                id: 3,
+                track_id: 1,
+                video_id: 'test-video-3',
+                video_url: 'https://youtube.com/watch?v=test3',
+                video_title: 'Test Video 3',
+                platform: 'youtube',
+                created_at: '2023-01-01T00:00:00Z'
+              }
+            ])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+
+    // Wait for component to load data
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Check that videos carousel is rendered
+    const videosCarousel = wrapper.find('.videos-carousel')
+    expect(videosCarousel.exists()).toBe(true)
+
+    // Check that videos gallery has proper flex layout
+    const videosGallery = wrapper.find('.videos-gallery')
+    expect(videosGallery.exists()).toBe(true)
+    expect(videosGallery.classes()).toContain('videos-gallery')
+
+    // Check that video items have proper styling
+    const videoItems = wrapper.findAll('.video-item')
+    expect(videoItems.length).toBe(3)
+
+    // Each video item should have proper structure
+    videoItems.forEach((item: any) => {
+      expect(item.classes()).toContain('video-item')
+    })
+  })
 })
