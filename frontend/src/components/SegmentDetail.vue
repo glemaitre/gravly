@@ -247,23 +247,41 @@
                 </h3>
               </div>
               <div class="card-content">
-                <div class="images-gallery">
-                  <div
-                    v-for="image in trackImages"
-                    :key="image.id"
-                    class="gallery-item"
-                    @click="openImageModal(image)"
+                <div class="images-carousel">
+                  <button
+                    v-if="canScrollImagesLeft"
+                    @click="scrollImagesLeft"
+                    class="carousel-btn carousel-btn-left"
                   >
-                    <img
-                      :src="image.image_url"
-                      :alt="image.original_filename || 'Segment image'"
-                      class="gallery-image"
-                      loading="lazy"
-                    />
-                    <div class="gallery-overlay">
-                      <i class="fa-solid fa-expand"></i>
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+
+                  <div class="images-gallery">
+                    <div
+                      v-for="image in visibleImages"
+                      :key="image.id"
+                      class="gallery-item"
+                      @click="openImageModal(image)"
+                    >
+                      <img
+                        :src="image.image_url"
+                        :alt="image.original_filename || 'Segment image'"
+                        class="gallery-image"
+                        loading="lazy"
+                      />
+                      <div class="gallery-overlay">
+                        <i class="fa-solid fa-expand"></i>
+                      </div>
                     </div>
                   </div>
+
+                  <button
+                    v-if="canScrollImagesRight"
+                    @click="scrollImagesRight"
+                    class="carousel-btn carousel-btn-right"
+                  >
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -280,7 +298,11 @@
               </div>
               <div class="card-content">
                 <div class="videos-gallery">
-                  <div v-for="video in trackVideos" :key="video.id" class="video-item">
+                  <div
+                    v-for="video in paginatedVideos"
+                    :key="video.id"
+                    class="video-item"
+                  >
                     <div class="video-embed">
                       <iframe
                         v-if="video.platform === 'youtube'"
@@ -311,6 +333,51 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- Videos Pagination -->
+                <div v-if="totalVideosPages > 1" class="pagination">
+                  <div class="pagination-info">
+                    {{ t('pagination.showing') }}
+                    {{ (currentVideosPage - 1) * videosPerPage + 1 }}-{{
+                      Math.min(currentVideosPage * videosPerPage, trackVideos.length)
+                    }}
+                    {{ t('pagination.of') }} {{ trackVideos.length }}
+                    {{ t('pagination.items') }}
+                  </div>
+                  <div class="pagination-controls">
+                    <button
+                      @click="previousVideosPage"
+                      :disabled="currentVideosPage === 1"
+                      class="pagination-btn"
+                    >
+                      <i class="fa-solid fa-chevron-left"></i>
+                      {{ t('pagination.previous') }}
+                    </button>
+
+                    <div class="pagination-pages">
+                      <button
+                        v-for="page in totalVideosPages"
+                        :key="page"
+                        @click="goToVideosPage(page)"
+                        :class="[
+                          'pagination-page',
+                          { active: page === currentVideosPage }
+                        ]"
+                      >
+                        {{ page }}
+                      </button>
+                    </div>
+
+                    <button
+                      @click="nextVideosPage"
+                      :disabled="currentVideosPage === totalVideosPages"
+                      class="pagination-btn"
+                    >
+                      {{ t('pagination.next') }}
+                      <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -324,15 +391,30 @@
         <button class="modal-close" @click="closeImageModal">
           <i class="fa-solid fa-times"></i>
         </button>
-        <img
-          :src="selectedImage.image_url"
-          :alt="selectedImage.original_filename || 'Segment image'"
-          class="modal-image"
-        />
-        <div class="modal-info">
-          <p v-if="selectedImage.original_filename" class="image-filename">
-            {{ selectedImage.original_filename }}
-          </p>
+
+        <!-- Modal Navigation -->
+        <button
+          v-if="currentModalImageIndex > 0"
+          @click="previousModalImage"
+          class="modal-nav-btn modal-nav-left"
+        >
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+
+        <button
+          v-if="currentModalImageIndex < trackImages.length - 1"
+          @click="nextModalImage"
+          class="modal-nav-btn modal-nav-right"
+        >
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+
+        <div class="modal-image-container">
+          <img
+            :src="currentModalImage?.image_url"
+            :alt="currentModalImage?.original_filename || 'Segment image'"
+            class="modal-image"
+          />
         </div>
       </div>
     </div>
@@ -401,6 +483,13 @@ const elevationChartRef = ref<HTMLCanvasElement | null>(null)
 const mapMarker = ref<any>(null)
 const trackPolyline = ref<any>(null)
 
+// Carousel state
+const imagesPerView = ref(4) // Number of images visible at once
+const videosPerPage = 4
+const currentImagesStart = ref(0) // Starting index for visible images
+const currentVideosPage = ref(1)
+const currentModalImageIndex = ref(0) // Index of currently viewed image in modal
+
 // Current position tracking for cursor sync
 const currentPosition = ref({
   lat: 0,
@@ -427,6 +516,34 @@ const surfaceImages = {
 
 // Computed properties
 const segmentId = computed(() => route.params.id as string)
+
+// Carousel computed properties
+const totalVideosPages = computed(() =>
+  Math.ceil(trackVideos.value.length / videosPerPage)
+)
+
+const visibleImages = computed(() => {
+  const end = Math.min(
+    currentImagesStart.value + imagesPerView.value,
+    trackImages.value.length
+  )
+  return trackImages.value.slice(currentImagesStart.value, end)
+})
+
+const paginatedVideos = computed(() => {
+  const start = (currentVideosPage.value - 1) * videosPerPage
+  const end = start + videosPerPage
+  return trackVideos.value.slice(start, end)
+})
+
+const canScrollImagesLeft = computed(() => currentImagesStart.value > 0)
+const canScrollImagesRight = computed(
+  () => currentImagesStart.value + imagesPerView.value < trackImages.value.length
+)
+
+const currentModalImage = computed(
+  () => trackImages.value[currentModalImageIndex.value]
+)
 
 // Methods
 function goBack() {
@@ -941,10 +1058,60 @@ function getTrackTypeIcon(trackType: string): string {
 
 function openImageModal(image: any) {
   selectedImage.value = image
+  currentModalImageIndex.value = trackImages.value.findIndex(
+    (img) => img.id === image.id
+  )
 }
 
 function closeImageModal() {
   selectedImage.value = null
+}
+
+// Carousel methods
+function scrollImagesLeft() {
+  if (canScrollImagesLeft.value) {
+    currentImagesStart.value = Math.max(0, currentImagesStart.value - 1)
+  }
+}
+
+function scrollImagesRight() {
+  if (canScrollImagesRight.value) {
+    currentImagesStart.value = Math.min(
+      trackImages.value.length - imagesPerView.value,
+      currentImagesStart.value + 1
+    )
+  }
+}
+
+function goToVideosPage(page: number) {
+  if (page >= 1 && page <= totalVideosPages.value) {
+    currentVideosPage.value = page
+  }
+}
+
+function nextVideosPage() {
+  if (currentVideosPage.value < totalVideosPages.value) {
+    currentVideosPage.value++
+  }
+}
+
+function previousVideosPage() {
+  if (currentVideosPage.value > 1) {
+    currentVideosPage.value--
+  }
+}
+
+// Modal navigation methods
+function previousModalImage() {
+  if (currentModalImageIndex.value > 0) {
+    currentModalImageIndex.value--
+  }
+}
+
+function nextModalImage() {
+  if (currentModalImageIndex.value < trackImages.value.length - 1) {
+    currentModalImageIndex.value++
+  }
 }
 
 // Video helper functions
@@ -987,9 +1154,48 @@ function getVimeoEmbedUrl(url: string): string {
   return url
 }
 
+// Keyboard navigation for modal
+function handleKeydown(event: KeyboardEvent) {
+  if (selectedImage.value) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault()
+      previousModalImage()
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault()
+      nextModalImage()
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      closeImageModal()
+    }
+  }
+}
+
+// Responsive images per view calculation
+function updateImagesPerView() {
+  const width = window.innerWidth
+  if (width <= 480) {
+    imagesPerView.value = 2
+  } else if (width <= 768) {
+    imagesPerView.value = 3
+  } else {
+    imagesPerView.value = 4
+  }
+
+  // Reset to first image if current start is beyond available images
+  if (currentImagesStart.value + imagesPerView.value > trackImages.value.length) {
+    currentImagesStart.value = Math.max(
+      0,
+      trackImages.value.length - imagesPerView.value
+    )
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   loadSegmentData()
+  document.addEventListener('keydown', handleKeydown)
+  window.addEventListener('resize', updateImagesPerView)
+  updateImagesPerView()
 })
 
 onUnmounted(() => {
@@ -1002,6 +1208,8 @@ onUnmounted(() => {
   if (mapMarker.value) {
     mapMarker.value.remove()
   }
+  document.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('resize', updateImagesPerView)
 })
 </script>
 
@@ -1129,6 +1337,7 @@ onUnmounted(() => {
   padding: 1rem;
   box-sizing: border-box;
   overflow-y: auto;
+  margin-bottom: 1rem;
 }
 
 .content-wrapper {
@@ -1764,11 +1973,61 @@ onUnmounted(() => {
   grid-area: images;
 }
 
+.images-carousel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 3.5rem 1rem 3.5rem;
+}
+
 .images-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  padding: 1rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-btn:hover {
+  background: #ffffff;
+  border-color: #ff6600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.carousel-btn i {
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.carousel-btn:hover i {
+  color: #ff6600;
+}
+
+.carousel-btn-left {
+  left: 0.5rem;
+}
+
+.carousel-btn-right {
+  right: 0.5rem;
 }
 
 .gallery-item {
@@ -1841,22 +2100,82 @@ onUnmounted(() => {
   align-items: center;
 }
 
+.modal-image-container {
+  position: relative;
+  overflow: hidden;
+  max-width: 80vw;
+  max-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+}
+
+.modal-nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  border: none;
+  border-radius: 50%;
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 1001;
+  color: white;
+}
+
+.modal-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.modal-nav-btn i {
+  font-size: 1.25rem;
+}
+
+.modal-nav-left {
+  left: 2rem;
+}
+
+.modal-nav-right {
+  right: 2rem;
+}
+
 .modal-close {
-  position: absolute;
-  top: -3rem;
-  right: 0;
-  background: none;
+  position: fixed;
+  top: 5rem;
+  right: 2rem;
+  background: rgba(0, 0, 0, 0.7);
   border: none;
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
-  padding: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   border-radius: 50%;
-  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 1002;
 }
 
 .modal-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.9);
+  transform: scale(1.1);
 }
 
 .modal-image {
@@ -1972,10 +2291,52 @@ onUnmounted(() => {
 
 /* Responsive adjustments for images and videos */
 @media (max-width: 768px) {
-  .images-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 0.75rem;
+  .images-carousel {
     padding: 0.75rem;
+  }
+
+  .images-gallery {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+  }
+
+  .carousel-btn {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .carousel-btn i {
+    font-size: 0.75rem;
+  }
+
+  .carousel-btn-left {
+    left: 0.25rem;
+  }
+
+  .carousel-btn-right {
+    right: 0.25rem;
+  }
+
+  .modal-nav-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .modal-nav-btn i {
+    font-size: 1rem;
+  }
+
+  .modal-image-container {
+    max-width: 85vw;
+    max-height: 75vh;
+  }
+
+  .modal-nav-left {
+    left: 1rem;
+  }
+
+  .modal-nav-right {
+    right: 1rem;
   }
 
   .videos-gallery {
@@ -1989,8 +2350,199 @@ onUnmounted(() => {
   }
 
   .modal-close {
-    top: -2.5rem;
-    font-size: 1.25rem;
+    top: 5rem;
+    right: 0.75rem;
+    width: 2rem;
+    height: 2rem;
+    font-size: 1rem;
+  }
+}
+
+/* Pagination Styles */
+.pagination {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pagination-info {
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-align: center;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9fafb;
+}
+
+.pagination-btn i {
+  font-size: 0.75rem;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pagination-page {
+  min-width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-page:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.pagination-page.active {
+  background: #ff6600;
+  border-color: #ff6600;
+  color: #ffffff;
+}
+
+.pagination-page.active:hover {
+  background: #e55a00;
+  border-color: #e55a00;
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+  .pagination {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    gap: 0.75rem;
+  }
+
+  .pagination-info {
+    font-size: 0.8rem;
+  }
+
+  .pagination-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .pagination-page {
+    min-width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.8rem;
+  }
+
+  .pagination-controls {
+    gap: 0.25rem;
+  }
+
+  .pagination-pages {
+    gap: 0.125rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .images-gallery {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .carousel-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .carousel-btn i {
+    font-size: 0.625rem;
+  }
+
+  .modal-nav-btn {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .modal-nav-btn i {
+    font-size: 0.875rem;
+  }
+
+  .modal-close {
+    top: 5rem;
+    right: 0.5rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.875rem;
+  }
+
+  .modal-image-container {
+    max-width: 90vw;
+    max-height: 70vh;
+  }
+
+  .modal-nav-left {
+    left: 0.5rem;
+  }
+
+  .modal-nav-right {
+    right: 0.5rem;
+  }
+
+  .pagination-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+
+  .pagination-btn span {
+    display: none; /* Hide text on very small screens, keep only icons */
+  }
+
+  .pagination-btn i {
+    margin: 0;
+  }
+
+  .pagination-page {
+    min-width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.75rem;
   }
 }
 </style>

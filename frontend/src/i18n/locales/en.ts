@@ -255,6 +255,16 @@ export default {
     m: 'm'
   },
 
+  // Pagination
+  pagination: {
+    previous: 'Previous',
+    next: 'Next',
+    page: 'Page',
+    of: 'of',
+    showing: 'Showing',
+    items: 'items'
+  },
+
   // Common
   common: {
     close: 'Close',

@@ -257,6 +257,16 @@ export default {
     m: 'm'
   },
 
+  // Pagination
+  pagination: {
+    previous: 'Précédent',
+    next: 'Suivant',
+    page: 'Page',
+    of: 'de',
+    showing: 'Affichage',
+    items: 'éléments'
+  },
+
   // Common
   common: {
     close: 'Fermer',
