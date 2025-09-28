@@ -107,7 +107,7 @@
                 data-testid="update-button"
               >
                 <span class="icon" aria-hidden="true"
-                  ><i class="fa-solid fa-database"></i
+                  ><i class="fa-solid fa-arrows-rotate"></i
                 ></span>
                 <span v-if="!isCompactSidebar" class="text">{{
                   t('menu.updateInDb')
