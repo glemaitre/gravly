@@ -7461,10 +7461,345 @@ def test_update_segment_with_existing_media(
 
 
 @mock_aws
+def test_update_segment_preserve_existing_media(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update preserves existing images and videos when adding new ones."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session to track media operations
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        def __init__(self):
+            self.deleted_images = []
+            self.deleted_videos = []
+            self.added_images = []
+            self.added_videos = []
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    # Return empty list since we're not deleting existing media anymore
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            # Track what would be deleted (should not be called for media)
+            if hasattr(obj, "track_id"):
+                if hasattr(obj, "image_id"):
+                    self.deleted_images.append(obj)
+                elif hasattr(obj, "video_id"):
+                    self.deleted_videos.append(obj)
+
+        def add(self, obj):
+            # Track what gets added
+            if hasattr(obj, "track_id"):
+                if hasattr(obj, "image_id"):
+                    self.added_images.append(obj)
+                elif hasattr(obj, "video_id"):
+                    self.added_videos.append(obj)
+
+    # Create a shared session instance to track operations
+    shared_session = MockSession()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return shared_session
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            # Update segment with new media data
+            image_data = json.dumps(
+                [
+                    {
+                        "image_id": "new_image_1",
+                        "image_url": "https://example.com/new_image1.jpg",
+                        "storage_key": "new_image1_key",
+                        "filename": "new_image1.jpg",
+                        "original_filename": "new_image1.jpg",
+                    }
+                ]
+            )
+
+            video_data = json.dumps(
+                [
+                    {
+                        "id": "new_video_1",
+                        "url": "https://youtube.com/watch?v=new_video_1",
+                        "platform": "youtube",
+                    }
+                ]
+            )
+
+            update_response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "image_data": image_data,
+                    "video_links": video_data,
+                },
+            )
+
+        assert update_response.status_code == 200
+
+        # Verify that no existing media was deleted
+        assert len(shared_session.deleted_images) == 0, (
+            "Existing images should not be deleted"
+        )
+        assert len(shared_session.deleted_videos) == 0, (
+            "Existing videos should not be deleted"
+        )
+
+        # Verify that new media was added
+        assert len(shared_session.added_images) == 1, "New image should be added"
+        assert len(shared_session.added_videos) == 1, "New video should be added"
+
+        # Verify the added media has correct properties
+        added_image = shared_session.added_images[0]
+        assert added_image.track_id == track_id
+        assert added_image.image_id == "new_image_1"
+        assert added_image.image_url == "https://example.com/new_image1.jpg"
+
+        added_video = shared_session.added_videos[0]
+        assert added_video.track_id == track_id
+        assert added_video.video_id == "new_video_1"
+        assert added_video.video_url == "https://youtube.com/watch?v=new_video_1"
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_old_file_deletion_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when old file deletion fails but update still succeeds."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = (
+                "s3://test-bucket/gpx-segments/old_file.gpx"  # Valid storage path
+            )
+
+    class MockSession:
+        def __init__(self):
+            self.session_id = 0
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            # Mock storage manager to simulate deletion failure
+            with patch("src.main.storage_manager") as mock_storage:
+                mock_storage.get_storage_root_prefix.return_value = "s3://test-bucket"
+                mock_storage.delete_gpx_segment.return_value = (
+                    False  # Simulate deletion failure
+                )
+
+                # Update segment
+                update_response = client.put(
+                    f"/api/segments/{track_id}",
+                    data={
+                        "name": "Updated Segment",
+                        "track_type": "segment",
+                        "tire_dry": "slick",
+                        "tire_wet": "semi-slick",
+                        "file_id": file_id,
+                        "start_index": "10",
+                        "end_index": "80",
+                        "surface_type": "forest-trail",
+                        "difficulty_level": "3",
+                        "commentary_text": "Updated commentary",
+                        "video_links": "[]",
+                    },
+                )
+
+        # Should still succeed even if old file deletion fails
+        assert update_response.status_code == 200
+
+        # Verify that delete_gpx_segment was called
+        mock_storage.delete_gpx_segment.assert_called_once_with(
+            "gpx-segments/old_file.gpx"
+        )
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
 def test_update_segment_old_file_cleanup_with_prefix(
     client, sample_gpx_file, tmp_path, main_module
 ):
-    """Test segment update with old file cleanup when file path matches storage prefix."""
+    """Test segment update with old file cleanup when file path matches storage
+    prefix."""
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
 
@@ -7836,7 +8171,8 @@ def test_update_segment_database_error_cleanup_failure(
 def test_update_segment_track_not_found_in_second_session(
     client, sample_gpx_file, tmp_path, main_module
 ):
-    """Test update_segment when track is not found in the second database session (lines 1220-1221)."""
+    """Test update_segment when track is not found in the second database session
+    (lines 1220-1221)."""
     s3_client = boto3.client("s3", region_name="us-east-1")
     s3_client.create_bucket(Bucket="test-bucket")
 
@@ -7897,7 +8233,8 @@ def test_update_segment_track_not_found_in_second_session(
 
             class MockResult:
                 def scalar_one_or_none(self):
-                    # First session (session_id=0) returns track, second session (session_id=1) returns None
+                    # First session (session_id=0) returns track, second session
+                    # (session_id=1) returns None
                     if session_id == 0:
                         return MockTrack()
                     else:
@@ -7967,7 +8304,8 @@ def test_update_segment_track_not_found_in_second_session(
                 },
             )
 
-        # Should return 500 because the exception is caught by the general exception handler
+        # Should return 500 because the exception is caught by the general exception
+        # handler
         assert response.status_code == 500
         assert "Failed to update segment" in response.json()["detail"]
 

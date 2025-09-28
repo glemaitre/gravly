@@ -1243,26 +1243,12 @@ async def update_segment(
             await session.commit()
             await session.refresh(track)
 
-            # Process image data and update TrackImage records
+            # Process image data and add new TrackImage records (preserve existing)
             try:
                 image_data_list = json.loads(image_data) if image_data else []
                 video_links_list = json.loads(video_links) if video_links else []
 
-                # Clear existing images and videos
-                # (cascade should handle this, but let's be explicit)
-                existing_images = await session.execute(
-                    select(TrackImage).filter(TrackImage.track_id == track_id)
-                )
-                for image in existing_images.scalars():
-                    await session.delete(image)
-
-                existing_videos = await session.execute(
-                    select(TrackVideo).filter(TrackVideo.track_id == track_id)
-                )
-                for video in existing_videos.scalars():
-                    await session.delete(video)
-
-                # Add new images
+                # Add new images (preserve existing ones)
                 for img_data in image_data_list:
                     track_image = TrackImage(
                         track_id=track.id,
@@ -1274,7 +1260,7 @@ async def update_segment(
                     )
                     session.add(track_image)
 
-                # Add new videos
+                # Add new videos (preserve existing ones)
                 for video_data in video_links_list:
                     track_video = TrackVideo(
                         track_id=track.id,
