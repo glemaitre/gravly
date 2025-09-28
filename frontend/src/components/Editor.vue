@@ -113,6 +113,27 @@
                   t('menu.updateInDb')
                 }}</span>
               </li>
+              <li
+                class="menu-item action danger"
+                :class="{ disabled: isDeleteDisabled }"
+                :aria-disabled="isDeleteDisabled"
+                :title="
+                  isCompactSidebar
+                    ? t('menu.deleteFromDb')
+                    : isDeleteDisabled
+                      ? deleteDisabledTitle
+                      : t('menu.deleteFromDb')
+                "
+                @click="!isDeleteDisabled && onDeleteFromDb()"
+                data-testid="delete-from-db-button"
+              >
+                <span class="icon" aria-hidden="true"
+                  ><i class="fa-solid fa-trash"></i
+                ></span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.deleteFromDb')
+                }}</span>
+              </li>
             </ul>
           </div>
 
@@ -918,6 +939,17 @@ const saveDisabledTitle = computed(() => {
 const updateDisabledTitle = computed(() => {
   if (!loaded.value) return t('tooltip.loadGpxFirst')
   if (!name.value) return t('tooltip.enterSegmentName')
+  if (submitting.value) return t('tooltip.submitting')
+  if (!isUpdateMode.value) return t('tooltip.loadFromDatabase')
+  return ''
+})
+
+const isDeleteDisabled = computed(
+  () => submitting.value || !loaded.value || !isUpdateMode.value
+)
+
+const deleteDisabledTitle = computed(() => {
+  if (!loaded.value) return t('tooltip.loadGpxFirst')
   if (submitting.value) return t('tooltip.submitting')
   if (!isUpdateMode.value) return t('tooltip.loadFromDatabase')
   return ''
@@ -2331,6 +2363,107 @@ async function onUpdate() {
   }
 }
 
+async function onDeleteFromDb() {
+  if (
+    !loaded.value ||
+    !isUpdateMode.value ||
+    !updatingSegmentId.value
+  ) {
+    console.error(
+      `Delete validation failed: ${!loaded.value ? 'not loaded' : !isUpdateMode.value ? 'not in update mode' : 'no updatingSegmentId'}`
+    )
+
+    showError.value = true
+    currentErrorMessage.value = t('message.loadGpxFirst')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+    return
+  }
+
+  // Show confirmation dialog
+  const confirmed = confirm(
+    t('message.confirmDelete', { name: name.value })
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  submitting.value = true
+  showError.value = false
+  currentErrorMessage.value = ''
+  message.value = ''
+
+  try {
+    const response = await fetch(`/api/segments/${updatingSegmentId.value}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(error || 'Failed to delete segment')
+    }
+
+    const result = await response.json()
+    console.info('Segment deleted successfully:', result)
+
+    // Reset the editor state
+    loaded.value = false
+    name.value = ''
+    points.value = []
+    cumulativeKm.value = []
+    cumulativeSec.value = []
+    startIndex.value = 0
+    endIndex.value = 0
+    uploadedFileId.value = null
+    trailConditions.value = {
+      tire_dry: 'slick',
+      tire_wet: 'slick',
+      surface_type: 'forest-trail',
+      difficulty_level: 3
+    }
+    commentary.value = { text: '', video_links: [], images: [] }
+
+    // Reset update mode
+    resetUpdateMode()
+
+    // Clear map and chart
+    if (map) {
+      map.remove()
+      map = null
+    }
+    if (chart) {
+      chart.destroy()
+      chart = null
+    }
+
+    // Show success message
+    showSegmentSuccess.value = true
+    showError.value = false
+    currentErrorMessage.value = ''
+    showUploadSuccess.value = false
+
+    // Hide success message after 3 seconds
+    setTimeout(() => {
+      showSegmentSuccess.value = false
+    }, 3000)
+
+  } catch (err: any) {
+    showError.value = true
+    currentErrorMessage.value = err.message || t('message.deleteError')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      showError.value = false
+      currentErrorMessage.value = ''
+    }, 5000)
+  } finally {
+    submitting.value = false
+  }
+}
+
 // Function to reset update mode (called when loading new files)
 function resetUpdateMode() {
   isUpdateMode.value = false
@@ -2559,6 +2692,28 @@ ${points.value
 }
 .menu-item.active:hover {
   background: var(--brand-100);
+}
+
+.menu-item.danger {
+  color: #dc2626;
+}
+
+.menu-item.danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.menu-item.danger:active {
+  background: #fee2e2;
+}
+
+.menu-item.danger.disabled {
+  color: #9ca3af;
+}
+
+.menu-item.danger.disabled:hover {
+  background: transparent;
+  color: #9ca3af;
 }
 
 /* Import Dropdown Styles */

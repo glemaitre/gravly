@@ -9,6 +9,7 @@ export default {
     importSegmentTooltip: 'Import segment from database',
     saveAsNew: 'Save as New',
     updateInDb: 'Update in DB',
+    deleteFromDb: 'Delete from DB',
     infoFeed: 'Information feed',
     collapseSidebar: 'Collapse sidebar',
     expandSidebar: 'Expand sidebar'
@@ -98,6 +99,8 @@ export default {
     segmentCreated: 'Segment created successfully',
     createError: 'Error while creating segment',
     updateError: 'Error while updating segment',
+    deleteError: 'Error while deleting segment',
+    confirmDelete: 'Are you sure you want to delete "{name}"? This action cannot be undone.',
     uploading: 'Uploading GPX file...',
     uploadError: 'Error uploading GPX file',
     uploadSuccess: 'GPX file uploaded successfully',

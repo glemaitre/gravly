@@ -9,6 +9,7 @@ export default {
     importSegmentTooltip: 'Importer un segment depuis la base de données',
     saveAsNew: 'Sauvegarder comme nouveau',
     updateInDb: 'Mettre à jour en BD',
+    deleteFromDb: 'Supprimer de la BD',
     infoFeed: "Flux d'informations",
     collapseSidebar: 'Réduire la barre latérale',
     expandSidebar: 'Développer la barre latérale'
@@ -99,6 +100,8 @@ export default {
     segmentCreated: 'Segment créé avec succès',
     createError: 'Erreur lors de la création du segment',
     updateError: 'Erreur lors de la mise à jour du segment',
+    deleteError: 'Erreur lors de la suppression du segment',
+    confirmDelete: 'Êtes-vous sûr de vouloir supprimer "{name}" ? Cette action ne peut pas être annulée.',
     uploading: 'Téléchargement du fichier GPX...',
     uploadError: 'Erreur lors du téléchargement du fichier GPX',
     uploadSuccess: 'Fichier GPX téléchargé avec succès',

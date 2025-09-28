@@ -8311,3 +8311,140 @@ def test_update_segment_track_not_found_in_second_session(
 
     finally:
         main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
+    """Test successful deletion of a segment with associated files."""
+
+    # Mock a session that returns a track
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.images = []
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+        async def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    # Mock the session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = lambda: MockSession()
+
+    try:
+        # Mock storage manager to track delete calls
+        with patch("src.main.storage_manager") as mock_storage:
+            mock_storage.delete_gpx_segment.return_value = True
+            mock_storage.delete_image.return_value = True
+
+            # Delete the segment
+            response = client.delete("/api/segments/123")
+
+            # Should succeed
+            assert response.status_code == 200
+            response_data = response.json()
+            assert response_data["message"] == "Track deleted successfully"
+            assert "deleted_track" in response_data
+            assert response_data["deleted_track"]["id"] == 123
+
+            # Verify that storage cleanup was called
+            mock_storage.delete_gpx_segment.assert_called_once()
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_not_found(client):
+    """Test deletion of a non-existent segment."""
+    response = client.delete("/api/segments/99999")
+
+    assert response.status_code == 404
+    assert "Track not found" in response.json()["detail"]
+
+
+def test_delete_segment_database_error(client, sample_gpx_file, tmp_path, main_module):
+    """Test deletion when database operation fails."""
+
+    # Mock a session that raises an exception
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            raise Exception("Database error")
+
+        async def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    # Mock the session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = lambda: MockSession()
+
+    try:
+        # Delete the segment
+        response = client.delete("/api/segments/123")
+
+        # Should return 500
+        assert response.status_code == 500
+        assert "Failed to delete track" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_no_database(client, main_module):
+    """Test deletion when database is not available."""
+    # Mock no database
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = None
+
+    try:
+        response = client.delete("/api/segments/1")
+
+        assert response.status_code == 500
+        assert "Database not available" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_no_storage_manager(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test deletion when storage manager is not available."""
+    # Mock no storage manager
+    original_storage_manager = main_module.storage_manager
+    main_module.storage_manager = None
+
+    try:
+        response = client.delete("/api/segments/123")
+
+        assert response.status_code == 500
+        assert "Storage manager not initialized" in response.json()["detail"]
+
+    finally:
+        main_module.storage_manager = original_storage_manager

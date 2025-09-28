@@ -1328,6 +1328,100 @@ async def update_segment(
         )
 
 
+@app.delete("/api/segments/{track_id}")
+async def delete_segment(track_id: int):
+    """Delete a track and all associated files from storage and database.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to delete
+
+    Returns
+    -------
+    dict
+        Success message with deleted track information
+    """
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    global storage_manager
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
+
+    try:
+        async with SessionLocal() as session:
+            # First, get the track and its associated files
+            stmt = select(Track).filter(Track.id == track_id)
+            result = await session.execute(stmt)
+            track = result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            # Get associated images and videos for storage cleanup
+            images = track.images
+            videos = track.videos
+
+            # Delete files from storage before database deletion
+            # Delete GPX file
+            try:
+                if track.file_path:
+                    # Extract storage key from file_path (remove storage prefix)
+                    if track.file_path.startswith("local:///"):
+                        storage_key = track.file_path[9:]  # Remove "local:///"
+                    elif track.file_path.startswith("s3://"):
+                        # Extract key from s3://bucket/key format
+                        storage_key = track.file_path.split("/", 3)[
+                            -1
+                        ]  # Get everything after bucket/
+                    else:
+                        storage_key = track.file_path
+
+                    logger.info(f"Deleting GPX file from storage: {storage_key}")
+                    storage_manager.delete_gpx_segment(storage_key)
+            except Exception as e:
+                logger.warning(f"Failed to delete GPX file from storage: {str(e)}")
+
+            # Delete associated images from storage
+            for image in images:
+                try:
+                    logger.info(f"Deleting image from storage: {image.storage_key}")
+                    storage_manager.delete_image(image.storage_key)
+                except Exception as e:
+                    logger.warning(f"Failed to delete image from storage: {str(e)}")
+
+            # Note: Videos are just URLs, no files to delete from storage
+
+            # Store track info for response before deletion
+            track_info = {
+                "id": track.id,
+                "name": track.name,
+                "file_path": track.file_path,
+                "images_count": len(images),
+                "videos_count": len(videos),
+            }
+
+            # Delete the track (cascade will handle images and videos in DB)
+            await session.delete(track)
+            await session.commit()
+
+            logger.info(
+                f"Successfully deleted track {track_id} and all associated files"
+            )
+            return {
+                "message": "Track deleted successfully",
+                "deleted_track": track_info,
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting track {track_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete track: {str(e)}")
+
+
 # Strava API endpoints
 @app.get("/api/strava/auth-url")
 async def get_strava_auth_url(state: str = "strava_auth"):

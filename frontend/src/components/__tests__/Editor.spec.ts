@@ -2224,4 +2224,262 @@ describe('Editor Image Upload', () => {
       expect(vm.showSegmentSuccess).toBe(false)
     })
   })
+
+  describe('Delete from DB functionality', () => {
+    let wrapper: any
+    let vm: any
+
+    beforeEach(() => {
+      wrapper = mountEditor()
+      vm = wrapper.vm as any
+
+      // Set up a loaded track in update mode
+      vm.loaded = true
+      vm.isUpdateMode = true
+      vm.updatingSegmentId = 123
+      vm.name = 'Test Segment'
+      vm.points = [
+        { latitude: 45.0, longitude: 4.0, elevation: 100 },
+        { latitude: 45.1, longitude: 4.1, elevation: 110 }
+      ]
+      vm.cumulativeKm = [0, 1.0]
+      vm.cumulativeSec = [0, 60]
+      vm.uploadedFileId = 'test-file-id'
+      vm.trailConditions = {
+        tire_dry: 'slick',
+        tire_wet: 'semi-slick',
+        surface_type: 'forest-trail',
+        difficulty_level: 3
+      }
+      vm.commentary = { text: 'Test commentary', video_links: [], images: [] }
+
+      // Mock window.confirm globally
+      global.confirm = vi.fn(() => true)
+      // Also mock window.confirm
+      window.confirm = vi.fn(() => true)
+    })
+
+    it('should render delete button when in update mode', async () => {
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.exists()).toBe(true)
+      // In compact mode, the text is hidden, so check the title instead
+      expect(deleteButton.attributes('title')).toContain('Delete from DB')
+    })
+
+    it('should disable delete button when not in update mode', async () => {
+      vm.isUpdateMode = false
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.classes()).toContain('disabled')
+      expect(deleteButton.attributes('aria-disabled')).toBe('true')
+    })
+
+    it('should disable delete button when not loaded', async () => {
+      vm.loaded = false
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.classes()).toContain('disabled')
+      expect(deleteButton.attributes('aria-disabled')).toBe('true')
+    })
+
+    it('should disable delete button when submitting', async () => {
+      vm.submitting = true
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.classes()).toContain('disabled')
+      expect(deleteButton.attributes('aria-disabled')).toBe('true')
+    })
+
+    it('should have correct danger styling', async () => {
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.classes()).toContain('danger')
+    })
+
+    it('should call onDeleteFromDb when clicked and enabled', async () => {
+      const onDeleteFromDbSpy = vi.spyOn(vm, 'onDeleteFromDb')
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      await deleteButton.trigger('click')
+
+      expect(onDeleteFromDbSpy).toHaveBeenCalled()
+    })
+
+    it('should not call onDeleteFromDb when disabled', async () => {
+      vm.isUpdateMode = false
+      await nextTick()
+
+      const onDeleteFromDbSpy = vi.spyOn(vm, 'onDeleteFromDb')
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      await deleteButton.trigger('click')
+
+      expect(onDeleteFromDbSpy).not.toHaveBeenCalled()
+    })
+
+    it('should validate delete conditions correctly', async () => {
+      // Test with valid conditions
+      expect(vm.isDeleteDisabled).toBe(false)
+
+      // Test with invalid conditions
+      vm.loaded = false
+      expect(vm.isDeleteDisabled).toBe(true)
+
+      vm.loaded = true
+      vm.isUpdateMode = false
+      expect(vm.isDeleteDisabled).toBe(true)
+
+      vm.isUpdateMode = true
+      vm.submitting = true
+      expect(vm.isDeleteDisabled).toBe(true)
+    })
+
+    it('should show correct tooltip when disabled', async () => {
+      // Ensure we're not in compact sidebar mode
+      vm.isCompactSidebar = false
+
+      // Test when not loaded
+      vm.loaded = false
+      vm.isUpdateMode = false
+      await nextTick()
+
+      const deleteButton = wrapper.find('[data-testid="delete-from-db-button"]')
+      expect(deleteButton.attributes('title')).toContain('Load a GPX first')
+
+      // Test when loaded but not in update mode
+      vm.loaded = true
+      vm.isUpdateMode = false
+      await nextTick()
+
+      expect(deleteButton.attributes('title')).toContain('Load a segment from database to enable update')
+    })
+
+    it('should have onDeleteFromDb function', () => {
+      expect(typeof vm.onDeleteFromDb).toBe('function')
+    })
+
+    it('should handle delete API call successfully', async () => {
+      // Mock successful delete response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          message: 'Track deleted successfully',
+          deleted_track: {
+            id: 123,
+            name: 'Test Segment',
+            images_count: 0,
+            videos_count: 0
+          }
+        })
+      })
+
+      // Ensure confirm returns true
+      global.confirm = vi.fn(() => true)
+      window.confirm = vi.fn(() => true)
+
+      // Ensure fetch is properly mocked
+      global.fetch = mockFetch
+      window.fetch = mockFetch
+
+      await vm.onDeleteFromDb()
+
+      expect(mockFetch).toHaveBeenCalledWith('/api/segments/123', {
+        method: 'DELETE'
+      })
+      expect(vm.loaded).toBe(false)
+      expect(vm.name).toBe('')
+      expect(vm.points).toEqual([])
+      expect(vm.isUpdateMode).toBe(false)
+      expect(vm.updatingSegmentId).toBe(null)
+    })
+
+    it('should handle delete API call failure', async () => {
+      // Mock failed delete response
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        text: () => Promise.resolve('Track not found')
+      })
+
+      // Ensure confirm returns true
+      global.confirm = vi.fn(() => true)
+      window.confirm = vi.fn(() => true)
+
+      // Ensure fetch is properly mocked
+      global.fetch = mockFetch
+      window.fetch = mockFetch
+
+      await vm.onDeleteFromDb()
+
+      expect(vm.showError).toBe(true)
+      expect(vm.currentErrorMessage).toBe('Track not found')
+    })
+
+    it('should not proceed with delete if user cancels confirmation', async () => {
+      // Mock cancel confirmation
+      global.confirm = vi.fn(() => false)
+      window.confirm = vi.fn(() => false)
+
+      await vm.onDeleteFromDb()
+
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(vm.loaded).toBe(true) // Should remain unchanged
+    })
+
+    it('should validate delete conditions before proceeding', async () => {
+      // Test with invalid conditions
+      vm.loaded = false
+
+      await vm.onDeleteFromDb()
+
+      expect(mockFetch).not.toHaveBeenCalled()
+      expect(vm.showError).toBe(true)
+      expect(vm.currentErrorMessage).toContain('Load a GPX first')
+    })
+
+    it('should reset editor state after successful delete', async () => {
+      // Mock successful delete response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          message: 'Track deleted successfully',
+          deleted_track: { id: 123, name: 'Test Segment' }
+        })
+      })
+
+      // Ensure confirm returns true
+      global.confirm = vi.fn(() => true)
+      window.confirm = vi.fn(() => true)
+
+      // Ensure fetch is properly mocked
+      global.fetch = mockFetch
+      window.fetch = mockFetch
+
+      await vm.onDeleteFromDb()
+
+      // Verify all state is reset
+      expect(vm.loaded).toBe(false)
+      expect(vm.name).toBe('')
+      expect(vm.points).toEqual([])
+      expect(vm.cumulativeKm).toEqual([])
+      expect(vm.cumulativeSec).toEqual([])
+      expect(vm.startIndex).toBe(0)
+      expect(vm.endIndex).toBe(0)
+      expect(vm.uploadedFileId).toBe(null)
+      expect(vm.trailConditions).toEqual({
+        tire_dry: 'slick',
+        tire_wet: 'slick',
+        surface_type: 'forest-trail',
+        difficulty_level: 3
+      })
+      expect(vm.commentary).toEqual({ text: '', video_links: [], images: [] })
+      expect(vm.isUpdateMode).toBe(false)
+      expect(vm.updatingSegmentId).toBe(null)
+    })
+  })
 })
