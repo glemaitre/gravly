@@ -39,6 +39,23 @@
                   t('menu.stravaImport')
                 }}</span>
               </li>
+              <li
+                class="menu-item"
+                @click="openSegmentImport"
+                :title="
+                  isCompactSidebar
+                    ? t('menu.importSegment')
+                    : t('menu.importSegmentTooltip')
+                "
+                role="button"
+              >
+                <span class="icon" aria-hidden="true"
+                  ><i class="fa-solid fa-database"></i
+                ></span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.importSegment')
+                }}</span>
+              </li>
             </ul>
             <input
               ref="fileInput"
@@ -729,6 +746,13 @@
         <StravaActivityList @close="closeStravaModal" @import="handleStravaImport" />
       </div>
     </div>
+
+    <!-- Segment Import Modal -->
+    <SegmentImportModal
+      :is-open="showSegmentImportModal"
+      @close="closeSegmentImportModal"
+      @import="handleSegmentImport"
+    />
   </div>
 </template>
 
@@ -737,6 +761,8 @@ import { onMounted, onUnmounted, ref, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import StravaActivityList from './StravaActivityList.vue'
+import SegmentImportModal from './SegmentImportModal.vue'
+import { parseGPXData } from '../utils/gpxParser'
 import {
   Chart,
   LineController,
@@ -829,6 +855,9 @@ const isSidebarCollapsed = ref(false)
 // Strava integration
 // Strava authentication is now handled by the navbar and route guards
 const showStravaModal = ref(false)
+
+// Segment import modal
+const showSegmentImportModal = ref(false)
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -1840,6 +1869,15 @@ function closeStravaModal() {
   showStravaModal.value = false
 }
 
+// Segment import modal functions
+function openSegmentImport() {
+  showSegmentImportModal.value = true
+}
+
+function closeSegmentImportModal() {
+  showSegmentImportModal.value = false
+}
+
 async function handleStravaImport(gpxData: any) {
   try {
     console.info(
@@ -1902,6 +1940,84 @@ async function handleStravaImport(gpxData: any) {
     console.error('Error importing Strava activity:', error)
     showError.value = true
     currentErrorMessage.value = t('strava.importError')
+  }
+}
+
+async function handleSegmentImport(segment: any) {
+  try {
+    console.info(`Importing segment: ${segment.name} (ID: ${segment.id})`)
+
+    // Fetch GPX data for the segment
+    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    if (!response.ok) {
+      throw new Error(`Failed to fetch GPX data: ${response.statusText}`)
+    }
+
+    const gpxResponse = await response.json()
+
+    // Parse GPX data similar to file upload
+    const gpxData = parseGPXData(gpxResponse.gpx_xml_data, segment.id.toString())
+
+    if (!gpxData || !gpxData.points || gpxData.points.length < 2) {
+      throw new Error('Invalid GPX data or insufficient points')
+    }
+
+    // Use the same logic as file upload but with GPX data from database
+    const actualPoints: TrackPoint[] = gpxData.points.map((p: any) => ({
+      latitude: p.latitude,
+      longitude: p.longitude,
+      elevation: p.elevation,
+      time: p.time
+    }))
+
+    // Process the data the same way as regular file upload
+    points.value = actualPoints
+    cumulativeKm.value = computeCumulativeKm(actualPoints)
+    cumulativeSec.value = computeCumulativeSec(actualPoints)
+    smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
+    startIndex.value = 0
+    endIndex.value = actualPoints.length - 1
+
+    console.info(`Data processing complete: ${actualPoints.length} points processed`)
+
+    if (actualPoints.length < 2) {
+      console.error(`❌ Insufficient points: ${actualPoints.length}`)
+      showError.value = true
+      currentErrorMessage.value = t('message.insufficientPoints')
+      showUploadSuccess.value = false
+      showSegmentSuccess.value = false
+      return
+    }
+
+    // Set additional data
+    loaded.value = true
+    name.value = segment.name
+
+    // Set uploadedFileId for database imports using the segment ID
+    uploadedFileId.value = `db-segment-${segment.id}`
+
+    console.info(`Editor state updated: ${points.value.length} points loaded`)
+
+    // Clear any previous errors
+    showError.value = false
+    currentErrorMessage.value = ''
+    message.value = ''
+    showUploadSuccess.value = true
+    showSegmentSuccess.value = false
+
+    console.info(`Segment import successful`)
+
+    // Close the modal
+    closeSegmentImportModal()
+
+    // Update the map and chart
+    await nextTick()
+    renderMap()
+    renderChart()
+  } catch (error) {
+    console.error('Error importing segment:', error)
+    showError.value = true
+    currentErrorMessage.value = t('message.importError') || 'Failed to import segment'
   }
 }
 
@@ -2193,6 +2309,74 @@ async function onSubmit() {
 }
 .menu-item.active:hover {
   background: var(--brand-100);
+}
+
+/* Import Dropdown Styles */
+.menu-item.dropdown-trigger {
+  position: relative;
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+  font-size: 0.75rem;
+  transition: transform 0.2s ease;
+  opacity: 0.7;
+}
+
+.dropdown-arrow .fa-chevron-down.rotated {
+  transform: rotate(180deg);
+}
+
+.import-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-top: 4px;
+}
+
+.dropdown-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.6rem 0.4rem 0.75rem;
+  margin: 0.1rem 0.35rem;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #111827;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item:active {
+  background: #e5e7eb;
+}
+
+.dropdown-item .icon {
+  width: 20px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.dropdown-item .text {
+  font-size: 0.8rem;
 }
 
 /* Compact sidebar styles */

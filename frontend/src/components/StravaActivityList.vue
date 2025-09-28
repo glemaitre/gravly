@@ -1,7 +1,10 @@
 <template>
   <div class="strava-activity-list">
     <div class="header">
-      <h3>{{ t('strava.activities') }}</h3>
+      <h3 class="modal-title">
+        <i class="fa-brands fa-strava"></i>
+        {{ t('strava.activities') }}
+      </h3>
       <div class="header-actions">
         <button
           @click="refreshActivities"
@@ -457,11 +460,19 @@ defineExpose({
   background: #f9fafb;
 }
 
-.header h3 {
+.header h3,
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   margin: 0;
-  color: #1f2937;
-  font-size: 1.125rem;
+  font-size: 1.5rem;
   font-weight: 600;
+  color: #111827;
+}
+
+.modal-title i {
+  color: var(--brand-500);
 }
 
 .header-actions {
@@ -520,14 +531,15 @@ defineExpose({
 }
 
 .activity-card:hover {
-  border-color: #3b82f6;
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+  border-color: #ff6b35;
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  transform: translateY(-2px);
 }
 
 .activity-card.selected {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  border-color: #ff6b35;
+  background: linear-gradient(135deg, #fff 0%, #fff8f5 100%);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
 .activity-preview {

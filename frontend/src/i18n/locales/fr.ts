@@ -5,6 +5,8 @@ export default {
     segments: 'Piste',
     gpxFile: 'Fichier GPX',
     stravaImport: 'Strava',
+    importSegment: 'Base de données',
+    importSegmentTooltip: 'Importer un segment depuis la base de données',
     saveInDb: 'Sauvegarder en BD',
     infoFeed: "Flux d'informations",
     collapseSidebar: 'Réduire la barre latérale',
@@ -65,6 +67,7 @@ export default {
     dryHelp: "Utiliser par temps clair et sec où l'adhérence est élevée.",
     wetHelp: 'Utiliser par temps de pluie, boue ou faible adhérence.',
     slick: 'lisse',
+    'semi-slick': 'semi-lisse',
     semiSlick: 'semi-lisse',
     knobs: 'crampons'
   },
@@ -199,7 +202,7 @@ export default {
     noRoutes: 'Aucun itinéraire de vélo trouvé',
     importRoute: "Importer l'itinéraire",
     selectRoute: 'Sélectionnez un itinéraire à importer',
-    activities: 'Vos Activités',
+    activities: 'Vos Activités Strava',
     loadingActivities: 'Chargement des activités...',
     noActivities: 'Aucune activité de vélo trouvée',
     loadMore: 'Charger plus',
@@ -214,6 +217,21 @@ export default {
     completingLogin: 'Finalisation de la connexion...',
     redirecting: 'Redirection...',
     noGpsData: "Cette activité n'a pas de données GPS disponibles pour l'importation"
+  },
+
+  // Editor specific
+  editor: {
+    importSegment: 'Importer un Segment',
+    searchingSegments: 'Recherche de segments',
+    segmentsFound: 'segments trouvés',
+    noSegmentsFound: 'Aucun segment trouvé',
+    noSegmentsInArea: 'Aucun segment dans cette zone',
+    tryDifferentArea:
+      'Essayez de déplacer la carte pour rechercher dans une zone différente',
+    loadingSegments: 'Chargement des segments...',
+    searchCenter: 'Centre de recherche',
+    maxResults: 'Résultats max',
+    importToEditor: "Importer dans l'Éditeur"
   },
 
   // Route Planner

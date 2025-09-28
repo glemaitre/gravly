@@ -216,7 +216,7 @@ describe('StravaActivityList', () => {
     it('should display correct title', () => {
       wrapper = createWrapper()
 
-      expect(wrapper.find('.header h3').text()).toContain('Your Activities')
+      expect(wrapper.find('.header h3').text()).toContain('Your Strava Activities')
     })
 
     it('should render header action buttons', () => {
@@ -607,7 +607,7 @@ describe('StravaActivityList', () => {
     it('should properly integrate with i18n', () => {
       wrapper = createWrapper()
 
-      expect(wrapper.find('.header h3').text()).toContain('Your Activities')
+      expect(wrapper.find('.header h3').text()).toContain('Your Strava Activities')
     })
 
     it('should load activities on mount', async () => {

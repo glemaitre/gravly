@@ -5,6 +5,8 @@ export default {
     segments: 'Track',
     gpxFile: 'GPX file',
     stravaImport: 'Strava',
+    importSegment: 'Database',
+    importSegmentTooltip: 'Import segment from database',
     saveInDb: 'Save in DB',
     infoFeed: 'Information feed',
     collapseSidebar: 'Collapse sidebar',
@@ -65,6 +67,7 @@ export default {
     dryHelp: 'Use for clear, dry conditions where grip is high.',
     wetHelp: 'Use for rain, mud, or low-grip conditions.',
     slick: 'slick',
+    'semi-slick': 'semi-slick',
     semiSlick: 'semi-slick',
     knobs: 'knobs'
   },
@@ -198,7 +201,7 @@ export default {
     noRoutes: 'No cycling routes found',
     importRoute: 'Import Route',
     selectRoute: 'Select a route to import',
-    activities: 'Your Activities',
+    activities: 'Your Strava Activities',
     loadingActivities: 'Loading activities...',
     noActivities: 'No cycling activities found',
     loadMore: 'Load More',
@@ -213,6 +216,20 @@ export default {
     completingLogin: 'Completing login...',
     redirecting: 'Redirecting...',
     noGpsData: 'This activity does not have GPS data available for import'
+  },
+
+  // Editor specific
+  editor: {
+    importSegment: 'Import Segment',
+    searchingSegments: 'Searching segments',
+    segmentsFound: 'segments found',
+    noSegmentsFound: 'No segments found',
+    noSegmentsInArea: 'No segments in this area',
+    tryDifferentArea: 'Try moving the map to search in a different area',
+    loadingSegments: 'Loading segments...',
+    searchCenter: 'Search center',
+    maxResults: 'Max results',
+    importToEditor: 'Import to Editor'
   },
 
   // Route Planner

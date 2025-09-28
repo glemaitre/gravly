@@ -547,34 +547,6 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #fff 0%, #fff8f5 100%);
 }
 
-.segment-card:hover::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: 2px solid #ff6b35;
-  border-radius: 8px;
-  pointer-events: none;
-  animation: pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
-  100% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-}
-
 .segment-card-header {
   margin-bottom: 12px;
 }
