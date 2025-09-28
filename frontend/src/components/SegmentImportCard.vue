@@ -15,30 +15,39 @@
     <div class="segment-card-content">
       <div class="segment-stats">
         <div class="stat-item">
-          <span class="stat-label">Distance</span>
-          <span class="stat-value">
-            {{ isLoadingStats ? '...' : formatDistance(segmentStats.total_distance) }}
-          </span>
+          <i class="fa-solid fa-route"></i>
+          <div class="stat-content">
+            <span class="stat-value">
+              {{ isLoadingStats ? '...' : formatDistance(segmentStats.total_distance) }}
+            </span>
+            <span class="stat-label">Distance</span>
+          </div>
         </div>
         <div class="stat-item">
-          <span class="stat-label">Elevation Gain</span>
-          <span class="stat-value">
-            {{
-              isLoadingStats
-                ? '...'
-                : formatElevation(segmentStats.total_elevation_gain)
-            }}
-          </span>
+          <i class="fa-solid fa-arrow-trend-up"></i>
+          <div class="stat-content">
+            <span class="stat-value">
+              {{
+                isLoadingStats
+                  ? '...'
+                  : formatElevation(segmentStats.total_elevation_gain)
+              }}
+            </span>
+            <span class="stat-label">Elevation Gain</span>
+          </div>
         </div>
         <div class="stat-item">
-          <span class="stat-label">Elevation Loss</span>
-          <span class="stat-value">
-            {{
-              isLoadingStats
-                ? '...'
-                : formatElevation(segmentStats.total_elevation_loss)
-            }}
-          </span>
+          <i class="fa-solid fa-arrow-trend-down"></i>
+          <div class="stat-content">
+            <span class="stat-value">
+              {{
+                isLoadingStats
+                  ? '...'
+                  : formatElevation(segmentStats.total_elevation_loss)
+              }}
+            </span>
+            <span class="stat-label">Elevation Loss</span>
+          </div>
         </div>
       </div>
     </div>
@@ -241,34 +250,35 @@ onMounted(() => {
 <style scoped>
 .segment-card {
   border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 6px;
+  padding: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
 }
 
 .segment-card:hover,
 .segment-card.is-hovered {
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
+  transform: translateY(-1px);
   border-color: #ff6b35;
 }
 
 .segment-card-header {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .segment-name {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #333;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: color 0.2s ease;
+  line-height: 1.2;
 }
 
 .segment-card:hover .segment-name {
@@ -276,7 +286,7 @@ onMounted(() => {
 }
 
 .segment-card-content {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .segment-stats {
@@ -286,46 +296,66 @@ onMounted(() => {
 
 .stat-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border-radius: 6px;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
   transition: background-color 0.2s ease;
   flex: 1;
-  text-align: center;
+}
+
+.stat-item i {
+  width: 20px;
+  height: 20px;
+  background: #f97316;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: #666;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .stat-value {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #333;
   font-weight: 600;
 }
 
 .segment-card-footer {
   border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
+  padding-top: 8px;
   position: relative;
 }
 
 .segment-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
 }
 
 .info-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   align-items: center;
   text-align: center;
 }
@@ -333,24 +363,24 @@ onMounted(() => {
 .info-label {
   color: #666;
   font-weight: 500;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+  margin-bottom: 1px;
 }
 
 .info-value {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  font-size: 0.75rem;
+  gap: 3px;
+  font-size: 0.65rem;
   color: #333;
   font-weight: 500;
 }
 
 .info-value i {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   color: #666;
 }
 
@@ -361,17 +391,17 @@ onMounted(() => {
 
 .tire-recommendations {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tire-recommendation {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tire-recommendation i {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
 }
 
 .tire-recommendation .fa-sun {
@@ -384,9 +414,9 @@ onMounted(() => {
 
 .tire-badge {
   background-color: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.7rem;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.6rem;
   color: #333;
   font-weight: 500;
 }
