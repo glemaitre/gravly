@@ -1989,14 +1989,44 @@ async function handleSegmentImport(segment: any) {
       return
     }
 
-    // Set additional data
+    // Initialize form with database segment data
     loaded.value = true
     name.value = segment.name
+
+    // Set track type from database
+    trackType.value = segment.track_type as 'segment' | 'route'
+
+    // Initialize trail conditions from database
+    trailConditions.value = {
+      tire_dry: segment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+      tire_wet: segment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+      surface_type: segment.surface_type as
+        | 'broken-paved-road'
+        | 'dirty-road'
+        | 'small-stone-road'
+        | 'big-stone-road'
+        | 'field-trail'
+        | 'forest-trail',
+      difficulty_level: segment.difficulty_level
+    }
+
+    // Initialize commentary from database comments
+    commentary.value = {
+      text: segment.comments || '',
+      video_links: [],
+      images: []
+    }
 
     // Set uploadedFileId for database imports using the segment ID
     uploadedFileId.value = `db-segment-${segment.id}`
 
     console.info(`Editor state updated: ${points.value.length} points loaded`)
+    console.info(`Form initialized with segment data:`, {
+      name: segment.name,
+      trackType: segment.track_type,
+      trailConditions: trailConditions.value,
+      commentary: commentary.value
+    })
 
     // Clear any previous errors
     showError.value = false

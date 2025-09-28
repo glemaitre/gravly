@@ -396,15 +396,23 @@ describe('SegmentImportCard', () => {
 
   describe('Error Handling', () => {
     it('handles fetch errors gracefully', async () => {
+      // Suppress console.warn for this test since we're testing error handling
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       ;(global.fetch as any).mockRejectedValue(new Error('Network error'))
 
       await wrapper.vm.fetchSegmentStats()
 
       // Should not crash and should generate fallback stats
       expect(wrapper.vm.segmentStats.total_distance).toBeGreaterThan(0)
+
+      consoleSpy.mockRestore()
     })
 
     it('handles non-OK fetch responses', async () => {
+      // Suppress console.warn for this test since we're testing error handling
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       ;(global.fetch as any).mockResolvedValue({
         ok: false,
         statusText: 'Not Found'
@@ -414,9 +422,14 @@ describe('SegmentImportCard', () => {
 
       // Should generate fallback stats
       expect(wrapper.vm.segmentStats.total_distance).toBeGreaterThan(0)
+
+      consoleSpy.mockRestore()
     })
 
     it('handles JSON parsing errors', async () => {
+      // Suppress console.warn for this test since we're testing error handling
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       ;(global.fetch as any).mockResolvedValue({
         ok: true,
         json: () => Promise.reject(new Error('Invalid JSON'))
@@ -426,6 +439,8 @@ describe('SegmentImportCard', () => {
 
       // Should generate fallback stats
       expect(wrapper.vm.segmentStats.total_distance).toBeGreaterThan(0)
+
+      consoleSpy.mockRestore()
     })
   })
 
@@ -572,6 +587,9 @@ describe('SegmentImportCard', () => {
     })
 
     it('handles missing translations gracefully', async () => {
+      // Suppress console.warn for this test since we're testing missing translations
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       // Test with unknown surface type
       const segmentWithUnknownSurface = {
         ...mockSegment,
@@ -581,6 +599,8 @@ describe('SegmentImportCard', () => {
 
       // Should not crash
       expect(wrapper.vm.surfaceTypeLabel).toBeDefined()
+
+      consoleSpy.mockRestore()
     })
   })
 })

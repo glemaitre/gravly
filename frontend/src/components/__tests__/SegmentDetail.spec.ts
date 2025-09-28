@@ -1684,6 +1684,9 @@ describe('SegmentDetail Video Gallery', () => {
   })
 
   it('should handle video fetch errors gracefully', async () => {
+    // Suppress console.warn for this test since we're testing error handling
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
     // Mock successful segment and GPX responses, but failed video fetch
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
@@ -1752,6 +1755,8 @@ describe('SegmentDetail Video Gallery', () => {
     // Should not crash and videos section should not be rendered
     const videosSection = wrapper.find('.videos-section')
     expect(videosSection.exists()).toBe(false)
+
+    consoleSpy.mockRestore()
   })
 
   it('should render videos carousel with pagination when multiple pages exist', async () => {

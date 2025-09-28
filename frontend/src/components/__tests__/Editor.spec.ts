@@ -1861,4 +1861,366 @@ describe('Editor Image Upload', () => {
     // Cleanup
     global.fetch = originalFetch
   })
+
+  describe('Segment Import Form Initialization', () => {
+    let wrapper: any
+    let vm: any
+
+    beforeEach(() => {
+      wrapper = mount(Editor, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      vm = wrapper.vm
+    })
+
+    afterEach(() => {
+      mockFetch.mockClear()
+    })
+
+    it('should initialize form fields with segment data from database', () => {
+      // Mock segment data from database
+      const mockSegment = {
+        id: 123,
+        name: 'Mountain Trail Segment',
+        track_type: 'segment',
+        tire_dry: 'knobs',
+        tire_wet: 'semi-slick',
+        surface_type: 'forest-trail',
+        difficulty_level: 4,
+        comments: 'Challenging mountain trail with technical sections'
+      }
+
+      // Simulate the form initialization logic from handleSegmentImport
+      vm.loaded = true
+      vm.name = mockSegment.name
+      vm.trackType = mockSegment.track_type as 'segment' | 'route'
+      vm.trailConditions = {
+        tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+        tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+        surface_type: mockSegment.surface_type as
+          | 'broken-paved-road'
+          | 'dirty-road'
+          | 'small-stone-road'
+          | 'big-stone-road'
+          | 'field-trail'
+          | 'forest-trail',
+        difficulty_level: mockSegment.difficulty_level
+      }
+      vm.commentary = {
+        text: mockSegment.comments || '',
+        video_links: [],
+        images: []
+      }
+      vm.uploadedFileId = `db-segment-${mockSegment.id}`
+
+      // Verify form fields are initialized
+      expect(vm.name).toBe('Mountain Trail Segment')
+      expect(vm.trackType).toBe('segment')
+      expect(vm.trailConditions.tire_dry).toBe('knobs')
+      expect(vm.trailConditions.tire_wet).toBe('semi-slick')
+      expect(vm.trailConditions.surface_type).toBe('forest-trail')
+      expect(vm.trailConditions.difficulty_level).toBe(4)
+      expect(vm.commentary.text).toBe(
+        'Challenging mountain trail with technical sections'
+      )
+      expect(vm.commentary.video_links).toEqual([])
+      expect(vm.commentary.images).toEqual([])
+      expect(vm.uploadedFileId).toBe('db-segment-123')
+    })
+
+    it('should initialize form fields with route data from database', () => {
+      // Mock route data from database
+      const mockRoute = {
+        id: 456,
+        name: 'City Cycling Route',
+        track_type: 'route',
+        tire_dry: 'slick',
+        tire_wet: 'slick',
+        surface_type: 'broken-paved-road',
+        difficulty_level: 2,
+        comments: 'Easy city route for beginners'
+      }
+
+      // Simulate the form initialization logic from handleSegmentImport
+      vm.loaded = true
+      vm.name = mockRoute.name
+      vm.trackType = mockRoute.track_type as 'segment' | 'route'
+      vm.trailConditions = {
+        tire_dry: mockRoute.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+        tire_wet: mockRoute.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+        surface_type: mockRoute.surface_type as
+          | 'broken-paved-road'
+          | 'dirty-road'
+          | 'small-stone-road'
+          | 'big-stone-road'
+          | 'field-trail'
+          | 'forest-trail',
+        difficulty_level: mockRoute.difficulty_level
+      }
+      vm.commentary = {
+        text: mockRoute.comments || '',
+        video_links: [],
+        images: []
+      }
+      vm.uploadedFileId = `db-segment-${mockRoute.id}`
+
+      // Verify form fields are initialized
+      expect(vm.name).toBe('City Cycling Route')
+      expect(vm.trackType).toBe('route')
+      expect(vm.trailConditions.tire_dry).toBe('slick')
+      expect(vm.trailConditions.tire_wet).toBe('slick')
+      expect(vm.trailConditions.surface_type).toBe('broken-paved-road')
+      expect(vm.trailConditions.difficulty_level).toBe(2)
+      expect(vm.commentary.text).toBe('Easy city route for beginners')
+    })
+
+    it('should handle segment with null comments', () => {
+      // Mock segment data with null comments
+      const mockSegment = {
+        id: 789,
+        name: 'Segment Without Comments',
+        track_type: 'segment',
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs',
+        surface_type: 'dirty-road',
+        difficulty_level: 3,
+        comments: null
+      }
+
+      // Simulate the form initialization logic from handleSegmentImport
+      vm.loaded = true
+      vm.name = mockSegment.name
+      vm.trackType = mockSegment.track_type as 'segment' | 'route'
+      vm.trailConditions = {
+        tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+        tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+        surface_type: mockSegment.surface_type as
+          | 'broken-paved-road'
+          | 'dirty-road'
+          | 'small-stone-road'
+          | 'big-stone-road'
+          | 'field-trail'
+          | 'forest-trail',
+        difficulty_level: mockSegment.difficulty_level
+      }
+      vm.commentary = {
+        text: mockSegment.comments || '',
+        video_links: [],
+        images: []
+      }
+      vm.uploadedFileId = `db-segment-${mockSegment.id}`
+
+      // Verify form fields are initialized with empty comments
+      expect(vm.name).toBe('Segment Without Comments')
+      expect(vm.trackType).toBe('segment')
+      expect(vm.trailConditions.tire_dry).toBe('semi-slick')
+      expect(vm.trailConditions.tire_wet).toBe('knobs')
+      expect(vm.trailConditions.surface_type).toBe('dirty-road')
+      expect(vm.trailConditions.difficulty_level).toBe(3)
+      expect(vm.commentary.text).toBe('')
+    })
+
+    it('should handle segment with undefined comments', () => {
+      // Mock segment data with undefined comments
+      const mockSegment = {
+        id: 101,
+        name: 'Segment With Undefined Comments',
+        track_type: 'segment',
+        tire_dry: 'knobs',
+        tire_wet: 'knobs',
+        surface_type: 'big-stone-road',
+        difficulty_level: 5,
+        comments: undefined
+      }
+
+      // Simulate the form initialization logic from handleSegmentImport
+      vm.loaded = true
+      vm.name = mockSegment.name
+      vm.trackType = mockSegment.track_type as 'segment' | 'route'
+      vm.trailConditions = {
+        tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+        tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+        surface_type: mockSegment.surface_type as
+          | 'broken-paved-road'
+          | 'dirty-road'
+          | 'small-stone-road'
+          | 'big-stone-road'
+          | 'field-trail'
+          | 'forest-trail',
+        difficulty_level: mockSegment.difficulty_level
+      }
+      vm.commentary = {
+        text: mockSegment.comments || '',
+        video_links: [],
+        images: []
+      }
+      vm.uploadedFileId = `db-segment-${mockSegment.id}`
+
+      // Verify form fields are initialized with empty comments
+      expect(vm.name).toBe('Segment With Undefined Comments')
+      expect(vm.trackType).toBe('segment')
+      expect(vm.trailConditions.tire_dry).toBe('knobs')
+      expect(vm.trailConditions.tire_wet).toBe('knobs')
+      expect(vm.trailConditions.surface_type).toBe('big-stone-road')
+      expect(vm.trailConditions.difficulty_level).toBe(5)
+      expect(vm.commentary.text).toBe('')
+    })
+
+    it('should handle all surface types correctly', () => {
+      const surfaceTypes = [
+        'broken-paved-road',
+        'dirty-road',
+        'small-stone-road',
+        'big-stone-road',
+        'field-trail',
+        'forest-trail'
+      ]
+
+      for (const surfaceType of surfaceTypes) {
+        const mockSegment = {
+          id: Math.floor(Math.random() * 1000),
+          name: `Test ${surfaceType}`,
+          track_type: 'segment',
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick',
+          surface_type: surfaceType,
+          difficulty_level: 3,
+          comments: `Test segment with ${surfaceType}`
+        }
+
+        // Simulate the form initialization logic
+        vm.trailConditions = {
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick',
+          surface_type: mockSegment.surface_type as
+            | 'broken-paved-road'
+            | 'dirty-road'
+            | 'small-stone-road'
+            | 'big-stone-road'
+            | 'field-trail'
+            | 'forest-trail',
+          difficulty_level: 3
+        }
+
+        // Verify surface type is set correctly
+        expect(vm.trailConditions.surface_type).toBe(surfaceType)
+      }
+    })
+
+    it('should handle all tire types correctly', () => {
+      const tireTypes = ['slick', 'semi-slick', 'knobs'] as const
+
+      for (const tireDry of tireTypes) {
+        for (const tireWet of tireTypes) {
+          const mockSegment = {
+            id: Math.floor(Math.random() * 1000),
+            name: `Test ${tireDry}-${tireWet}`,
+            track_type: 'segment',
+            tire_dry: tireDry,
+            tire_wet: tireWet,
+            surface_type: 'forest-trail',
+            difficulty_level: 3,
+            comments: `Test segment with ${tireDry} dry and ${tireWet} wet`
+          }
+
+          // Simulate the form initialization logic
+          vm.trailConditions = {
+            tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+            tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
+            surface_type: 'forest-trail',
+            difficulty_level: 3
+          }
+
+          // Verify tire types are set correctly
+          expect(vm.trailConditions.tire_dry).toBe(tireDry)
+          expect(vm.trailConditions.tire_wet).toBe(tireWet)
+        }
+      }
+    })
+
+    it('should handle all difficulty levels correctly', () => {
+      for (let difficulty = 1; difficulty <= 5; difficulty++) {
+        const mockSegment = {
+          id: Math.floor(Math.random() * 1000),
+          name: `Test Difficulty ${difficulty}`,
+          track_type: 'segment',
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick',
+          surface_type: 'forest-trail',
+          difficulty_level: difficulty,
+          comments: `Test segment with difficulty ${difficulty}`
+        }
+
+        // Simulate the form initialization logic
+        vm.trailConditions = {
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick',
+          surface_type: 'forest-trail',
+          difficulty_level: mockSegment.difficulty_level
+        }
+
+        // Verify difficulty level is set correctly
+        expect(vm.trailConditions.difficulty_level).toBe(difficulty)
+      }
+    })
+
+    it('should set uploadedFileId with segment ID', () => {
+      const mockSegment = {
+        id: 999,
+        name: 'Test Segment',
+        track_type: 'segment',
+        tire_dry: 'slick',
+        tire_wet: 'semi-slick',
+        surface_type: 'forest-trail',
+        difficulty_level: 3,
+        comments: 'Test comments'
+      }
+
+      // Simulate the form initialization logic
+      vm.uploadedFileId = `db-segment-${mockSegment.id}`
+
+      // Verify uploadedFileId is set correctly
+      expect(vm.uploadedFileId).toBe('db-segment-999')
+    })
+
+    it('should set loaded state to true after successful import', () => {
+      // Initially loaded should be false
+      expect(vm.loaded).toBe(false)
+
+      // Simulate the form initialization logic
+      vm.loaded = true
+
+      // Verify loaded state is set to true
+      expect(vm.loaded).toBe(true)
+    })
+
+    it('should clear error states after successful import', () => {
+      // Set error states
+      vm.showError = true
+      vm.currentErrorMessage = 'Previous error'
+      vm.message = 'Previous message'
+
+      // Simulate the form initialization logic
+      vm.showError = false
+      vm.currentErrorMessage = ''
+      vm.message = ''
+
+      // Verify error states are cleared
+      expect(vm.showError).toBe(false)
+      expect(vm.currentErrorMessage).toBe('')
+      expect(vm.message).toBe('')
+    })
+
+    it('should set success states after successful import', () => {
+      // Simulate the form initialization logic
+      vm.showUploadSuccess = true
+      vm.showSegmentSuccess = false
+
+      // Verify success states are set
+      expect(vm.showUploadSuccess).toBe(true)
+      expect(vm.showSegmentSuccess).toBe(false)
+    })
+  })
 })

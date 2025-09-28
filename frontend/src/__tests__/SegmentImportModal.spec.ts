@@ -418,12 +418,17 @@ describe('SegmentImportModal', () => {
     })
 
     it('handles GPX fetch errors gracefully', async () => {
+      // Suppress console.warn for this test since we're testing error handling
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
       ;(global.fetch as any).mockRejectedValue(new Error('Fetch failed'))
 
       await (wrapper.vm as any).fetchAndRenderGPXData(mockSegment)
 
       // Should not throw errors
       expect(true).toBe(true)
+
+      consoleSpy.mockRestore()
     })
 
     it('caches GPX data to avoid duplicate requests', async () => {

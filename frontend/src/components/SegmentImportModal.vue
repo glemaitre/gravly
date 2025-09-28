@@ -223,7 +223,7 @@ const initializeMap = async () => {
     map.remove()
   }
 
-  if (mapContainer.value.offsetHeight === 0) {
+  if (!mapContainer.value || mapContainer.value.offsetHeight === 0) {
     nextTick(() => {
       setTimeout(() => {
         initializeMap()
