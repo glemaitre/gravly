@@ -1066,6 +1066,282 @@ async def get_track_videos(track_id: int):
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@app.put("/api/segments/{track_id}", response_model=TrackResponse)
+async def update_segment(
+    track_id: int,
+    name: str = Form(...),
+    track_type: str = Form("segment"),
+    tire_dry: str = Form(...),
+    tire_wet: str = Form(...),
+    file_id: str = Form(...),
+    start_index: int = Form(...),
+    end_index: int = Form(...),
+    surface_type: str = Form(...),
+    difficulty_level: int = Form(...),
+    commentary_text: str = Form(""),
+    video_links: str = Form("[]"),
+    image_data: str = Form("[]"),
+):
+    """Update an existing segment: process uploaded GPX file with indices,
+    upload to storage, update metadata in DB, and remove the previous file.
+
+    Parameters
+    ----------
+    track_id : int
+        The ID of the track to update
+    name : str
+        Name of the segment
+    track_type : str
+        Type of track ('segment' or 'route')
+    tire_dry : str
+        Tire type for dry conditions
+    tire_wet : str
+        Tire type for wet conditions
+    file_id : str
+        File ID for the GPX data
+    start_index : int
+        Start index for GPX segment extraction
+    end_index : int
+        End index for GPX segment extraction
+    surface_type : str
+        Type of surface
+    difficulty_level : int
+        Difficulty level (1-5)
+    commentary_text : str
+        Commentary text
+    video_links : str
+        JSON string of video links
+    image_data : str
+        JSON string of image data
+
+    Returns
+    -------
+    TrackResponse
+        Updated track information
+    """
+    allowed_tire_types = {"slick", "semi-slick", "knobs"}
+    if tire_dry not in allowed_tire_types or tire_wet not in allowed_tire_types:
+        raise HTTPException(status_code=422, detail="Invalid tire types")
+
+    allowed_track_types = {"segment", "route"}
+    if track_type not in allowed_track_types:
+        raise HTTPException(status_code=422, detail="Invalid track type")
+
+    global temp_dir, storage_manager
+
+    if not temp_dir:
+        raise HTTPException(
+            status_code=500, detail="Temporary directory not initialized"
+        )
+
+    if not storage_manager:
+        raise HTTPException(status_code=500, detail="Storage manager not initialized")
+
+    if not SessionLocal:
+        raise HTTPException(status_code=500, detail="Database not available")
+
+    # Check if track exists and get current file path for cleanup
+    async with SessionLocal() as session:
+        track_stmt = select(Track).filter(Track.id == track_id)
+        track_result = await session.execute(track_stmt)
+        existing_track = track_result.scalar_one_or_none()
+
+        if not existing_track:
+            raise HTTPException(status_code=404, detail="Track not found")
+
+        old_file_path = existing_track.file_path
+        logger.info(f"Updating track {track_id}, old file: {old_file_path}")
+
+    # Handle GPX file processing
+    original_file_path = Path(temp_dir.name) / f"{file_id}.gpx"
+    logger.info(f"Processing segment from file {file_id}.gpx at: {original_file_path}")
+
+    if not original_file_path.exists():
+        logger.warning(f"Uploaded file not found: {original_file_path}")
+        raise HTTPException(status_code=404, detail="Uploaded file not found")
+
+    frontend_temp_dir = Path(temp_dir.name) / "gpx_segments"
+    frontend_temp_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        logger.info(
+            f"Processing segment '{name}' from indices {start_index} to {end_index}"
+        )
+        segment_file_id, segment_file_path, bounds = generate_gpx_segment(
+            input_file_path=original_file_path,
+            start_index=start_index,
+            end_index=end_index,
+            segment_name=name,
+            output_dir=frontend_temp_dir,
+        )
+        logger.info(f"Successfully created segment file: {segment_file_path}")
+
+        try:
+            # Upload new GPX file to storage
+            storage_key = storage_manager.upload_gpx_segment(
+                local_file_path=segment_file_path,
+                file_id=segment_file_id,
+                prefix="gpx-segments",
+            )
+            logger.info(f"Successfully uploaded segment to storage: {storage_key}")
+
+            cleanup_success = cleanup_local_file(segment_file_path)
+            if cleanup_success:
+                logger.info(f"Successfully cleaned up local file: {segment_file_path}")
+            else:
+                logger.warning(f"Failed to clean up local file: {segment_file_path}")
+
+            processed_file_path = (
+                f"{storage_manager.get_storage_root_prefix()}/{storage_key}"
+            )
+
+        except Exception as storage_error:
+            logger.error(f"Failed to upload to storage: {str(storage_error)}")
+            cleanup_local_file(segment_file_path)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to upload to storage: {str(storage_error)}",
+            )
+
+    except Exception as e:
+        logger.error(f"Failed to process GPX file for segment '{name}': {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process GPX file: {str(e)}"
+        )
+
+    # Update metadata in DB and handle file cleanup
+    try:
+        async with SessionLocal() as session:
+            # Get the track again within this session
+            track_stmt = select(Track).filter(Track.id == track_id)
+            track_result = await session.execute(track_stmt)
+            track = track_result.scalar_one_or_none()
+
+            if not track:
+                raise HTTPException(status_code=404, detail="Track not found")
+
+            # Calculate new bounds and barycenter
+            barycenter_latitude = (bounds.north + bounds.south) / 2
+            barycenter_longitude = (bounds.east + bounds.west) / 2
+
+            # Update track fields
+            track.file_path = str(processed_file_path)
+            track.bound_north = bounds.north
+            track.bound_south = bounds.south
+            track.bound_east = bounds.east
+            track.bound_west = bounds.west
+            track.barycenter_latitude = barycenter_latitude
+            track.barycenter_longitude = barycenter_longitude
+            track.name = name
+            track.track_type = TrackType(track_type)
+            track.difficulty_level = difficulty_level
+            track.surface_type = SurfaceType(surface_type)
+            track.tire_dry = TireType(tire_dry)
+            track.tire_wet = TireType(tire_wet)
+            track.comments = commentary_text
+
+            await session.commit()
+            await session.refresh(track)
+
+            # Process image data and update TrackImage records
+            try:
+                image_data_list = json.loads(image_data) if image_data else []
+                video_links_list = json.loads(video_links) if video_links else []
+
+                # Clear existing images and videos
+                # (cascade should handle this, but let's be explicit)
+                existing_images = await session.execute(
+                    select(TrackImage).filter(TrackImage.track_id == track_id)
+                )
+                for image in existing_images.scalars():
+                    await session.delete(image)
+
+                existing_videos = await session.execute(
+                    select(TrackVideo).filter(TrackVideo.track_id == track_id)
+                )
+                for video in existing_videos.scalars():
+                    await session.delete(video)
+
+                # Add new images
+                for img_data in image_data_list:
+                    track_image = TrackImage(
+                        track_id=track.id,
+                        image_id=img_data["image_id"],
+                        image_url=img_data["image_url"],
+                        storage_key=img_data.get("storage_key", ""),
+                        filename=img_data.get("filename", ""),
+                        original_filename=img_data.get("original_filename", ""),
+                    )
+                    session.add(track_image)
+
+                # Add new videos
+                for video_data in video_links_list:
+                    track_video = TrackVideo(
+                        track_id=track.id,
+                        video_id=video_data["id"],
+                        video_url=video_data["url"],
+                        video_title=None,  # Could be extracted from URL if needed
+                        platform=video_data.get("platform", "other"),
+                    )
+                    session.add(track_video)
+
+                await session.commit()
+
+            except Exception as media_e:
+                logger.warning(f"Failed to update media for segment: {media_e}")
+                # Continue without media updates
+
+            # Now that DB is updated, clean up the old file
+            try:
+                # Extract storage key from old file path
+                if old_file_path.startswith(storage_manager.get_storage_root_prefix()):
+                    # Remove the storage root prefix to get the storage key
+                    prefix_len = len(storage_manager.get_storage_root_prefix())
+                    old_storage_key = old_file_path[prefix_len + 1 :]
+                    delete_success = storage_manager.delete_gpx_segment(old_storage_key)
+                    if delete_success:
+                        logger.info(f"Successfully deleted old file: {old_storage_key}")
+                    else:
+                        logger.warning(f"Failed to delete old file: {old_storage_key}")
+                else:
+                    logger.warning(
+                        f"Old file path doesn't match storage format: {old_file_path}"
+                    )
+            except Exception as cleanup_e:
+                logger.warning(f"Failed to cleanup old file: {cleanup_e}")
+                # Continue even if cleanup fails
+
+            return TrackResponse(
+                id=track.id,
+                file_path=str(processed_file_path),
+                bound_north=track.bound_north,
+                bound_south=track.bound_south,
+                bound_east=track.bound_east,
+                bound_west=track.bound_west,
+                barycenter_latitude=track.barycenter_latitude,
+                barycenter_longitude=track.barycenter_longitude,
+                name=track.name,
+                track_type=track.track_type,
+                difficulty_level=int(track.difficulty_level),
+                surface_type=track.surface_type,
+                tire_dry=track.tire_dry,
+                tire_wet=track.tire_wet,
+                comments=track.comments,
+            )
+
+    except Exception as db_e:
+        logger.error(f"Failed to update segment in database: {db_e}")
+        # Try to clean up the newly uploaded file since DB update failed
+        try:
+            if "storage_key" in locals():
+                storage_manager.delete_gpx_segment(storage_key)
+        except Exception as cleanup_e:
+            logger.error(f"Failed to cleanup new file after DB error: {cleanup_e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update segment: {str(db_e)}"
+        )
+
+
 # Strava API endpoints
 @app.get("/api/strava/auth-url")
 async def get_strava_auth_url(state: str = "strava_auth"):

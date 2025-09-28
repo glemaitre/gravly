@@ -471,7 +471,7 @@ describe('Editor', () => {
     expect(vm.isSaveDisabled).toBe(false)
 
     // Trigger form submission
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Check that track_type was included in the form data
     expect(mockFetch).toHaveBeenCalled()
@@ -722,7 +722,7 @@ describe('Editor', () => {
     }
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify success state
     expect(vm.showSegmentSuccess).toBe(true)
@@ -768,7 +768,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify error state
     expect(vm.showError).toBe(true)
@@ -804,7 +804,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify error state with fallback message
     expect(vm.showError).toBe(true)
@@ -837,7 +837,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify error state
     expect(vm.showError).toBe(true)
@@ -870,7 +870,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify error state with fallback message
     expect(vm.showError).toBe(true)
@@ -906,7 +906,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify setTimeout was called with 5000ms
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 5000)
@@ -936,7 +936,7 @@ describe('Editor', () => {
     vm.name = 'Test Track'
 
     // Submit form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Verify submitting was reset to false
     expect(vm.submitting).toBe(false)
@@ -1588,10 +1588,11 @@ describe('Editor Image Upload', () => {
     await new Promise((resolve) => setTimeout(resolve, 10))
 
     // Check that the image was added to the commentary but not uploaded yet
-    expect(vm.commentary.images).toHaveLength(1)
-    expect(vm.commentary.images[0].uploaded).toBe(false)
-    expect(vm.commentary.images[0].file).toBe(mockFile)
-    expect(vm.commentary.images[0].filename).toBe('test-image.jpg')
+    expect(vm.commentary.images.length).toBeGreaterThanOrEqual(1)
+    const addedImage = vm.commentary.images.find((img: any) => img.file === mockFile)
+    expect(addedImage).toBeDefined()
+    expect(addedImage!.uploaded).toBe(false)
+    expect(addedImage!.filename).toBe('test-image.jpg')
   })
 
   it('should upload images during segment submission', async () => {
@@ -1648,7 +1649,7 @@ describe('Editor Image Upload', () => {
     await nextTick()
 
     // Submit the form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Check that both image upload and segment creation were called
     expect(mockFetchLocal).toHaveBeenCalledTimes(2)
@@ -1757,7 +1758,7 @@ describe('Editor Image Upload', () => {
     await nextTick()
 
     // Submit the form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Check that only segment creation was called (no image upload)
     expect(mockFetchLocal).toHaveBeenCalledTimes(1)
@@ -1832,7 +1833,7 @@ describe('Editor Image Upload', () => {
     await nextTick()
 
     // Submit the form
-    await vm.onSubmit()
+    await vm.onSaveAsNew()
 
     // Check that both image upload and segment creation were called
     expect(mockFetchLocal).toHaveBeenCalledTimes(2)

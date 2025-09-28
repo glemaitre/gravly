@@ -4,6 +4,7 @@ import asyncio
 import io
 import json
 import os
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
@@ -6307,6 +6308,1668 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
         assert segment_response.status_code == 200
         segment_data = segment_response.json()
         assert segment_data["name"] == "Test Image JSON Error Database"
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+# ============================================================================
+# UPDATE SEGMENT TESTS
+# ============================================================================
+
+
+@mock_aws
+def test_update_segment_success(client, sample_gpx_file, tmp_path):
+    """Test successful segment update - create segment first, then update it."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Now update the segment
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        update_response = client.put(
+            f"/api/segments/{track_id}",
+            data={
+                "name": "Updated Segment",
+                "track_type": "route",
+                "tire_dry": "knobs",
+                "tire_wet": "slick",
+                "file_id": file_id,
+                "start_index": "10",
+                "end_index": "80",
+                "surface_type": "dirty-road",
+                "difficulty_level": "4",
+                "commentary_text": "Updated commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert update_response.status_code == 200
+    updated_data = update_response.json()
+
+    # Verify the update
+    assert updated_data["id"] == track_id
+    assert updated_data["name"] == "Updated Segment"
+    assert updated_data["track_type"] == "route"
+    assert updated_data["tire_dry"] == "knobs"
+    assert updated_data["tire_wet"] == "slick"
+    assert updated_data["surface_type"] == "dirty-road"
+    assert updated_data["difficulty_level"] == 4
+    assert updated_data["comments"] == "Updated commentary"
+    assert updated_data["file_path"].endswith(".gpx")
+
+
+def test_update_segment_invalid_tire_types(client):
+    """Test segment update with invalid tire types."""
+    response = client.put(
+        "/api/segments/1",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "invalid_tire",
+            "tire_wet": "semi-slick",
+            "file_id": "test_file",
+            "start_index": "0",
+            "end_index": "100",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
+            "commentary_text": "",
+            "video_links": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid tire types" in response.json()["detail"]
+
+
+def test_update_segment_invalid_track_type(client):
+    """Test segment update with invalid track type."""
+    response = client.put(
+        "/api/segments/1",
+        data={
+            "name": "Test Segment",
+            "track_type": "invalid_type",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+            "file_id": "test_file",
+            "start_index": "0",
+            "end_index": "100",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
+            "commentary_text": "",
+            "video_links": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid track type" in response.json()["detail"]
+
+
+@patch("src.main.temp_dir", None)
+def test_update_segment_no_temp_directory(client):
+    """Test segment update when temporary directory is not initialized."""
+    response = client.put(
+        "/api/segments/1",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+            "file_id": "test_file",
+            "start_index": "0",
+            "end_index": "100",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
+            "commentary_text": "",
+            "video_links": "[]",
+        },
+    )
+
+    assert response.status_code == 500
+    assert "Temporary directory not initialized" in response.json()["detail"]
+
+
+@patch("src.main.storage_manager", None)
+def test_update_segment_storage_manager_not_initialized(client):
+    """Test segment update when storage manager is not initialized."""
+    response = client.put(
+        "/api/segments/1",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+            "file_id": "test_file",
+            "start_index": "0",
+            "end_index": "100",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
+            "commentary_text": "",
+            "video_links": "[]",
+        },
+    )
+
+    assert response.status_code == 500
+    assert "Storage manager not initialized" in response.json()["detail"]
+
+
+@patch("src.main.SessionLocal", None)
+def test_update_segment_database_not_available(client):
+    """Test segment update when database is not available."""
+    response = client.put(
+        "/api/segments/1",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "semi-slick",
+            "file_id": "test_file",
+            "start_index": "0",
+            "end_index": "100",
+            "surface_type": "forest-trail",
+            "difficulty_level": "3",
+            "commentary_text": "",
+            "video_links": "[]",
+        },
+    )
+
+    assert response.status_code == 500
+    assert "Database not available" in response.json()["detail"]
+
+
+def test_update_segment_track_not_found(client, main_module):
+    """Test segment update when track doesn't exist."""
+    # Mock database session to return no track
+    original_session_local = main_module.SessionLocal
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return None
+
+            return MockResult()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        response = client.put(
+            "/api/segments/999",
+            data={
+                "name": "Test Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": "test_file",
+                "start_index": "0",
+                "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
+                "commentary_text": "",
+                "video_links": "[]",
+            },
+        )
+
+        assert response.status_code == 404
+        assert "Track not found" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_update_segment_file_not_found(client, main_module):
+    """Test segment update when uploaded file is not found."""
+    # Mock database session to return a track
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        response = client.put(
+            "/api/segments/1",
+            data={
+                "name": "Test Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": "nonexistent_file",
+                "start_index": "0",
+                "end_index": "100",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
+                "commentary_text": "",
+                "video_links": "[]",
+            },
+        )
+
+        assert response.status_code == 404
+        assert "Uploaded file not found" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_generation_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when GPX segment generation fails."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    # Mock database session to return a track
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch(
+            "src.main.generate_gpx_segment", side_effect=Exception("Generation failed")
+        ):
+            response = client.put(
+                "/api/segments/1",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "",
+                    "video_links": "[]",
+                },
+            )
+
+        assert response.status_code == 500
+        assert "Failed to process GPX file" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_storage_upload_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when storage upload fails."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    # Mock database session to return a track
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch(
+            "src.main.storage_manager.upload_gpx_segment",
+            side_effect=Exception("Upload failed"),
+        ):
+            response = client.put(
+                "/api/segments/1",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "",
+                    "video_links": "[]",
+                },
+            )
+
+        assert response.status_code == 500
+        assert "Failed to upload to storage" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_database_exception_handling(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when database operations fail but storage succeeds."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    # Mock database session to return a track initially, then fail on update
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        def __init__(self):
+            self.call_count = 0
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    # For media queries that return multiple results
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            self.call_count += 1
+            if self.call_count == 1:  # Fail on the first call (main track update)
+                raise Exception("Database commit failed")
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch(
+            "src.main.storage_manager.delete_gpx_segment", return_value=True
+        ) as mock_delete:
+            response = client.put(
+                "/api/segments/1",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "",
+                    "video_links": "[]",
+                },
+            )
+
+        assert response.status_code == 500
+        assert "Failed to update segment" in response.json()["detail"]
+        # Verify that cleanup was attempted
+        mock_delete.assert_called_once()
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_with_media(client, sample_gpx_file, tmp_path):
+    """Test segment update with images and videos."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Update segment with media
+    image_data = json.dumps(
+        [
+            {
+                "image_id": f"img_update_{track_id}_{int(time.time())}",
+                "image_url": "https://example.com/image1.jpg",
+                "storage_key": "images/img_update.jpg",
+                "filename": "image1.jpg",
+                "original_filename": "original_image1.jpg",
+            }
+        ]
+    )
+
+    video_links = json.dumps(
+        [
+            {
+                "id": f"vid_update_{track_id}_{int(time.time())}",
+                "url": "https://youtube.com/watch?v=123",
+                "platform": "youtube",
+            }
+        ]
+    )
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        update_response = client.put(
+            f"/api/segments/{track_id}",
+            data={
+                "name": "Updated Segment with Media",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "10",
+                "end_index": "80",
+                "surface_type": "forest-trail",
+                "difficulty_level": "3",
+                "commentary_text": "Updated with media",
+                "video_links": video_links,
+                "image_data": image_data,
+            },
+        )
+
+    assert update_response.status_code == 200
+    updated_data = update_response.json()
+
+    # Verify the update
+    assert updated_data["name"] == "Updated Segment with Media"
+    assert updated_data["comments"] == "Updated with media"
+
+
+@mock_aws
+def test_update_segment_media_json_error(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update with malformed JSON in media data."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    # Mock database session to return a track
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            response = client.put(
+                "/api/segments/1",
+                data={
+                    "name": "Test Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "0",
+                    "end_index": "100",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "",
+                    "video_links": "[]",
+                    "image_data": "{invalid_json",  # Malformed JSON
+                },
+            )
+
+        # Should succeed despite bad JSON in image_data (handled gracefully)
+        assert response.status_code == 200
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_cleanup_old_file_success(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update with successful cleanup of old file."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock storage manager to track delete calls
+    with patch(
+        "src.main.storage_manager.delete_gpx_segment", return_value=True
+    ) as mock_delete:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            update_response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "video_links": "[]",
+                },
+            )
+
+    assert update_response.status_code == 200
+    # Verify that delete was called (cleanup of old file)
+    mock_delete.assert_called_once()
+
+
+@mock_aws
+def test_update_segment_cleanup_old_file_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when cleanup of old file fails (should still succeed)."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock storage manager to fail on delete
+    with patch(
+        "src.main.storage_manager.delete_gpx_segment", return_value=False
+    ) as mock_delete:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            update_response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "video_links": "[]",
+                },
+            )
+
+    # Should still succeed even if cleanup fails
+    assert update_response.status_code == 200
+    # Verify that delete was attempted
+    mock_delete.assert_called_once()
+
+
+@mock_aws
+def test_update_segment_local_file_cleanup_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when local file cleanup fails."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock cleanup_local_file to return False (failure)
+    with patch("src.main.cleanup_local_file", return_value=False):
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            update_response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "video_links": "[]",
+                },
+            )
+
+    # Should still succeed even if local cleanup fails
+    assert update_response.status_code == 200
+
+
+@mock_aws
+def test_update_segment_with_existing_media(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update with existing images and videos to cover media deletion."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session to return existing media
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = "old/path/file.gpx"
+
+    class MockImage:
+        def __init__(self):
+            self.id = 1
+            self.track_id = track_id
+
+    class MockVideo:
+        def __init__(self):
+            self.id = 1
+            self.track_id = track_id
+
+    class MockSession:
+        def __init__(self):
+            self.call_count = 0
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    # Return existing media for deletion
+                    if "TrackImage" in str(stmt):
+                        return [MockImage()]
+                    elif "TrackVideo" in str(stmt):
+                        return [MockVideo()]
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            update_response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "video_links": "[]",
+                },
+            )
+
+        assert update_response.status_code == 200
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_old_file_cleanup_with_prefix(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update with old file cleanup when file path matches storage prefix."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session to return a track with storage prefix path
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = "s3://test-bucket/gpx-segments/old_file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        # Mock storage manager to return a specific prefix
+        with patch(
+            "src.main.storage_manager.get_storage_root_prefix",
+            return_value="s3://test-bucket",
+        ):
+            with patch(
+                "src.main.storage_manager.delete_gpx_segment", return_value=True
+            ) as mock_delete:
+                with patch("src.main.Path") as mock_path:
+
+                    def path_side_effect(path_str):
+                        if path_str == "../scratch/mock_gpx":
+                            return tmp_path / "mock_gpx"
+                        return Path(path_str)
+
+                    mock_path.side_effect = path_side_effect
+
+                    update_response = client.put(
+                        f"/api/segments/{track_id}",
+                        data={
+                            "name": "Updated Segment",
+                            "track_type": "segment",
+                            "tire_dry": "slick",
+                            "tire_wet": "semi-slick",
+                            "file_id": file_id,
+                            "start_index": "10",
+                            "end_index": "80",
+                            "surface_type": "forest-trail",
+                            "difficulty_level": "3",
+                            "commentary_text": "Updated commentary",
+                            "video_links": "[]",
+                        },
+                    )
+
+        assert update_response.status_code == 200
+        # Verify that delete was called with the correct storage key
+        mock_delete.assert_called_once_with("gpx-segments/old_file.gpx")
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_old_file_cleanup_exception(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when old file cleanup raises an exception."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session to return a track
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = "s3://test-bucket/gpx-segments/old_file.gpx"
+
+    class MockSession:
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        # Mock storage manager to raise exception during cleanup
+        with patch(
+            "src.main.storage_manager.get_storage_root_prefix",
+            return_value="s3://test-bucket",
+        ):
+            with patch(
+                "src.main.storage_manager.delete_gpx_segment",
+                side_effect=Exception("Cleanup failed"),
+            ):
+                with patch("src.main.Path") as mock_path:
+
+                    def path_side_effect(path_str):
+                        if path_str == "../scratch/mock_gpx":
+                            return tmp_path / "mock_gpx"
+                        return Path(path_str)
+
+                    mock_path.side_effect = path_side_effect
+
+                    update_response = client.put(
+                        f"/api/segments/{track_id}",
+                        data={
+                            "name": "Updated Segment",
+                            "track_type": "segment",
+                            "tire_dry": "slick",
+                            "tire_wet": "semi-slick",
+                            "file_id": file_id,
+                            "start_index": "10",
+                            "end_index": "80",
+                            "surface_type": "forest-trail",
+                            "difficulty_level": "3",
+                            "commentary_text": "Updated commentary",
+                            "video_links": "[]",
+                        },
+                    )
+
+        # Should still succeed even if cleanup fails
+        assert update_response.status_code == 200
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_database_error_cleanup_failure(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test segment update when database fails and cleanup of new file also fails."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    # Mock database session to return a track initially, then fail on update
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        def __init__(self):
+            self.call_count = 0
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            self.call_count += 1
+            if self.call_count == 1:  # Fail on the first call (main track update)
+                raise Exception("Database commit failed")
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    class MockAsyncContextManager:
+        async def __aenter__(self):
+            return MockSession()
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        return MockAsyncContextManager()
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        # Mock storage manager to fail on cleanup
+        with patch(
+            "src.main.storage_manager.delete_gpx_segment",
+            side_effect=Exception("Cleanup failed"),
+        ):
+            with patch("src.main.Path") as mock_path:
+
+                def path_side_effect(path_str):
+                    if path_str == "../scratch/mock_gpx":
+                        return tmp_path / "mock_gpx"
+                    return Path(path_str)
+
+                mock_path.side_effect = path_side_effect
+
+                response = client.put(
+                    "/api/segments/1",
+                    data={
+                        "name": "Test Segment",
+                        "track_type": "segment",
+                        "tire_dry": "slick",
+                        "tire_wet": "semi-slick",
+                        "file_id": file_id,
+                        "start_index": "0",
+                        "end_index": "100",
+                        "surface_type": "forest-trail",
+                        "difficulty_level": "3",
+                        "commentary_text": "",
+                        "video_links": "[]",
+                    },
+                )
+
+        assert response.status_code == 500
+        assert "Failed to update segment" in response.json()["detail"]
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+@mock_aws
+def test_update_segment_track_not_found_in_second_session(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test update_segment when track is not found in the second database session (lines 1220-1221)."""
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.main.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": "forest-trail",
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    segment_data = create_response.json()
+    track_id = segment_data["id"]
+
+    # Mock database session to return a track in first session, None in second session
+    original_session_local = main_module.SessionLocal
+
+    class MockTrack:
+        def __init__(self):
+            self.id = track_id
+            self.file_path = "old/path/file.gpx"
+
+    class MockSession:
+        def __init__(self, session_id):
+            self.session_id = session_id
+
+        async def execute(self, stmt):
+            session_id = self.session_id  # Capture the session_id
+
+            class MockResult:
+                def scalar_one_or_none(self):
+                    # First session (session_id=0) returns track, second session (session_id=1) returns None
+                    if session_id == 0:
+                        return MockTrack()
+                    else:
+                        return None  # This triggers the "Track not found" exception
+
+                def scalars(self):
+                    return []
+
+            return MockResult()
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, track):
+            pass
+
+        async def delete(self, obj):
+            pass
+
+        def add(self, obj):
+            pass
+
+    session_counter = 0
+
+    class MockAsyncContextManager:
+        def __init__(self, session_id):
+            self.session_id = session_id
+
+        async def __aenter__(self):
+            return MockSession(self.session_id)
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_session_local():
+        nonlocal session_counter
+        session_id = session_counter
+        session_counter += 1
+        return MockAsyncContextManager(session_id)
+
+    main_module.SessionLocal = mock_session_local
+
+    try:
+        with patch("src.main.Path") as mock_path:
+
+            def path_side_effect(path_str):
+                if path_str == "../scratch/mock_gpx":
+                    return tmp_path / "mock_gpx"
+                return Path(path_str)
+
+            mock_path.side_effect = path_side_effect
+
+            response = client.put(
+                f"/api/segments/{track_id}",
+                data={
+                    "name": "Updated Segment",
+                    "track_type": "segment",
+                    "tire_dry": "slick",
+                    "tire_wet": "semi-slick",
+                    "file_id": file_id,
+                    "start_index": "10",
+                    "end_index": "80",
+                    "surface_type": "forest-trail",
+                    "difficulty_level": "3",
+                    "commentary_text": "Updated commentary",
+                    "video_links": "[]",
+                },
+            )
+
+        # Should return 500 because the exception is caught by the general exception handler
+        assert response.status_code == 500
+        assert "Failed to update segment" in response.json()["detail"]
 
     finally:
         main_module.SessionLocal = original_session_local

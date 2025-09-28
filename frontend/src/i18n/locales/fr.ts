@@ -7,7 +7,8 @@ export default {
     stravaImport: 'Strava',
     importSegment: 'Base de données',
     importSegmentTooltip: 'Importer un segment depuis la base de données',
-    saveInDb: 'Sauvegarder en BD',
+    saveAsNew: 'Sauvegarder comme nouveau',
+    updateInDb: 'Mettre à jour en BD',
     infoFeed: "Flux d'informations",
     collapseSidebar: 'Réduire la barre latérale',
     expandSidebar: 'Développer la barre latérale'
@@ -77,6 +78,8 @@ export default {
     loadGpxFirst: "Charger un fichier GPX d'abord pour activer la sauvegarde",
     enterSegmentName: 'Entrer un nom de segment pour activer la sauvegarde',
     submitting: 'Envoi en cours…',
+    loadFromDatabase:
+      'Charger un segment depuis la base de données pour activer la mise à jour',
     loadGpxFile: 'Charger un fichier GPX',
     moveStartBack: "Reculer le marqueur de début d'un point",
     moveStartForward: "Avancer le marqueur de début d'un point",
@@ -95,6 +98,7 @@ export default {
     useFileLoad: 'Utiliser "Importer depuis ..." → "Fichier GPX" pour commencer',
     segmentCreated: 'Segment créé avec succès',
     createError: 'Erreur lors de la création du segment',
+    updateError: 'Erreur lors de la mise à jour du segment',
     uploading: 'Téléchargement du fichier GPX...',
     uploadError: 'Erreur lors du téléchargement du fichier GPX',
     uploadSuccess: 'Fichier GPX téléchargé avec succès',

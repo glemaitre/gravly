@@ -77,18 +77,40 @@
                 :aria-disabled="isSaveDisabled"
                 :title="
                   isCompactSidebar
-                    ? t('menu.saveInDb')
+                    ? t('menu.saveAsNew')
                     : isSaveDisabled
                       ? saveDisabledTitle
-                      : t('menu.saveInDb')
+                      : t('menu.saveAsNew')
                 "
-                @click="!isSaveDisabled && onSubmit()"
+                @click="!isSaveDisabled && onSaveAsNew()"
+                data-testid="save-as-new-button"
+              >
+                <span class="icon" aria-hidden="true"
+                  ><i class="fa-solid fa-plus"></i
+                ></span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  t('menu.saveAsNew')
+                }}</span>
+              </li>
+              <li
+                class="menu-item action"
+                :class="{ disabled: isUpdateDisabled }"
+                :aria-disabled="isUpdateDisabled"
+                :title="
+                  isCompactSidebar
+                    ? t('menu.updateInDb')
+                    : isUpdateDisabled
+                      ? updateDisabledTitle
+                      : t('menu.updateInDb')
+                "
+                @click="!isUpdateDisabled && onUpdate()"
+                data-testid="update-button"
               >
                 <span class="icon" aria-hidden="true"
                   ><i class="fa-solid fa-database"></i
                 ></span>
                 <span v-if="!isCompactSidebar" class="text">{{
-                  t('menu.saveInDb')
+                  t('menu.updateInDb')
                 }}</span>
               </li>
             </ul>
@@ -359,7 +381,7 @@
               </div>
             </div>
 
-            <form class="card meta" @submit.prevent="onSubmit">
+            <form class="card meta" @submit.prevent="onSaveAsNew">
               <!-- Track Type Tabs -->
               <div class="track-type-tabs">
                 <button
@@ -875,13 +897,29 @@ const showSegmentSuccess = ref<boolean>(false)
 const showError = ref<boolean>(false)
 const currentErrorMessage = ref<string>('')
 
+// Update mode state
+const isUpdateMode = ref<boolean>(false)
+const updatingSegmentId = ref<number | null>(null)
+
 const controlsCard = ref<HTMLElement | null>(null)
 
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
+const isUpdateDisabled = computed(
+  () => submitting.value || !name.value || !loaded.value || !isUpdateMode.value
+)
+
 const saveDisabledTitle = computed(() => {
   if (!loaded.value) return t('tooltip.loadGpxFirst')
   if (!name.value) return t('tooltip.enterSegmentName')
   if (submitting.value) return t('tooltip.submitting')
+  return ''
+})
+
+const updateDisabledTitle = computed(() => {
+  if (!loaded.value) return t('tooltip.loadGpxFirst')
+  if (!name.value) return t('tooltip.enterSegmentName')
+  if (submitting.value) return t('tooltip.submitting')
+  if (!isUpdateMode.value) return t('tooltip.loadFromDatabase')
   return ''
 })
 
@@ -990,6 +1028,9 @@ async function onFileChange(ev: Event) {
   const input = ev.target as HTMLInputElement
   const file = input.files && input.files[0]
   if (!file) return
+
+  // Reset update mode when loading new file
+  resetUpdateMode()
 
   isUploading.value = true
   uploadProgress.value = 0
@@ -2017,8 +2058,13 @@ async function handleSegmentImport(segment: any) {
       images: []
     }
 
-    // Set uploadedFileId for database imports using the segment ID
+    // Create a temporary GPX file for database imports
+    await createTemporaryGPXFile(segment.id.toString())
     uploadedFileId.value = `db-segment-${segment.id}`
+
+    // Set update mode
+    isUpdateMode.value = true
+    updatingSegmentId.value = segment.id
 
     console.info(`Editor state updated: ${points.value.length} points loaded`)
     console.info(`Form initialized with segment data:`, {
@@ -2051,7 +2097,7 @@ async function handleSegmentImport(segment: any) {
   }
 }
 
-async function onSubmit() {
+async function onSaveAsNew() {
   if (!loaded.value || points.value.length < 2 || !uploadedFileId.value) {
     console.error(
       `Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : 'no uploadedFileId'}`
@@ -2128,7 +2174,7 @@ async function onSubmit() {
       throw new Error(detail || 'Failed to create segment')
     }
 
-    // Reset only form fields to original state
+    // For new segments, reset form fields to original state
     name.value = ''
     trailConditions.value = {
       tire_dry: 'slick',
@@ -2141,6 +2187,9 @@ async function onSubmit() {
     // Reset selection markers to start and end of file (preserve loaded state)
     startIndex.value = 0
     endIndex.value = points.value.length - 1
+
+    // Reset update mode
+    resetUpdateMode()
 
     // Update map and chart with new selection
     await nextTick()
@@ -2165,6 +2214,177 @@ async function onSubmit() {
     }, 5000)
   } finally {
     submitting.value = false
+  }
+}
+
+async function onUpdate() {
+  if (
+    !loaded.value ||
+    points.value.length < 2 ||
+    !uploadedFileId.value ||
+    !isUpdateMode.value
+  ) {
+    console.error(
+      `Form validation failed: ${!loaded.value ? 'not loaded' : points.value.length < 2 ? 'insufficient points' : !uploadedFileId.value ? 'no uploadedFileId' : 'not in update mode'}`
+    )
+
+    showError.value = true
+    currentErrorMessage.value = t('message.loadGpxFirst')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+    return
+  }
+
+  submitting.value = true
+  showError.value = false
+  currentErrorMessage.value = ''
+  message.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('name', name.value)
+    formData.append('track_type', trackType.value)
+    formData.append('tire_dry', trailConditions.value.tire_dry)
+    formData.append('tire_wet', trailConditions.value.tire_wet)
+    formData.append('surface_type', trailConditions.value.surface_type)
+    formData.append(
+      'difficulty_level',
+      trailConditions.value.difficulty_level.toString()
+    )
+
+    // Add the start and end indices for GPX processing
+    formData.append('start_index', startIndex.value.toString())
+    formData.append('end_index', endIndex.value.toString())
+
+    // Add the uploaded file ID instead of the file itself
+    formData.append('file_id', uploadedFileId.value)
+
+    // Add commentary data
+    formData.append('commentary_text', commentary.value.text)
+    formData.append('video_links', JSON.stringify(commentary.value.video_links))
+
+    // Upload images to storage and collect their metadata
+    const imageData = []
+    for (const image of commentary.value.images) {
+      if (!image.uploaded && image.file) {
+        // Upload image to storage
+        await uploadImageToStorage(image.file, image.id)
+
+        // Find the updated image in the commentary
+        const updatedImage = commentary.value.images.find((img) => img.id === image.id)
+        if (updatedImage && updatedImage.uploaded) {
+          imageData.push({
+            image_id: updatedImage.image_id,
+            image_url: updatedImage.image_url,
+            storage_key: updatedImage.storage_key || '',
+            filename: updatedImage.filename,
+            original_filename: updatedImage.original_filename
+          })
+        }
+      } else if (image.uploaded) {
+        // Image was already uploaded (shouldn't happen with new flow, but keep for safety)
+        imageData.push({
+          image_id: image.image_id,
+          image_url: image.image_url,
+          storage_key: image.storage_key || '',
+          filename: image.filename,
+          original_filename: image.original_filename
+        })
+      }
+    }
+    formData.append('image_data', JSON.stringify(imageData))
+
+    const res = await fetch(`/api/segments/${updatingSegmentId.value}`, {
+      method: 'PUT',
+      body: formData
+    })
+    if (!res.ok) {
+      const detail = await res.text()
+      throw new Error(detail || 'Failed to update segment')
+    }
+
+    // For updates, just show success message without resetting form
+    showSegmentSuccess.value = true
+    showError.value = false
+    currentErrorMessage.value = ''
+    showUploadSuccess.value = false
+
+    // Update map and chart with current selection
+    await nextTick()
+    renderMap()
+    renderChart()
+
+    // Reset update mode
+    resetUpdateMode()
+  } catch (err: any) {
+    showError.value = true
+    currentErrorMessage.value = err.message || t('message.updateError')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+
+    // Hide error after 5 seconds
+    setTimeout(() => {
+      showError.value = false
+      currentErrorMessage.value = ''
+    }, 5000)
+  } finally {
+    submitting.value = false
+  }
+}
+
+// Function to reset update mode (called when loading new files)
+function resetUpdateMode() {
+  isUpdateMode.value = false
+  updatingSegmentId.value = null
+}
+
+// Function to create a temporary GPX file from current editor state
+async function createTemporaryGPXFile(fileId: string) {
+  if (!points.value.length) {
+    throw new Error('No points available to create GPX file')
+  }
+
+  // Create GPX structure
+  const gpxContent = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Gravly Editor" xmlns="http://www.topografix.com/GPX/1/1">
+  <trk>
+    <name>${name.value || 'Imported Segment'}</name>
+    <trkseg>
+${points.value
+  .map(
+    (point) => `      <trkpt lat="${point.latitude}" lon="${point.longitude}">
+        <ele>${point.elevation}</ele>
+        ${point.time ? `<time>${point.time}</time>` : ''}
+      </trkpt>`
+  )
+  .join('\n')}
+    </trkseg>
+  </trk>
+</gpx>`
+
+  // Create a temporary file and upload it
+  const tempFile = new File([gpxContent], `${fileId}.gpx`, {
+    type: 'application/gpx+xml'
+  })
+
+  try {
+    const formData = new FormData()
+    formData.append('file', tempFile)
+
+    const response = await fetch('/api/upload-gpx', {
+      method: 'POST',
+      body: formData
+    })
+
+    if (!response.ok) {
+      const detail = await response.text()
+      throw new Error(detail || 'Failed to upload temporary GPX file')
+    }
+
+    const result = await response.json()
+    console.info(`Temporary GPX file created: ${result.file_id}`)
+  } catch (error) {
+    console.error('Error creating temporary GPX file:', error)
+    throw error
   }
 }
 </script>
