@@ -4,7 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import Navbar from '../Navbar.vue'
-import LandingPage from '../LandingPage.vue'
+import Explorer from '../Explorer.vue'
 import Editor from '../Editor.vue'
 
 // Mock the logo import
@@ -75,7 +75,7 @@ describe('Navbar', () => {
     router = createRouter({
       history: createWebHistory(),
       routes: [
-        { path: '/', component: LandingPage },
+        { path: '/', component: Explorer },
         { path: '/editor', component: Editor }
       ]
     })

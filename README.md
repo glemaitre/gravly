@@ -22,6 +22,7 @@ persistence.
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
 - **Advanced Route Analysis**: Elevation profiles, distance calculations, and trail
   condition metadata
+- **Media Management**: Upload and manage images and videos for cycling segments
 - **Flexible Storage**: Support for both local filesystem and AWS S3 storage backends
 - **Database Seeding**: Automated generation of realistic test data for development and
   testing
@@ -642,6 +643,9 @@ website_cycling/
 │   │   ├── main.py         # Main API server with streaming endpoints
 │   │   ├── models/         # SQLAlchemy models and Pydantic schemas
 │   │   │   ├── track.py    # Track model and response schemas
+│   │   │   ├── image.py    # Track image model and schemas
+│   │   │   ├── video.py    # Track video model and schemas
+│   │   │   ├── auth_user.py # Authorized user model and schemas
 │   │   │   └── base.py     # Base model configuration
 │   │   ├── services/       # Service modules
 │   │   │   └── strava.py   # Strava API integration service with OAuth and GPX processing
@@ -654,18 +658,20 @@ website_cycling/
 ├── frontend/               # Vue.js frontend
 │   ├── src/
 │   │   ├── components/     # Vue components
-│   │   │   ├── LandingPage.vue # Interactive map with streaming segments
+│   │   │   ├── Explorer.vue # Interactive map with streaming segments
 │   │   │   ├── Editor.vue      # GPX route editor with chart visualization
 │   │   │   ├── SegmentDetail.vue # Detailed segment view with map and charts
 │   │   │   ├── SegmentList.vue   # Filterable segment list component
 │   │   │   ├── Navbar.vue        # Navigation component with Strava authentication
+│   │   │   ├── RoutePlanner.vue  # Route planning component
 │   │   │   ├── StravaCallback.vue # Strava OAuth callback handler
 │   │   │   ├── StravaActivityList.vue # Strava activities list component
 │   │   │   └── StravaActivityDetailsModal.vue # Strava activity details modal
 │   │   ├── composables/    # Vue composables
 │   │   │   ├── useMapState.ts    # Map state persistence management
 │   │   │   ├── useStravaApi.ts   # Strava API integration and authentication composable
-│   │   │   └── useStravaActivities.ts # Strava activities management composable
+│   │   │   ├── useStravaActivities.ts # Strava activities management composable
+│   │   │   └── useAuthorization.ts # Editor authorization management
 │   │   ├── utils/          # Frontend utilities
 │   │   │   ├── gpxParser.ts      # Client-side GPX parsing
 │   │   │   └── distance.ts       # Distance calculation utilities
@@ -715,6 +721,14 @@ website_cycling/
 ### Editor Authorization
 - `GET /api/auth/check-authorization?strava_id={strava_id}` - Check if Strava user is authorized for editor access
 - `GET /api/auth/users` - List all authorized users (admin endpoint)
+
+### Track Media Management
+- `GET /api/tracks/{track_id}/images` - Get images for a specific track
+- `POST /api/tracks/{track_id}/images` - Upload images for a track
+- `DELETE /api/tracks/{track_id}/images/{image_id}` - Delete a specific track image
+- `GET /api/tracks/{track_id}/videos` - Get videos for a specific track
+- `POST /api/tracks/{track_id}/videos` - Upload videos for a track
+- `DELETE /api/tracks/{track_id}/videos/{video_id}` - Delete a specific track video
 
 **Features**:
 - **OAuth 2.0 Authentication**: Complete OAuth flow with secure token management
@@ -821,12 +835,12 @@ Task definitions use Pixi's cwd and depends-on fields for clarity.
 
 ### Frontend Testing
 - **Framework**: Vitest + Vue Test Utils + Testing Library with jsdom
-- **Coverage**: 83.43% overall coverage with:
-  - `LandingPage.vue`: 39.79% (map interactions, EventSource streaming)
+- **Coverage**: 82.96% overall coverage with:
+  - `Explorer.vue`: 58.68% (map interactions, EventSource streaming)
   - `SegmentList.vue`: Comprehensive segment list functionality
   - `SegmentDetail.vue`: Detailed segment view and interactions
-  - `Editor.vue`: 69.14% (route editing functionality)
-  - `Navbar.vue`: Navigation and language switching
+  - `Editor.vue`: 73.42% (route editing functionality)
+  - `Navbar.vue`: 88.78% (navigation and language switching)
   - `gpxParser.ts`: 92.8% (comprehensive GPX parsing tests)
   - `useMapState.ts`: Map state persistence composable
 - **Run**: `pixi run test-frontend`
@@ -875,6 +889,7 @@ summaries.
   recommendations)
 - **Chart Visualization**: Real-time elevation profile with Chart.js
 - **Commentary Support**: Text, video links, and image attachments for segments
+- **Media Management**: Upload and manage images and videos for cycling segments
 
 ### Authentication System
 - **Global Authentication**: Navbar-based login/logout with Strava OAuth 2.0
@@ -897,11 +912,12 @@ summaries.
 - **PostgreSQL**: Async database with SQLAlchemy ORM
 - **Metadata Management**: Comprehensive track metadata storage
 - **File Serving**: Efficient GPX file serving with proper MIME types
+- **Media Storage**: Support for images and videos with metadata tracking
 - **Database Seeding**: Automated generation of realistic test data
 
 ### Development Experience
 - **TypeScript**: Strict typing throughout frontend
-- **Testing**: Comprehensive test coverage (83.43% frontend, 100% backend core)
+- **Testing**: Comprehensive test coverage (82.96% frontend, 100% backend core)
 - **Code Quality**: Automated linting with Ruff (Python) and ESLint (TypeScript)
 - **Environment Management**: Pixi-based development environment
 - **Component Architecture**: Modular Vue components with clear separation of concerns

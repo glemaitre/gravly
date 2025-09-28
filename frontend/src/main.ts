@@ -4,13 +4,13 @@ import { i18n, initializeLanguage } from './i18n'
 import { useStravaApi } from './composables/useStravaApi'
 import App from './App.vue'
 import Editor from './components/Editor.vue'
-import LandingPage from './components/LandingPage.vue'
+import Explorer from './components/Explorer.vue'
 import SegmentDetail from './components/SegmentDetail.vue'
 import StravaCallback from './components/StravaCallback.vue'
 import RoutePlanner from './components/RoutePlanner.vue'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: LandingPage },
+  { path: '/', component: Explorer },
   {
     path: '/editor',
     component: Editor,
