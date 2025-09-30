@@ -29,10 +29,6 @@ class StorageManager(Protocol):
         """Upload a GPX segment file to storage."""
         ...
 
-    def delete_gpx_segment(self, storage_key: str) -> bool:
-        """Delete a GPX segment file from storage."""
-        ...
-
     def get_gpx_segment_url(
         self, storage_key: str, expiration: int = 3600
     ) -> str | None:
@@ -43,10 +39,6 @@ class StorageManager(Protocol):
         self, local_file_path: Path, file_id: str, prefix: str = "images-segments"
     ) -> str:
         """Upload an image file to storage."""
-        ...
-
-    def delete_image(self, storage_key: str) -> bool:
-        """Delete an image file from storage."""
         ...
 
     def get_image_url(self, storage_key: str, expiration: int = 3600) -> str | None:
@@ -63,6 +55,14 @@ class StorageManager(Protocol):
 
     def load_gpx_data(self, url: str) -> bytes | None:
         """Load GPX data from storage URL (s3:// or local://)."""
+        ...
+
+    def delete_gpx_segment_by_url(self, url: str) -> bool:
+        """Delete a GPX segment file from storage using full URL."""
+        ...
+
+    def delete_image_by_url(self, url: str) -> bool:
+        """Delete an image file from storage using full URL."""
         ...
 
 
@@ -157,31 +157,6 @@ class S3Manager:
             error_message = e.response["Error"]["Message"]
             logger.error(f"Failed to upload to S3: {error_code} - {error_message}")
             raise
-
-    def delete_gpx_segment(self, s3_key: str) -> bool:
-        """Delete a GPX segment file from S3.
-
-        Parameters
-        ----------
-        s3_key : str
-            S3 key (path) of the file to delete.
-
-        Returns
-        -------
-        bool
-            True if deletion was successful, False otherwise.
-        """
-        try:
-            logger.info(f"Deleting s3://{self.bucket_name}/{s3_key}")
-            self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
-            logger.info(f"Successfully deleted s3://{self.bucket_name}/{s3_key}")
-            return True
-
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            error_message = e.response["Error"]["Message"]
-            logger.error(f"Failed to delete from S3: {error_code} - {error_message}")
-            return False
 
     def get_gpx_segment_url(self, s3_key: str, expiration: int = 3600) -> str | None:
         """Generate a presigned URL for a GPX segment file.
@@ -357,31 +332,6 @@ class S3Manager:
             logger.error(f"Failed to upload to S3: {error_code} - {error_message}")
             raise
 
-    def delete_image(self, s3_key: str) -> bool:
-        """Delete an image file from S3.
-
-        Parameters
-        ----------
-        s3_key : str
-            S3 key (path) of the file to delete.
-
-        Returns
-        -------
-        bool
-            True if deletion was successful, False otherwise.
-        """
-        try:
-            logger.info(f"Deleting s3://{self.bucket_name}/{s3_key}")
-            self.s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
-            logger.info(f"Successfully deleted s3://{self.bucket_name}/{s3_key}")
-            return True
-
-        except ClientError as e:
-            error_code = e.response["Error"]["Code"]
-            error_message = e.response["Error"]["Message"]
-            logger.error(f"Failed to delete from S3: {error_code} - {error_message}")
-            return False
-
     def get_image_url(self, s3_key: str, expiration: int = 3600) -> str | None:
         """Generate a presigned URL for an image file.
 
@@ -413,6 +363,104 @@ class S3Manager:
                 f"Failed to generate presigned URL: {error_code} - {error_message}"
             )
             return None
+
+    def delete_gpx_segment_by_url(self, url: str) -> bool:
+        """Delete a GPX segment file from S3 storage using full URL.
+
+        Parameters
+        ----------
+        url : str
+            S3 URL in format 's3://bucket/key' of the GPX file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            if not url.startswith(self.get_storage_root_prefix()):
+                logger.error(f"Invalid S3 URL format: {url}")
+                return False
+
+            url_parts = url[5:]  # Remove 's3://'
+            if "/" not in url_parts:
+                logger.error(f"Invalid S3 URL format, missing key: {url}")
+                return False
+
+            bucket_name, key = url_parts.split("/", 1)
+
+            if bucket_name != self.bucket_name:
+                logger.error(
+                    f"S3 URL bucket '{bucket_name}' doesn't match configured bucket "
+                    f"'{self.bucket_name}'"
+                )
+                return False
+
+            logger.info(f"Deleting GPX segment from S3: {key}")
+
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+            logger.info(f"Successfully deleted GPX segment from S3: {key}")
+            return True
+
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            error_message = e.response["Error"]["Message"]
+            logger.error(
+                f"Failed to delete GPX segment from S3: {error_code} - {error_message}"
+            )
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting GPX segment from S3: {str(e)}")
+            return False
+
+    def delete_image_by_url(self, url: str) -> bool:
+        """Delete an image file from S3 storage using full URL.
+
+        Parameters
+        ----------
+        url : str
+            S3 URL in format 's3://bucket/key' of the image file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            if not url.startswith(self.get_storage_root_prefix()):
+                logger.error(f"Invalid S3 URL format: {url}")
+                return False
+
+            url_parts = url[5:]  # Remove 's3://'
+            if "/" not in url_parts:
+                logger.error(f"Invalid S3 URL format, missing key: {url}")
+                return False
+
+            bucket_name, key = url_parts.split("/", 1)
+
+            if bucket_name != self.bucket_name:
+                logger.error(
+                    f"S3 URL bucket '{bucket_name}' doesn't match configured bucket "
+                    f"'{self.bucket_name}'"
+                )
+                return False
+
+            logger.info(f"Deleting image from S3: {key}")
+
+            self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+            logger.info(f"Successfully deleted image from S3: {key}")
+            return True
+
+        except ClientError as e:
+            error_code = e.response["Error"]["Code"]
+            error_message = e.response["Error"]["Message"]
+            logger.error(
+                f"Failed to delete image from S3: {error_code} - {error_message}"
+            )
+            return False
+        except Exception as e:
+            logger.error(f"Unexpected error deleting image from S3: {str(e)}")
+            return False
 
 
 class LocalStorageManager:
@@ -487,38 +535,6 @@ original-path: {local_file_path}
         except Exception as e:
             logger.error(f"Failed to upload to local storage: {str(e)}")
             raise
-
-    def delete_gpx_segment(self, storage_key: str) -> bool:
-        """Delete a GPX segment file from local storage.
-
-        Parameters
-        ----------
-        storage_key : str
-            Storage key (path) of the file to delete.
-
-        Returns
-        -------
-        bool
-            True if deletion was successful, False otherwise.
-        """
-        try:
-            target_path = self.storage_root / storage_key
-            metadata_path = target_path.with_suffix(".gpx.metadata")
-
-            logger.info(f"Deleting from local storage: {target_path}")
-
-            if target_path.exists():
-                target_path.unlink()
-
-            if metadata_path.exists():
-                metadata_path.unlink()
-
-            logger.info(f"Successfully deleted from local storage: {target_path}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to delete from local storage: {str(e)}")
-            return False
 
     def get_gpx_segment_url(
         self, storage_key: str, expiration: int = 3600
@@ -615,38 +631,6 @@ original-path: {local_file_path}
         except Exception as e:
             logger.error(f"Failed to upload to local storage: {str(e)}")
             raise
-
-    def delete_image(self, storage_key: str) -> bool:
-        """Delete an image file from local storage.
-
-        Parameters
-        ----------
-        storage_key : str
-            Storage key (path) of the file to delete.
-
-        Returns
-        -------
-        bool
-            True if deletion was successful, False otherwise.
-        """
-        try:
-            target_path = self.storage_root / storage_key
-            metadata_path = target_path.with_suffix(target_path.suffix + ".metadata")
-
-            logger.info(f"Deleting from local storage: {target_path}")
-
-            if target_path.exists():
-                target_path.unlink()
-
-            if metadata_path.exists():
-                metadata_path.unlink()
-
-            logger.info(f"Successfully deleted from local storage: {target_path}")
-            return True
-
-        except Exception as e:
-            logger.error(f"Failed to delete from local storage: {str(e)}")
-            return False
 
     def get_image_url(self, storage_key: str, expiration: int = 3600) -> str | None:
         """Generate a URL for accessing an image file.
@@ -799,6 +783,76 @@ original-path: {local_file_path}
         except Exception as e:
             logger.error(f"Failed to load GPX data from local URL {url}: {str(e)}")
             return None
+
+    def delete_gpx_segment_by_url(self, url: str) -> bool:
+        """Delete a GPX segment file from local storage using full URL.
+
+        Parameters
+        ----------
+        url : str
+            Local URL in format 'local:///path/to/file' of the GPX file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            if not url.startswith(self.get_storage_root_prefix()):
+                logger.error(f"Invalid local URL format: {url}")
+                return False
+
+            file_path = url[9:]  # Remove 'local:///'
+            local_file_path = self.storage_root / file_path
+
+            if not local_file_path.exists():
+                logger.warning(f"Local file not found: {local_file_path}")
+                return False
+
+            logger.info(f"Deleting GPX segment from local storage: {local_file_path}")
+
+            local_file_path.unlink()
+            logger.info(f"Successfully deleted GPX segment: {local_file_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to delete GPX segment from local URL {url}: {str(e)}")
+            return False
+
+    def delete_image_by_url(self, url: str) -> bool:
+        """Delete an image file from local storage using full URL.
+
+        Parameters
+        ----------
+        url : str
+            Local URL in format 'local:///path/to/file' of the image file to delete.
+
+        Returns
+        -------
+        bool
+            True if deletion was successful, False otherwise.
+        """
+        try:
+            if not url.startswith(self.get_storage_root_prefix()):
+                logger.error(f"Invalid local URL format: {url}")
+                return False
+
+            file_path = url[9:]  # Remove 'local:///'
+            local_file_path = self.storage_root / file_path
+
+            if not local_file_path.exists():
+                logger.warning(f"Local file not found: {local_file_path}")
+                return False
+
+            logger.info(f"Deleting image from local storage: {local_file_path}")
+
+            local_file_path.unlink()
+            logger.info(f"Successfully deleted image: {local_file_path}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to delete image from local URL {url}: {str(e)}")
+            return False
 
 
 def get_storage_manager(config: S3StorageConfig | LocalStorageConfig) -> StorageManager:

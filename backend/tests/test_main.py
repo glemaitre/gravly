@@ -6844,7 +6844,7 @@ def test_update_segment_database_exception_handling(
 
     try:
         with patch(
-            "src.main.storage_manager.delete_gpx_segment", return_value=True
+            "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
         ) as mock_delete:
             response = client.put(
                 "/api/segments/1",
@@ -7121,7 +7121,7 @@ def test_update_segment_cleanup_old_file_success(
 
     # Mock storage manager to track delete calls
     with patch(
-        "src.main.storage_manager.delete_gpx_segment", return_value=True
+        "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
     ) as mock_delete:
         with patch("src.main.Path") as mock_path:
 
@@ -7204,7 +7204,7 @@ def test_update_segment_cleanup_old_file_failure(
 
     # Mock storage manager to fail on delete
     with patch(
-        "src.main.storage_manager.delete_gpx_segment", return_value=False
+        "src.main.storage_manager.delete_gpx_segment_by_url", return_value=False
     ) as mock_delete:
         with patch("src.main.Path") as mock_path:
 
@@ -7760,7 +7760,7 @@ def test_update_segment_old_file_deletion_failure(
             # Mock storage manager to simulate deletion failure
             with patch("src.main.storage_manager") as mock_storage:
                 mock_storage.get_storage_root_prefix.return_value = "s3://test-bucket"
-                mock_storage.delete_gpx_segment.return_value = (
+                mock_storage.delete_gpx_segment_by_url.return_value = (
                     False  # Simulate deletion failure
                 )
 
@@ -7785,9 +7785,9 @@ def test_update_segment_old_file_deletion_failure(
         # Should still succeed even if old file deletion fails
         assert update_response.status_code == 200
 
-        # Verify that delete_gpx_segment was called
-        mock_storage.delete_gpx_segment.assert_called_once_with(
-            "gpx-segments/old_file.gpx"
+        # Verify that delete_gpx_segment_by_url was called
+        mock_storage.delete_gpx_segment_by_url.assert_called_once_with(
+            "s3://test-bucket/gpx-segments/old_file.gpx"
         )
 
     finally:
@@ -7893,7 +7893,7 @@ def test_update_segment_old_file_cleanup_with_prefix(
             return_value="s3://test-bucket",
         ):
             with patch(
-                "src.main.storage_manager.delete_gpx_segment", return_value=True
+                "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
             ) as mock_delete:
                 with patch("src.main.Path") as mock_path:
 
@@ -7922,8 +7922,10 @@ def test_update_segment_old_file_cleanup_with_prefix(
                     )
 
         assert update_response.status_code == 200
-        # Verify that delete was called with the correct storage key
-        mock_delete.assert_called_once_with("gpx-segments/old_file.gpx")
+        # Verify that delete was called with the correct full URL
+        mock_delete.assert_called_once_with(
+            "s3://test-bucket/gpx-segments/old_file.gpx"
+        )
 
     finally:
         main_module.SessionLocal = original_session_local
@@ -8027,7 +8029,7 @@ def test_update_segment_old_file_cleanup_exception(
             return_value="s3://test-bucket",
         ):
             with patch(
-                "src.main.storage_manager.delete_gpx_segment",
+                "src.main.storage_manager.delete_gpx_segment_by_url",
                 side_effect=Exception("Cleanup failed"),
             ):
                 with patch("src.main.Path") as mock_path:
@@ -8131,7 +8133,7 @@ def test_update_segment_database_error_cleanup_failure(
     try:
         # Mock storage manager to fail on cleanup
         with patch(
-            "src.main.storage_manager.delete_gpx_segment",
+            "src.main.storage_manager.delete_gpx_segment_by_url",
             side_effect=Exception("Cleanup failed"),
         ):
             with patch("src.main.Path") as mock_path:
@@ -8339,7 +8341,7 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
 
             return MockResult()
 
-        async def delete(self, obj):
+        def delete(self, obj):
             pass
 
         async def commit(self):
@@ -8352,8 +8354,8 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
     try:
         # Mock storage manager to track delete calls
         with patch("src.main.storage_manager") as mock_storage:
-            mock_storage.delete_gpx_segment.return_value = True
-            mock_storage.delete_image.return_value = True
+            mock_storage.delete_gpx_segment_by_url.return_value = True
+            mock_storage.delete_image_by_url.return_value = True
 
             # Delete the segment
             response = client.delete("/api/segments/123")
@@ -8366,7 +8368,7 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
             assert response_data["deleted_track"]["id"] == 123
 
             # Verify that storage cleanup was called
-            mock_storage.delete_gpx_segment.assert_called_once()
+            mock_storage.delete_gpx_segment_by_url.assert_called_once()
 
     finally:
         main_module.SessionLocal = original_session_local
@@ -8448,3 +8450,209 @@ def test_delete_segment_no_storage_manager(
 
     finally:
         main_module.storage_manager = original_storage_manager
+
+
+def test_delete_segment_track_not_found_in_database(client, main_module):
+    """Test deletion when track is not found in database (mocked session)."""
+
+    # Mock a session that returns None for the track (simulating track not found)
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return None  # Track not found in database
+
+            return MockResult()
+
+    # Mock the session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = lambda: MockSession()
+
+    try:
+        # Delete the segment
+        response = client.delete("/api/segments/123")
+
+        # Should return 404 with "Track not found" message
+        assert response.status_code == 404
+        response_data = response.json()
+        assert response_data["detail"] == "Track not found"
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_gpx_deletion_exception_handling(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test that GPX file deletion exceptions are handled gracefully and logged."""
+
+    # Mock a session that returns a track with a file_path
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.images = []
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+        def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    # Mock the SessionLocal to return our mock session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSession
+
+    try:
+        # Mock storage manager to raise an exception during GPX deletion
+        with patch("src.main.storage_manager") as mock_storage:
+            # Make delete_gpx_segment_by_url raise an exception
+            mock_storage.delete_gpx_segment_by_url.side_effect = Exception(
+                "Storage service unavailable"
+            )
+            mock_storage.delete_image_by_url.return_value = True
+
+            # Mock logger to capture warning messages
+            with patch("src.main.logger") as mock_logger:
+                # Delete the segment
+                response = client.delete("/api/segments/123")
+
+                # Should still succeed despite storage exception
+                assert response.status_code == 200
+                response_data = response.json()
+                assert response_data["message"] == "Track deleted successfully"
+                assert "deleted_track" in response_data
+                assert response_data["deleted_track"]["id"] == 123
+
+                # Verify that storage cleanup was attempted
+                mock_storage.delete_gpx_segment_by_url.assert_called_once_with(
+                    "gpx-segments/test.gpx"
+                )
+
+                # Verify that the exception was logged as a warning
+                mock_logger.warning.assert_called()
+                warning_calls = [
+                    call
+                    for call in mock_logger.warning.call_args_list
+                    if "Failed to delete GPX file from storage" in str(call)
+                ]
+                assert len(warning_calls) > 0, (
+                    "Expected warning log for GPX deletion failure"
+                )
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_image_deletion_exception_handling(
+    client, sample_gpx_file, tmp_path, main_module
+):
+    """Test that image deletion exceptions are handled gracefully and logged."""
+
+    # Mock an image class
+    class MockImage:
+        def __init__(self, image_id, image_url):
+            self.id = image_id
+            self.image_url = image_url
+
+    # Mock a session that returns a track with images
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.images = [
+                MockImage(1, "images/image1.jpg"),
+                MockImage(2, "images/image2.jpg"),
+            ]
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+        def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    # Mock the SessionLocal to return our mock session
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSession
+
+    try:
+        # Mock storage manager to raise exceptions during image deletion
+        with patch("src.main.storage_manager") as mock_storage:
+            # Make delete_gpx_segment_by_url succeed
+            mock_storage.delete_gpx_segment_by_url.return_value = True
+            # Make delete_image_by_url raise an exception for the first image
+            mock_storage.delete_image_by_url.side_effect = Exception(
+                "Image storage service unavailable"
+            )
+
+            # Mock logger to capture warning messages
+            with patch("src.main.logger") as mock_logger:
+                # Delete the segment
+                response = client.delete("/api/segments/123")
+
+                # Should still succeed despite storage exception
+                assert response.status_code == 200
+                response_data = response.json()
+                assert response_data["message"] == "Track deleted successfully"
+                assert "deleted_track" in response_data
+                assert response_data["deleted_track"]["id"] == 123
+
+                # Verify that storage cleanup was attempted for GPX
+                mock_storage.delete_gpx_segment_by_url.assert_called_once_with(
+                    "gpx-segments/test.gpx"
+                )
+
+                # Verify that image deletion was attempted (called twice for two images)
+                assert mock_storage.delete_image_by_url.call_count == 2
+
+                # Verify that the exception was logged as a warning
+                mock_logger.warning.assert_called()
+                warning_calls = [
+                    call
+                    for call in mock_logger.warning.call_args_list
+                    if "Failed to delete image from storage" in str(call)
+                ]
+                assert len(warning_calls) > 0, (
+                    "Expected warning log for image deletion failure"
+                )
+
+    finally:
+        main_module.SessionLocal = original_session_local

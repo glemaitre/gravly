@@ -13,8 +13,9 @@ from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from PIL import Image
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 from werkzeug.utils import secure_filename
 
 from .models.auth_user import AuthUser, AuthUserResponse, AuthUserSummary
@@ -1284,7 +1285,9 @@ async def update_segment(
                     # Remove the storage root prefix to get the storage key
                     prefix_len = len(storage_manager.get_storage_root_prefix())
                     old_storage_key = old_file_path[prefix_len + 1 :]
-                    delete_success = storage_manager.delete_gpx_segment(old_storage_key)
+                    delete_success = storage_manager.delete_gpx_segment_by_url(
+                        old_file_path
+                    )
                     if delete_success:
                         logger.info(f"Successfully deleted old file: {old_storage_key}")
                     else:
@@ -1320,7 +1323,7 @@ async def update_segment(
         # Try to clean up the newly uploaded file since DB update failed
         try:
             if "storage_key" in locals():
-                storage_manager.delete_gpx_segment(storage_key)
+                storage_manager.delete_gpx_segment_by_url(storage_key)
         except Exception as cleanup_e:
             logger.error(f"Failed to cleanup new file after DB error: {cleanup_e}")
         raise HTTPException(
@@ -1352,8 +1355,12 @@ async def delete_segment(track_id: int):
 
     try:
         async with SessionLocal() as session:
-            # First, get the track and its associated files
-            stmt = select(Track).filter(Track.id == track_id)
+            # First, get the track and its associated files with eager loading
+            stmt = (
+                select(Track)
+                .options(selectinload(Track.images), selectinload(Track.videos))
+                .filter(Track.id == track_id)
+            )
             result = await session.execute(stmt)
             track = result.scalar_one_or_none()
 
@@ -1368,27 +1375,16 @@ async def delete_segment(track_id: int):
             # Delete GPX file
             try:
                 if track.file_path:
-                    # Extract storage key from file_path (remove storage prefix)
-                    if track.file_path.startswith("local:///"):
-                        storage_key = track.file_path[9:]  # Remove "local:///"
-                    elif track.file_path.startswith("s3://"):
-                        # Extract key from s3://bucket/key format
-                        storage_key = track.file_path.split("/", 3)[
-                            -1
-                        ]  # Get everything after bucket/
-                    else:
-                        storage_key = track.file_path
-
-                    logger.info(f"Deleting GPX file from storage: {storage_key}")
-                    storage_manager.delete_gpx_segment(storage_key)
+                    logger.info(f"Deleting GPX file from storage: {track.file_path}")
+                    storage_manager.delete_gpx_segment_by_url(track.file_path)
             except Exception as e:
                 logger.warning(f"Failed to delete GPX file from storage: {str(e)}")
 
             # Delete associated images from storage
             for image in images:
                 try:
-                    logger.info(f"Deleting image from storage: {image.storage_key}")
-                    storage_manager.delete_image(image.storage_key)
+                    logger.info(f"Deleting image from storage: {image.image_url}")
+                    storage_manager.delete_image_by_url(image.image_url)
                 except Exception as e:
                     logger.warning(f"Failed to delete image from storage: {str(e)}")
 
@@ -1404,7 +1400,8 @@ async def delete_segment(track_id: int):
             }
 
             # Delete the track (cascade will handle images and videos in DB)
-            await session.delete(track)
+            stmt = delete(Track).where(Track.id == track_id)
+            await session.execute(stmt)
             await session.commit()
 
             logger.info(

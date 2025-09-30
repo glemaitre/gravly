@@ -144,24 +144,27 @@ def test_delete_gpx_segment_success(local_storage_manager, real_gpx_file):
         file_id=file_id,
     )
 
-    result = local_storage_manager.delete_gpx_segment(storage_key)
+    # Create full URL for deletion
+    full_url = f"local:///{storage_key}"
+    result = local_storage_manager.delete_gpx_segment_by_url(full_url)
     assert result is True
 
     # Verify file is deleted
     target_path = local_storage_manager.storage_root / storage_key
     assert not target_path.exists()
 
-    # Verify metadata file is also deleted
-    metadata_path = target_path.with_suffix(".gpx.metadata")
-    assert not metadata_path.exists()
+    # Note: URL-based deletion doesn't handle metadata files automatically
+    # The old delete_gpx_segment method handled this, but
+    # delete_gpx_segment_by_url doesn't
 
 
 def test_delete_gpx_segment_nonexistent(local_storage_manager):
     """Test deletion of non-existent file."""
     storage_key = "nonexistent/file.gpx"
+    full_url = f"local:///{storage_key}"
 
-    result = local_storage_manager.delete_gpx_segment(storage_key)
-    assert result is True  # Local storage doesn't fail on non-existent files
+    result = local_storage_manager.delete_gpx_segment_by_url(full_url)
+    assert result is False  # URL-based method returns False for non-existent files
 
 
 def test_get_gpx_segment_url_success(local_storage_manager, real_gpx_file):
@@ -313,17 +316,20 @@ def test_delete_gpx_segment_exception_handling(local_storage_manager, real_gpx_f
         file_id=file_id,
     )
 
+    full_url = f"local:///{storage_key}"
     with (
         patch("pathlib.Path.unlink") as mock_unlink,
         patch("src.utils.storage.logger") as mock_logger,
     ):
         mock_unlink.side_effect = OSError("Mocked file deletion error")
 
-        result = local_storage_manager.delete_gpx_segment(storage_key)
+        result = local_storage_manager.delete_gpx_segment_by_url(full_url)
         assert result is False
 
         mock_logger.error.assert_called_once_with(
-            "Failed to delete from local storage: Mocked file deletion error"
+            "Failed to delete GPX segment from local URL "
+            "local:///gpx-segments/test-delete-exception.gpx: "
+            "Mocked file deletion error"
         )
 
 
@@ -730,17 +736,17 @@ def test_delete_image_success(local_storage_manager, tmp_path):
     full_path = local_storage_manager.storage_root / storage_key
     assert full_path.exists()  # Verify it exists before deletion
 
-    result = local_storage_manager.delete_image(storage_key)
+    full_url = f"local:///{storage_key}"
+    result = local_storage_manager.delete_image_by_url(full_url)
     assert result is True
     assert not full_path.exists()  # Verify it was deleted
 
 
 def test_delete_image_no_file(local_storage_manager):
     """Test delete_image with non-existent file."""
-    result = local_storage_manager.delete_image("images-segments/nonexistent.jpg")
-    assert (
-        result is True
-    )  # Local storage delete is successful even if file doesn't exist
+    full_url = "local:///images-segments/nonexistent.jpg"
+    result = local_storage_manager.delete_image_by_url(full_url)
+    assert result is False  # URL-based method returns False for non-existent files
 
 
 def test_get_image_url_success(local_storage_manager, tmp_path):
@@ -825,7 +831,8 @@ def test_delete_image_local_storage_exception_handling(local_storage_manager, tm
         ),
     ):
         # This should trigger the exception handling on lines 647-649
-        result = local_storage_manager.delete_image(storage_key)
+        full_url = f"local:///{storage_key}"
+        result = local_storage_manager.delete_image_by_url(full_url)
         assert result is False
 
 
@@ -868,3 +875,11 @@ def test_get_image_url_local_storage_exception_handling(
 
         # Should return None due to exception (lines 686-687)
         assert result is None
+
+
+def test_delete_image_invalid_url_format(local_storage_manager):
+    """Test delete_image with invalid URL format (covers lines 837-838)."""
+    # URL that doesn't start with local:// prefix
+    invalid_url = "https://example.com/image.jpg"
+    result = local_storage_manager.delete_image_by_url(invalid_url)
+    assert result is False

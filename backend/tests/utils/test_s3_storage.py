@@ -149,7 +149,8 @@ def test_delete_gpx_segment_success(mock_s3_manager, real_gpx_file):
         file_id=file_id,
     )
 
-    result = mock_s3_manager.delete_gpx_segment(s3_key)
+    full_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
+    result = mock_s3_manager.delete_gpx_segment_by_url(full_url)
     assert result is True
 
     # Verify file is deleted - in moto, deletion might not actually remove the object
@@ -160,8 +161,9 @@ def test_delete_gpx_segment_success(mock_s3_manager, real_gpx_file):
 def test_delete_gpx_segment_nonexistent(mock_s3_manager):
     """Test deletion of non-existent file."""
     s3_key = "nonexistent/file.gpx"
+    full_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
 
-    result = mock_s3_manager.delete_gpx_segment(s3_key)
+    result = mock_s3_manager.delete_gpx_segment_by_url(full_url)
     # In moto, deletion of non-existent objects still returns True
     # This tests our code logic, not moto's behavior
     assert result is True
@@ -321,6 +323,7 @@ def test_upload_gpx_segment_client_error(mock_s3_manager, real_gpx_file, tmp_pat
 def test_delete_gpx_segment_client_error(mock_s3_manager):
     """Test delete_gpx_segment when S3 deletion raises a ClientError."""
     s3_key = "test-segment/file.gpx"
+    full_url = f"s3://test-cycling-gpx-bucket/{s3_key}"
 
     client_error = ClientError(
         error_response={
@@ -335,7 +338,7 @@ def test_delete_gpx_segment_client_error(mock_s3_manager):
     with patch.object(
         mock_s3_manager.s3_client, "delete_object", side_effect=client_error
     ):
-        result = mock_s3_manager.delete_gpx_segment(s3_key)
+        result = mock_s3_manager.delete_gpx_segment_by_url(full_url)
         assert result is False
 
 
@@ -690,13 +693,15 @@ def test_delete_image_success(mock_s3_manager):
         Body=b"fake-image-data",
     )
 
-    result = mock_s3_manager.delete_image("images-segments/test-image.jpg")
+    full_url = "s3://test-cycling-gpx-bucket/images-segments/test-image.jpg"
+    result = mock_s3_manager.delete_image_by_url(full_url)
     assert result is True
 
 
 def test_delete_image_no_file(mock_s3_manager):
     """Test delete_image with non-existent file."""
-    result = mock_s3_manager.delete_image("images-segments/nonexistent.jpg")
+    full_url = "s3://test-cycling-gpx-bucket/images-segments/nonexistent.jpg"
+    result = mock_s3_manager.delete_image_by_url(full_url)
     # S3 delete expects to succeed even if key doesn't exist
     assert result is True
 
@@ -711,7 +716,8 @@ def test_delete_image_s3_client_error(mock_s3_manager):
             operation_name="delete_object",
         )
 
-        result = mock_s3_manager.delete_image("images-segments/test-image.jpg")
+        full_url = "s3://test-cycling-gpx-bucket/images-segments/test-image.jpg"
+        result = mock_s3_manager.delete_image_by_url(full_url)
         assert result is False
 
 
@@ -751,3 +757,88 @@ def test_get_image_url_s3_client_error(mock_s3_manager):
 
         result = mock_s3_manager.get_image_url("images-segments/test-image.jpg")
         assert result is None
+
+
+# ============== ADDITIONAL EDGE CASE TESTS FOR COVERAGE ==============
+
+
+def test_delete_gpx_segment_invalid_url_format(mock_s3_manager):
+    """Test delete_gpx_segment with invalid URL format (covers lines 382-383)."""
+    # URL that doesn't start with s3://bucket prefix
+    invalid_url = "https://example.com/file.gpx"
+    result = mock_s3_manager.delete_gpx_segment_by_url(invalid_url)
+    assert result is False
+
+
+def test_delete_gpx_segment_missing_key(mock_s3_manager):
+    """Test delete_gpx_segment with missing key in URL (covers lines 387-388)."""
+    # URL without a key after the bucket name
+    invalid_url = "s3://test-cycling-gpx-bucket"
+    result = mock_s3_manager.delete_gpx_segment_by_url(invalid_url)
+    assert result is False
+
+
+def test_delete_gpx_segment_bucket_mismatch(mock_s3_manager):
+    """Test delete_gpx_segment with wrong bucket name (covers lines 393-397)."""
+    # URL with a different bucket name than configured
+    wrong_bucket_url = "s3://wrong-bucket/gpx-segments/file.gpx"
+
+    # Mock get_storage_root_prefix to return a generic s3:// prefix
+    with patch.object(mock_s3_manager, "get_storage_root_prefix", return_value="s3://"):
+        result = mock_s3_manager.delete_gpx_segment_by_url(wrong_bucket_url)
+        assert result is False
+
+
+def test_delete_gpx_segment_generic_exception(mock_s3_manager):
+    """Test delete_gpx_segment with generic exception (covers lines 412-414)."""
+    valid_url = "s3://test-cycling-gpx-bucket/gpx-segments/file.gpx"
+
+    # Mock delete_object to raise a generic exception (not ClientError)
+    with patch.object(
+        mock_s3_manager.s3_client,
+        "delete_object",
+        side_effect=RuntimeError("Unexpected error"),
+    ):
+        result = mock_s3_manager.delete_gpx_segment_by_url(valid_url)
+        assert result is False
+
+
+def test_delete_image_invalid_url_format(mock_s3_manager):
+    """Test delete_image with invalid URL format (covers lines 431-432)."""
+    # URL that doesn't start with s3://bucket prefix
+    invalid_url = "https://example.com/image.jpg"
+    result = mock_s3_manager.delete_image_by_url(invalid_url)
+    assert result is False
+
+
+def test_delete_image_missing_key(mock_s3_manager):
+    """Test delete_image with missing key in URL (covers lines 436-437)."""
+    # URL without a key after the bucket name
+    invalid_url = "s3://test-cycling-gpx-bucket"
+    result = mock_s3_manager.delete_image_by_url(invalid_url)
+    assert result is False
+
+
+def test_delete_image_bucket_mismatch(mock_s3_manager):
+    """Test delete_image with wrong bucket name (covers lines 442-446)."""
+    # URL with a different bucket name than configured
+    wrong_bucket_url = "s3://wrong-bucket/images-segments/image.jpg"
+
+    # Mock get_storage_root_prefix to return a generic s3:// prefix
+    with patch.object(mock_s3_manager, "get_storage_root_prefix", return_value="s3://"):
+        result = mock_s3_manager.delete_image_by_url(wrong_bucket_url)
+        assert result is False
+
+
+def test_delete_image_generic_exception(mock_s3_manager):
+    """Test delete_image with generic exception (covers lines 461-463)."""
+    valid_url = "s3://test-cycling-gpx-bucket/images-segments/image.jpg"
+
+    # Mock delete_object to raise a generic exception (not ClientError)
+    with patch.object(
+        mock_s3_manager.s3_client,
+        "delete_object",
+        side_effect=RuntimeError("Unexpected error"),
+    ):
+        result = mock_s3_manager.delete_image_by_url(valid_url)
+        assert result is False

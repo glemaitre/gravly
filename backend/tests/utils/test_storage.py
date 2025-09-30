@@ -170,9 +170,9 @@ class MockStorageManager:
         self.upload_calls.append((local_file_path, file_id, prefix))
         return f"{prefix}/{file_id}.gpx"
 
-    def delete_gpx_segment(self, storage_key: str) -> bool:
+    def delete_gpx_segment_by_url(self, url: str) -> bool:
         """Mock delete implementation."""
-        self.delete_calls.append(storage_key)
+        self.delete_calls.append(url)
         return True
 
     def get_gpx_segment_url(
@@ -195,7 +195,7 @@ class MockStorageManager:
 def test_storage_manager_protocol_interface():
     """Test that StorageManager Protocol defines the correct interface."""
     assert hasattr(StorageManager, "upload_gpx_segment")
-    assert hasattr(StorageManager, "delete_gpx_segment")
+    assert hasattr(StorageManager, "delete_gpx_segment_by_url")
     assert hasattr(StorageManager, "get_gpx_segment_url")
     assert hasattr(StorageManager, "bucket_exists")
     assert hasattr(StorageManager, "get_storage_root_prefix")
@@ -203,7 +203,7 @@ def test_storage_manager_protocol_interface():
     upload_method = StorageManager.__dict__["upload_gpx_segment"]
     assert upload_method.__annotations__["return"] is str
 
-    delete_method = StorageManager.__dict__["delete_gpx_segment"]
+    delete_method = StorageManager.__dict__["delete_gpx_segment_by_url"]
     assert delete_method.__annotations__["return"] is bool
 
     url_method = StorageManager.__dict__["get_gpx_segment_url"]
@@ -225,9 +225,9 @@ def test_storage_manager_protocol_implementation():
     assert result == "test-prefix/test-id.gpx"
     assert manager.upload_calls == [(file_path, "test-id", "test-prefix")]
 
-    result = manager.delete_gpx_segment("test/file.gpx")
+    result = manager.delete_gpx_segment_by_url("mock://test-bucket/test/file.gpx")
     assert result is True
-    assert manager.delete_calls == ["test/file.gpx"]
+    assert manager.delete_calls == ["mock://test-bucket/test/file.gpx"]
 
     result = manager.get_gpx_segment_url("test/file.gpx", 7200)
     assert result == "https://example.com/test/file.gpx"

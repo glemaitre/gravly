@@ -2357,7 +2357,9 @@ describe('Editor Image Upload', () => {
       vm.isUpdateMode = false
       await nextTick()
 
-      expect(deleteButton.attributes('title')).toContain('Load a segment from database to enable update')
+      expect(deleteButton.attributes('title')).toContain(
+        'Load a segment from database to enable update'
+      )
     })
 
     it('should have onDeleteFromDb function', () => {
@@ -2368,15 +2370,16 @@ describe('Editor Image Upload', () => {
       // Mock successful delete response
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          message: 'Track deleted successfully',
-          deleted_track: {
-            id: 123,
-            name: 'Test Segment',
-            images_count: 0,
-            videos_count: 0
-          }
-        })
+        json: () =>
+          Promise.resolve({
+            message: 'Track deleted successfully',
+            deleted_track: {
+              id: 123,
+              name: 'Test Segment',
+              images_count: 0,
+              videos_count: 0
+            }
+          })
       })
 
       // Ensure confirm returns true
@@ -2446,10 +2449,11 @@ describe('Editor Image Upload', () => {
       // Mock successful delete response
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({
-          message: 'Track deleted successfully',
-          deleted_track: { id: 123, name: 'Test Segment' }
-        })
+        json: () =>
+          Promise.resolve({
+            message: 'Track deleted successfully',
+            deleted_track: { id: 123, name: 'Test Segment' }
+          })
       })
 
       // Ensure confirm returns true

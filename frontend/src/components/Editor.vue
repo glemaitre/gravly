@@ -2364,11 +2364,7 @@ async function onUpdate() {
 }
 
 async function onDeleteFromDb() {
-  if (
-    !loaded.value ||
-    !isUpdateMode.value ||
-    !updatingSegmentId.value
-  ) {
+  if (!loaded.value || !isUpdateMode.value || !updatingSegmentId.value) {
     console.error(
       `Delete validation failed: ${!loaded.value ? 'not loaded' : !isUpdateMode.value ? 'not in update mode' : 'no updatingSegmentId'}`
     )
@@ -2381,9 +2377,7 @@ async function onDeleteFromDb() {
   }
 
   // Show confirmation dialog
-  const confirmed = confirm(
-    t('message.confirmDelete', { name: name.value })
-  )
+  const confirmed = confirm(t('message.confirmDelete', { name: name.value }))
 
   if (!confirmed) {
     return
@@ -2447,7 +2441,6 @@ async function onDeleteFromDb() {
     setTimeout(() => {
       showSegmentSuccess.value = false
     }, 3000)
-
   } catch (err: any) {
     showError.value = true
     currentErrorMessage.value = err.message || t('message.deleteError')
