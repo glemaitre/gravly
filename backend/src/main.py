@@ -1383,8 +1383,13 @@ async def delete_segment(track_id: int):
             # Delete associated images from storage
             for image in images:
                 try:
-                    logger.info(f"Deleting image from storage: {image.image_url}")
-                    storage_manager.delete_image_by_url(image.image_url)
+                    # Construct the proper storage URL from storage_key
+                    storage_url = (
+                        f"{storage_manager.get_storage_root_prefix()}/"
+                        f"{image.storage_key}"
+                    )
+                    logger.info(f"Deleting image from storage: {storage_url}")
+                    storage_manager.delete_image_by_url(storage_url)
                 except Exception as e:
                     logger.warning(f"Failed to delete image from storage: {str(e)}")
 

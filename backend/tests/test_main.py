@@ -7,7 +7,7 @@ import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, call, patch
 
 import boto3
 import pytest
@@ -1962,12 +1962,35 @@ def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
     """Test GPX endpoint when storage manager raises an exception."""
     # Mock storage manager to raise an exception
     original_storage_manager = main_module.storage_manager
+    original_session_local = main_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
             raise Exception("Storage connection failed")
 
+    # Mock track object
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "local:///gpx-segments/test.gpx"
+
+    # Mock database session
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
     main_module.storage_manager = MockStorageManager()
+    main_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1975,20 +1998,44 @@ def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
         data = response.json()
         assert "Failed to load GPX data: Storage connection failed" in data["detail"]
     finally:
-        # Restore original storage manager
+        # Restore original storage manager and session
         main_module.storage_manager = original_storage_manager
+        main_module.SessionLocal = original_session_local
 
 
 def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
     """Test GPX endpoint when storage manager returns None (file not found)."""
     # Mock storage manager to return None
     original_storage_manager = main_module.storage_manager
+    original_session_local = main_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
             return None
 
+    # Mock track object
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "local:///gpx-segments/test.gpx"
+
+    # Mock database session
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
     main_module.storage_manager = MockStorageManager()
+    main_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1996,8 +2043,9 @@ def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
         data = response.json()
         assert data["detail"] == "GPX data not found"
     finally:
-        # Restore original storage manager
+        # Restore original storage manager and session
         main_module.storage_manager = original_storage_manager
+        main_module.SessionLocal = original_session_local
 
 
 def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, main_module):
@@ -2378,13 +2426,36 @@ def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
     """Test GPX endpoint when GPX data cannot be decoded as UTF-8."""
     # Mock storage manager to return invalid UTF-8 data
     original_storage_manager = main_module.storage_manager
+    original_session_local = main_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
             # Return bytes that cannot be decoded as UTF-8
             return b"\xff\xfe\x00\x00"
 
+    # Mock track object
+    class MockTrack:
+        def __init__(self):
+            self.id = 1
+            self.file_path = "local:///gpx-segments/test.gpx"
+
+    # Mock database session
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
     main_module.storage_manager = MockStorageManager()
+    main_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -2392,8 +2463,9 @@ def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
         data = response.json()
         assert "Failed to load GPX data" in data["detail"]
     finally:
-        # Restore original storage manager
+        # Restore original storage manager and session
         main_module.storage_manager = original_storage_manager
+        main_module.SessionLocal = original_session_local
 
 
 def test_get_track_gpx_data_endpoint_database_error(client, main_module):
@@ -8573,9 +8645,10 @@ def test_delete_segment_image_deletion_exception_handling(
 
     # Mock an image class
     class MockImage:
-        def __init__(self, image_id, image_url):
+        def __init__(self, image_id, image_url, storage_key):
             self.id = image_id
             self.image_url = image_url
+            self.storage_key = storage_key
 
     # Mock a session that returns a track with images
     class MockTrack:
@@ -8584,8 +8657,16 @@ def test_delete_segment_image_deletion_exception_handling(
             self.name = "Test Segment"
             self.file_path = "gpx-segments/test.gpx"
             self.images = [
-                MockImage(1, "images/image1.jpg"),
-                MockImage(2, "images/image2.jpg"),
+                MockImage(
+                    1,
+                    "http://localhost:8000/storage/images-segments/image1.jpg",
+                    "images-segments/image1.jpg",
+                ),
+                MockImage(
+                    2,
+                    "http://localhost:8000/storage/images-segments/image2.jpg",
+                    "images-segments/image2.jpg",
+                ),
             ]
             self.videos = []
 
@@ -8618,6 +8699,8 @@ def test_delete_segment_image_deletion_exception_handling(
         with patch("src.main.storage_manager") as mock_storage:
             # Make delete_gpx_segment_by_url succeed
             mock_storage.delete_gpx_segment_by_url.return_value = True
+            # Mock get_storage_root_prefix to return local storage prefix
+            mock_storage.get_storage_root_prefix.return_value = "local://"
             # Make delete_image_by_url raise an exception for the first image
             mock_storage.delete_image_by_url.side_effect = Exception(
                 "Image storage service unavailable"
@@ -8641,7 +8724,15 @@ def test_delete_segment_image_deletion_exception_handling(
                 )
 
                 # Verify that image deletion was attempted (called twice for two images)
+                # with the proper storage URL format
                 assert mock_storage.delete_image_by_url.call_count == 2
+                expected_calls = [
+                    call("local:///images-segments/image1.jpg"),
+                    call("local:///images-segments/image2.jpg"),
+                ]
+                mock_storage.delete_image_by_url.assert_has_calls(
+                    expected_calls, any_order=True
+                )
 
                 # Verify that the exception was logged as a warning
                 mock_logger.warning.assert_called()
@@ -8655,4 +8746,223 @@ def test_delete_segment_image_deletion_exception_handling(
                 )
 
     finally:
+        main_module.SessionLocal = original_session_local
+
+
+# Non-regression tests for specific bugs
+
+
+def test_nonregression_image_deletion_uses_storage_url_not_http_url(
+    client, main_module
+):
+    """Non-regression test: Verify image deletion uses storage URL format.
+
+    This test ensures that when deleting a segment with images, the deletion
+    code correctly constructs storage URLs (e.g., 'local:///images-segments/...')
+    from the storage_key field, not HTTP URLs (e.g., 'http://localhost:8000/...').
+
+    Bug fixed: Image deletion was failing because it used image.image_url
+    (HTTP URL) instead of constructing proper storage URL from storage_key.
+    """
+
+    # Mock an image class with both image_url (HTTP) and storage_key fields
+    class MockImage:
+        def __init__(self, image_id, image_url, storage_key):
+            self.id = image_id
+            self.image_url = image_url  # HTTP URL
+            self.storage_key = storage_key  # Storage path
+
+    # Mock a track with images
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "local:///gpx-segments/test.gpx"
+            self.images = [
+                MockImage(
+                    1,
+                    "http://localhost:8000/storage/images-segments/test-image-1.png",
+                    "images-segments/test-image-1.png",
+                ),
+                MockImage(
+                    2,
+                    "http://localhost:8000/storage/images-segments/test-image-2.jpg",
+                    "images-segments/test-image-2.jpg",
+                ),
+            ]
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(999)
+
+            return MockResult()
+
+        def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    original_session_local = main_module.SessionLocal
+    main_module.SessionLocal = MockSession
+
+    try:
+        with patch("src.main.storage_manager") as mock_storage:
+            mock_storage.delete_gpx_segment_by_url.return_value = True
+            mock_storage.delete_image_by_url.return_value = True
+            mock_storage.get_storage_root_prefix.return_value = "local://"
+
+            # Delete the segment
+            response = client.delete("/api/segments/999")
+
+            # Verify success
+            assert response.status_code == 200
+
+            # CRITICAL: Verify that delete_image_by_url was called with
+            # storage URLs (local:///...), NOT HTTP URLs
+            assert mock_storage.delete_image_by_url.call_count == 2
+
+            # Get all calls to delete_image_by_url
+            delete_calls = mock_storage.delete_image_by_url.call_args_list
+
+            # Extract the URLs that were passed
+            called_urls = [call_args[0][0] for call_args in delete_calls]
+
+            # Verify that storage URLs were used (local:///images-segments/...)
+            assert "local:///images-segments/test-image-1.png" in called_urls
+            assert "local:///images-segments/test-image-2.jpg" in called_urls
+
+            # Verify that HTTP URLs were NOT used
+            assert (
+                "http://localhost:8000/storage/images-segments/test-image-1.png"
+                not in called_urls
+            )
+            assert (
+                "http://localhost:8000/storage/images-segments/test-image-2.jpg"
+                not in called_urls
+            )
+
+    finally:
+        main_module.SessionLocal = original_session_local
+
+
+def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
+    client, main_module
+):
+    """Non-regression test: GPX endpoint needs both database and storage mocks.
+
+    This test ensures that when testing storage errors in the GPX endpoint,
+    the database session must be properly mocked. Otherwise, the endpoint
+    returns 404 "Track not found" before reaching the storage code.
+
+    Bug fixed: Tests were only mocking storage manager, causing them to fail
+    with 404 instead of the expected storage error codes.
+    """
+    original_storage_manager = main_module.storage_manager
+    original_session_local = main_module.SessionLocal
+
+    # Mock storage manager to return None (simulating file not found)
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            return None  # File not found in storage
+
+    # Mock track object (must exist in DB to reach storage code)
+    class MockTrack:
+        def __init__(self):
+            self.id = 123
+            self.file_path = "local:///gpx-segments/test-segment.gpx"
+
+    # Mock database session (REQUIRED to avoid 404)
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()  # Track exists in DB
+
+            return MockResult()
+
+    main_module.storage_manager = MockStorageManager()
+    main_module.SessionLocal = lambda: MockSession()
+
+    try:
+        response = client.get("/api/segments/123/gpx")
+
+        # CRITICAL: With proper mocking, we should get 404 for missing GPX data,
+        # NOT 404 for missing track
+        assert response.status_code == 404
+        data = response.json()
+        assert data["detail"] == "GPX data not found"
+        # NOT "Track not found"
+
+    finally:
+        main_module.storage_manager = original_storage_manager
+        main_module.SessionLocal = original_session_local
+
+
+def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
+    client, main_module
+):
+    """Non-regression test: GPX endpoint storage exceptions return 500.
+
+    Verifies that when a track exists in the database but storage raises
+    an exception, the endpoint returns 500 (not 404).
+    """
+    original_storage_manager = main_module.storage_manager
+    original_session_local = main_module.SessionLocal
+
+    # Mock storage manager to raise an exception
+    class MockStorageManager:
+        def load_gpx_data(self, url):
+            raise Exception("Storage service unavailable")
+
+    # Mock track object
+    class MockTrack:
+        def __init__(self):
+            self.id = 456
+            self.file_path = "local:///gpx-segments/test.gpx"
+
+    # Mock database session
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack()
+
+            return MockResult()
+
+    main_module.storage_manager = MockStorageManager()
+    main_module.SessionLocal = lambda: MockSession()
+
+    try:
+        response = client.get("/api/segments/456/gpx")
+
+        # CRITICAL: Storage exceptions should return 500, not 404
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to load GPX data" in data["detail"]
+        assert "Storage service unavailable" in data["detail"]
+
+    finally:
+        main_module.storage_manager = original_storage_manager
         main_module.SessionLocal = original_session_local

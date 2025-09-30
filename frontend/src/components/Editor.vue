@@ -2091,8 +2091,9 @@ async function handleSegmentImport(segment: any) {
     }
 
     // Create a temporary GPX file for database imports
-    await createTemporaryGPXFile(segment.id.toString())
-    uploadedFileId.value = `db-segment-${segment.id}`
+    // Use the actual file_id returned by the backend
+    const actualFileId = await createTemporaryGPXFile(segment.id.toString())
+    uploadedFileId.value = actualFileId
 
     // Set update mode
     isUpdateMode.value = true
@@ -2464,7 +2465,7 @@ function resetUpdateMode() {
 }
 
 // Function to create a temporary GPX file from current editor state
-async function createTemporaryGPXFile(fileId: string) {
+async function createTemporaryGPXFile(fileId: string): Promise<string> {
   if (!points.value.length) {
     throw new Error('No points available to create GPX file')
   }
@@ -2508,6 +2509,8 @@ ${points.value
 
     const result = await response.json()
     console.info(`Temporary GPX file created: ${result.file_id}`)
+    // Return the actual file_id from the backend
+    return result.file_id
   } catch (error) {
     console.error('Error creating temporary GPX file:', error)
     throw error
