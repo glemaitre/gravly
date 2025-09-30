@@ -550,4 +550,167 @@ describe('SegmentImportModal', () => {
       expect(wrapper.exists()).toBe(false)
     })
   })
+
+  describe('State Reset on Modal Reopen (Non-Regression)', () => {
+    it('should reset segments list when modal is reopened', async () => {
+      // Create a wrapper with the modal initially closed
+      const testWrapper = mount(SegmentImportModal, {
+        props: { isOpen: false },
+        global: { plugins: [i18n] }
+      })
+
+      // Open the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Simulate having some segments loaded
+      const oldSegments = [
+        { ...mockSegment, id: 1, name: 'Old Segment 1' },
+        { ...mockSegment, id: 2, name: 'Old Segment 2' }
+      ]
+      ;(testWrapper.vm as any).segments = oldSegments
+      ;(testWrapper.vm as any).loading = false
+      await testWrapper.vm.$nextTick()
+
+      // Verify segments are present
+      expect((testWrapper.vm as any).segments).toHaveLength(2)
+      expect((testWrapper.vm as any).segments[0].name).toBe('Old Segment 1')
+
+      // Close the modal
+      await testWrapper.setProps({ isOpen: false })
+      await testWrapper.vm.$nextTick()
+
+      // Reopen the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Verify that segments list is reset to empty
+      expect((testWrapper.vm as any).segments).toHaveLength(0)
+      expect((testWrapper.vm as any).loading).toBe(false)
+
+      testWrapper.unmount()
+    })
+
+    it('should reset all caches when modal is reopened', async () => {
+      // Create a wrapper with the modal initially closed
+      const testWrapper = mount(SegmentImportModal, {
+        props: { isOpen: false },
+        global: { plugins: [i18n] }
+      })
+
+      // Open the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Simulate having cached GPX data
+      const gpxDataCache = (testWrapper.vm as any).gpxDataCache
+      const loadingGPXData = (testWrapper.vm as any).loadingGPXData
+
+      // Add some entries to the caches
+      gpxDataCache.set(1, { id: 1, gpx_xml_data: '<gpx>...</gpx>' })
+      loadingGPXData.add(2)
+
+      // Verify caches have data
+      expect(gpxDataCache.size).toBe(1)
+      expect(loadingGPXData.size).toBe(1)
+
+      // Close the modal
+      await testWrapper.setProps({ isOpen: false })
+      await testWrapper.vm.$nextTick()
+
+      // Reopen the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Verify that caches are cleared
+      expect(gpxDataCache.size).toBe(0)
+      expect(loadingGPXData.size).toBe(0)
+
+      testWrapper.unmount()
+    })
+
+    it('should reset loading and searching flags when modal is reopened', async () => {
+      // Create a wrapper with the modal initially closed
+      const testWrapper = mount(SegmentImportModal, {
+        props: { isOpen: false },
+        global: { plugins: [i18n] }
+      })
+
+      // Open the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Simulate loading state
+      ;(testWrapper.vm as any).loading = true
+      ;(testWrapper.vm as any).isSearching = true
+      await testWrapper.vm.$nextTick()
+
+      // Verify flags are set
+      expect((testWrapper.vm as any).loading).toBe(true)
+      expect((testWrapper.vm as any).isSearching).toBe(true)
+
+      // Close the modal
+      await testWrapper.setProps({ isOpen: false })
+      await testWrapper.vm.$nextTick()
+
+      // Reopen the modal
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Verify that flags are reset
+      expect((testWrapper.vm as any).loading).toBe(false)
+      expect((testWrapper.vm as any).isSearching).toBe(false)
+
+      testWrapper.unmount()
+    })
+
+    it('should not persist deleted segments when modal is reopened', async () => {
+      // This test simulates the bug that was fixed:
+      // 1. Import a segment
+      // 2. Delete the segment from database
+      // 3. Reopen modal - deleted segment should not appear
+
+      const testWrapper = mount(SegmentImportModal, {
+        props: { isOpen: false },
+        global: { plugins: [i18n] }
+      })
+
+      // Open modal first time
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Simulate segments from database
+      const segmentsFromDB = [
+        { ...mockSegment, id: 1, name: 'Segment to be deleted' },
+        { ...mockSegment, id: 2, name: 'Segment to keep' }
+      ]
+      ;(testWrapper.vm as any).segments = segmentsFromDB
+      await testWrapper.vm.$nextTick()
+
+      expect((testWrapper.vm as any).segments).toHaveLength(2)
+
+      // Close modal
+      await testWrapper.setProps({ isOpen: false })
+      await testWrapper.vm.$nextTick()
+
+      // Reopen modal - simulate only one segment exists now (one was deleted)
+      await testWrapper.setProps({ isOpen: true })
+      await testWrapper.vm.$nextTick()
+
+      // Verify old segments are not present
+      expect((testWrapper.vm as any).segments).toHaveLength(0)
+
+      // Now simulate fresh data fetch from database (only one segment remains)
+      const newSegmentsFromDB = [{ ...mockSegment, id: 2, name: 'Segment to keep' }]
+      ;(testWrapper.vm as any).segments = newSegmentsFromDB
+      await testWrapper.vm.$nextTick()
+
+      // Only the non-deleted segment should be present
+      expect((testWrapper.vm as any).segments).toHaveLength(1)
+      expect((testWrapper.vm as any).segments[0].id).toBe(2)
+      expect((testWrapper.vm as any).segments[0].name).toBe('Segment to keep')
+
+      testWrapper.unmount()
+    })
+  })
 })

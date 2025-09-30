@@ -739,6 +739,14 @@ watch(
   () => props.isOpen,
   (isOpen) => {
     if (isOpen) {
+      // Reset all state when modal opens to ensure fresh data
+      segments.value = []
+      loading.value = false
+      previousMapBounds = null
+      gpxDataCache.clear()
+      loadingGPXData.clear()
+      isSearching = false
+
       nextTick(() => {
         if (!mapContainer.value) {
           // Wait a bit longer for the DOM to be fully rendered
