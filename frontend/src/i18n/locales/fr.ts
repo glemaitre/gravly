@@ -277,6 +277,25 @@ export default {
     // Error Messages
     elevationDataUnavailable:
       "Données d'élévation indisponibles. Veuillez vérifier votre connexion internet et réessayer.",
+    // Sidebar and Mode Selection
+    routingMode: 'Mode de Routage',
+    standardMode: 'Libre',
+    standardModeDesc:
+      'Ajoutez plusieurs points de passage pour créer des itinéraires complexes avec des arrêts intermédiaires.',
+    startEndMode: 'Guidé',
+    startEndModeDesc:
+      'Créez des itinéraires simples entre seulement deux points - départ et arrivée.',
+    guidedTodoList: 'Étapes',
+    guidedTodoInstructions: 'Définir les points de repère sur la carte',
+    todoSetStartPoint: 'Définir le point de <strong>départ</strong>',
+    todoSetEndPoint: "Définir le point d'<strong>arrivée</strong>",
+    clickStartPoint: 'Cliquez sur la carte pour définir le point de départ',
+    clickEndPoint: "Cliquez sur la carte pour définir le point d'arrivée",
+    startSet: 'Point de départ défini',
+    startNotSet: 'Point de départ non défini',
+    endSet: "Point d'arrivée défini",
+    endNotSet: "Point d'arrivée non défini",
+    generateRoute: 'Générer le parcours',
     // Units
     km: 'km',
     m: 'm'

@@ -1,11 +1,133 @@
 <template>
   <div class="route-planner">
+    <!-- Sidebar Menu -->
+    <div class="sidebar-menu" :class="{ 'sidebar-open': showSidebar }">
+      <div class="sidebar-content">
+        <div class="sidebar-header">
+          <button class="sidebar-close" @click="toggleSidebar">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div class="sidebar-options">
+          <h4 class="mode-toggle-title">{{ t('routePlanner.routingMode') }}</h4>
+          <div class="mode-toggle-container">
+            <div class="mode-toggle">
+              <span class="toggle-label" :title="t('routePlanner.standardModeDesc')">
+                {{ t('routePlanner.standardMode') }}
+              </span>
+              <label class="toggle-switch">
+                <input
+                  type="checkbox"
+                  :checked="routeMode === 'startEnd'"
+                  @change="onToggleMode"
+                />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label" :title="t('routePlanner.startEndModeDesc')">
+                {{ t('routePlanner.startEndMode') }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guided Mode Todo List -->
+        <div v-if="routeMode === 'startEnd'" class="guided-todo-list">
+          <h4 class="todo-title">{{ t('routePlanner.guidedTodoList') }}</h4>
+          <p class="todo-instructions">
+            {{ t('routePlanner.guidedTodoInstructions') }}
+          </p>
+          <div class="todo-items">
+            <div class="todo-item" :class="{ completed: startWaypoint }">
+              <div class="todo-main-content">
+                <div class="todo-checkbox">
+                  <i v-if="startWaypoint" class="fa-solid fa-check"></i>
+                  <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
+                </div>
+                <div class="todo-content">
+                  <span
+                    class="todo-text"
+                    v-html="t('routePlanner.todoSetStartPoint')"
+                  ></span>
+                </div>
+              </div>
+              <div v-if="startWaypoint" class="todo-coordinates">
+                <div class="coordinate-table">
+                  <div class="coordinate-row">
+                    <span class="coordinate-label">Lat:</span>
+                    <span class="coordinate-value">{{
+                      startWaypoint.lat.toFixed(6)
+                    }}</span>
+                  </div>
+                  <div class="coordinate-row">
+                    <span class="coordinate-label">Long:</span>
+                    <span class="coordinate-value">{{
+                      startWaypoint.lng.toFixed(6)
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="todo-item" :class="{ completed: endWaypoint }">
+              <div class="todo-main-content">
+                <div class="todo-checkbox">
+                  <i v-if="endWaypoint" class="fa-solid fa-check"></i>
+                  <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
+                </div>
+                <div class="todo-content">
+                  <span
+                    class="todo-text"
+                    v-html="t('routePlanner.todoSetEndPoint')"
+                  ></span>
+                </div>
+              </div>
+              <div v-if="endWaypoint" class="todo-coordinates">
+                <div class="coordinate-table">
+                  <div class="coordinate-row">
+                    <span class="coordinate-label">Lat:</span>
+                    <span class="coordinate-value">{{
+                      endWaypoint.lat.toFixed(6)
+                    }}</span>
+                  </div>
+                  <div class="coordinate-row">
+                    <span class="coordinate-label">Long:</span>
+                    <span class="coordinate-value">{{
+                      endWaypoint.lng.toFixed(6)
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generate Route Button -->
+        <div
+          v-if="routeMode === 'startEnd' && startWaypoint && endWaypoint"
+          class="generate-route-section"
+        >
+          <button class="generate-route-btn" @click="generateStartEndRoute">
+            <i class="fa-solid fa-route"></i>
+            <span>{{ t('routePlanner.generateRoute') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="map-container">
       <div id="route-map" class="map"></div>
 
       <!-- Top right corner controls -->
       <div class="map-controls">
         <div class="control-group">
+          <button
+            class="control-btn"
+            @click="toggleSidebar"
+            :title="t('routePlanner.routingMode')"
+            :class="{ active: showSidebar }"
+          >
+            <i class="fa-solid fa-route"></i>
+          </button>
           <button
             class="control-btn"
             @click="clearMap"
@@ -33,7 +155,13 @@
       </div>
 
       <!-- Bottom elevation section -->
-      <div class="elevation-section" :class="{ 'elevation-expanded': showElevation }">
+      <div
+        class="elevation-section"
+        :class="{
+          'elevation-expanded': showElevation,
+          'sidebar-open': showSidebar
+        }"
+      >
         <!-- Resize Handle - Always visible when elevation is expanded -->
         <div
           v-if="showElevation"
@@ -136,6 +264,13 @@ L.Icon.Default.mergeOptions({
 })
 
 const { t } = useI18n()
+
+// Sidebar and mode state
+const showSidebar = ref(false)
+const routeMode = ref<'standard' | 'startEnd'>('standard')
+const startWaypoint = ref<any>(null)
+const endWaypoint = ref<any>(null)
+const startEndMarkers: any[] = []
 
 // Map and routing state
 let map: any = null
@@ -422,6 +557,233 @@ let routeUpdateTimeout: any = null
 let isWaypointDragActive = false // Flag to prevent marker rebuilding during drag
 let markerUpdateTimeout: any = null // Throttle marker updates during drag
 
+// Sidebar and mode management functions
+function toggleSidebar() {
+  showSidebar.value = !showSidebar.value
+}
+
+function onRouteModeChange() {
+  if (routeMode.value === 'standard') {
+    // Switch to standard mode - preserve route by converting start/end waypoints to regular waypoints
+    preserveRouteFromStartEndMode()
+    clearStartEndWaypoints(false) // Don't clear route - we're preserving it
+  } else {
+    // Switch to start/end mode - clear everything completely
+    // We need to clear both regular waypoints AND start/end waypoints
+    clearRoute() // Clear regular waypoints and routes
+    clearStartEndWaypoints(true) // Clear start/end waypoints and any remaining routes
+  }
+}
+
+function onToggleMode() {
+  // Toggle between standard and startEnd modes
+  routeMode.value = routeMode.value === 'standard' ? 'startEnd' : 'standard'
+  onRouteModeChange()
+}
+
+function preserveRouteFromStartEndMode() {
+  // If we have start and end waypoints, preserve ALL waypoints including intermediate ones
+  if (startWaypoint.value && endWaypoint.value) {
+    // Save state for undo functionality
+    saveState()
+
+    // Clear existing waypoint markers first (but preserve the waypoints array)
+    waypointMarkers.forEach((marker) => {
+      if (marker && map.hasLayer(marker)) {
+        map.removeLayer(marker)
+      }
+    })
+    waypointMarkers = []
+
+    // If we have waypoints from guided mode (including intermediate ones created by dragging),
+    // preserve them all. Otherwise, just use start and end waypoints.
+    if (waypoints.length > 0) {
+      // We have waypoints from guided mode - preserve them all
+      // Rebuild markers for all preserved waypoints
+      waypoints.forEach((waypoint, index) => {
+        createWaypointMarker(index, waypoint.latLng)
+      })
+    } else {
+      // No waypoints from guided mode - create waypoints from start/end points
+      waypoints = []
+      addWaypoint(startWaypoint.value)
+      addWaypoint(endWaypoint.value)
+    }
+
+    // Update routing control with all waypoints
+    if (routingControl) {
+      routingControl.setWaypoints(waypoints)
+    }
+
+    // Save route after preserving waypoints
+    saveCurrentRoute()
+  }
+}
+
+function clearStartEndWaypoints(clearRoute = true) {
+  startWaypoint.value = null
+  endWaypoint.value = null
+
+  // Remove start/end markers from map
+  startEndMarkers.forEach((marker) => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  startEndMarkers.length = 0
+
+  // Only clear route if explicitly requested
+  if (clearRoute) {
+    // Clear any route that was generated from start/end waypoints
+    if (routeLine) {
+      map.removeLayer(routeLine)
+      routeLine = null
+    }
+    if (routeToleranceBuffer) {
+      map.removeLayer(routeToleranceBuffer)
+      routeToleranceBuffer = null
+    }
+
+    // Update routing control
+    if (routingControl) {
+      routingControl.setWaypoints([])
+    }
+  }
+}
+
+function addStartEndWaypoint(latlng: any) {
+  if (!startWaypoint.value) {
+    // Set start waypoint
+    startWaypoint.value = latlng
+    createStartEndMarker('start', latlng)
+  } else if (!endWaypoint.value) {
+    // Set end waypoint
+    endWaypoint.value = latlng
+    createStartEndMarker('end', latlng)
+    // Don't generate route automatically - user will click the button
+  } else {
+    // Both waypoints are set, replace the end waypoint
+    endWaypoint.value = latlng
+
+    // Remove existing end marker
+    const endMarker = startEndMarkers.find((marker) => marker.options.type === 'end')
+    if (endMarker && map.hasLayer(endMarker)) {
+      map.removeLayer(endMarker)
+      const index = startEndMarkers.indexOf(endMarker)
+      if (index > -1) {
+        startEndMarkers.splice(index, 1)
+      }
+    }
+
+    // Create new end marker
+    createStartEndMarker('end', latlng)
+    // Don't generate route automatically - user will click the button
+  }
+}
+
+function createStartEndMarker(type: 'start' | 'end', latlng: any) {
+  const isStart = type === 'start'
+  const markerClass = isStart
+    ? 'start-end-marker start-marker'
+    : 'start-end-marker end-marker'
+  const iconClass = isStart ? 'fa-play' : 'fa-stop'
+
+  const markerIcon = L.divIcon({
+    html: `<div class="${markerClass}"><i class="fa-solid ${iconClass}"></i></div>`,
+    className: 'custom-start-end-marker',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16]
+  })
+
+  const marker = L.marker(latlng, {
+    icon: markerIcon,
+    interactive: true,
+    zIndexOffset: 600,
+    type: type
+  }).addTo(map)
+
+  // Add click handler to remove waypoint
+  marker.on('click', () => {
+    removeStartEndWaypoint(type)
+  })
+
+  // Add hover effects
+  marker.on('mouseover', () => {
+    map.getContainer().style.cursor = 'pointer'
+  })
+
+  marker.on('mouseout', () => {
+    map.getContainer().style.cursor =
+      routeMode.value === 'standard' ? 'crosshair' : 'pointer'
+  })
+
+  startEndMarkers.push(marker)
+}
+
+function removeStartEndWaypoint(type: 'start' | 'end') {
+  if (type === 'start') {
+    startWaypoint.value = null
+  } else {
+    endWaypoint.value = null
+  }
+
+  // Remove marker from map
+  const marker = startEndMarkers.find((m) => m.options.type === type)
+  if (marker && map.hasLayer(marker)) {
+    map.removeLayer(marker)
+    const index = startEndMarkers.indexOf(marker)
+    if (index > -1) {
+      startEndMarkers.splice(index, 1)
+    }
+  }
+
+  // Clear route if we remove a waypoint
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
+    routeToleranceBuffer = null
+  }
+}
+
+function generateStartEndRoute() {
+  if (!startWaypoint.value || !endWaypoint.value) {
+    return
+  }
+
+  // Create waypoints for routing using the same format as standard mode
+  const routeWaypoints = [
+    L.Routing.waypoint(startWaypoint.value),
+    L.Routing.waypoint(endWaypoint.value)
+  ]
+
+  // Update routing control to generate route using the same OSRM service
+  if (routingControl) {
+    routingControl.setWaypoints(routeWaypoints)
+  }
+
+  // Also update the waypoints array for consistency with standard mode
+  waypoints = routeWaypoints
+
+  // Clear any existing regular waypoint markers since we're in start/end mode
+  waypointMarkers.forEach((marker) => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
+  // Calculate route distance
+  if (waypoints.length >= 2) {
+    calculateRouteDistance()
+  }
+
+  // The route will be generated via the same 'routesfound' event handler
+  // which will call createClickableRouteLine and calculateElevationStats
+}
+
 // Helper function to calculate zoom-responsive route line weight
 function getZoomResponsiveWeight(zoomLevel: number): number {
   // 7px at zoom 18, decrease 1px per zoom level: weight = zoom - 11
@@ -496,6 +858,7 @@ function initializeMap() {
   map = L.map('route-map', {
     center: [46.942728, 4.033681], // Mont-Beuvray parce que ca pique! (same as landing page)
     zoom: 14
+    // zoomControl: true is the default, so we don't need to specify it
   })
 
   // Add OpenCycleMap tiles via backend proxy (secure API key handling)
@@ -544,8 +907,9 @@ function initializeMap() {
   // Initialize sophisticated mouse interaction system
   initializeMouseInteractions()
 
-  // Set default crosshair cursor
-  map.getContainer().style.cursor = 'crosshair'
+  // Set initial cursor based on current mode
+  map.getContainer().style.cursor =
+    routeMode.value === 'standard' ? 'crosshair' : 'pointer'
 }
 
 function initializeMouseInteractions() {
@@ -593,8 +957,12 @@ function initializeMouseInteractions() {
     const timeDiff = Date.now() - mouseDownStartTime
 
     if (!isDragging && timeDiff < clickTimeThreshold && currentDragTarget === 'map') {
-      // Simple click on map - add waypoint
-      addWaypoint(e.latlng)
+      // Simple click on map - handle based on mode
+      if (routeMode.value === 'startEnd') {
+        addStartEndWaypoint(e.latlng)
+      } else {
+        addWaypoint(e.latlng)
+      }
     } else if (isDragging) {
       // Handle drag end
       if (currentDragTarget === 'waypoint' && draggedWaypointIndex >= 0) {
@@ -622,9 +990,10 @@ function resetMouseState() {
     map.dragging.enable()
   }
 
-  // Reset cursor
+  // Reset cursor based on current mode
   if (map) {
-    map.getContainer().style.cursor = 'crosshair'
+    map.getContainer().style.cursor =
+      routeMode.value === 'standard' ? 'crosshair' : 'pointer'
   }
 
   mouseDownStartPoint = null
@@ -1436,12 +1805,16 @@ function updateHistoryButtonStates() {
 
 function clearMap() {
   // Save state before clearing
-  if (waypoints.length > 0) {
+  if (waypoints.length > 0 || startWaypoint.value || endWaypoint.value) {
     saveState()
   }
 
-  // Clear everything
-  clearRoute()
+  // Clear everything based on current mode
+  if (routeMode.value === 'standard') {
+    clearRoute()
+  } else {
+    clearStartEndWaypoints()
+  }
 }
 
 // Elevation section functions
@@ -1571,7 +1944,7 @@ function _getWaypointColor(index: number): string {
   const isEnd = index === waypoints.length - 1 && waypoints.length > 1
 
   if (isStart) return '#f97316' // Orange
-  if (isEnd) return '#3b82f6' // Blue
+  if (isEnd) return '#ff6600' // Orange
   return '#6b7280' // Gray
 }
 
@@ -2912,6 +3285,11 @@ function stopElevationResize() {
   display: none !important;
 }
 
+/* Hide zoom controls when sidebar is open */
+.route-planner:has(.sidebar-menu.sidebar-open) :global(.leaflet-control-zoom) {
+  display: none !important;
+}
+
 /* Map cursor styling */
 .map {
   cursor: crosshair !important;
@@ -2919,6 +3297,424 @@ function stopElevationResize() {
 
 .map:active {
   cursor: grabbing !important;
+}
+
+/* Sidebar Menu Styles */
+.sidebar-menu {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  width: 300px;
+  height: calc(100vh - var(--navbar-height));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(229, 231, 235, 0.5);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 2000;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease-in-out;
+  overflow-y: auto;
+}
+
+.sidebar-menu.sidebar-open {
+  transform: translateX(0);
+}
+
+.sidebar-content {
+  padding: 1.5rem;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.sidebar-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.sidebar-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  transform: scale(1.05);
+}
+
+.sidebar-options {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.mode-toggle-title {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.mode-toggle-container {
+  margin-bottom: 0;
+  padding: 1rem;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-container:hover {
+  background: rgba(248, 250, 252, 1);
+  border-color: rgba(255, 102, 0, 0.3);
+}
+
+.mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.toggle-label {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.toggle-label:hover {
+  color: var(--brand-primary);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #d1d5db;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: '';
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: var(--brand-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(24px);
+}
+
+.guided-todo-list {
+  background: rgba(255, 102, 0, 0.05);
+  border: 1px solid rgba(255, 102, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.todo-title {
+  margin: 0 0 0.5rem 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.todo-instructions {
+  margin: 0 0 1rem 0;
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.todo-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.todo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  transition: all 0.3s ease;
+}
+
+.todo-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.todo-item.completed {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.todo-item.completed .todo-text {
+  color: #059669;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.todo-checkbox {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.todo-item:not(.completed) .todo-checkbox {
+  color: #6b7280;
+}
+
+.todo-item.completed .todo-checkbox {
+  color: #059669;
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.todo-checkbox i {
+  font-size: 12px;
+}
+
+.todo-main-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.todo-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.todo-text {
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  line-height: 1.4;
+}
+
+.todo-text strong {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.todo-coordinates {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-family: 'Courier New', monospace;
+  background: rgba(249, 250, 251, 0.8);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  transition: all 0.3s ease;
+}
+
+.todo-coordinates {
+  width: 100%;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.coordinate-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coordinate-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coordinate-label {
+  font-weight: 500;
+  color: #374151;
+  min-width: 35px;
+  text-align: right;
+}
+
+.coordinate-value {
+  font-family: 'Courier New', monospace;
+  color: #6b7280;
+  min-width: 80px;
+  text-align: left;
+}
+
+.waiting-icon {
+  color: #ff6600;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Generate Route Section */
+.generate-route-section {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.generate-route-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #ff6600;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+}
+
+.generate-route-btn:hover {
+  background: #e65c00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+}
+
+.generate-route-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+}
+
+.generate-route-btn i {
+  font-size: 1rem;
+}
+
+/* Start/End Marker Styles */
+:global(.custom-start-end-marker) {
+  background: transparent;
+  border: none;
+}
+
+:global(.start-end-marker) {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 3px solid white;
+  font-size: 0.75rem;
+}
+
+:global(.start-end-marker:hover) {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+:global(.start-marker) {
+  background: #22c55e; /* Green for start */
+  border-color: white;
+}
+
+:global(.end-marker) {
+  background: #ef4444; /* Red for end */
+  border-color: white;
+}
+
+/* Responsive adjustments for sidebar */
+@media (max-width: 768px) {
+  .sidebar-menu {
+    width: 280px;
+  }
+
+  .sidebar-toggle {
+    left: 0.75rem;
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-content {
+    padding: 1rem;
+  }
+
+  .mode-toggle {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+  }
+
+  .toggle-label {
+    font-size: 0.8rem;
+  }
+
+  .mode-toggle-container {
+    padding: 0.75rem;
+  }
 }
 
 /* Custom waypoint markers */
@@ -2953,7 +3749,7 @@ function stopElevationResize() {
 }
 
 :global(.waypoint-end) {
-  background: #3b82f6; /* Blue */
+  background: #ff6600; /* Orange */
   border: 2px solid white;
 }
 
@@ -3036,6 +3832,23 @@ function stopElevationResize() {
   color: #c2410c;
 }
 
+/* Active state for route button */
+.control-btn.active {
+  background: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  color: white;
+}
+
+.control-btn.active:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+  color: white;
+}
+
+.control-btn.active i {
+  color: white;
+}
+
 /* Elevation section styles */
 .elevation-section {
   position: absolute;
@@ -3063,6 +3876,10 @@ function stopElevationResize() {
 .elevation-expanded {
   transform: translateY(0); /* Show full content when expanded */
   background: rgba(255, 255, 255, 0.95); /* More opaque when expanded */
+}
+
+.elevation-section.sidebar-open {
+  left: 300px; /* Start from the right edge of the sidebar */
 }
 
 .elevation-toggle {
@@ -3324,6 +4141,10 @@ function stopElevationResize() {
   .elevation-section {
     /* Ensure mobile viewport fit */
     max-height: calc(100vh - var(--navbar-height) - 80px);
+  }
+
+  .elevation-section.sidebar-open {
+    left: 280px; /* Adjusted for mobile sidebar width */
   }
 
   .elevation-stats {

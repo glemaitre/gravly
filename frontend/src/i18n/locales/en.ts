@@ -273,6 +273,24 @@ export default {
     // Error Messages
     elevationDataUnavailable:
       'Elevation data unavailable. Please check your internet connection and try again.',
+    // Sidebar and Mode Selection
+    routingMode: 'Routing Mode',
+    standardMode: 'Free',
+    standardModeDesc:
+      'Add multiple waypoints to create complex routes with intermediate stops.',
+    startEndMode: 'Guided',
+    startEndModeDesc: 'Create simple routes between just two points - start and end.',
+    guidedTodoList: 'Steps',
+    guidedTodoInstructions: 'Set landmarks on the map',
+    todoSetStartPoint: 'Set <strong>starting</strong> point',
+    todoSetEndPoint: 'Set <strong>ending</strong> point',
+    clickStartPoint: 'Click on the map to set the starting point',
+    clickEndPoint: 'Click on the map to set the ending point',
+    startSet: 'Start point set',
+    startNotSet: 'Start point not set',
+    endSet: 'End point set',
+    endNotSet: 'End point not set',
+    generateRoute: 'Generate Route',
     // Units
     km: 'km',
     m: 'm'
