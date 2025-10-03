@@ -113,6 +113,8 @@
               @dragover="handleDragOver($event)"
               @drop="handleDrop($event, index)"
               @dragend="handleDragEnd"
+              @mouseenter="handleSegmentItemHover(segment)"
+              @mouseleave="handleSegmentItemLeave(segment)"
             >
               <div class="segment-index">{{ index + 1 }}</div>
               <div class="segment-drag-handle">
@@ -3841,6 +3843,43 @@ function handleDragEnd() {
   // Reset drag state
   draggedIndex.value = null
   dragOverIndex.value = null
+}
+
+// Hover functions for selected segment items
+function handleSegmentItemHover(segment: TrackResponse) {
+  // Get the segment's layer data
+  const segmentId = segment.id.toString()
+  const layerData = segmentMapLayers.get(segmentId)
+
+  if (layerData && layerData.polyline && layerData.popup && map) {
+    // Show the popup on the map
+    layerData.popup.setLatLng(layerData.polyline.getBounds().getCenter()).openOn(map)
+
+    // Highlight the polyline
+    layerData.polyline.setStyle({
+      weight: 5,
+      opacity: 1
+    })
+  }
+}
+
+function handleSegmentItemLeave(segment: TrackResponse) {
+  // Get the segment's layer data
+  const segmentId = segment.id.toString()
+  const layerData = segmentMapLayers.get(segmentId)
+
+  if (layerData && layerData.polyline && layerData.popup && map) {
+    // Close the popup
+    map.closePopup(layerData.popup)
+
+    // Reset polyline style
+    const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+    layerData.polyline.setStyle({
+      color: isSelected ? '#ff6600' : '#000000',
+      weight: isSelected ? 4 : 3,
+      opacity: 0.8
+    })
+  }
 }
 
 function clearAllSegments() {
