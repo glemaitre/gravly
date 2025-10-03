@@ -21,6 +21,7 @@ export interface TrackResponse {
   tire_dry: string
   tire_wet: string
   comments: string
+  isReversed?: boolean // Added to track segment direction
 }
 
 export interface GPXDataResponse {

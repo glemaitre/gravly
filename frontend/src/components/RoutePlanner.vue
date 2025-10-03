@@ -102,7 +102,7 @@
           <div class="selected-segments-list">
             <div
               v-for="(segment, index) in selectedSegments"
-              :key="segment.id"
+              :key="`${segment.id}-${segment.isReversed || false}`"
               class="selected-segment-item"
               draggable="true"
               @dragstart="handleDragStart($event, index)"
@@ -117,13 +117,24 @@
                 <i class="fa-solid fa-grip-vertical"></i>
               </div>
               <div class="segment-name">{{ segment.name }}</div>
-              <button
-                class="remove-segment-btn"
-                @click="deselectSegment(segment)"
-                :title="t('routePlanner.removeSegment')"
-              >
-                <i class="fa-solid fa-times"></i>
-              </button>
+              <div class="segment-controls">
+                <button
+                  class="reverse-segment-btn"
+                  @click="reverseSegment(segment)"
+                  :title="
+                    segment.isReversed ? 'Original direction' : 'Reverse direction'
+                  "
+                >
+                  <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                </button>
+                <button
+                  class="remove-segment-btn"
+                  @click="deselectSegment(segment)"
+                  :title="t('routePlanner.removeSegment')"
+                >
+                  <i class="fa-solid fa-times"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -304,7 +315,10 @@ const startEndMarkers: any[] = []
 // Segment display state (for guided mode)
 const availableSegments = ref<TrackResponse[]>([])
 const selectedSegments = ref<TrackResponse[]>([])
-const segmentMapLayers = new Map<string, { polyline: any; popup?: any }>()
+const segmentMapLayers = new Map<
+  string,
+  { polyline: any; popup?: any; startMarker?: any; endMarker?: any }
+>()
 const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
 const loadingGPXData = new Set<number>()
 const isSearchingSegments = ref(false)
@@ -673,6 +687,9 @@ function clearStartEndWaypoints(clearRoute = true) {
   })
   startEndMarkers.length = 0
 
+  // Clear all segments and their landmarks when clearing start/end waypoints
+  clearAllSegments()
+
   // Only clear route if explicitly requested
   if (clearRoute) {
     // Clear any route that was generated from start/end waypoints
@@ -825,6 +842,10 @@ function generateStartEndRoute() {
   })
   waypointMarkers = []
 
+  // Clear segment landmarks since they're replaced by numbered waypoints
+  // This happens immediately when route generation starts
+  clearSegmentLandmarks()
+
   // Calculate route distance
   if (waypoints.length >= 2) {
     calculateRouteDistance()
@@ -857,7 +878,12 @@ function getSegmentWaypoints(segments: TrackResponse[]): any[] {
 
     // Use intermediate GPX points to force the route to follow the segment path
     // Sample points strategically to balance accuracy with waypoint count
-    const segmentWaypoints = sampleSegmentPoints(parsedGPX.points)
+    let segmentWaypoints = sampleSegmentPoints(parsedGPX.points)
+
+    // Reverse the waypoints if the segment is reversed
+    if (segment.isReversed) {
+      segmentWaypoints = segmentWaypoints.reverse()
+    }
 
     // Add all sampled waypoints to ensure the route follows the segment path
     for (const point of segmentWaypoints) {
@@ -2051,11 +2077,84 @@ function clearMap() {
     saveState()
   }
 
-  // Clear everything based on current mode
-  if (routeMode.value === 'standard') {
-    clearRoute()
-  } else {
-    clearStartEndWaypoints()
+  // Perform comprehensive reset regardless of mode
+  performCompleteReset()
+}
+
+function performCompleteReset() {
+  // Clear waypoints and start/end waypoints
+  waypoints = []
+  startWaypoint.value = null
+  endWaypoint.value = null
+
+  // Clear saved route from localStorage
+  localStorage.removeItem(ROUTE_STORAGE_KEY)
+
+  // Clear all waypoint markers
+  waypointMarkers.forEach((marker) => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  waypointMarkers = []
+
+  // Clear start/end markers from map
+  startEndMarkers.forEach((marker) => {
+    if (marker && map.hasLayer(marker)) {
+      map.removeLayer(marker)
+    }
+  })
+  startEndMarkers.length = 0
+
+  // Clear all segments and their landmarks
+  clearAllSegments()
+
+  // Clear routing control
+  if (routingControl) {
+    routingControl.setWaypoints([])
+  }
+
+  // Remove route lines (both visible line and tolerance buffer)
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
+  }
+  if (routeToleranceBuffer) {
+    map.removeLayer(routeToleranceBuffer)
+    routeToleranceBuffer = null
+  }
+
+  // Clear elevation chart data
+  if (elevationChart.value) {
+    elevationChart.value.destroy()
+    elevationChart.value = null
+  }
+
+  // Clean up chart event listeners
+  cleanupChartEventListeners()
+  if (mapMarker) {
+    map.removeLayer(mapMarker)
+    mapMarker = null
+  }
+
+  // Reset all route-related state
+  routeDistance.value = 0
+  waypointChartIndices.value = []
+  currentPosition.value = null
+  elevationSegments.value = []
+  elevationCache.clear()
+  actualRouteCoordinates.value = []
+  elevationStats.value = {
+    totalGain: 0,
+    totalLoss: 0,
+    maxElevation: 0,
+    minElevation: 0
+  }
+
+  // Clear any pending search timeout
+  if (segmentSearchTimeout) {
+    clearTimeout(segmentSearchTimeout)
+    segmentSearchTimeout = null
   }
 }
 
@@ -3635,11 +3734,37 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     return
   }
 
+  // Render with direction (default: not reversed)
+  renderSegmentOnMapWithDirection(segment, segment.isReversed || false)
+}
+
+function renderSegmentOnMapWithDirection(
+  segment: TrackWithGPXDataResponse,
+  isReversed: boolean = false
+) {
+  if (!segment.gpx_xml_data || !map) {
+    return
+  }
+
+  // Parse GPX data
+  const fileId =
+    segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+  const gpxData = parseGPXData(segment.gpx_xml_data, fileId)
+
+  if (!gpxData || !gpxData.points || gpxData.points.length === 0) {
+    return
+  }
+
   // Convert GPX points to Leaflet lat/lng format
-  const trackPoints = gpxData.points.map((point: any) => [
+  let trackPoints = gpxData.points.map((point: any) => [
     point.latitude,
     point.longitude
   ])
+
+  // Reverse the points if needed
+  if (isReversed) {
+    trackPoints = trackPoints.reverse()
+  }
 
   // Create polyline for the segment - black color as requested
   const polyline = L.polyline(trackPoints, {
@@ -3685,11 +3810,68 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     selectSegment(segment)
   })
 
+  // Create start and end landmarks for selected segments
+  const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+  let startMarker = null
+  let endMarker = null
+
+  if (isSelected) {
+    startMarker = createSegmentLandmark([trackPoints[0][0], trackPoints[0][1]], 'start')
+    endMarker = createSegmentLandmark(
+      [trackPoints[trackPoints.length - 1][0], trackPoints[trackPoints.length - 1][1]],
+      'end'
+    )
+  }
+
   // Store the layer reference
   const segmentId = segment.id.toString()
   segmentMapLayers.set(segmentId, {
     polyline: polyline,
-    popup: popup
+    popup: popup,
+    startMarker: startMarker,
+    endMarker: endMarker
+  })
+}
+
+function createSegmentLandmark(point: [number, number], type: 'start' | 'end') {
+  if (!map) return null
+
+  // Create different icons for start and end
+  const icon = L.divIcon({
+    className: `segment-landmark segment-landmark-${type}`,
+    html: `<div class="landmark-content">
+      <i class="fa-solid ${type === 'start' ? 'fa-play' : 'fa-stop'}"></i>
+    </div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10]
+  })
+
+  const marker = L.marker([point[0], point[1]], { icon }).addTo(map)
+  return marker
+}
+
+function removeSegmentLandmarks(segmentId: number) {
+  const segmentIdStr = segmentId.toString()
+  const layerData = segmentMapLayers.get(segmentIdStr)
+
+  if (layerData) {
+    if (layerData.startMarker && map) {
+      map.removeLayer(layerData.startMarker)
+    }
+    if (layerData.endMarker && map) {
+      map.removeLayer(layerData.endMarker)
+    }
+
+    // Update the layer data
+    layerData.startMarker = null
+    layerData.endMarker = null
+  }
+}
+
+function clearSegmentLandmarks() {
+  // Remove landmarks from all selected segments since they're replaced by numbered waypoints
+  selectedSegments.value.forEach((segment) => {
+    removeSegmentLandmarks(segment.id)
   })
 }
 
@@ -3838,7 +4020,44 @@ function selectSegment(segment: TrackResponse) {
       color: isSelected ? '#ff6600' : '#000000', // Orange when selected, black when not
       weight: isSelected ? 4 : 3
     })
+
+    // Add or remove landmarks based on selection
+    if (isSelected) {
+      // Add landmarks for selected segment
+      addSegmentLandmarks(segment, layerData.polyline)
+    } else {
+      // Remove landmarks for deselected segment
+      removeSegmentLandmarks(segment.id)
+    }
   }
+}
+
+function addSegmentLandmarks(segment: TrackResponse, polyline: any) {
+  if (!map) return
+
+  const segmentId = segment.id.toString()
+  const layerData = segmentMapLayers.get(segmentId)
+
+  if (!layerData) return
+
+  // Get the polyline coordinates
+  const coordinates = polyline.getLatLngs()
+  if (coordinates.length < 2) return
+
+  // Create landmarks at start and end points
+  const startPoint = coordinates[0]
+  const endPoint = coordinates[coordinates.length - 1]
+
+  // Remove existing landmarks if any
+  removeSegmentLandmarks(segment.id)
+
+  // Create new landmarks
+  const startMarker = createSegmentLandmark([startPoint.lat, startPoint.lng], 'start')
+  const endMarker = createSegmentLandmark([endPoint.lat, endPoint.lng], 'end')
+
+  // Update layer data
+  layerData.startMarker = startMarker
+  layerData.endMarker = endMarker
 }
 
 function deselectSegment(segment: TrackResponse) {
@@ -3861,6 +4080,34 @@ function deselectSegment(segment: TrackResponse) {
         color: '#000000', // Black when not selected
         weight: 3
       })
+    }
+
+    // Remove start/end landmarks when deselected
+    removeSegmentLandmarks(segment.id)
+  }
+}
+
+function reverseSegment(segment: TrackResponse) {
+  // Toggle the reversed state
+  segment.isReversed = !segment.isReversed
+
+  // Update the segment in the selectedSegments array
+  const index = selectedSegments.value.findIndex((s) => s.id === segment.id)
+  if (index >= 0) {
+    selectedSegments.value[index] = { ...segment }
+  }
+
+  // Re-render the segment with new direction and landmarks
+  const segmentId = segment.id.toString()
+  const layerData = segmentMapLayers.get(segmentId)
+  if (layerData && layerData.polyline) {
+    // Remove existing polyline
+    map.removeLayer(layerData.polyline)
+
+    // Get cached GPX data and re-render
+    const gpxData = gpxDataCache.get(segment.id)
+    if (gpxData) {
+      renderSegmentOnMapWithDirection(gpxData, segment.isReversed)
     }
   }
 }
@@ -3956,10 +4203,48 @@ function handleSegmentItemLeave(segment: TrackResponse) {
 }
 
 function clearAllSegments() {
-  // Remove all segment layers from map
+  // Ensure map is available before attempting to remove layers
+  if (!map) {
+    return
+  }
+
+  // Remove all segment layers from map (polylines, popups, and landmarks)
   segmentMapLayers.forEach((layerData) => {
-    if (layerData.polyline && map.hasLayer(layerData.polyline)) {
-      map.removeLayer(layerData.polyline)
+    try {
+      if (layerData.polyline && map.hasLayer(layerData.polyline)) {
+        map.removeLayer(layerData.polyline)
+      }
+      if (layerData.popup && map.hasLayer(layerData.popup)) {
+        map.removeLayer(layerData.popup)
+      }
+      if (layerData.startMarker && map.hasLayer(layerData.startMarker)) {
+        map.removeLayer(layerData.startMarker)
+      }
+      if (layerData.endMarker && map.hasLayer(layerData.endMarker)) {
+        map.removeLayer(layerData.endMarker)
+      }
+    } catch {
+      // Silently handle errors during cleanup
+    }
+  })
+
+  // Additional cleanup: Remove any remaining landmark markers that might not be in segmentMapLayers
+  // This is a safety net in case some landmarks weren't properly tracked
+  const allLayers = map._layers
+  Object.keys(allLayers).forEach((layerId) => {
+    const layer = allLayers[layerId]
+    // Check if it's a segment landmark marker (has the specific class)
+    if (
+      layer &&
+      layer._icon &&
+      layer._icon.className &&
+      layer._icon.className.includes('segment-landmark')
+    ) {
+      try {
+        map.removeLayer(layer)
+      } catch {
+        // Silently handle errors during cleanup
+      }
     }
   })
 
@@ -5180,6 +5465,29 @@ function clearAllSegments() {
   margin-left: 0.25rem;
 }
 
+.segment-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.reverse-segment-btn {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+  border-radius: 4px;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.75rem;
+}
+
+.reverse-segment-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+  color: #1d4ed8;
+}
+
 .remove-segment-btn {
   display: flex;
   align-items: center;
@@ -5202,5 +5510,33 @@ function clearAllSegments() {
 
 .remove-segment-btn i {
   font-size: 0.75rem;
+}
+
+/* Segment landmark styles */
+:global(.segment-landmark) {
+  background: transparent !important;
+  border: none !important;
+}
+
+:global(.segment-landmark .landmark-content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+:global(.segment-landmark-start .landmark-content) {
+  background: #10b981;
+  color: white;
+}
+
+:global(.segment-landmark-end .landmark-content) {
+  background: #ef4444;
+  color: white;
 }
 </style>
