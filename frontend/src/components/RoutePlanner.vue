@@ -855,18 +855,102 @@ function getSegmentWaypoints(segments: TrackResponse[]): any[] {
       continue
     }
 
-    // Use the start and end points of the segment as waypoints
-    // This ensures the route passes through the segment
-    const startPoint = parsedGPX.points[0]
-    const endPoint = parsedGPX.points[parsedGPX.points.length - 1]
+    // Use intermediate GPX points to force the route to follow the segment path
+    // Sample points strategically to balance accuracy with waypoint count
+    const segmentWaypoints = sampleSegmentPoints(parsedGPX.points)
 
-    if (startPoint && endPoint) {
-      waypoints.push(L.Routing.waypoint([startPoint.latitude, startPoint.longitude]))
-      waypoints.push(L.Routing.waypoint([endPoint.latitude, endPoint.longitude]))
+    // Add all sampled waypoints to ensure the route follows the segment path
+    for (const point of segmentWaypoints) {
+      waypoints.push(L.Routing.waypoint([point.latitude, point.longitude]))
     }
   }
 
   return waypoints
+}
+
+/**
+ * Sample intermediate points from GPX data to create waypoints that force route to follow segment path
+ * Uses adaptive sampling based on segment length and curvature
+ */
+function sampleSegmentPoints(points: any[]): any[] {
+  if (points.length <= 2) {
+    return points // Return all points if segment is very short
+  }
+
+  const sampledPoints: any[] = []
+  const totalPoints = points.length
+
+  // Calculate segment distance to determine sampling strategy
+  let totalDistance = 0
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1]
+    const curr = points[i]
+    const distance = calculateDistance(
+      prev.latitude,
+      prev.longitude,
+      curr.latitude,
+      curr.longitude
+    )
+    totalDistance += distance
+  }
+
+  // Adaptive sampling strategy:
+  // - For short segments (< 500m): use every 3rd point or minimum of 3 points
+  // - For medium segments (500m - 2km): use every 5th point or minimum of 4 points
+  // - For long segments (> 2km): use every 8th point or minimum of 5 points
+  let stepSize: number
+  let minPoints: number
+
+  if (totalDistance < 500) {
+    stepSize = Math.max(1, Math.floor(totalPoints / 3))
+    minPoints = 3
+  } else if (totalDistance < 2000) {
+    stepSize = Math.max(1, Math.floor(totalPoints / 4))
+    minPoints = 4
+  } else {
+    stepSize = Math.max(1, Math.floor(totalPoints / 5))
+    minPoints = 5
+  }
+
+  // Ensure we don't exceed reasonable waypoint limits (max 20 points per segment)
+  const maxPoints = Math.min(20, totalPoints)
+  stepSize = Math.max(stepSize, Math.floor(totalPoints / maxPoints))
+
+  // Always include the first point
+  sampledPoints.push(points[0])
+
+  // Sample intermediate points
+  for (let i = stepSize; i < totalPoints - 1; i += stepSize) {
+    sampledPoints.push(points[i])
+  }
+
+  // Always include the last point (if not already included)
+  const lastPoint = points[totalPoints - 1]
+  if (
+    sampledPoints.length === 0 ||
+    sampledPoints[sampledPoints.length - 1].latitude !== lastPoint.latitude ||
+    sampledPoints[sampledPoints.length - 1].longitude !== lastPoint.longitude
+  ) {
+    sampledPoints.push(lastPoint)
+  }
+
+  // Ensure minimum number of points for better route following
+  if (sampledPoints.length < minPoints && totalPoints >= minPoints) {
+    // Redistribute points more evenly
+    sampledPoints.length = 0 // Clear array
+    const newStepSize = Math.floor(totalPoints / minPoints)
+
+    sampledPoints.push(points[0]) // First point
+    for (let i = newStepSize; i < totalPoints - 1; i += newStepSize) {
+      sampledPoints.push(points[i])
+    }
+    sampledPoints.push(points[totalPoints - 1]) // Last point
+  }
+
+  console.log(
+    `Sampled ${sampledPoints.length} waypoints from ${totalPoints} GPX points for segment (${totalDistance.toFixed(0)}m)`
+  )
+  return sampledPoints
 }
 
 // Helper functions for segment popup formatting
@@ -3563,13 +3647,6 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     weight: 3,
     opacity: 0.8
   }).addTo(map)
-
-  // Add a tooltip to indicate clickability for selection
-  polyline.bindTooltip('Click to select segment for route', {
-    permanent: false,
-    direction: 'top',
-    offset: [0, -10]
-  })
 
   // Create popup with segment details
   const popupContent = createSegmentPopup(segment)
