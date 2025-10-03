@@ -38,7 +38,15 @@
             {{ t('routePlanner.guidedTodoInstructions') }}
           </p>
           <div class="todo-items">
-            <div class="todo-item" :class="{ completed: startWaypoint }">
+            <div
+              class="todo-item"
+              :class="{ completed: startWaypoint }"
+              :title="
+                startWaypoint
+                  ? `Lat: ${startWaypoint.lat.toFixed(6)}, Lng: ${startWaypoint.lng.toFixed(6)}`
+                  : ''
+              "
+            >
               <div class="todo-main-content">
                 <div class="todo-checkbox">
                   <i v-if="startWaypoint" class="fa-solid fa-check"></i>
@@ -48,24 +56,16 @@
                   <span class="todo-text"> Set <strong>starting</strong> point </span>
                 </div>
               </div>
-              <div v-if="startWaypoint" class="todo-coordinates">
-                <div class="coordinate-table">
-                  <div class="coordinate-row">
-                    <span class="coordinate-label">Lat:</span>
-                    <span class="coordinate-value">{{
-                      startWaypoint.lat.toFixed(6)
-                    }}</span>
-                  </div>
-                  <div class="coordinate-row">
-                    <span class="coordinate-label">Long:</span>
-                    <span class="coordinate-value">{{
-                      startWaypoint.lng.toFixed(6)
-                    }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
-            <div class="todo-item" :class="{ completed: endWaypoint }">
+            <div
+              class="todo-item"
+              :class="{ completed: endWaypoint }"
+              :title="
+                endWaypoint
+                  ? `Lat: ${endWaypoint.lat.toFixed(6)}, Lng: ${endWaypoint.lng.toFixed(6)}`
+                  : ''
+              "
+            >
               <div class="todo-main-content">
                 <div class="todo-checkbox">
                   <i v-if="endWaypoint" class="fa-solid fa-check"></i>
@@ -73,22 +73,6 @@
                 </div>
                 <div class="todo-content">
                   <span class="todo-text"> Set <strong>ending</strong> point </span>
-                </div>
-              </div>
-              <div v-if="endWaypoint" class="todo-coordinates">
-                <div class="coordinate-table">
-                  <div class="coordinate-row">
-                    <span class="coordinate-label">Lat:</span>
-                    <span class="coordinate-value">{{
-                      endWaypoint.lat.toFixed(6)
-                    }}</span>
-                  </div>
-                  <div class="coordinate-row">
-                    <span class="coordinate-label">Long:</span>
-                    <span class="coordinate-value">{{
-                      endWaypoint.lng.toFixed(6)
-                    }}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -4147,8 +4131,7 @@ function clearAllSegments() {
 .todo-item {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background: rgba(255, 255, 255, 0.7);
   border-radius: 6px;
   border: 1px solid rgba(229, 231, 235, 0.5);
@@ -4165,6 +4148,7 @@ function clearAllSegments() {
 .todo-item.completed {
   background: rgba(34, 197, 94, 0.1);
   border-color: rgba(34, 197, 94, 0.3);
+  cursor: help;
 }
 
 .todo-item.completed .todo-text {
@@ -4222,50 +4206,6 @@ function clearAllSegments() {
   color: #1f2937;
 }
 
-.todo-coordinates {
-  font-size: 0.75rem;
-  color: #6b7280;
-  font-family: 'Courier New', monospace;
-  background: rgba(249, 250, 251, 0.8);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(229, 231, 235, 0.5);
-  transition: all 0.3s ease;
-}
-
-.todo-coordinates {
-  width: 100%;
-  margin-top: 0.5rem;
-  text-align: center;
-}
-
-.coordinate-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.coordinate-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.coordinate-label {
-  font-weight: 500;
-  color: #374151;
-  min-width: 35px;
-  text-align: right;
-}
-
-.coordinate-value {
-  font-family: 'Courier New', monospace;
-  color: #6b7280;
-  min-width: 80px;
-  text-align: left;
-}
-
 .waiting-icon {
   color: #ff6600;
   animation: spin 1s linear infinite;
@@ -4282,8 +4222,7 @@ function clearAllSegments() {
 
 /* Generate Route Section */
 .generate-route-section {
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
+  padding: 0.2rem;
 }
 
 .generate-route-btn {
