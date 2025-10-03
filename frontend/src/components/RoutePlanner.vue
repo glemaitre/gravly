@@ -45,10 +45,9 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span
-                    class="todo-text"
-                    v-html="t('routePlanner.todoSetStartPoint')"
-                  ></span>
+                  <span class="todo-text">
+                    Set <strong>starting</strong> point
+                  </span>
                 </div>
               </div>
               <div v-if="startWaypoint" class="todo-coordinates">
@@ -75,10 +74,9 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span
-                    class="todo-text"
-                    v-html="t('routePlanner.todoSetEndPoint')"
-                  ></span>
+                  <span class="todo-text">
+                    Set <strong>ending</strong> point
+                  </span>
                 </div>
               </div>
               <div v-if="endWaypoint" class="todo-coordinates">
@@ -97,6 +95,40 @@
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selected Segments -->
+        <div
+          v-if="routeMode === 'startEnd' && selectedSegments.length > 0"
+          class="selected-segments-section"
+        >
+          <h4 class="selected-segments-title">
+            {{ t('routePlanner.selectedSegments') }}
+          </h4>
+          <div class="selected-segments-list">
+            <div
+              v-for="segment in selectedSegments"
+              :key="segment.id"
+              class="selected-segment-item"
+            >
+              <div class="segment-info">
+                <div class="segment-name">{{ segment.name }}</div>
+                <div class="segment-meta">
+                  <span class="segment-difficulty"
+                    >{{ segment.difficulty_level }}/5</span
+                  >
+                  <span class="segment-type">{{ segment.track_type }}</span>
+                </div>
+              </div>
+              <button
+                class="remove-segment-btn"
+                @click="deselectSegment(segment)"
+                :title="t('routePlanner.removeSegment')"
+              >
+                <i class="fa-solid fa-times"></i>
+              </button>
             </div>
           </div>
         </div>
@@ -238,6 +270,8 @@ import {
   Filler,
   Tooltip
 } from 'chart.js'
+import type { TrackResponse, GPXDataResponse, TrackWithGPXDataResponse } from '../types'
+import { parseGPXData } from '../utils/gpxParser'
 
 // Register Chart.js components
 Chart.register(
@@ -271,6 +305,14 @@ const routeMode = ref<'standard' | 'startEnd'>('standard')
 const startWaypoint = ref<any>(null)
 const endWaypoint = ref<any>(null)
 const startEndMarkers: any[] = []
+
+// Segment display state (for guided mode)
+const availableSegments = ref<TrackResponse[]>([])
+const selectedSegments = ref<TrackResponse[]>([])
+const segmentMapLayers = new Map<string, { polyline: any; popup?: any }>()
+const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
+const loadingGPXData = new Set<number>()
+const isSearchingSegments = ref(false)
 
 // Map and routing state
 let map: any = null
@@ -753,11 +795,20 @@ function generateStartEndRoute() {
     return
   }
 
-  // Create waypoints for routing using the same format as standard mode
-  const routeWaypoints = [
-    L.Routing.waypoint(startWaypoint.value),
-    L.Routing.waypoint(endWaypoint.value)
-  ]
+  // Create waypoints for routing - start with start waypoint
+  const routeWaypoints = [L.Routing.waypoint(startWaypoint.value)]
+
+  // Add waypoints for selected segments
+  if (selectedSegments.value.length > 0) {
+    // Get segment waypoints from selected segments
+    const segmentWaypoints = getSegmentWaypoints(selectedSegments.value)
+
+    // Add segment waypoints to route
+    routeWaypoints.push(...segmentWaypoints)
+  }
+
+  // Always end with the end waypoint
+  routeWaypoints.push(L.Routing.waypoint(endWaypoint.value))
 
   // Update routing control to generate route using the same OSRM service
   if (routingControl) {
@@ -782,6 +833,62 @@ function generateStartEndRoute() {
 
   // The route will be generated via the same 'routesfound' event handler
   // which will call createClickableRouteLine and calculateElevationStats
+}
+
+function getSegmentWaypoints(segments: TrackResponse[]): any[] {
+  const waypoints: any[] = []
+
+  for (const segment of segments) {
+    // Get GPX data for this segment
+    const gpxData = gpxDataCache.get(segment.id)
+    if (!gpxData || !gpxData.gpx_xml_data) {
+      console.warn(`No GPX data available for segment ${segment.id}`)
+      continue
+    }
+
+    // Parse GPX data to get coordinates
+    const fileId =
+      segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+    const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
+
+    if (!parsedGPX || !parsedGPX.points || parsedGPX.points.length === 0) {
+      console.warn(`No valid GPX points found for segment ${segment.id}`)
+      continue
+    }
+
+    // Use the start and end points of the segment as waypoints
+    // This ensures the route passes through the segment
+    const startPoint = parsedGPX.points[0]
+    const endPoint = parsedGPX.points[parsedGPX.points.length - 1]
+
+    if (startPoint && endPoint) {
+      waypoints.push(L.Routing.waypoint([startPoint.latitude, startPoint.longitude]))
+      waypoints.push(L.Routing.waypoint([endPoint.latitude, endPoint.longitude]))
+    }
+  }
+
+  return waypoints
+}
+
+// Helper functions for segment popup formatting
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)}m`
+  }
+  return `${(meters / 1000).toFixed(1)}km`
+}
+
+function formatElevation(meters: number): string {
+  return `${Math.round(meters)}m`
+}
+
+function formatSurfaceType(surfaceType: string): string {
+  return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
+
+function formatTireType(tireType: string): string {
+  if (!tireType) return ''
+  return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
 // Helper function to calculate zoom-responsive route line weight
@@ -811,6 +918,44 @@ watch(elevationHeight, () => {
     }, 100) // Small delay to ensure DOM has updated
   }
 })
+
+// Watch for route mode changes to load/clear segments
+watch(routeMode, (newMode) => {
+  if (newMode === 'startEnd') {
+    // Load segments when switching to guided mode
+    loadSegmentsInBounds()
+  } else {
+    // Clear segments when switching to free mode
+    clearAllSegments()
+  }
+
+  // Update cursor when mode changes
+  updateMapCursor()
+})
+
+// Watch for waypoint changes to update cursor in guided mode
+watch([startWaypoint, endWaypoint], () => {
+  if (routeMode.value === 'startEnd') {
+    updateMapCursor()
+  }
+})
+
+// Watch for map bounds changes to reload segments (debounced)
+let segmentSearchTimeout: any = null
+watch(
+  () => map?.getBounds(),
+  (newBounds) => {
+    if (routeMode.value === 'startEnd' && newBounds && !isSearchingSegments.value) {
+      if (segmentSearchTimeout) {
+        clearTimeout(segmentSearchTimeout)
+      }
+      segmentSearchTimeout = setTimeout(() => {
+        loadSegmentsInBounds()
+      }, 500) // Debounce for 500ms
+    }
+  },
+  { deep: true }
+)
 
 onMounted(async () => {
   // Add CSS class to prevent scrollbars on the entire page
@@ -908,8 +1053,7 @@ function initializeMap() {
   initializeMouseInteractions()
 
   // Set initial cursor based on current mode
-  map.getContainer().style.cursor =
-    routeMode.value === 'standard' ? 'crosshair' : 'pointer'
+  updateMapCursor()
 }
 
 function initializeMouseInteractions() {
@@ -959,7 +1103,11 @@ function initializeMouseInteractions() {
     if (!isDragging && timeDiff < clickTimeThreshold && currentDragTarget === 'map') {
       // Simple click on map - handle based on mode
       if (routeMode.value === 'startEnd') {
-        addStartEndWaypoint(e.latlng)
+        // In guided mode, only allow setting start/end waypoints if they're not already set
+        if (!startWaypoint.value || !endWaypoint.value) {
+          addStartEndWaypoint(e.latlng)
+        }
+        // If both start and end are set, clicks are ignored (only for segment selection)
       } else {
         addWaypoint(e.latlng)
       }
@@ -991,10 +1139,7 @@ function resetMouseState() {
   }
 
   // Reset cursor based on current mode
-  if (map) {
-    map.getContainer().style.cursor =
-      routeMode.value === 'standard' ? 'crosshair' : 'pointer'
-  }
+  updateMapCursor()
 
   mouseDownStartPoint = null
   mouseDownStartTime = 0
@@ -3234,6 +3379,422 @@ function stopElevationResize() {
   document.removeEventListener('touchmove', handleElevationResize)
   document.removeEventListener('touchend', stopElevationResize)
 }
+
+function updateMapCursor() {
+  if (!map) return
+
+  if (routeMode.value === 'standard') {
+    map.getContainer().style.cursor = 'crosshair'
+  } else {
+    // In guided mode, use pointer cursor when both waypoints are set (for segment selection)
+    // or crosshair when waypoints still need to be set
+    map.getContainer().style.cursor =
+      startWaypoint.value && endWaypoint.value ? 'pointer' : 'crosshair'
+  }
+}
+
+// Segment management functions for guided mode
+async function loadSegmentsInBounds() {
+  if (!map || routeMode.value !== 'startEnd' || isSearchingSegments.value) {
+    return
+  }
+
+  isSearchingSegments.value = true
+
+  try {
+    const bounds = map.getBounds()
+    const params = new URLSearchParams({
+      north: bounds.getNorth().toString(),
+      south: bounds.getSouth().toString(),
+      east: bounds.getEast().toString(),
+      west: bounds.getWest().toString(),
+      track_type: 'segment',
+      limit: '50'
+    })
+
+    const url = `http://localhost:8000/api/segments/search?${params}`
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      console.warn(`Failed to fetch segments: ${response.statusText}`)
+      return
+    }
+
+    // Clear existing segments
+    clearAllSegments()
+
+    // Parse streaming response
+    const reader = response.body?.getReader()
+    if (!reader) return
+
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n')
+      buffer = lines.pop() || ''
+
+      for (const line of lines) {
+        if (line.trim().startsWith('data: ')) {
+          const jsonData = line.slice(6) // Remove 'data: ' prefix
+
+          // Skip [DONE] message from streaming API
+          if (jsonData.trim() === '[DONE]') {
+            continue
+          }
+
+          try {
+            const segment: TrackResponse = JSON.parse(jsonData)
+
+            // Validate segment has required properties
+            if (!segment.id) {
+              console.warn('Segment missing ID, skipping:', segment)
+              continue
+            }
+
+            availableSegments.value.push(segment)
+
+            // Load GPX data and render segment
+            await loadSegmentGPXData(segment)
+          } catch (error) {
+            console.warn('Failed to parse segment data:', error, 'Raw line:', line)
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading segments:', error)
+  } finally {
+    isSearchingSegments.value = false
+  }
+}
+
+async function loadSegmentGPXData(segment: TrackResponse) {
+  // Validate segment has required properties
+  if (!segment || !segment.id) {
+    console.warn('Invalid segment data, cannot load GPX:', segment)
+    return
+  }
+
+  // Check if we already have this GPX data cached
+  if (gpxDataCache.has(segment.id)) {
+    const cachedSegment = gpxDataCache.get(segment.id)!
+    renderSegmentOnMap(cachedSegment)
+    return
+  }
+
+  // Check if we're already loading this GPX data
+  if (loadingGPXData.has(segment.id)) {
+    return
+  }
+
+  loadingGPXData.add(segment.id)
+
+  try {
+    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch GPX data for segment ${segment.id}: ${response.statusText}`
+      )
+      return
+    }
+
+    const gpxResponse: GPXDataResponse = await response.json()
+
+    // Create a TrackWithGPXDataResponse object for caching and rendering
+    const segmentWithGPX: TrackWithGPXDataResponse = {
+      ...segment,
+      gpx_data: null,
+      gpx_xml_data: gpxResponse.gpx_xml_data
+    }
+
+    // Cache the GPX data
+    gpxDataCache.set(segment.id, segmentWithGPX)
+
+    // Render the segment on map
+    renderSegmentOnMap(segmentWithGPX)
+  } catch (error) {
+    console.warn(`Error fetching GPX data for segment ${segment.id}:`, error)
+  } finally {
+    loadingGPXData.delete(segment.id)
+  }
+}
+
+function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
+  if (!segment.gpx_xml_data || !map) {
+    return
+  }
+
+  // Parse GPX data
+  const fileId =
+    segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+  const gpxData = parseGPXData(segment.gpx_xml_data, fileId)
+
+  if (!gpxData || !gpxData.points || gpxData.points.length === 0) {
+    return
+  }
+
+  // Convert GPX points to Leaflet lat/lng format
+  const trackPoints = gpxData.points.map((point: any) => [
+    point.latitude,
+    point.longitude
+  ])
+
+  // Create polyline for the segment - black color as requested
+  const polyline = L.polyline(trackPoints, {
+    color: '#000000', // Black color as requested
+    weight: 3,
+    opacity: 0.8
+  }).addTo(map)
+
+  // Add a tooltip to indicate clickability for selection
+  polyline.bindTooltip('Click to select segment for route', {
+    permanent: false,
+    direction: 'top',
+    offset: [0, -10]
+  })
+
+  // Create popup with segment details
+  const popupContent = createSegmentPopup(segment)
+  const popup = L.popup({
+    maxWidth: 340, // Match the card width
+    className: 'segment-hover-popup',
+    closeButton: false // Remove the close cross
+  }).setContent(popupContent)
+
+  // Add hover effects and popup trigger
+  polyline.on('mouseover', () => {
+    polyline.setStyle({
+      weight: 5,
+      opacity: 1
+    })
+    // Show popup on hover
+    popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
+  })
+
+  polyline.on('mouseout', () => {
+    polyline.setStyle({
+      weight: 3,
+      opacity: 0.8
+    })
+    // Close popup on mouseout (with small delay to prevent flickering)
+    setTimeout(() => {
+      if (map && popup) {
+        map.closePopup(popup)
+      }
+    }, 100)
+  })
+
+  // Add click handler to select segment only
+  polyline.on('click', () => {
+    // Select the segment for route generation
+    selectSegment(segment)
+  })
+
+  // Store the layer reference
+  const segmentId = segment.id.toString()
+  segmentMapLayers.set(segmentId, {
+    polyline: polyline,
+    popup: popup
+  })
+}
+
+function createSegmentPopup(segment: TrackResponse): string {
+  const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+
+  // Get cached GPX data for stats
+  const gpxData = gpxDataCache.get(segment.id)
+  let statsHtml = ''
+
+  if (gpxData && gpxData.gpx_xml_data) {
+    const fileId = segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+    const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
+
+    if (parsedGPX && parsedGPX.total_stats) {
+      const stats = parsedGPX.total_stats
+      statsHtml = `
+        <div class="segment-stats">
+          <div class="stat-item">
+            <i class="fa-solid fa-route"></i>
+            <div class="stat-content">
+              <span class="stat-value">${formatDistance(stats.total_distance)}</span>
+              <span class="stat-label">Distance</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+            <div class="stat-content">
+              <span class="stat-value">${formatElevation(stats.total_elevation_gain)}</span>
+              <span class="stat-label">Elevation Gain</span>
+            </div>
+          </div>
+          <div class="stat-item">
+            <i class="fa-solid fa-arrow-trend-down"></i>
+            <div class="stat-content">
+              <span class="stat-value">${formatElevation(stats.total_elevation_loss)}</span>
+              <span class="stat-label">Elevation Loss</span>
+            </div>
+          </div>
+        </div>
+      `
+    }
+  }
+
+  // If no stats available, show loading or fallback
+  if (!statsHtml) {
+    statsHtml = `
+      <div class="segment-stats">
+        <div class="stat-item">
+          <i class="fa-solid fa-route"></i>
+          <div class="stat-content">
+            <span class="stat-value">...</span>
+            <span class="stat-label">Distance</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <i class="fa-solid fa-arrow-trend-up"></i>
+          <div class="stat-content">
+            <span class="stat-value">...</span>
+            <span class="stat-label">Elevation Gain</span>
+          </div>
+        </div>
+        <div class="stat-item">
+          <i class="fa-solid fa-arrow-trend-down"></i>
+          <div class="stat-content">
+            <span class="stat-value">...</span>
+            <span class="stat-label">Elevation Loss</span>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  return `
+    <div class="segment-popup-card ${isSelected ? 'selected' : ''}">
+      <div class="segment-card-header">
+        <h4 class="segment-name" title="${segment.name}">
+          ${segment.name}
+        </h4>
+      </div>
+
+      <div class="segment-card-content">
+        ${statsHtml}
+      </div>
+
+      <div class="segment-card-footer">
+        <div class="segment-info-grid">
+          <div class="info-section">
+            <div class="info-label">Surface</div>
+            <div class="info-value">
+              <i class="fa-solid fa-road"></i>
+              <span>${formatSurfaceType(segment.surface_type)}</span>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="info-label">Tires</div>
+            <div class="tire-recommendations">
+              <div class="tire-recommendation">
+                <i class="fa-solid fa-sun"></i>
+                <span class="tire-badge">${formatTireType(segment.tire_dry)}</span>
+              </div>
+              <div class="tire-recommendation">
+                <i class="fa-solid fa-cloud-rain"></i>
+                <span class="tire-badge">${formatTireType(segment.tire_wet)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-section">
+            <div class="info-label">Difficulty</div>
+            <div class="info-value difficulty">
+              <i class="fa-solid fa-signal"></i>
+              <span>${segment.difficulty_level}/5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function selectSegment(segment: TrackResponse) {
+  const existingIndex = selectedSegments.value.findIndex((s) => s.id === segment.id)
+
+  if (existingIndex >= 0) {
+    // Deselect segment
+    selectedSegments.value.splice(existingIndex, 1)
+  } else {
+    // Select segment
+    selectedSegments.value.push(segment)
+  }
+
+  // Update popup content to reflect new selection status
+  const segmentId = segment.id.toString()
+  const layerData = segmentMapLayers.get(segmentId)
+  if (layerData && layerData.popup) {
+    layerData.popup.setContent(createSegmentPopup(segment))
+  }
+
+  // Update polyline style to show selection
+  if (layerData && layerData.polyline) {
+    const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+    layerData.polyline.setStyle({
+      color: isSelected ? '#ff6600' : '#000000', // Orange when selected, black when not
+      weight: isSelected ? 4 : 3
+    })
+  }
+}
+
+function deselectSegment(segment: TrackResponse) {
+  const existingIndex = selectedSegments.value.findIndex((s) => s.id === segment.id)
+
+  if (existingIndex >= 0) {
+    // Remove from selected segments
+    selectedSegments.value.splice(existingIndex, 1)
+
+    // Update popup content to reflect new selection status
+    const segmentId = segment.id.toString()
+    const layerData = segmentMapLayers.get(segmentId)
+    if (layerData && layerData.popup) {
+      layerData.popup.setContent(createSegmentPopup(segment))
+    }
+
+    // Update polyline style to show deselection
+    if (layerData && layerData.polyline) {
+      layerData.polyline.setStyle({
+        color: '#000000', // Black when not selected
+        weight: 3
+      })
+    }
+  }
+}
+
+function clearAllSegments() {
+  // Remove all segment layers from map
+  segmentMapLayers.forEach((layerData) => {
+    if (layerData.polyline && map.hasLayer(layerData.polyline)) {
+      map.removeLayer(layerData.polyline)
+    }
+  })
+
+  // Clear all data structures
+  segmentMapLayers.clear()
+  availableSegments.value = []
+  selectedSegments.value = []
+  gpxDataCache.clear()
+  loadingGPXData.clear()
+
+  // Clear any pending search timeout
+  if (segmentSearchTimeout) {
+    clearTimeout(segmentSearchTimeout)
+    segmentSearchTimeout = null
+  }
+}
 </script>
 
 <style scoped>
@@ -4200,5 +4761,287 @@ function stopElevationResize() {
   .elevation-chart-canvas {
     height: 100%; /* Fill the container on very small screens */
   }
+}
+
+/* Segment hover popup styles - compact version of SegmentImportCard */
+:global(.segment-hover-popup .leaflet-popup-content-wrapper) {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e1e5e9;
+  padding: 0;
+}
+
+:global(.segment-hover-popup .leaflet-popup-content) {
+  margin: 0;
+  padding: 0;
+}
+:global(.segment-popup-card) {
+  border: 1px solid #e1e5e9;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: inherit;
+  background: white;
+  width: 340px; /* Increased width to 340px */
+}
+
+:global(.segment-popup-card.selected) {
+  box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
+  transform: translateY(-1px);
+  border-color: #ff6b35;
+}
+
+:global(.segment-card-header) {
+  margin-bottom: 8px;
+}
+
+:global(.segment-name) {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s ease;
+  line-height: 1.2;
+}
+
+:global(.segment-popup-card.selected .segment-name) {
+  color: #ff6b35;
+}
+
+:global(.segment-card-content) {
+  margin-bottom: 8px;
+}
+
+:global(.segment-stats) {
+  display: flex;
+  gap: 8px;
+}
+
+:global(.stat-item) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: #f8fafc;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  transition: background-color 0.2s ease;
+  flex: 1;
+}
+
+:global(.stat-item i) {
+  width: 20px;
+  height: 20px;
+  background: #f97316;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+:global(.stat-content) {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+:global(.stat-label) {
+  font-size: 0.6rem;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+:global(.stat-value) {
+  font-size: 0.75rem;
+  color: #333;
+  font-weight: 600;
+}
+
+:global(.segment-card-footer) {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 8px;
+  position: relative;
+}
+
+:global(.segment-info-grid) {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+:global(.info-section) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  text-align: center;
+}
+
+:global(.info-label) {
+  color: #666;
+  font-weight: 500;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 1px;
+}
+
+:global(.info-value) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  color: #333;
+  font-weight: 500;
+}
+
+:global(.info-value i) {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+:global(.info-value.difficulty) {
+  color: #e67e22;
+  font-weight: 600;
+}
+
+:global(.tire-recommendations) {
+  display: flex;
+  gap: 6px;
+}
+
+:global(.tire-recommendation) {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+:global(.tire-recommendation i) {
+  font-size: 0.7rem;
+}
+
+:global(.tire-recommendation .fa-sun) {
+  color: #ff6600;
+}
+
+:global(.tire-recommendation .fa-cloud-rain) {
+  color: #3b82f6;
+}
+
+:global(.tire-badge) {
+  background-color: #f5f5f5;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 0.6rem;
+  color: #333;
+  font-weight: 500;
+}
+
+/* Selected segments section styles */
+.selected-segments-section {
+  background: rgba(255, 102, 0, 0.05);
+  border: 1px solid rgba(255, 102, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.selected-segments-title {
+  margin: 0 0 1rem 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.selected-segments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.selected-segment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  transition: all 0.2s ease;
+}
+
+.selected-segment-item:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 102, 0, 0.3);
+}
+
+.segment-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.selected-segment-item .segment-name {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.segment-meta {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.segment-difficulty {
+  font-weight: 500;
+  color: #ff6600;
+}
+
+.segment-type {
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+
+.remove-segment-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.remove-segment-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+
+.remove-segment-btn i {
+  font-size: 0.75rem;
 }
 </style>

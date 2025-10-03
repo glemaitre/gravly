@@ -282,8 +282,8 @@ export default {
     startEndModeDesc: 'Create simple routes between just two points - start and end.',
     guidedTodoList: 'Steps',
     guidedTodoInstructions: 'Set landmarks on the map',
-    todoSetStartPoint: 'Set <strong>starting</strong> point',
-    todoSetEndPoint: 'Set <strong>ending</strong> point',
+    todoSetStartPoint: 'Set starting point',
+    todoSetEndPoint: 'Set ending point',
     clickStartPoint: 'Click on the map to set the starting point',
     clickEndPoint: 'Click on the map to set the ending point',
     startSet: 'Start point set',
@@ -291,6 +291,9 @@ export default {
     endSet: 'End point set',
     endNotSet: 'End point not set',
     generateRoute: 'Generate Route',
+    // Segment selection
+    selectedSegments: 'Selected Segments',
+    removeSegment: 'Remove segment',
     // Units
     km: 'km',
     m: 'm'

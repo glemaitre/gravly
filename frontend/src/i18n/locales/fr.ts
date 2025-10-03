@@ -287,8 +287,8 @@ export default {
       'Créez des itinéraires simples entre seulement deux points - départ et arrivée.',
     guidedTodoList: 'Étapes',
     guidedTodoInstructions: 'Définir les points de repère sur la carte',
-    todoSetStartPoint: 'Définir le point de <strong>départ</strong>',
-    todoSetEndPoint: "Définir le point d'<strong>arrivée</strong>",
+    todoSetStartPoint: 'Définir le point de départ',
+    todoSetEndPoint: "Définir le point d'arrivée",
     clickStartPoint: 'Cliquez sur la carte pour définir le point de départ',
     clickEndPoint: "Cliquez sur la carte pour définir le point d'arrivée",
     startSet: 'Point de départ défini',
@@ -296,6 +296,9 @@ export default {
     endSet: "Point d'arrivée défini",
     endNotSet: "Point d'arrivée non défini",
     generateRoute: 'Générer le parcours',
+    // Segment selection
+    selectedSegments: 'Segments sélectionnés',
+    removeSegment: 'Supprimer le segment',
     // Units
     km: 'km',
     m: 'm'
