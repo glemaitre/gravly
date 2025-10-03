@@ -92,10 +92,7 @@
         </div>
 
         <!-- Selected Segments -->
-        <div
-          v-if="routeMode === 'startEnd' && selectedSegments.length > 0"
-          class="selected-segments-section"
-        >
+        <div v-if="routeMode === 'startEnd'" class="selected-segments-section">
           <h4 class="selected-segments-title">
             {{ t('routePlanner.selectedSegments') }}
           </h4>
@@ -139,12 +136,14 @@
           </div>
         </div>
 
-        <!-- Generate Route Button -->
-        <div
-          v-if="routeMode === 'startEnd' && startWaypoint && endWaypoint"
-          class="generate-route-section"
-        >
-          <button class="generate-route-btn" @click="generateStartEndRoute">
+        <!-- Generate Route Button - Always visible in startEnd mode -->
+        <div v-if="routeMode === 'startEnd'" class="generate-route-section">
+          <button
+            class="generate-route-btn"
+            :class="{ disabled: !startWaypoint || !endWaypoint }"
+            :disabled="!startWaypoint || !endWaypoint"
+            @click="generateStartEndRoute"
+          >
             <i class="fa-solid fa-route"></i>
             <span>{{ t('routePlanner.generateRoute') }}</span>
           </button>
@@ -3811,15 +3810,23 @@ function renderSegmentOnMapWithDirection(
   })
 
   // Create start and end landmarks for selected segments
+  // Don't show landmarks if a route is currently active (they're replaced by numbered waypoints)
   const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
   let startMarker = null
   let endMarker = null
 
-  if (isSelected) {
-    startMarker = createSegmentLandmark([trackPoints[0][0], trackPoints[0][1]], 'start')
+  if (isSelected && !routeLine) {
+    // Find the index of this segment in the selected segments list
+    const segmentIndex = selectedSegments.value.findIndex((s) => s.id === segment.id)
+    startMarker = createSegmentLandmark(
+      [trackPoints[0][0], trackPoints[0][1]],
+      'start',
+      segmentIndex
+    )
     endMarker = createSegmentLandmark(
       [trackPoints[trackPoints.length - 1][0], trackPoints[trackPoints.length - 1][1]],
-      'end'
+      'end',
+      segmentIndex
     )
   }
 
@@ -3833,13 +3840,18 @@ function renderSegmentOnMapWithDirection(
   })
 }
 
-function createSegmentLandmark(point: [number, number], type: 'start' | 'end') {
+function createSegmentLandmark(
+  point: [number, number],
+  type: 'start' | 'end',
+  index: number = -1
+) {
   if (!map) return null
 
-  // Create different icons for start and end
+  // Create different icons for start and end with index
   const icon = L.divIcon({
     className: `segment-landmark segment-landmark-${type}`,
     html: `<div class="landmark-content">
+      ${index >= 0 ? `<div class="landmark-index">${index + 1}</div>` : ''}
       <i class="fa-solid ${type === 'start' ? 'fa-play' : 'fa-stop'}"></i>
     </div>`,
     iconSize: [20, 20],
@@ -4022,11 +4034,12 @@ function selectSegment(segment: TrackResponse) {
     })
 
     // Add or remove landmarks based on selection
-    if (isSelected) {
-      // Add landmarks for selected segment
+    // Don't show landmarks if a route is currently active (they're replaced by numbered waypoints)
+    if (isSelected && !routeLine) {
+      // Add landmarks for selected segment (only if no route is active)
       addSegmentLandmarks(segment, layerData.polyline)
     } else {
-      // Remove landmarks for deselected segment
+      // Remove landmarks for deselected segment or when route is active
       removeSegmentLandmarks(segment.id)
     }
   }
@@ -4051,9 +4064,20 @@ function addSegmentLandmarks(segment: TrackResponse, polyline: any) {
   // Remove existing landmarks if any
   removeSegmentLandmarks(segment.id)
 
+  // Find the index of this segment in the selected segments list
+  const segmentIndex = selectedSegments.value.findIndex((s) => s.id === segment.id)
+
   // Create new landmarks
-  const startMarker = createSegmentLandmark([startPoint.lat, startPoint.lng], 'start')
-  const endMarker = createSegmentLandmark([endPoint.lat, endPoint.lng], 'end')
+  const startMarker = createSegmentLandmark(
+    [startPoint.lat, startPoint.lng],
+    'start',
+    segmentIndex
+  )
+  const endMarker = createSegmentLandmark(
+    [endPoint.lat, endPoint.lng],
+    'end',
+    segmentIndex
+  )
 
   // Update layer data
   layerData.startMarker = startMarker
@@ -4150,6 +4174,9 @@ function handleDrop(event: DragEvent, dropIndex: number) {
   // Update the selectedSegments array
   selectedSegments.value = segments
 
+  // Update all segment landmarks with new indices
+  updateSegmentLandmarksIndices()
+
   // Reset drag state
   draggedIndex.value = null
   dragOverIndex.value = null
@@ -4163,6 +4190,49 @@ function handleDragEnd() {
   // Reset drag state
   draggedIndex.value = null
   dragOverIndex.value = null
+}
+
+function updateSegmentLandmarksIndices() {
+  // Update landmarks for all selected segments with their current indices
+  selectedSegments.value.forEach((segment, index) => {
+    const segmentIdStr = segment.id.toString()
+    const layerData = segmentMapLayers.get(segmentIdStr)
+
+    if (layerData && (layerData.startMarker || layerData.endMarker)) {
+      // Remove existing landmarks
+      if (layerData.startMarker && map) {
+        map.removeLayer(layerData.startMarker)
+      }
+      if (layerData.endMarker && map) {
+        map.removeLayer(layerData.endMarker)
+      }
+
+      // Get segment coordinates
+      const gpxData = gpxDataCache.get(segment.id)
+      if (gpxData && gpxData.gpx_xml_data) {
+        const fileId =
+          gpxData.file_path?.split('/').pop()?.replace('.gpx', '') ||
+          segment.id.toString()
+        const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
+        if (parsedGPX && parsedGPX.points && parsedGPX.points.length > 0) {
+          const startPoint = parsedGPX.points[0]
+          const endPoint = parsedGPX.points[parsedGPX.points.length - 1]
+
+          // Create new landmarks with updated index
+          layerData.startMarker = createSegmentLandmark(
+            [startPoint.latitude, startPoint.longitude],
+            'start',
+            index
+          )
+          layerData.endMarker = createSegmentLandmark(
+            [endPoint.latitude, endPoint.longitude],
+            'end',
+            index
+          )
+        }
+      }
+    }
+  })
 }
 
 // Hover functions for selected segment items
@@ -4380,9 +4450,10 @@ function clearAllSegments() {
 }
 
 .sidebar-options {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  flex-shrink: 0;
 }
 
 .mode-toggle-title {
@@ -4603,6 +4674,7 @@ function clearAllSegments() {
 /* Generate Route Section */
 .generate-route-section {
   padding: 0.2rem;
+  flex-shrink: 0;
 }
 
 .generate-route-btn {
@@ -4623,10 +4695,23 @@ function clearAllSegments() {
   box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
 }
 
-.generate-route-btn:hover {
+.generate-route-btn:hover:not(.disabled) {
   background: #e65c00;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+}
+
+.generate-route-btn.disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.generate-route-btn.disabled:hover {
+  background: #9ca3af;
+  transform: none;
+  box-shadow: none;
 }
 
 .generate-route-btn:active {
@@ -5383,7 +5468,11 @@ function clearAllSegments() {
   border: 1px solid rgba(255, 102, 0, 0.2);
   border-radius: 8px;
   padding: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: fit-content;
+  max-height: calc(100vh - var(--navbar-height) - 200px);
 }
 
 .selected-segments-title {
@@ -5392,12 +5481,17 @@ function clearAllSegments() {
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .selected-segments-list {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  max-height: calc(100vh - var(--navbar-height) - 280px);
 }
 
 .selected-segment-item {
@@ -5528,6 +5622,7 @@ function clearAllSegments() {
   font-size: 0.7rem;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 
 :global(.segment-landmark-start .landmark-content) {
@@ -5538,5 +5633,23 @@ function clearAllSegments() {
 :global(.segment-landmark-end .landmark-content) {
   background: #ef4444;
   color: white;
+}
+
+:global(.segment-landmark .landmark-index) {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #374151;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 </style>
