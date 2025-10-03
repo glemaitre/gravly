@@ -105,19 +105,20 @@
           </h4>
           <div class="selected-segments-list">
             <div
-              v-for="segment in selectedSegments"
+              v-for="(segment, index) in selectedSegments"
               :key="segment.id"
               class="selected-segment-item"
+              draggable="true"
+              @dragstart="handleDragStart($event, index)"
+              @dragover="handleDragOver($event)"
+              @drop="handleDrop($event, index)"
+              @dragend="handleDragEnd"
             >
-              <div class="segment-info">
-                <div class="segment-name">{{ segment.name }}</div>
-                <div class="segment-meta">
-                  <span class="segment-difficulty"
-                    >{{ segment.difficulty_level }}/5</span
-                  >
-                  <span class="segment-type">{{ segment.track_type }}</span>
-                </div>
+              <div class="segment-index">{{ index + 1 }}</div>
+              <div class="segment-drag-handle">
+                <i class="fa-solid fa-grip-vertical"></i>
               </div>
+              <div class="segment-name">{{ segment.name }}</div>
               <button
                 class="remove-segment-btn"
                 @click="deselectSegment(segment)"
@@ -309,6 +310,10 @@ const segmentMapLayers = new Map<string, { polyline: any; popup?: any }>()
 const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
 const loadingGPXData = new Set<number>()
 const isSearchingSegments = ref(false)
+
+// Drag and drop state for segment reordering
+const draggedIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 
 // Map and routing state
 let map: any = null
@@ -3785,6 +3790,59 @@ function deselectSegment(segment: TrackResponse) {
   }
 }
 
+// Drag and drop functions for segment reordering
+function handleDragStart(event: DragEvent, index: number) {
+  draggedIndex.value = index
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/html', '')
+  }
+  // Add dragging class to the dragged element
+  const target = event.target as HTMLElement
+  target.classList.add('dragging')
+}
+
+function handleDragOver(event: DragEvent) {
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleDrop(event: DragEvent, dropIndex: number) {
+  event.preventDefault()
+
+  if (draggedIndex.value === null || draggedIndex.value === dropIndex) {
+    return
+  }
+
+  // Create a copy of the selectedSegments array
+  const segments = [...selectedSegments.value]
+
+  // Remove the dragged segment from its current position
+  const draggedSegment = segments.splice(draggedIndex.value, 1)[0]
+
+  // Insert it at the new position
+  segments.splice(dropIndex, 0, draggedSegment)
+
+  // Update the selectedSegments array
+  selectedSegments.value = segments
+
+  // Reset drag state
+  draggedIndex.value = null
+  dragOverIndex.value = null
+}
+
+function handleDragEnd() {
+  // Remove dragging class from all elements
+  const draggingElements = document.querySelectorAll('.dragging')
+  draggingElements.forEach((el) => el.classList.remove('dragging'))
+
+  // Reset drag state
+  draggedIndex.value = null
+  dragOverIndex.value = null
+}
+
 function clearAllSegments() {
   // Remove all segment layers from map
   segmentMapLayers.forEach((layerData) => {
@@ -4988,7 +5046,7 @@ function clearAllSegments() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem;
+  padding: 0.3rem 0.7rem 0.3rem 0.75rem;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 6px;
   border: 1px solid rgba(229, 231, 235, 0.5);
@@ -5000,36 +5058,53 @@ function clearAllSegments() {
   border-color: rgba(255, 102, 0, 0.3);
 }
 
-.segment-info {
-  flex: 1;
+.selected-segment-item.dragging {
+  opacity: 0.5;
+  transform: rotate(2deg);
+}
+
+.segment-index {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #ff6600;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.segment-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 0.5rem;
+  color: #9ca3af;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.segment-drag-handle:active {
+  cursor: grabbing;
+}
+
+.segment-drag-handle i {
+  font-size: 0.75rem;
 }
 
 .selected-segment-item .segment-name {
+  flex: 1;
   font-weight: 600;
   color: #374151;
   font-size: 0.875rem;
   line-height: 1.2;
-}
-
-.segment-meta {
-  display: flex;
-  gap: 0.5rem;
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.segment-difficulty {
-  font-weight: 500;
-  color: #ff6600;
-}
-
-.segment-type {
-  font-weight: 500;
-  color: #6b7280;
-  text-transform: capitalize;
+  margin-left: 0.25rem;
 }
 
 .remove-segment-btn {
