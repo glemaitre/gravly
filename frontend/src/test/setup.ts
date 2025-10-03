@@ -1,6 +1,35 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
+// Suppress console output during tests to reduce noise
+global.console = {
+  ...console,
+  // Suppress all console methods during tests
+  log: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn(),
+  trace: vi.fn(),
+  table: vi.fn(),
+  group: vi.fn(),
+  groupCollapsed: vi.fn(),
+  groupEnd: vi.fn(),
+  time: vi.fn(),
+  timeEnd: vi.fn(),
+  timeLog: vi.fn(),
+  count: vi.fn(),
+  countReset: vi.fn(),
+  clear: vi.fn(),
+  dir: vi.fn(),
+  dirxml: vi.fn(),
+  assert: vi.fn(),
+  profile: vi.fn(),
+  profileEnd: vi.fn(),
+  timeStamp: vi.fn(),
+  context: vi.fn()
+} as any
+
 // Mock HTMLCanvasElement.getContext for tests
 Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
   value: vi.fn(() => ({

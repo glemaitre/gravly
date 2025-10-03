@@ -453,7 +453,7 @@ const actualRouteCoordinates = ref<Array<{ lat: number; lng: number }>>([]) // S
 const CACHE_VERSION = '1.1' // Increment version to invalidate old cache with zeros
 const CACHE_KEY = 'elevation_cache_v' + CACHE_VERSION
 const MAX_SEGMENT_LENGTH = 5000 // 5km - segments longer than this will be chunked
-const CHUNK_SIZE = 128 // Maximum points per API call
+const CHUNK_SIZE = 100 // Maximum points per API call
 
 // Sentinel value to indicate failed elevation requests
 const ELEVATION_FAILURE_SENTINEL = -9999

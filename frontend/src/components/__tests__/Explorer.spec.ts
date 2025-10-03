@@ -146,12 +146,19 @@ describe('Explorer', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Suppress expected console errors during tests
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'info').mockImplementation(() => {})
   })
 
   afterEach(() => {
     if (wrapper) {
       wrapper.unmount()
     }
+    // Restore console methods
+    vi.restoreAllMocks()
   })
 
   it('renders correctly', () => {

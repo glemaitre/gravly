@@ -83,6 +83,12 @@ describe('SegmentImportCard', () => {
     vi.clearAllMocks()
     mockFetch.mockClear()
 
+    // Suppress expected console errors during tests
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    vi.spyOn(console, 'info').mockImplementation(() => {})
+
     // Mock successful fetch response
     mockFetch.mockResolvedValue({
       ok: true,
@@ -97,6 +103,8 @@ describe('SegmentImportCard', () => {
     if (wrapper) {
       wrapper.unmount()
     }
+    // Restore console methods
+    vi.restoreAllMocks()
   })
 
   describe('Component Rendering', () => {
