@@ -33,10 +33,12 @@
 
         <!-- Guided Mode Todo List -->
         <div v-if="routeMode === 'startEnd'" class="guided-todo-list">
-          <h4 class="todo-title">{{ t('routePlanner.guidedTodoList') }}</h4>
-          <p class="todo-instructions">
-            {{ t('routePlanner.guidedTodoInstructions') }}
-          </p>
+          <h4 class="todo-title">
+            {{ t('routePlanner.guidedTodoList') }}
+            <span class="todo-subtitle">{{
+              t('routePlanner.guidedTodoInstructions')
+            }}</span>
+          </h4>
           <div class="todo-items">
             <div
               class="todo-item"
@@ -53,7 +55,12 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span class="todo-text"> Set <strong>starting</strong> point </span>
+                  <span class="todo-text">
+                    <template v-if="startWaypoint">
+                      <strong>Starting</strong> point set
+                    </template>
+                    <template v-else> Set <strong>starting</strong> point </template>
+                  </span>
                 </div>
               </div>
             </div>
@@ -72,7 +79,12 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span class="todo-text"> Set <strong>ending</strong> point </span>
+                  <span class="todo-text">
+                    <template v-if="endWaypoint">
+                      <strong>Ending</strong> point set
+                    </template>
+                    <template v-else> Set <strong>ending</strong> point </template>
+                  </span>
                 </div>
               </div>
             </div>
@@ -4107,11 +4119,19 @@ function clearAllSegments() {
 }
 
 .todo-title {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
   color: #374151;
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
+}
+
+.todo-subtitle {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 400;
+  font-style: italic;
+  margin-left: 0.25rem;
 }
 
 .todo-instructions {
@@ -4153,8 +4173,6 @@ function clearAllSegments() {
 
 .todo-item.completed .todo-text {
   color: #059669;
-  text-decoration: line-through;
-  opacity: 0.8;
 }
 
 .todo-checkbox {
