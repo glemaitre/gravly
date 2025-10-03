@@ -1571,6 +1571,48 @@ function addWaypoint(latlng: any) {
   }
 }
 
+function removeWaypoint(index: number) {
+  // Save state for undo functionality
+  saveState()
+
+  // Remove the waypoint from the array
+  waypoints.splice(index, 1)
+
+  // Remove the marker from the map and array
+  if (waypointMarkers[index]) {
+    map.removeLayer(waypointMarkers[index])
+    waypointMarkers.splice(index, 1)
+  }
+
+  // Update all remaining markers to reflect new indices
+  rebuildWaypointMarkers()
+
+  // Update routing control with new waypoints
+  if (routingControl) {
+    routingControl.setWaypoints(waypoints)
+  }
+
+  // Clear current route and regenerate if we have at least 2 waypoints
+  if (routeLine) {
+    map.removeLayer(routeLine)
+    routeLine = null
+  }
+
+  if (waypoints.length >= 2) {
+    // Regenerate route with updated waypoints
+    routingControl.setWaypoints(waypoints)
+
+    // Save route after waypoint removal
+    saveCurrentRoute()
+
+    // Update elevation chart and segments
+    updateElevationAfterWaypointChange()
+  } else {
+    // Clear elevation data if we don't have enough waypoints
+    clearElevationData()
+  }
+}
+
 function createWaypointMarker(index: number, latlng: any) {
   // Remove existing marker at this index if it exists
   if (waypointMarkers[index]) {
@@ -1619,6 +1661,17 @@ function createWaypointMarker(index: number, latlng: any) {
 
   marker.on('mouseout', () => {
     map.getContainer().style.cursor = 'crosshair'
+  })
+
+  // Add right-click context menu for waypoint removal
+  marker.on('contextmenu', (e: any) => {
+    L.DomEvent.stopPropagation(e)
+    L.DomEvent.preventDefault(e)
+
+    // Only allow removal if we have more than 2 waypoints (start and end)
+    if (waypoints.length > 2) {
+      removeWaypoint(index)
+    }
   })
 
   // Store marker reference
@@ -3129,6 +3182,42 @@ function clearRoute() {
     totalLoss: 0,
     maxElevation: 0,
     minElevation: 0
+  }
+}
+
+function clearElevationData() {
+  // Clear elevation chart data
+  if (elevationChart.value) {
+    elevationChart.value.destroy()
+    elevationChart.value = null
+  }
+
+  // Clean up chart event listeners
+  cleanupChartEventListeners()
+  if (mapMarker) {
+    map.removeLayer(mapMarker)
+    mapMarker = null
+  }
+
+  routeDistance.value = 0
+  waypointChartIndices.value = []
+  currentPosition.value = null
+  elevationSegments.value = []
+  elevationCache.clear()
+  actualRouteCoordinates.value = []
+  elevationStats.value = {
+    totalGain: 0,
+    totalLoss: 0,
+    maxElevation: 0,
+    minElevation: 0
+  }
+}
+
+async function updateElevationAfterWaypointChange() {
+  // Update elevation chart if section is visible
+  if (showElevation.value) {
+    // Recalculate elevation from actual route with caching
+    await calculateElevationFromActualRouteWithCaching()
   }
 }
 
