@@ -45,9 +45,7 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span class="todo-text">
-                    Set <strong>starting</strong> point
-                  </span>
+                  <span class="todo-text"> Set <strong>starting</strong> point </span>
                 </div>
               </div>
               <div v-if="startWaypoint" class="todo-coordinates">
@@ -74,9 +72,7 @@
                   <i v-else class="fa-solid fa-spinner fa-spin waiting-icon"></i>
                 </div>
                 <div class="todo-content">
-                  <span class="todo-text">
-                    Set <strong>ending</strong> point
-                  </span>
+                  <span class="todo-text"> Set <strong>ending</strong> point </span>
                 </div>
               </div>
               <div v-if="endWaypoint" class="todo-coordinates">
@@ -922,8 +918,8 @@ watch(elevationHeight, () => {
 // Watch for route mode changes to load/clear segments
 watch(routeMode, (newMode) => {
   if (newMode === 'startEnd') {
-    // Load segments when switching to guided mode
-    loadSegmentsInBounds()
+    // Don't load segments immediately - wait for both start and end waypoints to be set
+    // loadSegmentsInBounds() - removed to delay search
   } else {
     // Clear segments when switching to free mode
     clearAllSegments()
@@ -933,10 +929,18 @@ watch(routeMode, (newMode) => {
   updateMapCursor()
 })
 
-// Watch for waypoint changes to update cursor in guided mode
+// Watch for waypoint changes to update cursor in guided mode and load segments
 watch([startWaypoint, endWaypoint], () => {
   if (routeMode.value === 'startEnd') {
     updateMapCursor()
+
+    // Load segments when both start and end waypoints are set
+    if (startWaypoint.value && endWaypoint.value) {
+      loadSegmentsInBounds()
+    } else {
+      // Clear segments if either waypoint is removed
+      clearAllSegments()
+    }
   }
 })
 
@@ -945,7 +949,13 @@ let segmentSearchTimeout: any = null
 watch(
   () => map?.getBounds(),
   (newBounds) => {
-    if (routeMode.value === 'startEnd' && newBounds && !isSearchingSegments.value) {
+    if (
+      routeMode.value === 'startEnd' &&
+      newBounds &&
+      !isSearchingSegments.value &&
+      startWaypoint.value &&
+      endWaypoint.value
+    ) {
       if (segmentSearchTimeout) {
         clearTimeout(segmentSearchTimeout)
       }
@@ -3611,7 +3621,8 @@ function createSegmentPopup(segment: TrackResponse): string {
   let statsHtml = ''
 
   if (gpxData && gpxData.gpx_xml_data) {
-    const fileId = segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
+    const fileId =
+      segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
     const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
 
     if (parsedGPX && parsedGPX.total_stats) {
