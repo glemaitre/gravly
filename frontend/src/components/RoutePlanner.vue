@@ -256,6 +256,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Waypoint Context Menu -->
+    <div
+      v-if="contextMenu.visible"
+      class="waypoint-context-menu"
+      :style="{
+        left: contextMenu.x + 'px',
+        top: contextMenu.y + 'px'
+      }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="handleDeleteWaypoint">
+        <i class="fa-solid fa-trash"></i>
+        <span>{{ t('routePlanner.deleteWaypoint') }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -371,6 +387,14 @@ const currentPosition = ref<{
   distance: number
   elevation: number
 } | null>(null)
+
+// Context menu state
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  waypointIndex: -1
+})
 
 // Chart event listeners for cleanup
 let chartCanvasMouseLeaveListener: (() => void) | null = null
@@ -1098,6 +1122,9 @@ onMounted(async () => {
     calculateRouteDistance() // Calculate basic distance first
     // Don't calculate elevation stats here - wait for route to be fully loaded
   }
+
+  // Add click outside handler for context menu
+  document.addEventListener('click', hideContextMenu)
 })
 
 onUnmounted(() => {
@@ -1111,6 +1138,9 @@ onUnmounted(() => {
 
   // Clean up elevation resize event listeners
   stopElevationResize()
+
+  // Remove context menu click handler
+  document.removeEventListener('click', hideContextMenu)
 
   if (map) {
     map.remove()
@@ -1613,6 +1643,37 @@ function removeWaypoint(index: number) {
   }
 }
 
+// Context menu functions
+function showContextMenu(event: MouseEvent, waypointIndex: number) {
+  // Only allow removal if we have more than 2 waypoints (start and end)
+  if (waypoints.length <= 2) {
+    return
+  }
+
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    waypointIndex
+  }
+}
+
+function hideContextMenu() {
+  contextMenu.value = {
+    visible: false,
+    x: 0,
+    y: 0,
+    waypointIndex: -1
+  }
+}
+
+function handleDeleteWaypoint() {
+  if (contextMenu.value.waypointIndex >= 0) {
+    removeWaypoint(contextMenu.value.waypointIndex)
+  }
+  hideContextMenu()
+}
+
 function createWaypointMarker(index: number, latlng: any) {
   // Remove existing marker at this index if it exists
   if (waypointMarkers[index]) {
@@ -1668,10 +1729,8 @@ function createWaypointMarker(index: number, latlng: any) {
     L.DomEvent.stopPropagation(e)
     L.DomEvent.preventDefault(e)
 
-    // Only allow removal if we have more than 2 waypoints (start and end)
-    if (waypoints.length > 2) {
-      removeWaypoint(index)
-    }
+    // Show context menu
+    showContextMenu(e.originalEvent, index)
   })
 
   // Store marker reference
@@ -5740,5 +5799,42 @@ function clearAllSegments() {
   justify-content: center;
   border: 1px solid white;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Waypoint Context Menu */
+.waypoint-context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 160px;
+  overflow: hidden;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 14px;
+  color: #333;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.context-menu-item i {
+  margin-right: 8px;
+  width: 16px;
+  text-align: center;
+  color: #dc3545;
+}
+
+.context-menu-item span {
+  flex: 1;
 }
 </style>

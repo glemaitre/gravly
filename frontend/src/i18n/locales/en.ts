@@ -294,6 +294,8 @@ export default {
     // Segment selection
     selectedSegments: 'Selected Segments',
     removeSegment: 'Remove segment',
+    // Waypoint context menu
+    deleteWaypoint: 'Delete Waypoint',
     // Units
     km: 'km',
     m: 'm'

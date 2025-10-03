@@ -759,6 +759,133 @@ describe('RoutePlanner', () => {
     })
   })
 
+  describe('Context Menu', () => {
+    beforeEach(async () => {
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+    })
+
+    it('should have context menu state initialized', () => {
+      expect(wrapper.vm.contextMenu).toEqual({
+        visible: false,
+        x: 0,
+        y: 0,
+        waypointIndex: -1
+      })
+    })
+
+    it('should show context menu when waypoint count > 2', () => {
+      // Set up waypoints
+      wrapper.vm.waypoints = [
+        { latLng: { lat: 46.860104, lng: 3.978509 } },
+        { latLng: { lat: 46.861104, lng: 3.979509 } },
+        { latLng: { lat: 46.862104, lng: 3.980509 } }
+      ]
+
+      // Mock event
+      const mockEvent = {
+        clientX: 100,
+        clientY: 200
+      }
+
+      // Test showContextMenu function
+      wrapper.vm.showContextMenu(mockEvent, 1)
+
+      expect(wrapper.vm.contextMenu).toEqual({
+        visible: true,
+        x: 100,
+        y: 200,
+        waypointIndex: 1
+      })
+    })
+
+    it('should not show context menu when waypoint count <= 2', () => {
+      // Set up only 2 waypoints
+      wrapper.vm.waypoints = [
+        { latLng: { lat: 46.860104, lng: 3.978509 } },
+        { latLng: { lat: 46.861104, lng: 3.979509 } }
+      ]
+
+      // Mock event
+      const mockEvent = {
+        clientX: 100,
+        clientY: 200
+      }
+
+      // Test showContextMenu function
+      wrapper.vm.showContextMenu(mockEvent, 1)
+
+      // Context menu should not be shown
+      expect(wrapper.vm.contextMenu.visible).toBe(false)
+    })
+
+    it('should hide context menu', () => {
+      // First show the menu
+      wrapper.vm.contextMenu = {
+        visible: true,
+        x: 100,
+        y: 200,
+        waypointIndex: 1
+      }
+
+      // Hide the menu
+      wrapper.vm.hideContextMenu()
+
+      expect(wrapper.vm.contextMenu).toEqual({
+        visible: false,
+        x: 0,
+        y: 0,
+        waypointIndex: -1
+      })
+    })
+
+    it('should handle delete waypoint from context menu', () => {
+      // Set up context menu state
+      wrapper.vm.contextMenu = {
+        visible: true,
+        x: 100,
+        y: 200,
+        waypointIndex: 1
+      }
+
+      // Test that handleDeleteWaypoint function exists and is callable
+      expect(typeof wrapper.vm.handleDeleteWaypoint).toBe('function')
+
+      // Test the core logic - should hide context menu when called
+      wrapper.vm.handleDeleteWaypoint()
+
+      // Context menu should be hidden
+      expect(wrapper.vm.contextMenu.visible).toBe(false)
+      expect(wrapper.vm.contextMenu.waypointIndex).toBe(-1)
+    })
+
+    it('should not delete waypoint when waypointIndex is invalid', () => {
+      // Mock removeWaypoint function
+      wrapper.vm.removeWaypoint = vi.fn()
+
+      // Set up context menu state with invalid index
+      wrapper.vm.contextMenu = {
+        visible: true,
+        x: 100,
+        y: 200,
+        waypointIndex: -1
+      }
+
+      // Call handleDeleteWaypoint
+      wrapper.vm.handleDeleteWaypoint()
+
+      // Should not call removeWaypoint
+      expect(wrapper.vm.removeWaypoint).not.toHaveBeenCalled()
+
+      // Context menu should be hidden
+      expect(wrapper.vm.contextMenu.visible).toBe(false)
+    })
+  })
+
   describe('Elevation Statistics', () => {
     beforeEach(async () => {
       wrapper = mount(RoutePlanner, {
