@@ -13,8 +13,12 @@
           <h4 class="mode-toggle-title">{{ t('routePlanner.routingMode') }}</h4>
           <div class="mode-toggle-container">
             <div class="mode-toggle">
-              <span class="toggle-label" :title="t('routePlanner.standardModeDesc')">
+              <span class="toggle-label">
                 {{ t('routePlanner.standardMode') }}
+                <i
+                  class="fa-solid fa-info-circle mode-info-icon"
+                  :title="t('routePlanner.standardModeDescription')"
+                ></i>
               </span>
               <label class="toggle-switch">
                 <input
@@ -24,11 +28,20 @@
                 />
                 <span class="toggle-slider"></span>
               </label>
-              <span class="toggle-label" :title="t('routePlanner.startEndModeDesc')">
+              <span class="toggle-label">
                 {{ t('routePlanner.startEndMode') }}
+                <i
+                  class="fa-solid fa-info-circle mode-info-icon"
+                  :title="t('routePlanner.startEndModeDescription')"
+                ></i>
               </span>
             </div>
           </div>
+        </div>
+
+        <!-- Free Mode Instructions -->
+        <div v-if="routeMode === 'standard'" class="free-mode-instructions">
+          <p class="instruction-text">{{ t('routePlanner.chooseNextWaypoint') }}</p>
         </div>
 
         <!-- Guided Mode Todo List -->
@@ -92,10 +105,20 @@
         </div>
 
         <!-- Selected Segments -->
-        <div v-if="routeMode === 'startEnd'" class="selected-segments-section">
+        <div
+          v-if="routeMode === 'startEnd' && startWaypoint && endWaypoint"
+          class="selected-segments-section"
+        >
           <h4 class="selected-segments-title">
             {{ t('routePlanner.selectedSegments') }}
           </h4>
+
+          <!-- Empty state message -->
+          <div v-if="selectedSegments.length === 0" class="no-segments-message">
+            <div class="spinning-wheel"></div>
+            <span>{{ t('routePlanner.noSegmentsSelectedMessage') }}</span>
+          </div>
+
           <div class="selected-segments-list">
             <div
               v-for="(segment, index) in selectedSegments"
@@ -4604,6 +4627,23 @@ function clearAllSegments() {
   flex-shrink: 0;
 }
 
+.free-mode-instructions {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(248, 250, 252, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 231, 235, 0.3);
+  flex-shrink: 0;
+}
+
+.instruction-text {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+  font-style: italic;
+}
+
 .mode-toggle-title {
   margin: 0 0 1rem 0;
   color: #374151;
@@ -4642,6 +4682,18 @@ function clearAllSegments() {
 }
 
 .toggle-label:hover {
+  color: var(--brand-primary);
+}
+
+.mode-info-icon {
+  margin-left: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  cursor: help;
+  transition: color 0.2s ease;
+}
+
+.mode-info-icon:hover {
   color: var(--brand-primary);
 }
 
@@ -5630,6 +5682,37 @@ function clearAllSegments() {
   font-weight: 600;
   text-align: center;
   flex-shrink: 0;
+}
+
+.no-segments-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.spinning-wheel {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .selected-segments-list {

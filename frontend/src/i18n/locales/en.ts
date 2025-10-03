@@ -280,6 +280,11 @@ export default {
       'Add multiple waypoints to create complex routes with intermediate stops.',
     startEndMode: 'Guided',
     startEndModeDesc: 'Create simple routes between just two points - start and end.',
+    standardModeDescription:
+      'Create a route by adding successive waypoints and we generate the route for you.',
+    startEndModeDescription:
+      'Start by picking your start and end locations, select your gravel segments to pass through and we will generate the route for you.',
+    chooseNextWaypoint: 'Choose your next waypoint.',
     guidedTodoList: 'Steps',
     guidedTodoInstructions: 'Set landmarks on the map',
     todoSetStartPoint: 'Set starting point',
@@ -293,6 +298,8 @@ export default {
     generateRoute: 'Generate Route',
     // Segment selection
     selectedSegments: 'Selected Segments',
+    noSegmentsSelectedMessage:
+      'Start selecting segments on the map to build your route.',
     removeSegment: 'Remove segment',
     // Waypoint context menu
     deleteWaypoint: 'Delete Waypoint',

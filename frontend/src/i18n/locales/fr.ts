@@ -285,6 +285,11 @@ export default {
     startEndMode: 'Guidé',
     startEndModeDesc:
       'Créez des itinéraires simples entre seulement deux points - départ et arrivée.',
+    standardModeDescription:
+      'Créez un parcours en ajoutant des points de passage successifs et nous générons le parcours pour vous.',
+    startEndModeDescription:
+      "Commencez par choisir vos points de départ et d'arrivée, sélectionnez vos segments de gravel à traverser et nous générerons le parcours pour vous.",
+    chooseNextWaypoint: 'Choisissez votre prochain point de passage.',
     guidedTodoList: 'Étapes',
     guidedTodoInstructions: 'Définir les points de repère sur la carte',
     todoSetStartPoint: 'Définir le point de départ',
@@ -298,6 +303,8 @@ export default {
     generateRoute: 'Générer le parcours',
     // Segment selection
     selectedSegments: 'Segments sélectionnés',
+    noSegmentsSelectedMessage:
+      'Commencez par sélectionner des segments sur la carte pour construire votre parcours.',
     removeSegment: 'Supprimer le segment',
     // Waypoint context menu
     deleteWaypoint: 'Supprimer le point de passage',
