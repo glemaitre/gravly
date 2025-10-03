@@ -689,7 +689,7 @@ async function initializeMap() {
       point.longitude
     ])
     trackPolyline.value = L.polyline(trackPoints, {
-      color: '#ff6600',
+      color: 'var(--brand-primary)',
       weight: 4,
       opacity: 0.8
     }).addTo(map.value)
@@ -717,7 +717,7 @@ async function initializeMap() {
       if (map.value) {
         mapMarker.value = L.circleMarker([firstPoint.latitude, firstPoint.longitude], {
           radius: 8,
-          fillColor: '#ff6600',
+          fillColor: 'var(--brand-primary)',
           color: '#ffffff',
           weight: 3,
           opacity: 1,
@@ -835,6 +835,11 @@ async function initializeElevationChart() {
     // Create chart
     console.log('Creating chart with data points:', chartData.length)
   }
+  // Get CSS variable values from computed styles
+  const rootStyles = getComputedStyle(document.documentElement)
+  const brandPrimary = rootStyles.getPropertyValue('--brand-primary').trim()
+  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
+
   elevationChart.value = new Chart(elevationChartRef.value, {
     type: 'line',
     data: {
@@ -842,8 +847,8 @@ async function initializeElevationChart() {
         {
           label: 'Elevation',
           data: chartData,
-          borderColor: '#ff6600',
-          backgroundColor: 'rgba(255, 102, 0, 0.1)',
+          borderColor: brandPrimary || '#ff6600',
+          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.1)`,
           fill: true,
           tension: 0.1,
           pointRadius: 0,
@@ -1326,7 +1331,7 @@ onUnmounted(() => {
 
 .header-left i {
   font-size: 1.5rem;
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .back-button {
@@ -1399,7 +1404,7 @@ onUnmounted(() => {
 
 .loading-spinner i {
   font-size: 1.5rem;
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .error-message i {
@@ -1716,7 +1721,7 @@ onUnmounted(() => {
 }
 
 .card-header i {
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .card-content {
@@ -1800,7 +1805,7 @@ onUnmounted(() => {
 }
 
 .info-label i {
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .info-value {
@@ -1836,13 +1841,13 @@ onUnmounted(() => {
 }
 
 .difficulty-display i {
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .difficulty-level {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .difficulty-word {
@@ -1904,7 +1909,7 @@ onUnmounted(() => {
 
 .tire-recommendation i {
   font-size: 1.25rem;
-  color: #ff6600;
+  color: var(--brand-primary);
   width: 1.5rem;
   text-align: center;
 }
@@ -1969,7 +1974,7 @@ onUnmounted(() => {
 
 .tire-header i {
   font-size: 1rem;
-  color: #ff6600;
+  color: var(--brand-primary);
   width: 1rem;
   text-align: center;
 }
@@ -2020,7 +2025,7 @@ onUnmounted(() => {
 
 .stat-label i {
   font-size: 0.625rem;
-  color: #ff6600;
+  color: white;
 }
 
 .stat-value {
@@ -2087,7 +2092,7 @@ onUnmounted(() => {
 
 .carousel-btn:hover {
   background: #ffffff;
-  border-color: #ff6600;
+  border-color: var(--brand-primary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -2097,7 +2102,7 @@ onUnmounted(() => {
 }
 
 .carousel-btn:hover i {
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 .carousel-btn-left {
@@ -2522,14 +2527,14 @@ onUnmounted(() => {
 }
 
 .pagination-page.active {
-  background: #ff6600;
-  border-color: #ff6600;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: #ffffff;
 }
 
 .pagination-page.active:hover {
-  background: #e55a00;
-  border-color: #e55a00;
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
 }
 
 /* Responsive pagination */

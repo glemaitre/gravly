@@ -1559,6 +1559,13 @@ function renderChart() {
   // const data = buildXYData()
   const fullData = buildFullXYData()
 
+  // Get CSS variable values from computed styles
+  const rootStyles = getComputedStyle(document.documentElement)
+  const brandPrimary =
+    rootStyles.getPropertyValue('--brand-500').trim() ||
+    rootStyles.getPropertyValue('--brand-primary').trim()
+  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
+
   chart?.destroy()
   chart = new Chart(ctx, {
     type: 'line',
@@ -1568,10 +1575,7 @@ function renderChart() {
         {
           label: t('chart.elevation'),
           data: fullData.map((d) => ({ x: d.x, y: d.y })),
-          borderColor:
-            getComputedStyle(document.documentElement)
-              .getPropertyValue('--brand-500')
-              .trim() || '#ff6600',
+          borderColor: brandPrimary || '#ff6600',
           borderWidth: 2,
           pointRadius: 0,
           pointHoverRadius: 5,
@@ -1584,7 +1588,7 @@ function renderChart() {
           label: 'Selected Area',
           data: buildSelectedAreaData(),
           borderColor: 'transparent',
-          backgroundColor: 'rgba(255, 102, 0, 0.15)',
+          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.15)`,
           fill: 'origin',
           pointRadius: 0,
           pointHoverRadius: 0,

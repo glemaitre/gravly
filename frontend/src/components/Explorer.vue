@@ -996,7 +996,7 @@ onUnmounted(() => {
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0 0 0.5rem 0;
-  background: linear-gradient(135deg, #ff6600, #ff7f2a);
+  background: linear-gradient(135deg, var(--brand-primary), #ff7f2a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1032,7 +1032,7 @@ onUnmounted(() => {
 /* Resize Handle */
 .resize-handle {
   height: 16px;
-  background: #ff6600;
+  background: var(--brand-primary);
   cursor: ns-resize;
   position: relative;
   display: flex;
@@ -1040,20 +1040,20 @@ onUnmounted(() => {
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(var(--brand-primary-rgb), 0.2);
   border-radius: 8px;
   margin: 4px 8px; /* Add some margin for rounded appearance */
 }
 
 .resize-handle:hover {
-  background: #e55a00;
-  box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+  background: var(--brand-primary-hover);
+  box-shadow: 0 4px 8px rgba(var(--brand-primary-rgb), 0.3);
   transform: scaleY(1.1);
 }
 
 .resize-handle:active {
-  background: #cc4d00;
-  box-shadow: 0 1px 2px rgba(255, 102, 0, 0.4);
+  background: var(--brand-primary-hover);
+  box-shadow: 0 1px 2px rgba(var(--brand-primary-rgb), 0.4);
   transform: scaleY(1.05);
 }
 
@@ -1169,7 +1169,7 @@ onUnmounted(() => {
 .limit-select:focus {
   outline: none;
   border-color: var(--brand-primary);
-  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);
+  box-shadow: 0 0 0 2px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 /* Loading Indicator Styles - Top Right */

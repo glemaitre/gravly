@@ -289,9 +289,11 @@ describe('RoutePlanner', () => {
     process.removeAllListeners('unhandledRejection')
     process.on('unhandledRejection', (reason) => {
       // Suppress DOM insertion errors that don't affect test results
-      if (reason instanceof Error &&
-          reason.message.includes('insertBefore') &&
-          reason.message.includes('Cannot read properties of null')) {
+      if (
+        reason instanceof Error &&
+        reason.message.includes('insertBefore') &&
+        reason.message.includes('Cannot read properties of null')
+      ) {
         // Silently ignore these DOM errors
         return
       }
@@ -339,27 +341,27 @@ describe('RoutePlanner', () => {
     }
 
     // Mock document.createElement / getElementById to provide fully working element instances
-    document.createElement = vi.fn(
-      (tagName: string) => {
-        const element = { ...mockElementPrototype, tagName, nodeName: tagName.toUpperCase() } as any
-        // Ensure parentNode is never null to prevent insertBefore errors
-        element.parentNode = null
-        element.appendChild = vi.fn()
-        element.insertBefore = vi.fn()
-        element.removeChild = vi.fn()
-        return element
-      }
-    )
-    document.getElementById = vi.fn(
-      (id: string) => {
-        const element = { ...mockElementPrototype, id } as any
-        element.parentNode = null
-        element.appendChild = vi.fn()
-        element.insertBefore = vi.fn()
-        element.removeChild = vi.fn()
-        return element
-      }
-    )
+    document.createElement = vi.fn((tagName: string) => {
+      const element = {
+        ...mockElementPrototype,
+        tagName,
+        nodeName: tagName.toUpperCase()
+      } as any
+      // Ensure parentNode is never null to prevent insertBefore errors
+      element.parentNode = null
+      element.appendChild = vi.fn()
+      element.insertBefore = vi.fn()
+      element.removeChild = vi.fn()
+      return element
+    })
+    document.getElementById = vi.fn((id: string) => {
+      const element = { ...mockElementPrototype, id } as any
+      element.parentNode = null
+      element.appendChild = vi.fn()
+      element.insertBefore = vi.fn()
+      element.removeChild = vi.fn()
+      return element
+    })
 
     // Mock body and documentElement to have classList
     Object.defineProperty(document, 'body', {
@@ -426,7 +428,7 @@ describe('RoutePlanner', () => {
     // Mock the Vue runtime DOM insert function
     const _originalInsert = (global as any).insert
     if (_originalInsert) {
-      (global as any).insert = vi.fn((el) => {
+      ;(global as any).insert = vi.fn((el) => {
         // Mock insert function to prevent errors
         return el
       })
@@ -2169,10 +2171,12 @@ describe('RoutePlanner', () => {
       // Perform undo
       const previousState = wrapper.vm.undoStack.pop()
       if (previousState) {
-        wrapper.vm.redoStack.push(wrapper.vm.waypoints.map((wp: any) => ({
-          lat: wp.latLng.lat,
-          lng: wp.latLng.lng
-        })))
+        wrapper.vm.redoStack.push(
+          wrapper.vm.waypoints.map((wp: any) => ({
+            lat: wp.latLng.lat,
+            lng: wp.latLng.lng
+          }))
+        )
         wrapper.vm.restoreWaypointsFromState(previousState)
       }
 
@@ -2199,10 +2203,12 @@ describe('RoutePlanner', () => {
       // Perform redo
       const nextState = wrapper.vm.redoStack.pop()
       if (nextState) {
-        wrapper.vm.undoStack.push(wrapper.vm.waypoints.map((wp: any) => ({
-          lat: wp.latLng.lat,
-          lng: wp.latLng.lng
-        })))
+        wrapper.vm.undoStack.push(
+          wrapper.vm.waypoints.map((wp: any) => ({
+            lat: wp.latLng.lat,
+            lng: wp.latLng.lng
+          }))
+        )
         wrapper.vm.restoreWaypointsFromState(nextState)
       }
 
@@ -2532,7 +2538,9 @@ describe('RoutePlanner', () => {
       wrapper.vm.loadElevationCache()
 
       expect(wrapper.vm.elevationCache.has('test-key')).toBe(true)
-      expect(wrapper.vm.elevationCache.get('test-key')).toEqual(cacheData.cache['test-key'])
+      expect(wrapper.vm.elevationCache.get('test-key')).toEqual(
+        cacheData.cache['test-key']
+      )
     })
 
     it('should handle invalid elevation cache gracefully', () => {
@@ -2559,7 +2567,12 @@ describe('RoutePlanner', () => {
     })
 
     it('should create segment hash with proper precision', () => {
-      const hash = wrapper.vm.createSegmentHash(46.860104, 3.978509, 46.861104, 3.979509)
+      const hash = wrapper.vm.createSegmentHash(
+        46.860104,
+        3.978509,
+        46.861104,
+        3.979509
+      )
 
       expect(hash).toBe('46.8601040,3.9785090-46.8611040,3.9795090')
       expect(hash).toContain(',')
@@ -2568,11 +2581,11 @@ describe('RoutePlanner', () => {
 
     it('should determine if segment should be chunked', () => {
       expect(wrapper.vm.shouldChunkSegment(3000)).toBe(false) // 3km < 5km
-      expect(wrapper.vm.shouldChunkSegment(6000)).toBe(true)  // 6km > 5km
+      expect(wrapper.vm.shouldChunkSegment(6000)).toBe(true) // 6km > 5km
     })
 
     it('should calculate optimal sampling distance', () => {
-      expect(wrapper.vm.calculateOptimalSamplingDistance(500)).toBe(50)   // < 1km
+      expect(wrapper.vm.calculateOptimalSamplingDistance(500)).toBe(50) // < 1km
       expect(wrapper.vm.calculateOptimalSamplingDistance(3000)).toBe(100) // 1-5km
       expect(wrapper.vm.calculateOptimalSamplingDistance(7000)).toBe(200) // 5-10km
       expect(wrapper.vm.calculateOptimalSamplingDistance(15000)).toBe(300) // > 10km
@@ -2601,7 +2614,10 @@ describe('RoutePlanner', () => {
         })
       }
 
-      const segments = wrapper.vm.splitRouteIntoWaypointSegments(routeCoordinates, waypoints)
+      const segments = wrapper.vm.splitRouteIntoWaypointSegments(
+        routeCoordinates,
+        waypoints
+      )
 
       expect(segments).toHaveLength(2) // 3 waypoints = 2 segments
       expect(segments[0]).toBeDefined()
@@ -2619,9 +2635,10 @@ describe('RoutePlanner', () => {
 
       // Mock map distance calculation to return specific distances
       wrapper.vm.map = {
-        distance: vi.fn()
+        distance: vi
+          .fn()
           .mockReturnValueOnce(1000) // Distance to first point
-          .mockReturnValueOnce(0)    // Distance to middle point (exact match)
+          .mockReturnValueOnce(0) // Distance to middle point (exact match)
           .mockReturnValueOnce(500), // Distance to last point
         getContainer: vi.fn(() => ({ style: {} }))
       }
@@ -2645,7 +2662,10 @@ describe('RoutePlanner', () => {
         return Math.sqrt(dx * dx + dy * dy) * 111000
       })
 
-      const sampledPoints = wrapper.vm.sampleRouteSegmentEvery100Meters(segmentCoordinates, 0)
+      const sampledPoints = wrapper.vm.sampleRouteSegmentEvery100Meters(
+        segmentCoordinates,
+        0
+      )
 
       expect(sampledPoints).toBeDefined()
       expect(Array.isArray(sampledPoints)).toBe(true)
@@ -2820,11 +2840,13 @@ describe('RoutePlanner', () => {
 
         const previousState = wrapper.vm.undoStack.pop()
         if (previousState) {
-          wrapper.vm.redoStack.push(wrapper.vm.waypoints.map((wp: any) => ({
-            lat: wp.latLng.lat,
-            lng: wp.latLng.lng,
-            name: wp.name || ''
-          })))
+          wrapper.vm.redoStack.push(
+            wrapper.vm.waypoints.map((wp: any) => ({
+              lat: wp.latLng.lat,
+              lng: wp.latLng.lng,
+              name: wp.name || ''
+            }))
+          )
           wrapper.vm.restoreWaypointsFromState(previousState)
         }
       })
@@ -2842,11 +2864,13 @@ describe('RoutePlanner', () => {
 
         const nextState = wrapper.vm.redoStack.pop()
         if (nextState) {
-          wrapper.vm.undoStack.push(wrapper.vm.waypoints.map((wp: any) => ({
-            lat: wp.latLng.lat,
-            lng: wp.latLng.lng,
-            name: wp.name || ''
-          })))
+          wrapper.vm.undoStack.push(
+            wrapper.vm.waypoints.map((wp: any) => ({
+              lat: wp.latLng.lat,
+              lng: wp.latLng.lng,
+              name: wp.name || ''
+            }))
+          )
           wrapper.vm.restoreWaypointsFromState(nextState)
         }
       })
@@ -2870,7 +2894,10 @@ describe('RoutePlanner', () => {
       global.fetch = vi.fn(() =>
         Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ results: mockElevationData.map(e => ({ elevation: e })) })
+          json: () =>
+            Promise.resolve({
+              results: mockElevationData.map((e) => ({ elevation: e }))
+            })
         })
       ) as any
 

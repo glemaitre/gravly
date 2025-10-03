@@ -398,7 +398,7 @@ onUnmounted(() => {
   background: var(--brand-50);
   border-color: var(--brand-300);
   color: var(--brand-600);
-  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 .user-avatar {
@@ -519,7 +519,7 @@ onUnmounted(() => {
 .nav-link.active {
   background: var(--brand-50);
   color: var(--brand-primary);
-  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 .nav-link i {
@@ -555,7 +555,7 @@ onUnmounted(() => {
   background: var(--brand-50);
   border-color: var(--brand-300);
   color: var(--brand-600);
-  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 .navbar-menu {

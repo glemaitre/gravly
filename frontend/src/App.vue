@@ -36,6 +36,9 @@ import Navbar from './components/Navbar.vue'
   --brand-primary-hover: #e65c00;
   --brand-accent: var(--brand-300);
 
+  /* RGB values for use with rgba() */
+  --brand-primary-rgb: 255, 102, 0;
+
   --navbar-height: 60px;
 }
 

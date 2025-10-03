@@ -1558,7 +1558,7 @@ function initializeRoutingControl() {
     // Disable auto-zoom but keep route calculation
     fitSelectedRoutes: false,
     lineOptions: {
-      styles: [{ color: '#ff6600', weight: 6, opacity: 0.8 }]
+      styles: [{ color: 'var(--brand-primary)', weight: 6, opacity: 0.8 }]
     }
   }
 
@@ -1853,7 +1853,8 @@ function createClickableRouteLine(route: any) {
   map.eachLayer((layer: any) => {
     if (
       layer instanceof L.Polyline &&
-      (layer.options.color === '#3388ff' || layer.options.color === '#ff6600')
+      (layer.options.color === '#3388ff' ||
+        layer.options.color === 'var(--brand-primary)')
     ) {
       // This is likely the routing control's polyline
       existingPolyline = layer
@@ -2419,7 +2420,7 @@ function _getWaypointColor(index: number): string {
   const isEnd = index === waypoints.length - 1 && waypoints.length > 1
 
   if (isStart) return '#f97316' // Orange
-  if (isEnd) return '#ff6600' // Orange
+  if (isEnd) return 'var(--brand-primary)' // Orange
   return '#6b7280' // Gray
 }
 
@@ -2498,6 +2499,11 @@ async function initializeElevationChart(
   // Let Chart.js handle canvas sizing automatically
   // Don't manually set canvas.width and canvas.height as it can cause infinite growth
 
+  // Get CSS variable values from computed styles
+  const rootStyles = getComputedStyle(document.documentElement)
+  const brandPrimary = rootStyles.getPropertyValue('--brand-primary').trim()
+  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
+
   // Create chart
   elevationChart.value = new Chart(elevationChartRef.value, {
     type: 'line',
@@ -2506,8 +2512,8 @@ async function initializeElevationChart(
         {
           label: t('routePlanner.chartElevationLabel'),
           data: chartData,
-          borderColor: '#ff6600',
-          backgroundColor: 'rgba(255, 102, 0, 0.1)',
+          borderColor: brandPrimary || '#ff6600',
+          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.1)`,
           fill: true,
           tension: 0.1,
           pointRadius: 0,
@@ -4200,7 +4206,7 @@ function selectSegment(segment: TrackResponse) {
   if (layerData && layerData.polyline) {
     const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
     layerData.polyline.setStyle({
-      color: isSelected ? '#ff6600' : '#000000', // Orange when selected, black when not
+      color: isSelected ? 'var(--brand-primary)' : '#000000', // Orange when selected, black when not
       weight: isSelected ? 4 : 3
     })
 
@@ -4436,7 +4442,7 @@ function handleSegmentItemLeave(segment: TrackResponse) {
     // Reset polyline style
     const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
     layerData.polyline.setStyle({
-      color: isSelected ? '#ff6600' : '#000000',
+      color: isSelected ? 'var(--brand-primary)' : '#000000',
       weight: isSelected ? 4 : 3,
       opacity: 0.8
     })
@@ -4663,7 +4669,7 @@ function clearAllSegments() {
 
 .mode-toggle-container:hover {
   background: rgba(248, 250, 252, 1);
-  border-color: rgba(255, 102, 0, 0.3);
+  border-color: rgba(var(--brand-primary-rgb), 0.3);
 }
 
 .mode-toggle {
@@ -4745,8 +4751,8 @@ function clearAllSegments() {
 }
 
 .guided-todo-list {
-  background: rgba(255, 102, 0, 0.05);
-  border: 1px solid rgba(255, 102, 0, 0.2);
+  background: rgba(var(--brand-primary-rgb), 0.05);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
   border-radius: 8px;
   padding: 1rem;
 }
@@ -4858,7 +4864,7 @@ function clearAllSegments() {
 }
 
 .waiting-icon {
-  color: #ff6600;
+  color: var(--brand-primary);
   animation: spin 1s linear infinite;
 }
 
@@ -4880,7 +4886,7 @@ function clearAllSegments() {
 .generate-route-btn {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: #ff6600;
+  background: var(--brand-primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -4892,13 +4898,13 @@ function clearAllSegments() {
   justify-content: center;
   gap: 0.5rem;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(var(--brand-primary-rgb), 0.2);
 }
 
 .generate-route-btn:hover:not(.disabled) {
-  background: #e65c00;
+  background: var(--brand-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(var(--brand-primary-rgb), 0.3);
 }
 
 .generate-route-btn.disabled {
@@ -4916,7 +4922,7 @@ function clearAllSegments() {
 
 .generate-route-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.2);
+  box-shadow: 0 2px 4px rgba(var(--brand-primary-rgb), 0.2);
 }
 
 .generate-route-btn i {
@@ -5022,7 +5028,7 @@ function clearAllSegments() {
 }
 
 :global(.waypoint-end) {
-  background: #ff6600; /* Orange */
+  background: var(--brand-primary); /* Orange */
   border: 2px solid white;
 }
 
@@ -5244,7 +5250,7 @@ function clearAllSegments() {
 /* Elevation Resize Handle */
 .elevation-resize-handle {
   height: 8px;
-  background: #ff6600;
+  background: var(--brand-primary);
   cursor: ns-resize;
   position: relative;
   display: flex;
@@ -5252,20 +5258,20 @@ function clearAllSegments() {
   justify-content: center;
   transition: all 0.2s ease;
   flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(255, 102, 0, 0.2);
+  box-shadow: 0 1px 3px rgba(var(--brand-primary-rgb), 0.2);
   border-radius: 4px;
   margin: 2px 8px; /* Reduced margin for smaller handle */
 }
 
 .elevation-resize-handle:hover {
-  background: #e55a00;
-  box-shadow: 0 2px 6px rgba(255, 102, 0, 0.3);
+  background: var(--brand-primary-hover);
+  box-shadow: 0 2px 6px rgba(var(--brand-primary-rgb), 0.3);
   transform: scaleY(1.2);
 }
 
 .elevation-resize-handle:active {
-  background: #cc4d00;
-  box-shadow: 0 1px 2px rgba(255, 102, 0, 0.4);
+  background: var(--brand-primary-hover);
+  box-shadow: 0 1px 2px rgba(var(--brand-primary-rgb), 0.4);
   transform: scaleY(1.1);
 }
 
@@ -5388,7 +5394,7 @@ function clearAllSegments() {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #ff6600;
+  background: var(--brand-primary);
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   animation: pulse 2s infinite;
@@ -5646,7 +5652,7 @@ function clearAllSegments() {
 }
 
 :global(.tire-recommendation .fa-sun) {
-  color: #ff6600;
+  color: var(--brand-primary);
 }
 
 :global(.tire-recommendation .fa-cloud-rain) {
@@ -5664,8 +5670,8 @@ function clearAllSegments() {
 
 /* Selected segments section styles */
 .selected-segments-section {
-  background: rgba(255, 102, 0, 0.05);
-  border: 1px solid rgba(255, 102, 0, 0.2);
+  background: rgba(var(--brand-primary-rgb), 0.05);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -5738,7 +5744,7 @@ function clearAllSegments() {
 
 .selected-segment-item:hover {
   background: rgba(255, 255, 255, 1);
-  border-color: rgba(255, 102, 0, 0.3);
+  border-color: rgba(var(--brand-primary-rgb), 0.3);
 }
 
 .selected-segment-item.dragging {
@@ -5752,7 +5758,7 @@ function clearAllSegments() {
   justify-content: center;
   width: 24px;
   height: 24px;
-  background: #ff6600;
+  background: var(--brand-primary);
   color: white;
   border-radius: 50%;
   font-size: 0.75rem;

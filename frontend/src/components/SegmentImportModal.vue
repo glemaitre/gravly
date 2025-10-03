@@ -885,7 +885,7 @@ onUnmounted(() => {
 
 .tab-button.active {
   background: #ffffff;
-  color: #ff6600;
+  color: var(--brand-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #ffb366;
 }
@@ -1038,8 +1038,8 @@ onUnmounted(() => {
 }
 
 :global(.max-results-select:focus) {
-  border-color: #ff6600;
-  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.1);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 :global(.max-results-select:hover) {

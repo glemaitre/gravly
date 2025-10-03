@@ -405,7 +405,7 @@ onMounted(() => {
 }
 
 .tire-recommendation .fa-sun {
-  color: #ff6600; /* Orange for sun - matches Editor brand-500 */
+  color: var(--brand-primary); /* Orange for sun - matches Editor brand-500 */
 }
 
 .tire-recommendation .fa-cloud-rain {

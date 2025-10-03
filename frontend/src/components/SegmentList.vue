@@ -509,7 +509,7 @@ onUnmounted(() => {
 
 .tab-button.active {
   background: #ffffff;
-  color: #ff6600;
+  color: var(--brand-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #ffb366;
 }
@@ -679,7 +679,7 @@ onUnmounted(() => {
 }
 
 .tire-recommendation .fa-sun {
-  color: #ff6600; /* Orange for sun - matches Editor brand-500 */
+  color: var(--brand-primary); /* Orange for sun - matches Editor brand-500 */
 }
 
 .tire-recommendation .fa-cloud-rain {
@@ -738,7 +738,7 @@ onUnmounted(() => {
   z-index: 10; /* Ensure button is above filter-card */
 
   /* Pill shape and style */
-  background: linear-gradient(135deg, #ff6600, #ff7f2a);
+  background: linear-gradient(135deg, var(--brand-primary), #ff7f2a);
   border: none;
   border-radius: 24px;
   padding: 10px 28px;
@@ -746,7 +746,7 @@ onUnmounted(() => {
   min-width: 90px;
 
   /* Orange shadow */
-  box-shadow: 0 2px 8px rgba(255, 102, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.3);
 
   /* Button styles */
   display: flex;
@@ -765,14 +765,14 @@ onUnmounted(() => {
 }
 
 .show-more-button:hover {
-  background: linear-gradient(135deg, #e55a00, #e66a00);
+  background: var(--brand-primary-hover);
   transform: translateX(-50%) translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 102, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--brand-primary-rgb), 0.4);
 }
 
 .show-more-button:active {
   transform: translateX(-50%) translateY(0);
-  box-shadow: 0 2px 8px rgba(255, 102, 0, 0.3);
+  box-shadow: 0 2px 8px rgba(var(--brand-primary-rgb), 0.3);
 }
 
 /* Icon animation */
@@ -789,8 +789,8 @@ onUnmounted(() => {
 /* Focus state for accessibility */
 .show-more-button:focus-visible {
   box-shadow:
-    0 0 0 3px rgba(255, 102, 0, 0.4),
-    0 2px 8px rgba(255, 102, 0, 0.3);
+    0 0 0 3px rgba(var(--brand-primary-rgb), 0.4),
+    0 2px 8px rgba(var(--brand-primary-rgb), 0.3);
 }
 
 /* Large screens - more cards per row */
