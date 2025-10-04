@@ -159,7 +159,7 @@ const availableSegments = ref<TrackResponse[]>([])
 const selectedSegments = ref<TrackResponse[]>([])
 const segmentMapLayers = new Map<
   string,
-  { polyline: any; popup?: any; startMarker?: any; endMarker?: any }
+  { polyline: any; popup?: any; startMarker?: any; endMarker?: any; closeTimeout?: any }
 >()
 const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
 const loadingGPXData = new Set<number>()
@@ -3778,27 +3778,83 @@ function renderSegmentOnMapWithDirection(
     closeButton: false // Remove the close cross
   }).setContent(popupContent)
 
+  // Create closure for hover management to prevent flickering
+  const segmentId = segment.id.toString()
+
+  const handlePopupMouseEnter = () => {
+    const layerData = segmentMapLayers.get(segmentId)
+    if (layerData && layerData.closeTimeout) {
+      clearTimeout(layerData.closeTimeout)
+      layerData.closeTimeout = null
+    }
+  }
+
+  const handlePopupMouseLeave = () => {
+    const layerData = segmentMapLayers.get(segmentId)
+    if (layerData) {
+      layerData.closeTimeout = setTimeout(() => {
+        if (map && popup) {
+          map.closePopup(popup)
+        }
+        polyline.setStyle({
+          weight: 3,
+          opacity: 0.8
+        })
+      }, 150)
+    }
+  }
+
   // Add hover effects and popup trigger
   polyline.on('mouseover', () => {
+    const layerData = segmentMapLayers.get(segmentId)
+
+    // Cancel any pending close timeout
+    if (layerData && layerData.closeTimeout) {
+      clearTimeout(layerData.closeTimeout)
+      layerData.closeTimeout = null
+    }
+
     polyline.setStyle({
       weight: 5,
       opacity: 1
     })
     // Show popup on hover
     popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
+
+    // Add mouseenter/mouseleave listeners to the popup to prevent flickering
+    // We need to do this after the popup is opened
+    setTimeout(() => {
+      const popupElement = popup.getElement()
+      if (popupElement) {
+        popupElement.addEventListener('mouseenter', handlePopupMouseEnter)
+        popupElement.addEventListener('mouseleave', handlePopupMouseLeave)
+
+        // Add click handler to the popup card to select the segment
+        const cardElement = popupElement.querySelector('.segment-popup-card')
+        if (cardElement) {
+          cardElement.addEventListener('click', () => {
+            selectSegment(segment)
+          })
+        }
+      }
+    }, 10)
   })
 
   polyline.on('mouseout', () => {
-    polyline.setStyle({
-      weight: 3,
-      opacity: 0.8
-    })
-    // Close popup on mouseout (with small delay to prevent flickering)
-    setTimeout(() => {
-      if (map && popup) {
-        map.closePopup(popup)
-      }
-    }, 100)
+    const layerData = segmentMapLayers.get(segmentId)
+
+    // Don't close immediately - wait to see if mouse enters popup
+    if (layerData) {
+      layerData.closeTimeout = setTimeout(() => {
+        if (map && popup) {
+          map.closePopup(popup)
+        }
+        polyline.setStyle({
+          weight: 3,
+          opacity: 0.8
+        })
+      }, 150)
+    }
   })
 
   // Add click handler to select segment only
@@ -3828,13 +3884,13 @@ function renderSegmentOnMapWithDirection(
     )
   }
 
-  // Store the layer reference
-  const segmentId = segment.id.toString()
+  // Store the layer reference (segmentId already declared above)
   segmentMapLayers.set(segmentId, {
     polyline: polyline,
     popup: popup,
     startMarker: startMarker,
-    endMarker: endMarker
+    endMarker: endMarker,
+    closeTimeout: null
   })
 }
 
@@ -4092,6 +4148,13 @@ function deselectSegment(segment: TrackResponse) {
     // Update popup content to reflect new selection status
     const segmentId = segment.id.toString()
     const layerData = segmentMapLayers.get(segmentId)
+
+    // Clear any pending close timeout
+    if (layerData && layerData.closeTimeout) {
+      clearTimeout(layerData.closeTimeout)
+      layerData.closeTimeout = null
+    }
+
     if (layerData && layerData.popup) {
       layerData.popup.setContent(createSegmentPopup(segment))
     }
@@ -4358,6 +4421,12 @@ function handleSegmentItemHover(segment: TrackResponse) {
   const layerData = segmentMapLayers.get(segmentId)
 
   if (layerData && layerData.polyline && layerData.popup && map) {
+    // Cancel any pending close timeout
+    if (layerData.closeTimeout) {
+      clearTimeout(layerData.closeTimeout)
+      layerData.closeTimeout = null
+    }
+
     // Show the popup on the map
     layerData.popup.setLatLng(layerData.polyline.getBounds().getCenter()).openOn(map)
 
@@ -4366,6 +4435,52 @@ function handleSegmentItemHover(segment: TrackResponse) {
       weight: 5,
       opacity: 1
     })
+
+    // Add popup hover listeners to prevent flickering
+    setTimeout(() => {
+      const popupElement = layerData.popup.getElement()
+      if (popupElement) {
+        const handlePopupEnter = () => {
+          const layerData = segmentMapLayers.get(segmentId)
+          if (layerData && layerData.closeTimeout) {
+            clearTimeout(layerData.closeTimeout)
+            layerData.closeTimeout = null
+          }
+        }
+
+        const handlePopupLeave = () => {
+          const layerData = segmentMapLayers.get(segmentId)
+          if (layerData) {
+            layerData.closeTimeout = setTimeout(() => {
+              if (map && layerData.popup) {
+                map.closePopup(layerData.popup)
+              }
+              if (layerData.polyline) {
+                const isSelected = selectedSegments.value.some(
+                  (s) => s.id === segment.id
+                )
+                layerData.polyline.setStyle({
+                  color: isSelected ? 'var(--brand-primary)' : '#000000',
+                  weight: isSelected ? 4 : 3,
+                  opacity: 0.8
+                })
+              }
+            }, 150)
+          }
+        }
+
+        popupElement.addEventListener('mouseenter', handlePopupEnter)
+        popupElement.addEventListener('mouseleave', handlePopupLeave)
+
+        // Add click handler to the popup card to select the segment
+        const cardElement = popupElement.querySelector('.segment-popup-card')
+        if (cardElement) {
+          cardElement.addEventListener('click', () => {
+            selectSegment(segment)
+          })
+        }
+      }
+    }, 10)
   }
 }
 
@@ -4375,16 +4490,20 @@ function handleSegmentItemLeave(segment: TrackResponse) {
   const layerData = segmentMapLayers.get(segmentId)
 
   if (layerData && layerData.polyline && layerData.popup && map) {
-    // Close the popup
-    map.closePopup(layerData.popup)
+    // Don't close immediately - use timeout to allow mouse to move to popup
+    layerData.closeTimeout = setTimeout(() => {
+      if (map && layerData.popup) {
+        map.closePopup(layerData.popup)
+      }
 
-    // Reset polyline style
-    const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
-    layerData.polyline.setStyle({
-      color: isSelected ? 'var(--brand-primary)' : '#000000',
-      weight: isSelected ? 4 : 3,
-      opacity: 0.8
-    })
+      // Reset polyline style
+      const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+      layerData.polyline.setStyle({
+        color: isSelected ? 'var(--brand-primary)' : '#000000',
+        weight: isSelected ? 4 : 3,
+        opacity: 0.8
+      })
+    }, 150)
   }
 }
 
@@ -4397,6 +4516,12 @@ function clearAllSegments() {
   // Remove all segment layers from map (polylines, popups, and landmarks)
   segmentMapLayers.forEach((layerData) => {
     try {
+      // Clear any pending close timeout
+      if (layerData.closeTimeout) {
+        clearTimeout(layerData.closeTimeout)
+        layerData.closeTimeout = null
+      }
+
       if (layerData.polyline && map.hasLayer(layerData.polyline)) {
         map.removeLayer(layerData.polyline)
       }
@@ -4771,10 +4896,21 @@ function clearAllSegments() {
   width: 340px; /* Increased width to 340px */
 }
 
+:global(.segment-popup-card:hover) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  border-color: rgba(var(--brand-primary-rgb), 0.3);
+}
+
 :global(.segment-popup-card.selected) {
   box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
   transform: translateY(-1px);
   border-color: #ff6b35;
+}
+
+:global(.segment-popup-card.selected:hover) {
+  box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+  transform: translateY(-3px);
 }
 
 :global(.segment-card-header) {

@@ -2705,4 +2705,268 @@ describe('RoutePlanner', () => {
       expect(wrapper.vm.waypoints).toHaveLength(0)
     })
   })
+
+  describe('Segment Popup Hover and Click', () => {
+    beforeEach(async () => {
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+
+      // Mock map
+      wrapper.vm.map = {
+        closePopup: vi.fn(),
+        hasLayer: vi.fn(() => true),
+        removeLayer: vi.fn()
+      }
+    })
+
+    it('should handle segment item hover from sidebar', () => {
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        file_path: '/tracks/1.gpx',
+        bound_north: 46.862104,
+        bound_south: 46.860104,
+        bound_east: 3.980509,
+        bound_west: 3.978509,
+        barycenter_latitude: 46.861104,
+        barycenter_longitude: 3.979509,
+        track_type: 'gravel',
+        difficulty_level: 3,
+        surface_type: 'broken-paved-road',
+        tire_dry: 'slick',
+        tire_wet: 'knobs',
+        comments: ''
+      }
+
+      // Mock layer data
+      const mockPopup = {
+        setLatLng: vi.fn().mockReturnThis(),
+        openOn: vi.fn(),
+        getElement: vi.fn(() => null)
+      }
+
+      const mockPolyline = {
+        setStyle: vi.fn(),
+        getBounds: vi.fn(() => ({
+          getCenter: vi.fn(() => ({ lat: 46.861104, lng: 3.979509 }))
+        }))
+      }
+
+      wrapper.vm.segmentMapLayers.set('1', {
+        polyline: mockPolyline,
+        popup: mockPopup,
+        closeTimeout: null
+      })
+
+      // Call the hover handler
+      wrapper.vm.handleSegmentItemHover(mockSegment)
+
+      expect(mockPopup.setLatLng).toHaveBeenCalled()
+      expect(mockPopup.openOn).toHaveBeenCalled()
+      expect(mockPolyline.setStyle).toHaveBeenCalledWith({
+        weight: 5,
+        opacity: 1
+      })
+    })
+
+    it('should cancel close timeout when hovering segment item', () => {
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        file_path: '/tracks/1.gpx',
+        bound_north: 46.862104,
+        bound_south: 46.860104,
+        bound_east: 3.980509,
+        bound_west: 3.978509,
+        barycenter_latitude: 46.861104,
+        barycenter_longitude: 3.979509,
+        track_type: 'gravel',
+        difficulty_level: 3,
+        surface_type: 'broken-paved-road',
+        tire_dry: 'slick',
+        tire_wet: 'knobs',
+        comments: ''
+      }
+
+      // Mock layer data with a pending timeout
+      const mockTimeout = setTimeout(() => {}, 1000)
+      const mockPopup = {
+        setLatLng: vi.fn().mockReturnThis(),
+        openOn: vi.fn(),
+        getElement: vi.fn(() => null)
+      }
+
+      const mockPolyline = {
+        setStyle: vi.fn(),
+        getBounds: vi.fn(() => ({
+          getCenter: vi.fn(() => ({ lat: 46.861104, lng: 3.979509 }))
+        }))
+      }
+
+      wrapper.vm.segmentMapLayers.set('1', {
+        polyline: mockPolyline,
+        popup: mockPopup,
+        closeTimeout: mockTimeout
+      })
+
+      // Spy on clearTimeout
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      // Call the hover handler
+      wrapper.vm.handleSegmentItemHover(mockSegment)
+
+      // Should have cleared the timeout
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(mockTimeout)
+
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it('should set close timeout when leaving segment item', () => {
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        file_path: '/tracks/1.gpx',
+        bound_north: 46.862104,
+        bound_south: 46.860104,
+        bound_east: 3.980509,
+        bound_west: 3.978509,
+        barycenter_latitude: 46.861104,
+        barycenter_longitude: 3.979509,
+        track_type: 'gravel',
+        difficulty_level: 3,
+        surface_type: 'broken-paved-road',
+        tire_dry: 'slick',
+        tire_wet: 'knobs',
+        comments: ''
+      }
+
+      // Mock layer data
+      const mockPopup = {
+        setLatLng: vi.fn().mockReturnThis(),
+        openOn: vi.fn()
+      }
+
+      const mockPolyline = {
+        setStyle: vi.fn()
+      }
+
+      wrapper.vm.segmentMapLayers.set('1', {
+        polyline: mockPolyline,
+        popup: mockPopup,
+        closeTimeout: null
+      })
+
+      // Spy on setTimeout
+      const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+
+      // Call the leave handler
+      wrapper.vm.handleSegmentItemLeave(mockSegment)
+
+      // Should have set a timeout
+      expect(setTimeoutSpy).toHaveBeenCalled()
+
+      setTimeoutSpy.mockRestore()
+    })
+
+    it('should clear timeout when deselecting segment', () => {
+      const mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        file_path: '/tracks/1.gpx',
+        bound_north: 46.862104,
+        bound_south: 46.860104,
+        bound_east: 3.980509,
+        bound_west: 3.978509,
+        barycenter_latitude: 46.861104,
+        barycenter_longitude: 3.979509,
+        track_type: 'gravel',
+        difficulty_level: 3,
+        surface_type: 'broken-paved-road',
+        tire_dry: 'slick',
+        tire_wet: 'knobs',
+        comments: ''
+      }
+
+      // Mock layer data with a pending timeout
+      const mockTimeout = setTimeout(() => {}, 1000)
+      const mockPopup = {
+        setContent: vi.fn()
+      }
+
+      const mockPolyline = {
+        setStyle: vi.fn()
+      }
+
+      wrapper.vm.selectedSegments = [mockSegment]
+      wrapper.vm.segmentMapLayers.set('1', {
+        polyline: mockPolyline,
+        popup: mockPopup,
+        closeTimeout: mockTimeout
+      })
+
+      // Spy on clearTimeout
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      // Mock removeSegmentLandmarks to avoid errors
+      wrapper.vm.removeSegmentLandmarks = vi.fn()
+
+      // Call deselect
+      wrapper.vm.deselectSegment(mockSegment)
+
+      // Should have cleared the timeout
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(mockTimeout)
+
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it('should clear all timeouts when clearing all segments', () => {
+      // Update map mock to include _layers
+      wrapper.vm.map = {
+        closePopup: vi.fn(),
+        hasLayer: vi.fn(() => true),
+        removeLayer: vi.fn(),
+        _layers: {}
+      }
+
+      // Mock layer data with timeouts
+      const mockTimeout1 = setTimeout(() => {}, 1000)
+      const mockTimeout2 = setTimeout(() => {}, 1000)
+
+      wrapper.vm.segmentMapLayers.set('1', {
+        polyline: { remove: vi.fn() },
+        popup: null,
+        closeTimeout: mockTimeout1
+      })
+
+      wrapper.vm.segmentMapLayers.set('2', {
+        polyline: { remove: vi.fn() },
+        popup: null,
+        closeTimeout: mockTimeout2
+      })
+
+      // Spy on clearTimeout
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+
+      // Call clearAllSegments
+      wrapper.vm.clearAllSegments()
+
+      // Should have cleared both timeouts
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(mockTimeout1)
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(mockTimeout2)
+
+      clearTimeoutSpy.mockRestore()
+    })
+
+    it('should validate handleSegmentItemHover function exists', () => {
+      expect(typeof wrapper.vm.handleSegmentItemHover).toBe('function')
+    })
+
+    it('should validate handleSegmentItemLeave function exists', () => {
+      expect(typeof wrapper.vm.handleSegmentItemLeave).toBe('function')
+    })
+  })
 })
