@@ -248,159 +248,16 @@
             <div class="card card-map">
               <div id="map" class="map"></div>
             </div>
-            <div class="card card-elevation">
-              <div class="chart-wrapper">
-                <div class="chart-container">
-                  <canvas ref="chartCanvas" class="chart"></canvas>
-                  <div
-                    class="vertical-slider start-slider"
-                    :style="{ left: startSliderPosition + '%' }"
-                    @mousedown="startDrag('start', $event)"
-                    @touchstart="startDrag('start', $event)"
-                  >
-                    <div class="slider-handle"></div>
-                    <div class="slider-line"></div>
-                    <div class="slider-index">{{ startIndex }}</div>
-                    <div class="slider-controls">
-                      <button
-                        class="slider-btn slider-btn-minus"
-                        @click="moveSlider('start', -1)"
-                        :disabled="startIndex <= 0"
-                        :title="t('tooltip.moveStartBack')"
-                      >
-                        -
-                      </button>
-                      <button
-                        class="slider-btn slider-btn-plus"
-                        @click="moveSlider('start', 1)"
-                        :disabled="startIndex >= endIndex - 1"
-                        :title="t('tooltip.moveStartForward')"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <div
-                    class="vertical-slider end-slider"
-                    :style="{ left: endSliderPosition + '%' }"
-                    @mousedown="startDrag('end', $event)"
-                    @touchstart="startDrag('end', $event)"
-                  >
-                    <div class="slider-handle"></div>
-                    <div class="slider-line"></div>
-                    <div class="slider-index">{{ endIndex }}</div>
-                    <div
-                      class="slider-controls"
-                      :style="{ top: `-${endSliderOffset}px` }"
-                    >
-                      <button
-                        class="slider-btn slider-btn-minus"
-                        @click="moveSlider('end', -1)"
-                        :disabled="endIndex <= startIndex + 1"
-                        :title="t('tooltip.moveEndBack')"
-                      >
-                        -
-                      </button>
-                      <button
-                        class="slider-btn slider-btn-plus"
-                        @click="moveSlider('end', 1)"
-                        :disabled="endIndex >= points.length - 1"
-                        :title="t('tooltip.moveEndForward')"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="axis-toggle below">
-                <button
-                  type="button"
-                  class="seg left"
-                  :class="{ active: xMode === 'distance' }"
-                  @click="xMode = 'distance'"
-                >
-                  {{ t('chart.distance') }}
-                </button>
-                <button
-                  type="button"
-                  class="seg right"
-                  :class="{ active: xMode === 'time' }"
-                  @click="xMode = 'time'"
-                >
-                  {{ t('chart.time') }}
-                </button>
-              </div>
-
-              <div class="controls" ref="controlsCard">
-                <div class="slider-group">
-                  <div class="slider-header">
-                    <span class="badge start">{{ t('chart.start') }}</span>
-                  </div>
-                  <div class="metrics-grid">
-                    <div class="metric" :title="t('tooltip.elapsedTime')">
-                      <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                      <span class="value">{{ formatElapsed(startIndex) }}</span>
-                    </div>
-                    <div class="metric" :title="t('tooltip.distance')">
-                      <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                      <span class="value">{{ formatKm(distanceAt(startIndex)) }}</span>
-                    </div>
-                    <div class="metric" :title="t('tooltip.elevation')">
-                      <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                      <span class="value">{{
-                        formatElevation(pointAt(startIndex)?.elevation)
-                      }}</span>
-                    </div>
-                    <div class="gps-col">
-                      <span class="label">{{ t('gps.latitude') }}</span
-                      ><span class="value">{{
-                        pointAt(startIndex)?.latitude?.toFixed(5) ?? '-'
-                      }}</span>
-                    </div>
-                    <div class="gps-col">
-                      <span class="label">{{ t('gps.longitude') }}</span
-                      ><span class="value">{{
-                        pointAt(startIndex)?.longitude?.toFixed(5) ?? '-'
-                      }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="slider-group">
-                  <div class="slider-header">
-                    <span class="badge end">{{ t('chart.end') }}</span>
-                  </div>
-                  <div class="metrics-grid">
-                    <div class="metric" :title="t('tooltip.elapsedTime')">
-                      <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                      <span class="value">{{ formatElapsed(endIndex) }}</span>
-                    </div>
-                    <div class="metric" :title="t('tooltip.distance')">
-                      <span class="icon"><i class="fa-solid fa-ruler"></i></span>
-                      <span class="value">{{ formatKm(distanceAt(endIndex)) }}</span>
-                    </div>
-                    <div class="metric" :title="t('tooltip.elevation')">
-                      <span class="icon"><i class="fa-solid fa-mountain"></i></span>
-                      <span class="value">{{
-                        formatElevation(pointAt(endIndex)?.elevation)
-                      }}</span>
-                    </div>
-                    <div class="gps-col">
-                      <span class="label">{{ t('gps.latitude') }}</span
-                      ><span class="value">{{
-                        pointAt(endIndex)?.latitude?.toFixed(5) ?? '-'
-                      }}</span>
-                    </div>
-                    <div class="gps-col">
-                      <span class="label">{{ t('gps.longitude') }}</span
-                      ><span class="value">{{
-                        pointAt(endIndex)?.longitude?.toFixed(5) ?? '-'
-                      }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ElevationCropper
+              :points="points"
+              :cumulative-km="cumulativeKm"
+              :cumulative-sec="cumulativeSec"
+              :smoothed-elevations="smoothedElevations"
+              v-model:start-index="startIndex"
+              v-model:end-index="endIndex"
+              v-model:x-mode="xMode"
+              @chart-hover="updateMarkerPositionFromIndex"
+            />
 
             <form class="card meta" @submit.prevent="onSaveAsNew">
               <!-- Track Type Tabs -->
@@ -805,19 +662,8 @@ import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import StravaActivityList from './StravaActivityList.vue'
 import SegmentImportModal from './SegmentImportModal.vue'
+import ElevationCropper from './ElevationCropper.vue'
 import { parseGPXData } from '../utils/gpxParser'
-import {
-  Chart,
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  Title,
-  CategoryScale,
-  Filler,
-  Tooltip
-} from 'chart.js'
-import annotationPlugin from 'chartjs-plugin-annotation'
 import tireSlickUrl from '../assets/images/slick.png'
 import tireSemiSlickUrl from '../assets/images/semi-slick.png'
 import tireKnobsUrl from '../assets/images/ext.png'
@@ -828,18 +674,6 @@ import fieldTrailUrl from '../assets/images/field-trail.jpeg'
 import forestTrailUrl from '../assets/images/forest-trail.jpeg'
 import smallStoneRoadUrl from '../assets/images/small-stone-road.jpeg'
 import type { Commentary, VideoLink, TrailConditions } from '../types'
-
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Title,
-  Filler,
-  Tooltip,
-  annotationPlugin
-)
 
 // type Tire = 'slick' | 'semi-slick' | 'knobs'
 
@@ -922,8 +756,6 @@ const currentErrorMessage = ref<string>('')
 const isUpdateMode = ref<boolean>(false)
 const updatingSegmentId = ref<number | null>(null)
 
-const controlsCard = ref<HTMLElement | null>(null)
-
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
 const isUpdateDisabled = computed(
   () => submitting.value || !name.value || !loaded.value || !isUpdateMode.value
@@ -982,18 +814,7 @@ let selectedLine: any = null
 let baseLayer: any = null
 let mapMarker: any = null
 
-const chartCanvas = ref<HTMLCanvasElement | null>(null)
-let chart: Chart | null = null
 const smoothedElevations = ref<number[]>([])
-
-const isDragging = ref(false)
-const dragType = ref<'start' | 'end' | null>(null)
-const startSliderPosition = ref(0)
-const endSliderPosition = ref(100)
-
-const endSliderOffset = ref(0)
-const overlapThreshold = 20
-const constantOffset = 25
 // const startMin = computed(() => 0)
 // const startMax = computed(() => Math.max(1, endIndex.value - 1))
 // const endMin = computed(() => Math.min(points.value.length - 1, startIndex.value + 1))
@@ -1006,51 +827,6 @@ const constantOffset = 25
 //   toPercent(startIndex.value, startMin.value, startMax.value)
 // )
 // const endPercent = computed(() => toPercent(endIndex.value, endMin.value, endMax.value))
-
-function checkSliderOverlap() {
-  if (!chart || !chartCanvas.value) return
-
-  const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-  const sliderWidth = 20
-  const controlsExtension = 18
-  const startPixelCenter =
-    (startSliderPosition.value / 100) * containerRect.width + sliderWidth / 2
-  const endPixelCenter =
-    (endSliderPosition.value / 100) * containerRect.width + sliderWidth / 2
-
-  const startControlRight = startPixelCenter + controlsExtension
-  const endControlLeft = endPixelCenter - controlsExtension
-  const distance = endControlLeft - startControlRight
-
-  if (distance < overlapThreshold) {
-    endSliderOffset.value = constantOffset
-  } else {
-    endSliderOffset.value = 0
-  }
-}
-
-watch([startIndex, endIndex], () => {
-  if (points.value.length > 0 && chart && chartCanvas.value) {
-    const startX = getX(startIndex.value)
-    const endX = getX(endIndex.value)
-    const canvasRect = chart.canvas.getBoundingClientRect()
-    const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-
-    const startPixel = chart.scales.x.getPixelForValue(startX)
-    const endPixel = chart.scales.x.getPixelForValue(endX)
-    const canvasOffsetLeft = canvasRect.left - containerRect.left
-
-    const startPixelInContainer = startPixel + canvasOffsetLeft
-    const endPixelInContainer = endPixel + canvasOffsetLeft
-    const sliderWidth = 20
-    const startPixelCentered = startPixelInContainer - sliderWidth / 2
-    const endPixelCentered = endPixelInContainer - sliderWidth / 2
-
-    startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
-    endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-    checkSliderOverlap()
-  }
-})
 
 function triggerFileOpen() {
   fileInput.value?.click()
@@ -1135,7 +911,6 @@ async function onFileChange(ev: Event) {
 
     await nextTick()
     renderMap()
-    renderChart()
   } catch (err: any) {
     isUploading.value = false
     uploadProgress.value = 0
@@ -1177,37 +952,6 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number): numb
       Math.sin(dLon / 2) ** 2
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   return R * c
-}
-
-function distanceAt(i: number): number {
-  return cumulativeKm.value[i] ?? 0
-}
-function pointAt(i: number): TrackPoint | undefined {
-  return points.value[i]
-}
-function formatKm(km?: number): string {
-  return km == null ? '-' : `${km.toFixed(2)} ${t('units.km')}`
-}
-function formatElevation(ele?: number): string {
-  return ele == null ? '-' : `${Math.round(ele)} ${t('units.m')}`
-}
-function formatElapsed(i: number): string {
-  const t0 = points.value[0]?.time
-    ? new Date(points.value[0].time as string).getTime()
-    : undefined
-  const ti = points.value[i]?.time
-    ? new Date(points.value[i].time as string).getTime()
-    : undefined
-  if (!t0 || !ti) return '-'
-  const ms = Math.max(0, ti - t0)
-  const sec = Math.floor(ms / 1000)
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const s = sec % 60
-  const hh = h > 0 ? `${h}:` : ''
-  const mm = h > 0 ? String(m).padStart(2, '0') : String(m)
-  const ss = String(s).padStart(2, '0')
-  return `${hh}${mm}:${ss}`
 }
 
 // Commentary methods
@@ -1375,70 +1119,6 @@ function removeImage(index: number) {
   commentary.value.images.splice(index, 1)
 }
 
-function moveSlider(type: 'start' | 'end', direction: -1 | 1) {
-  if (type === 'start') {
-    const newIndex = startIndex.value + direction
-    if (newIndex >= 0 && newIndex < endIndex.value) {
-      startIndex.value = newIndex
-    }
-  } else {
-    const newIndex = endIndex.value + direction
-    if (newIndex > startIndex.value && newIndex < points.value.length) {
-      endIndex.value = newIndex
-    }
-  }
-}
-
-function startDrag(type: 'start' | 'end', event: MouseEvent | TouchEvent) {
-  event.preventDefault()
-  isDragging.value = true
-  dragType.value = type
-
-  const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDragging.value || !chartCanvas.value || !chart) return
-
-    const rect = chartCanvas.value.getBoundingClientRect()
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-    const x = clientX - rect.left
-
-    const dataX = chart.scales.x.getValueForPixel(x)
-    if (dataX === undefined) return
-    let closestIndex = 0
-    let minDistance = Infinity
-
-    for (let i = 0; i < points.value.length; i++) {
-      const pointX = getX(i)
-      const distance = Math.abs(pointX - dataX)
-      if (distance < minDistance) {
-        minDistance = distance
-        closestIndex = i
-      }
-    }
-
-    if (type === 'start') {
-      const newIndex = Math.min(closestIndex, endIndex.value - 1)
-      startIndex.value = Math.max(0, newIndex)
-    } else {
-      const newIndex = Math.max(closestIndex, startIndex.value + 1)
-      endIndex.value = Math.min(points.value.length - 1, newIndex)
-    }
-  }
-
-  const handleMouseUp = () => {
-    isDragging.value = false
-    dragType.value = null
-    document.removeEventListener('mousemove', handleMouseMove)
-    document.removeEventListener('mouseup', handleMouseUp)
-    document.removeEventListener('touchmove', handleMouseMove)
-    document.removeEventListener('touchend', handleMouseUp)
-  }
-
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
-  document.addEventListener('touchmove', handleMouseMove)
-  document.addEventListener('touchend', handleMouseUp)
-}
-
 function renderMap() {
   if (!map) {
     const container = document.getElementById('map')
@@ -1552,223 +1232,6 @@ function updateSelectedPolyline() {
   selectedLine.addTo(map)
 }
 
-function renderChart() {
-  if (!chartCanvas.value) return
-  const ctx = chartCanvas.value.getContext('2d')!
-  const labels = points.value.map((_, i) => i)
-  // const data = buildXYData()
-  const fullData = buildFullXYData()
-
-  // Get CSS variable values from computed styles
-  const rootStyles = getComputedStyle(document.documentElement)
-  const brandPrimary =
-    rootStyles.getPropertyValue('--brand-500').trim() ||
-    rootStyles.getPropertyValue('--brand-primary').trim()
-  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
-
-  chart?.destroy()
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: t('chart.elevation'),
-          data: fullData.map((d) => ({ x: d.x, y: d.y })),
-          borderColor: brandPrimary || '#ff6600',
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 5,
-          backgroundColor: 'transparent',
-          fill: false,
-          tension: 0.1,
-          parsing: false
-        },
-        {
-          label: 'Selected Area',
-          data: buildSelectedAreaData(),
-          borderColor: 'transparent',
-          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.15)`,
-          fill: 'origin',
-          pointRadius: 0,
-          pointHoverRadius: 0,
-          parsing: false,
-          tension: 0
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      layout: {
-        padding: {
-          left: 0,
-          right: 0,
-          top: 0,
-          bottom: 0
-        }
-      },
-      scales: {
-        x: {
-          type: 'linear',
-          display: true,
-          title: { display: false },
-          min: getX(0),
-          max: getX(points.value.length - 1),
-          ticks: { callback: (v: any) => formatXTick(Number(v)) }
-        },
-        y: {
-          display: true,
-          title: { display: true, text: t('chart.elevation') },
-          min: Math.min(...smoothedElevations.value)
-        }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          filter: function (tooltipItem) {
-            return tooltipItem.datasetIndex === 0
-          },
-          callbacks: {
-            title: function (context) {
-              // const dataIndex = context[0].dataIndex
-              const xValue = context[0].parsed.x
-              return xMode.value === 'distance'
-                ? `${xValue.toFixed(2)} ${t('units.km')}`
-                : formatXTick(xValue)
-            },
-            label: function (context) {
-              const yValue = context.parsed.y
-              return `${t('chart.elevation')}: ${Math.round(yValue)} ${t('units.m')}`
-            }
-          }
-        }
-      },
-      onHover: (event, activeElements) => {
-        if (activeElements.length > 0) {
-          const pointIndex = activeElements[0].index
-          updateMarkerPositionFromIndex(pointIndex)
-        }
-      },
-      onClick: (event) => {
-        if (event && chart && event.x !== null && event.y !== null) {
-          const rect = chart.canvas.getBoundingClientRect()
-          const x = event.x - rect.left
-          const y = event.y - rect.top
-
-          const dataX = chart.scales.x.getValueForPixel(x)
-          const dataY = chart.scales.y.getValueForPixel(y)
-
-          if (dataX === undefined || dataY === undefined) return
-
-          let closestIndex = 0
-          let minDistance = Infinity
-
-          for (let i = 0; i < points.value.length; i++) {
-            const pointX = getX(i)
-            const distance = Math.abs(pointX - dataX)
-            if (distance < minDistance) {
-              minDistance = distance
-              closestIndex = i
-            }
-          }
-          const startX = getX(startIndex.value)
-          const endX = getX(endIndex.value)
-
-          if (dataX < startX) {
-            startIndex.value = Math.min(closestIndex, endIndex.value - 1)
-          } else if (dataX > endX) {
-            endIndex.value = Math.max(closestIndex, startIndex.value + 1)
-          } else {
-            const distToStart = Math.abs(dataX - startX)
-            const distToEnd = Math.abs(dataX - endX)
-
-            if (distToStart < distToEnd) {
-              startIndex.value = Math.min(closestIndex, endIndex.value - 1)
-            } else {
-              endIndex.value = Math.max(closestIndex, startIndex.value + 1)
-            }
-          }
-
-          // Update marker position based on the closest point
-          updateMarkerPositionFromIndex(closestIndex)
-        }
-      }
-    }
-  })
-
-  nextTick(() => {
-    if (points.value.length > 0 && chart && chartCanvas.value && chart.canvas) {
-      const startX = getX(startIndex.value)
-      const endX = getX(endIndex.value)
-      const canvasRect = chart.canvas.getBoundingClientRect()
-      const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-      const startPixel = chart.scales.x.getPixelForValue(startX)
-      const endPixel = chart.scales.x.getPixelForValue(endX)
-      const canvasOffsetLeft = canvasRect.left - containerRect.left
-      const startPixelInContainer = startPixel + canvasOffsetLeft
-      const endPixelInContainer = endPixel + canvasOffsetLeft
-      const sliderWidth = 20
-      const startPixelCentered = startPixelInContainer - sliderWidth / 2
-      const endPixelCentered = endPixelInContainer - sliderWidth / 2
-
-      startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
-      endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-      checkSliderOverlap()
-    }
-  })
-}
-
-function getX(i: number): number {
-  return xMode.value === 'distance'
-    ? (cumulativeKm.value[i] ?? 0)
-    : (cumulativeSec.value[i] ?? 0)
-}
-
-// function buildXYData(): { x: number; y: number }[] {
-//   return points.value.map((p, i) => ({
-//     x: getX(i),
-//     y: smoothedElevations.value[i] ?? p.elevation
-//   }))
-// }
-
-function buildFullXYData(): { x: number; y: number }[] {
-  return points.value.map((p, i) => ({
-    x: getX(i),
-    y: smoothedElevations.value[i] ?? p.elevation
-  }))
-}
-
-function buildSelectedAreaData(): { x: number; y: number }[] {
-  const selectedData = []
-
-  for (let i = startIndex.value; i <= endIndex.value; i++) {
-    selectedData.push({
-      x: getX(i),
-      y: smoothedElevations.value[i] ?? points.value[i]?.elevation ?? 0
-    })
-  }
-
-  return selectedData
-}
-
-function formatXTick(v: number): string {
-  if (xMode.value === 'distance') return `${v.toFixed(1)} ${t('units.km')}`
-  const sec = Math.max(0, Math.round(v))
-  const h = Math.floor(sec / 3600)
-  const m = Math.floor((sec % 3600) / 60)
-  const s = sec % 60
-  const hh = h > 0 ? `${h}:` : ''
-  const mm = h > 0 ? String(m).padStart(2, '0') : String(m)
-  const ss = String(s).padStart(2, '0')
-  return `${hh}${mm}:${ss}`
-}
-
 function computeCumulativeSec(pts: TrackPoint[]): number[] {
   const out: number[] = [0]
   for (let i = 1; i < pts.length; i++) {
@@ -1802,11 +1265,6 @@ watch([startIndex, endIndex], () => {
     endIndex.value = Math.min(points.value.length - 1, startIndex.value + 1)
   }
   updateSelectedPolyline()
-  if (chart) {
-    // @ts-ignore
-    chart.data.datasets[1].data = buildSelectedAreaData()
-    chart.update()
-  }
   if (map && points.value.length > 1) {
     const segLatLngs = points.value
       .slice(startIndex.value, endIndex.value + 1)
@@ -1817,44 +1275,6 @@ watch([startIndex, endIndex], () => {
 
   // Update marker position to the start point when sliders change
   updateMarkerPositionFromIndex(startIndex.value)
-})
-
-watch(xMode, () => {
-  if (!chart) return
-  const fullData = buildFullXYData()
-  // @ts-ignore
-  chart.data.datasets[0].data = fullData.map((d) => ({ x: d.x, y: d.y }))
-  // @ts-ignore
-  chart.data.datasets[1].data = buildSelectedAreaData()
-  // @ts-ignore
-  chart.options.scales.x.ticks.callback = (v) => formatXTick(Number(v))
-  // @ts-ignore
-  chart.options.scales.x.min = getX(0)
-  // @ts-ignore
-  chart.options.scales.x.max = getX(points.value.length - 1)
-
-  chart.update()
-
-  nextTick(() => {
-    if (points.value.length > 0 && chart && chartCanvas.value) {
-      const startX = getX(startIndex.value)
-      const endX = getX(endIndex.value)
-      const canvasRect = chart.canvas.getBoundingClientRect()
-      const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-      const startPixel = chart.scales.x.getPixelForValue(startX)
-      const endPixel = chart.scales.x.getPixelForValue(endX)
-      const canvasOffsetLeft = canvasRect.left - containerRect.left
-      const startPixelInContainer = startPixel + canvasOffsetLeft
-      const endPixelInContainer = endPixel + canvasOffsetLeft
-      const sliderWidth = 20
-      const startPixelCentered = startPixelInContainer - sliderWidth / 2
-      const endPixelCentered = endPixelInContainer - sliderWidth / 2
-
-      startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
-      endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-      checkSliderOverlap()
-    }
-  })
 })
 
 watch(loaded, async () => {
@@ -1881,36 +1301,6 @@ onMounted(() => {
     }
     // Check sidebar mode on resize
     checkSidebarMode()
-
-    // Update chart and slider positions on resize
-    if (chart && chartCanvas.value && points.value.length > 0) {
-      // Force chart to recalculate its size
-      if (typeof chart.resize === 'function') {
-        chart.resize()
-      }
-
-      // Recalculate slider positions based on new chart dimensions
-      nextTick(() => {
-        if (chart && chartCanvas.value && chart.canvas) {
-          const startX = getX(startIndex.value)
-          const endX = getX(endIndex.value)
-          const canvasRect = chart.canvas.getBoundingClientRect()
-          const containerRect = chartCanvas.value.parentElement!.getBoundingClientRect()
-          const startPixel = chart.scales.x.getPixelForValue(startX)
-          const endPixel = chart.scales.x.getPixelForValue(endX)
-          const canvasOffsetLeft = canvasRect.left - containerRect.left
-          const startPixelInContainer = startPixel + canvasOffsetLeft
-          const endPixelInContainer = endPixel + canvasOffsetLeft
-          const sliderWidth = 20
-          const startPixelCentered = startPixelInContainer - sliderWidth / 2
-          const endPixelCentered = endPixelInContainer - sliderWidth / 2
-
-          startSliderPosition.value = (startPixelCentered / containerRect.width) * 100
-          endSliderPosition.value = (endPixelCentered / containerRect.width) * 100
-          checkSliderOverlap()
-        }
-      })
-    }
   }
   window.addEventListener('resize', onResize)
   ;(window as any).__editorOnResize = onResize
@@ -2012,7 +1402,6 @@ async function handleStravaImport(gpxData: any) {
     // Update the map and chart
     await nextTick()
     renderMap()
-    renderChart()
   } catch (error) {
     console.error('Error importing Strava activity:', error)
     showError.value = true
@@ -2126,7 +1515,6 @@ async function handleSegmentImport(segment: any) {
     // Update the map and chart
     await nextTick()
     renderMap()
-    renderChart()
   } catch (error) {
     console.error('Error importing segment:', error)
     showError.value = true
@@ -2231,7 +1619,6 @@ async function onSaveAsNew() {
     // Update map and chart with new selection
     await nextTick()
     renderMap()
-    renderChart()
 
     // Show success message in info feed
     showSegmentSuccess.value = true
@@ -2348,7 +1735,6 @@ async function onUpdate() {
     // Update map and chart with current selection
     await nextTick()
     renderMap()
-    renderChart()
 
     // Reset update mode
     resetUpdateMode()
@@ -2430,10 +1816,6 @@ async function onDeleteFromDb() {
     if (map) {
       map.remove()
       map = null
-    }
-    if (chart) {
-      chart.destroy()
-      chart = null
     }
 
     // Show success message
@@ -3003,273 +2385,7 @@ ${points.value
   height: 480px;
   width: 100%;
 }
-.axis-toggle {
-  display: inline-flex;
-  gap: 0;
-  margin: 0.25rem auto 0.25rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 999px;
-  overflow: hidden;
-  background: #fff;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 100%;
-}
-.axis-toggle.below {
-  margin-top: 0.5rem;
-}
-.axis-toggle .seg {
-  font-size: 12px;
-  padding: 4px 10px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #374151;
-}
-.axis-toggle .seg.left {
-  border-right: 1px solid #e5e7eb;
-}
-.axis-toggle .seg.active {
-  background: #f3f4f6;
-  color: #111827;
-}
-.controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  width: 100%;
-  box-sizing: border-box;
-}
 
-/* Responsive controls for narrow devices */
-@media (max-width: 819px) {
-  .controls {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-}
-.controls .meta-title {
-  grid-column: 1 / -1;
-  text-align: center;
-  margin: 0 0 0.5rem 0;
-}
-.slider-group {
-  background: #fafafa;
-  padding: 0.75rem;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.slider-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 0.5rem;
-}
-.badge {
-  font-size: 12px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  font-weight: 600;
-}
-.badge.start {
-  background: var(--brand-500, #ff6600);
-  color: #ffffff;
-}
-.badge.end {
-  background: var(--brand-500, #ff6600);
-  color: #ffffff;
-}
-.metric {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: #374151;
-}
-.metric .icon {
-  width: 18px;
-  text-align: center;
-}
-.metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.25rem 0.5rem;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* Responsive metrics grid for narrow devices */
-@media (max-width: 819px) {
-  .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .metrics-grid {
-    grid-template-columns: 1fr;
-    gap: 0.25rem;
-  }
-}
-.gps-col {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: #374151;
-}
-.gps-col .label {
-  font-size: 12px;
-  color: #6b7280;
-}
-.gps-col .value {
-  font-variant-numeric: tabular-nums;
-}
-.chart-wrapper {
-  width: 100%;
-  overflow: visible;
-  margin-bottom: 20px;
-}
-.chart-container {
-  position: relative;
-  width: 100%;
-  overflow: visible;
-}
-.chart {
-  width: 100%;
-  height: 200px;
-  max-height: 200px;
-  cursor: crosshair;
-}
-
-.vertical-slider {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 20px;
-  cursor: grab;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.vertical-slider:active {
-  cursor: grabbing;
-}
-
-.slider-handle {
-  position: relative;
-  width: 16px;
-  height: 16px;
-  background: var(--brand-500, #ff6600);
-  border: 2px solid #ffffff;
-  border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  margin-bottom: 4px;
-  z-index: 11;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.slider-line {
-  width: 3px;
-  height: 100%;
-  background: var(--brand-500, #ff6600);
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-.start-slider .slider-handle::after {
-  content: 'S';
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.end-slider .slider-handle::after {
-  content: 'E';
-  color: white;
-  font-size: 10px;
-  font-weight: bold;
-  line-height: 1;
-}
-
-.slider-index {
-  position: absolute;
-  bottom: -22px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #111827;
-  color: #ffffff;
-  font-size: 11px;
-  line-height: 1;
-  padding: 2px 6px;
-  border-radius: 8px;
-  white-space: nowrap;
-  z-index: 14;
-  max-width: 40px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.slider-controls {
-  position: absolute;
-  top: 0;
-  left: -18px;
-  right: -18px;
-  height: 22px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 13;
-  pointer-events: none;
-}
-
-.slider-btn {
-  width: 12px;
-  height: 12px;
-  border: none;
-  border-radius: 50%;
-  background: var(--brand-500, #ff6600);
-  color: #ffffff;
-  font-size: 8px;
-  font-weight: bold;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-  pointer-events: auto;
-}
-
-.slider-btn:hover:not(:disabled) {
-  background: var(--brand-primary-hover, #e65c00);
-  transform: scale(1.1);
-}
-
-.slider-btn:active:not(:disabled) {
-  transform: scale(0.95);
-}
-
-.slider-btn:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.slider-btn:disabled:hover {
-  transform: none;
-}
 .meta {
   background: #ffffff;
   width: 100%;
@@ -3941,27 +3057,6 @@ ${points.value
   .content {
     margin-left: 230px;
   }
-}
-
-.end-slider .slider-handle {
-  background: var(--blue-500);
-}
-
-.end-slider .slider-line {
-  background: var(--blue-500);
-}
-
-.end-slider .slider-btn {
-  background: var(--blue-500);
-}
-
-.end-slider .slider-btn:hover:not(:disabled) {
-  background: var(--blue-600);
-}
-
-.badge.end {
-  background: var(--blue-500);
-  color: #ffffff;
 }
 
 .tire-group:nth-child(2) .tire-group-header .icon {
