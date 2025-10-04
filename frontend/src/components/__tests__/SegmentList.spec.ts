@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import SegmentList from '../SegmentList.vue'
+import SegmentCard from '../SegmentCard.vue'
 import type { TrackResponse } from '../../types'
 
 // Mock the GPX parser
@@ -79,36 +80,31 @@ describe('SegmentList', () => {
       props: {
         segments: mockSegments,
         loading: false
+      },
+      global: {
+        components: { SegmentCard }
       }
     })
 
-    expect(wrapper.findAll('.segment-card')).toHaveLength(2)
-    expect(wrapper.find('.segment-name').text()).toBe('Test Segment 1')
+    const cards = wrapper.findAllComponents(SegmentCard)
+    expect(cards).toHaveLength(2)
   })
 
-  it('displays segment information correctly', () => {
+  it('passes correct props to SegmentCard components', () => {
     const wrapper = mount(SegmentList, {
       props: {
         segments: [mockSegments[0]],
         loading: false
+      },
+      global: {
+        components: { SegmentCard }
       }
     })
 
-    const card = wrapper.find('.segment-card')
-    expect(card.find('.segment-name').text()).toBe('Test Segment 1')
-
-    // Check tire recommendations
-    const tireBadges = card.findAll('.tire-badge')
-    expect(tireBadges.length).toBeGreaterThan(0)
-
-    // Check surface type info
-    const infoSections = card.findAll('.info-section')
-    expect(infoSections.length).toBeGreaterThan(0)
-
-    // Check difficulty level
-    const difficultyInfo = card.find('.difficulty span')
-    expect(difficultyInfo.exists()).toBe(true)
-    expect(difficultyInfo.text()).toBe('3/5')
+    const card = wrapper.findComponent(SegmentCard)
+    expect(card.exists()).toBe(true)
+    expect(card.props('segment')).toEqual(mockSegments[0])
+    expect(card.props('isHovered')).toBe(false)
   })
 
   it('shows no segments message when empty', () => {
@@ -122,106 +118,6 @@ describe('SegmentList', () => {
     expect(wrapper.find('.no-segments p').text()).toBe(
       'No segments found in the current view. Try zooming out or panning to a different area.'
     )
-  })
-
-  // TODO: Fix event emission tests - events are not being emitted properly in test environment
-  // it('emits segment-click event when card is clicked', async () => {
-  //   const wrapper = mount(SegmentList, {
-  //     props: {
-  //       segments: [mockSegments[0]],
-  //       loading: false
-  //     }
-  //   })
-
-  //   // Wait for the component to be fully mounted
-  //   await wrapper.vm.$nextTick()
-
-  //   await wrapper.find('.segment-card').trigger('click')
-
-  //   expect(wrapper.emitted('segment-click')).toBeTruthy()
-  //   expect(wrapper.emitted('segment-click')?.[0]).toEqual([mockSegments[0]])
-  // })
-
-  // it('emits segment-hover event when card is hovered', async () => {
-  //   const wrapper = mount(SegmentList, {
-  //     props: {
-  //       segments: [mockSegments[0]],
-  //       loading: false
-  //     }
-  //   })
-
-  //   // Wait for the component to be fully mounted
-  //   await wrapper.vm.$nextTick()
-
-  //   await wrapper.find('.segment-card').trigger('mouseenter')
-
-  //   expect(wrapper.emitted('segment-hover')).toBeTruthy()
-  //   expect(wrapper.emitted('segment-hover')?.[0]).toEqual([mockSegments[0]])
-  // })
-
-  // it('emits segment-leave event when card is left', async () => {
-  //   const wrapper = mount(SegmentList, {
-  //     props: {
-  //       segments: [mockSegments[0]],
-  //       loading: false
-  //     }
-  //   })
-
-  //   // Wait for the component to be fully mounted
-  //   await wrapper.vm.$nextTick()
-
-  //   await wrapper.find('.segment-card').trigger('mouseleave')
-
-  //   expect(wrapper.emitted('segment-leave')).toBeTruthy()
-  //   expect(wrapper.emitted('segment-leave')?.[0]).toEqual([mockSegments[0]])
-  // })
-
-  it('formats surface type correctly', () => {
-    const wrapper = mount(SegmentList, {
-      props: {
-        segments: [mockSegments[0]],
-        loading: false
-      }
-    })
-
-    const card = wrapper.find('.segment-card')
-    const surfaceInfo = card.find('.info-section .info-value span')
-    expect(surfaceInfo.exists()).toBe(true)
-    expect(surfaceInfo.text()).toContain('Forest Trail')
-  })
-
-  it('formats tire type correctly', () => {
-    const wrapper = mount(SegmentList, {
-      props: {
-        segments: [mockSegments[0]],
-        loading: false
-      }
-    })
-
-    const tireBadges = wrapper.findAll('.tire-badge')
-    expect(tireBadges[0].text()).toBe('Semi Slick')
-    expect(tireBadges[1].text()).toBe('Knobs')
-  })
-
-  it('displays tire recommendations with Font Awesome icons', () => {
-    const wrapper = mount(SegmentList, {
-      props: {
-        segments: [mockSegments[0]],
-        loading: false
-      }
-    })
-
-    const card = wrapper.find('.segment-card')
-
-    // Check for Font Awesome icons in tire recommendations
-    const sunIcon = card.find('.fa-sun')
-    const cloudIcon = card.find('.fa-cloud-rain')
-    expect(sunIcon.exists()).toBe(true)
-    expect(cloudIcon.exists()).toBe(true)
-
-    // Check that tire badges exist
-    const tireBadges = card.findAll('.tire-badge')
-    expect(tireBadges.length).toBeGreaterThan(0)
   })
 
   describe('Track Type Filtering', () => {
@@ -277,166 +173,6 @@ describe('SegmentList', () => {
       // Check that tabs have proper content
       expect(tabButtons[0].text()).toContain('Segments')
       expect(tabButtons[1].text()).toContain('Routes')
-    })
-  })
-
-  describe('Segment Statistics and Metrics', () => {
-    it('should display segment metrics correctly', () => {
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [mockSegments[0]],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      const metrics = card.findAll('.metric')
-
-      expect(metrics.length).toBeGreaterThan(0)
-
-      // Check that metric labels exist
-      const labels = card.findAll('.metric-label')
-      expect(labels.some((label) => label.text().includes('Distance'))).toBe(true)
-      expect(labels.some((label) => label.text().includes('Elevation Gain'))).toBe(true)
-      expect(labels.some((label) => label.text().includes('Elevation Loss'))).toBe(true)
-    })
-
-    it('should format metrics with proper units', () => {
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [mockSegments[0]],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      const metricValues = card.findAll('.metric-value')
-
-      expect(metricValues.length).toBeGreaterThan(0)
-
-      // Check that values are formatted (not raw numbers)
-      metricValues.forEach((value) => {
-        expect(value.text()).not.toMatch(/^\d+$/) // Should not be just raw numbers
-      })
-    })
-
-    it('should handle segments with missing statistics', () => {
-      const segmentWithoutStats = {
-        ...mockSegments[0]
-        // Remove any stats-related properties if they exist
-      }
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [segmentWithoutStats],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      expect(card.exists()).toBe(true)
-
-      // Should still render the card even without stats
-      expect(card.find('.segment-name').text()).toBe('Test Segment 1')
-    })
-  })
-
-  describe('Surface Type Formatting', () => {
-    it('should format different surface types correctly', () => {
-      const segmentsWithDifferentSurfaces = [
-        { ...mockSegments[0], surface_type: 'forest-trail' },
-        { ...mockSegments[1], surface_type: 'big-stone-road' }
-      ]
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: segmentsWithDifferentSurfaces,
-          loading: false
-        }
-      })
-
-      const cards = wrapper.findAll('.segment-card')
-      expect(cards.length).toBe(2)
-
-      // Check that surface types are displayed
-      cards.forEach((card) => {
-        const surfaceInfo = card.find('.info-section .info-value span')
-        expect(surfaceInfo.exists()).toBe(true)
-        expect(surfaceInfo.text()).toBeTruthy()
-      })
-    })
-
-    it('should handle unknown surface types gracefully', () => {
-      const segmentWithUnknownSurface = {
-        ...mockSegments[0],
-        surface_type: 'unknown-surface'
-      }
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [segmentWithUnknownSurface],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      const surfaceInfo = card.find('.info-section .info-value span')
-
-      expect(surfaceInfo.exists()).toBe(true)
-      // Should display something, even if it's the original value
-      expect(surfaceInfo.text()).toBeTruthy()
-    })
-  })
-
-  describe('Tire Type Formatting', () => {
-    it('should format different tire types correctly', () => {
-      const segmentsWithDifferentTires = [
-        { ...mockSegments[0], tire_dry: 'semi-slick', tire_wet: 'knobs' },
-        { ...mockSegments[1], tire_dry: 'knobs', tire_wet: 'knobs' }
-      ]
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: segmentsWithDifferentTires,
-          loading: false
-        }
-      })
-
-      const cards = wrapper.findAll('.segment-card')
-      expect(cards.length).toBe(2)
-
-      // Check that tire badges are displayed
-      cards.forEach((card) => {
-        const tireBadges = card.findAll('.tire-badge')
-        expect(tireBadges.length).toBeGreaterThan(0)
-
-        tireBadges.forEach((badge) => {
-          expect(badge.text()).toBeTruthy()
-        })
-      })
-    })
-
-    it('should handle unknown tire types gracefully', () => {
-      const segmentWithUnknownTires = {
-        ...mockSegments[0],
-        tire_dry: 'unknown-tire',
-        tire_wet: 'another-unknown'
-      }
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [segmentWithUnknownTires],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      const tireBadges = card.findAll('.tire-badge')
-
-      expect(tireBadges.length).toBeGreaterThan(0)
-      tireBadges.forEach((badge) => {
-        expect(badge.text()).toBeTruthy()
-      })
     })
   })
 
@@ -523,44 +259,61 @@ describe('SegmentList', () => {
   })
 
   describe('Event Handling', () => {
-    it('should have clickable segment cards', async () => {
+    it('should emit segmentClick event when SegmentCard emits click', async () => {
       const wrapper = mount(SegmentList, {
         props: {
           segments: [mockSegments[0]],
           loading: false
+        },
+        global: {
+          components: { SegmentCard }
         }
       })
 
-      const card = wrapper.find('.segment-card')
-      expect(card.exists()).toBe(true)
+      const card = wrapper.findComponent(SegmentCard)
+      await card.vm.$emit('click', mockSegments[0])
 
-      // Test that the card can be clicked without errors
-      await card.trigger('click')
-
-      // Should not throw error
-      expect(card.exists()).toBe(true)
+      expect(wrapper.emitted('segmentClick')).toBeTruthy()
+      expect(wrapper.emitted('segmentClick')?.[0]).toEqual([mockSegments[0]])
     })
 
-    it('should handle hover interactions', async () => {
+    it('should emit segmentHover event when SegmentCard emits mouseenter', async () => {
       const wrapper = mount(SegmentList, {
         props: {
           segments: [mockSegments[0]],
           loading: false
+        },
+        global: {
+          components: { SegmentCard }
         }
       })
 
-      const card = wrapper.find('.segment-card')
+      const card = wrapper.findComponent(SegmentCard)
+      await card.vm.$emit('mouseenter', mockSegments[0])
 
-      // Test mouseenter
-      await card.trigger('mouseenter')
-      expect(card.exists()).toBe(true)
-
-      // Test mouseleave
-      await card.trigger('mouseleave')
-      expect(card.exists()).toBe(true)
+      expect(wrapper.emitted('segmentHover')).toBeTruthy()
+      expect(wrapper.emitted('segmentHover')?.[0]).toEqual([mockSegments[0]])
     })
 
-    it('should have interactive track type tabs', async () => {
+    it('should emit segmentLeave event when SegmentCard emits mouseleave', async () => {
+      const wrapper = mount(SegmentList, {
+        props: {
+          segments: [mockSegments[0]],
+          loading: false
+        },
+        global: {
+          components: { SegmentCard }
+        }
+      })
+
+      const card = wrapper.findComponent(SegmentCard)
+      await card.vm.$emit('mouseleave', mockSegments[0])
+
+      expect(wrapper.emitted('segmentLeave')).toBeTruthy()
+      expect(wrapper.emitted('segmentLeave')?.[0]).toEqual([mockSegments[0]])
+    })
+
+    it('should emit trackTypeChange event when track type tab is clicked', async () => {
       const wrapper = mount(SegmentList, {
         props: {
           segments: mockSegments,
@@ -569,17 +322,15 @@ describe('SegmentList', () => {
       })
 
       const routeTab = wrapper.find('.tab-button:last-child')
-
-      // Test that the tab can be clicked without errors
       await routeTab.trigger('click')
 
-      // Should not throw error
-      expect(routeTab.exists()).toBe(true)
+      expect(wrapper.emitted('trackTypeChange')).toBeTruthy()
+      expect(wrapper.emitted('trackTypeChange')?.[0]).toEqual(['route'])
     })
   })
 
   describe('Edge Cases', () => {
-    it('should handle segments with missing optional fields', () => {
+    it('should render list with segments with missing optional fields', () => {
       const minimalSegment = {
         id: 1,
         name: 'Minimal Segment',
@@ -602,50 +353,34 @@ describe('SegmentList', () => {
         props: {
           segments: [minimalSegment],
           loading: false
+        },
+        global: {
+          components: { SegmentCard }
         }
       })
 
-      const card = wrapper.find('.segment-card')
-      expect(card.exists()).toBe(true)
-      expect(card.find('.segment-name').text()).toBe('Minimal Segment')
+      const cards = wrapper.findAllComponents(SegmentCard)
+      expect(cards).toHaveLength(1)
     })
 
-    it('should handle very long segment names gracefully', () => {
-      const longNameSegment = {
-        ...mockSegments[0],
-        name: 'This is a very long segment name that might cause layout issues and should be handled gracefully by the component'
-      }
-
+    it('should handle dynamic segment list updates', async () => {
       const wrapper = mount(SegmentList, {
         props: {
-          segments: [longNameSegment],
+          segments: [mockSegments[0]],
           loading: false
+        },
+        global: {
+          components: { SegmentCard }
         }
       })
 
-      const card = wrapper.find('.segment-card')
-      const nameElement = card.find('.segment-name')
+      let cards = wrapper.findAllComponents(SegmentCard)
+      expect(cards).toHaveLength(1)
 
-      expect(nameElement.exists()).toBe(true)
-      expect(nameElement.text()).toBe(longNameSegment.name)
-    })
-
-    it('should handle empty comments field', () => {
-      const segmentWithEmptyComment = {
-        ...mockSegments[0],
-        comments: ''
-      }
-
-      const wrapper = mount(SegmentList, {
-        props: {
-          segments: [segmentWithEmptyComment],
-          loading: false
-        }
-      })
-
-      const card = wrapper.find('.segment-card')
-      expect(card.exists()).toBe(true)
-      expect(card.find('.segment-name').text()).toBe('Test Segment 1')
+      // Update segments
+      await wrapper.setProps({ segments: mockSegments })
+      cards = wrapper.findAllComponents(SegmentCard)
+      expect(cards).toHaveLength(2)
     })
   })
 

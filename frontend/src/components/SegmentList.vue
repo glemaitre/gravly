@@ -33,100 +33,17 @@
             'segment-cards--no-button': segments.length <= initialDisplayCount
           }"
         >
-          <div
+          <SegmentCard
             v-for="segment in displayedSegments"
             :key="segment.id"
-            class="segment-card"
-            @click="onSegmentClick(segment)"
-            @mouseenter="onSegmentHover(segment)"
-            @mouseleave="onSegmentLeave(segment)"
-          >
-            <div class="segment-card-header">
-              <h4
-                class="segment-name"
-                :class="{ hovered: hoveredSegmentId === segment.id }"
-              >
-                {{ segment.name }}
-              </h4>
-            </div>
-
-            <div class="segment-card-content">
-              <div class="segment-metrics">
-                <div class="metric">
-                  <span class="metric-label">Distance</span>
-                  <span class="metric-value">{{
-                    formatDistance(segmentStats.get(segment.id)?.total_distance || 0)
-                  }}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Elevation Gain</span>
-                  <span class="metric-value">{{
-                    formatElevation(
-                      segmentStats.get(segment.id)?.total_elevation_gain || 0
-                    )
-                  }}</span>
-                </div>
-                <div class="metric">
-                  <span class="metric-label">Elevation Loss</span>
-                  <span class="metric-value">{{
-                    formatElevation(
-                      segmentStats.get(segment.id)?.total_elevation_loss || 0
-                    )
-                  }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="segment-card-footer">
-              <div class="segment-info-grid">
-                <!-- Surface Type -->
-                <div class="info-section">
-                  <div class="info-label">Surface</div>
-                  <div class="info-value">
-                    <i class="fa-solid fa-road"></i>
-                    <span>{{ formatSurfaceType(segment.surface_type) }}</span>
-                  </div>
-                </div>
-
-                <!-- Tire Recommendations -->
-                <div class="info-section">
-                  <div class="info-label">Tires</div>
-                  <div class="tire-recommendations">
-                    <div class="tire-recommendation">
-                      <i class="fa-solid fa-sun"></i>
-                      <span class="tire-badge">{{
-                        formatTireType(segment.tire_dry)
-                      }}</span>
-                    </div>
-                    <div class="tire-recommendation">
-                      <i class="fa-solid fa-cloud-rain"></i>
-                      <span class="tire-badge">{{
-                        formatTireType(segment.tire_wet)
-                      }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Difficulty -->
-                <div class="info-section">
-                  <div class="info-label">Difficulty</div>
-                  <div class="info-value difficulty">
-                    <i class="fa-solid fa-signal"></i>
-                    <span>{{ segment.difficulty_level }}/5</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Distance from center indicator -->
-            <div
-              v-if="getDistanceFromCenter"
-              class="segment-distance"
-              :title="`Distance from map center`"
-            >
-              {{ formatDistanceFromCenter(getDistanceFromCenter(segment)) }} to📍
-            </div>
-          </div>
+            :segment="segment"
+            :stats="segmentStats.get(segment.id)"
+            :is-hovered="hoveredSegmentId === segment.id"
+            :distance-from-center="getDistanceFromCenter?.(segment)"
+            @click="onSegmentClick"
+            @mouseenter="onSegmentHover"
+            @mouseleave="onSegmentLeave"
+          />
 
           <!-- Show More Button -->
           <div
@@ -162,7 +79,7 @@
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
-import { formatDistance as formatDistanceFromCenter } from '../utils/distance'
+import SegmentCard from './SegmentCard.vue'
 
 interface SegmentStats {
   total_distance: number
@@ -350,28 +267,6 @@ function toggleShowMore() {
   showAll.value = !showAll.value
 }
 
-// Formatting functions
-function formatDistance(meters: number): string {
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`
-  }
-  return `${(meters / 1000).toFixed(1)}km`
-}
-
-function formatElevation(meters: number): string {
-  return `${Math.round(meters)}m`
-}
-
-function formatSurfaceType(surfaceType: string): string {
-  if (!surfaceType) return ''
-  return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-}
-
-function formatTireType(tireType: string): string {
-  if (!tireType) return ''
-  return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-}
-
 // Add window resize listener
 onMounted(() => {
   window.addEventListener('resize', updateDisplayCount)
@@ -527,172 +422,6 @@ onUnmounted(() => {
 
 .segment-cards--no-button {
   padding: 16px; /* Add bottom padding when button is not present */
-}
-
-.segment-card {
-  background: white;
-  border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  position: relative;
-}
-
-.segment-card:hover {
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-  transform: translateY(-2px);
-  border-color: #ff6b35;
-  background: linear-gradient(135deg, #fff 0%, #fff8f5 100%);
-}
-
-.segment-card-header {
-  margin-bottom: 12px;
-}
-
-.segment-name {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: color 0.2s ease;
-}
-
-.segment-name.hovered {
-  color: #ff6b35;
-}
-
-.segment-card-content {
-  margin-bottom: 12px;
-}
-
-.segment-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.metric {
-  text-align: center;
-}
-
-.metric-label {
-  display: block;
-  font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.metric-value {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.segment-card-footer {
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-/* Distance from center indicator */
-.segment-distance {
-  font-size: 0.75rem;
-  color: #9ca3af;
-  font-weight: 500;
-  margin-top: 8px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.segment-card:hover .segment-distance {
-  color: #6b7280;
-}
-
-.segment-info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-}
-
-.info-section {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: center;
-  text-align: center;
-}
-
-.info-label {
-  color: #666;
-  font-weight: 500;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-
-.info-value {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  font-size: 0.75rem;
-  color: #333;
-  font-weight: 500;
-}
-
-.info-value i {
-  font-size: 0.8rem;
-  color: #666;
-}
-
-.info-value.difficulty {
-  color: #e67e22;
-  font-weight: 600;
-}
-
-.tire-recommendations {
-  display: flex;
-  gap: 8px;
-}
-
-.tire-recommendation {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.tire-recommendation i {
-  font-size: 0.8rem;
-}
-
-.tire-recommendation .fa-sun {
-  color: var(--brand-primary); /* Orange for sun - matches Editor brand-500 */
-}
-
-.tire-recommendation .fa-cloud-rain {
-  color: #3b82f6; /* Blue for cloud - matches Editor blue-500 */
-}
-
-.tire-badge {
-  background-color: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 0.7rem;
-  color: #333;
-  font-weight: 500;
 }
 
 .segment-comments {
