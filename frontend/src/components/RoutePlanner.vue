@@ -118,8 +118,10 @@ import {
 } from 'chart.js'
 import ElevationProfile from './ElevationProfile.vue'
 import RoutePlannerSidebar from './RoutePlannerSidebar.vue'
+import SegmentPopupCard from './SegmentPopupCard.vue'
 import type { TrackResponse, GPXDataResponse, TrackWithGPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
+import { createApp } from 'vue'
 
 // Register Chart.js components
 Chart.register(
@@ -847,25 +849,6 @@ function sampleSegmentPoints(points: any[]): any[] {
 }
 
 // Helper functions for segment popup formatting
-function formatDistance(meters: number): string {
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`
-  }
-  return `${(meters / 1000).toFixed(1)}km`
-}
-
-function formatElevation(meters: number): string {
-  return `${Math.round(meters)}m`
-}
-
-function formatSurfaceType(surfaceType: string): string {
-  return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-}
-
-function formatTireType(tireType: string): string {
-  if (!tireType) return ''
-  return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-}
 
 // Helper function to calculate zoom-responsive route line weight
 function getZoomResponsiveWeight(zoomLevel: number): number {
@@ -3941,124 +3924,34 @@ function clearSegmentLandmarks() {
   })
 }
 
-function createSegmentPopup(segment: TrackResponse): string {
+function createSegmentPopup(segment: TrackResponse): HTMLElement {
   const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
 
   // Get cached GPX data for stats
   const gpxData = gpxDataCache.get(segment.id)
-  let statsHtml = ''
+  let parsedGPXData = null
 
   if (gpxData && gpxData.gpx_xml_data) {
     const fileId =
       segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
-    const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
-
-    if (parsedGPX && parsedGPX.total_stats) {
-      const stats = parsedGPX.total_stats
-      statsHtml = `
-        <div class="segment-stats">
-          <div class="stat-item">
-            <i class="fa-solid fa-route"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatDistance(stats.total_distance)}</span>
-              <span class="stat-label">Distance</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <i class="fa-solid fa-arrow-trend-up"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatElevation(stats.total_elevation_gain)}</span>
-              <span class="stat-label">Elevation Gain</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <i class="fa-solid fa-arrow-trend-down"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatElevation(stats.total_elevation_loss)}</span>
-              <span class="stat-label">Elevation Loss</span>
-            </div>
-          </div>
-        </div>
-      `
-    }
+    parsedGPXData = parseGPXData(gpxData.gpx_xml_data, fileId)
   }
 
-  // If no stats available, show loading or fallback
-  if (!statsHtml) {
-    statsHtml = `
-      <div class="segment-stats">
-        <div class="stat-item">
-          <i class="fa-solid fa-route"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Distance</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <i class="fa-solid fa-arrow-trend-up"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Elevation Gain</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <i class="fa-solid fa-arrow-trend-down"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Elevation Loss</span>
-          </div>
-        </div>
-      </div>
-    `
-  }
+  // Create a container for the Vue component
+  const container = document.createElement('div')
 
-  return `
-    <div class="segment-popup-card ${isSelected ? 'selected' : ''}">
-      <div class="segment-card-header">
-        <h4 class="segment-name" title="${segment.name}">
-          ${segment.name}
-        </h4>
-      </div>
+  // Create a Vue app with the SegmentPopupCard component
+  const app = createApp(SegmentPopupCard, {
+    segment,
+    isSelected,
+    gpxData: parsedGPXData
+  })
 
-      <div class="segment-card-content">
-        ${statsHtml}
-      </div>
+  // Mount the component
+  app.mount(container)
 
-      <div class="segment-card-footer">
-        <div class="segment-info-grid">
-          <div class="info-section">
-            <div class="info-label">Surface</div>
-            <div class="info-value">
-              <i class="fa-solid fa-road"></i>
-              <span>${formatSurfaceType(segment.surface_type)}</span>
-            </div>
-          </div>
-
-          <div class="info-section">
-            <div class="info-label">Tires</div>
-            <div class="tire-recommendations">
-              <div class="tire-recommendation">
-                <i class="fa-solid fa-sun"></i>
-                <span class="tire-badge">${formatTireType(segment.tire_dry)}</span>
-              </div>
-              <div class="tire-recommendation">
-                <i class="fa-solid fa-cloud-rain"></i>
-                <span class="tire-badge">${formatTireType(segment.tire_wet)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-section">
-            <div class="info-label">Difficulty</div>
-            <div class="info-value difficulty">
-              <i class="fa-solid fa-signal"></i>
-              <span>${segment.difficulty_level}/5</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+  // Return the rendered HTML element
+  return container.firstElementChild as HTMLElement
 }
 
 function selectSegment(segment: TrackResponse) {
@@ -4882,191 +4775,6 @@ function clearAllSegments() {
 :global(.segment-hover-popup .leaflet-popup-content) {
   margin: 0;
   padding: 0;
-}
-:global(.segment-popup-card) {
-  border: 1px solid #e1e5e9;
-  border-radius: 6px;
-  padding: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  position: relative;
-  font-family: inherit;
-  background: white;
-  width: 340px; /* Increased width to 340px */
-}
-
-:global(.segment-popup-card:hover) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-  border-color: rgba(var(--brand-primary-rgb), 0.3);
-}
-
-:global(.segment-popup-card.selected) {
-  box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
-  transform: translateY(-1px);
-  border-color: #ff6b35;
-}
-
-:global(.segment-popup-card.selected:hover) {
-  box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
-  transform: translateY(-3px);
-}
-
-:global(.segment-card-header) {
-  margin-bottom: 8px;
-}
-
-:global(.segment-name) {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #333;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.2s ease;
-  line-height: 1.2;
-}
-
-:global(.segment-popup-card.selected .segment-name) {
-  color: #ff6b35;
-}
-
-:global(.segment-card-content) {
-  margin-bottom: 8px;
-}
-
-:global(.segment-stats) {
-  display: flex;
-  gap: 8px;
-}
-
-:global(.stat-item) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  background: #f8fafc;
-  border-radius: 4px;
-  border: 1px solid #e2e8f0;
-  transition: background-color 0.2s ease;
-  flex: 1;
-}
-
-:global(.stat-item i) {
-  width: 20px;
-  height: 20px;
-  background: #f97316;
-  color: white;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  flex-shrink: 0;
-}
-
-:global(.stat-content) {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-:global(.stat-label) {
-  font-size: 0.6rem;
-  color: #666;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-:global(.stat-value) {
-  font-size: 0.75rem;
-  color: #333;
-  font-weight: 600;
-}
-
-:global(.segment-card-footer) {
-  border-top: 1px solid #f0f0f0;
-  padding-top: 8px;
-  position: relative;
-}
-
-:global(.segment-info-grid) {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
-:global(.info-section) {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  text-align: center;
-}
-
-:global(.info-label) {
-  color: #666;
-  font-weight: 500;
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  margin-bottom: 1px;
-}
-
-:global(.info-value) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  font-size: 0.65rem;
-  color: #333;
-  font-weight: 500;
-}
-
-:global(.info-value i) {
-  font-size: 0.7rem;
-  color: #666;
-}
-
-:global(.info-value.difficulty) {
-  color: #e67e22;
-  font-weight: 600;
-}
-
-:global(.tire-recommendations) {
-  display: flex;
-  gap: 6px;
-}
-
-:global(.tire-recommendation) {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-:global(.tire-recommendation i) {
-  font-size: 0.7rem;
-}
-
-:global(.tire-recommendation .fa-sun) {
-  color: var(--brand-primary);
-}
-
-:global(.tire-recommendation .fa-cloud-rain) {
-  color: #3b82f6;
-}
-
-:global(.tire-badge) {
-  background-color: #f5f5f5;
-  padding: 1px 4px;
-  border-radius: 2px;
-  font-size: 0.6rem;
-  color: #333;
-  font-weight: 500;
 }
 
 /* Segment landmark styles */
