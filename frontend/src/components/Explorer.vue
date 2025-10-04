@@ -99,6 +99,10 @@ let isSearching = false
 let searchTimeout: number | null = null
 let pendingTracks: TrackResponse[] = []
 
+// Timeout IDs for cleanup
+let redirectTimeout: number | null = null
+let mapInitTimeout: number | null = null
+
 // Track type filter
 const selectedTrackType = ref<'segment' | 'route'>('segment')
 
@@ -752,6 +756,16 @@ function cleanupMap() {
     searchTimeout = null
   }
 
+  // Clear mounted timeouts
+  if (redirectTimeout) {
+    clearTimeout(redirectTimeout)
+    redirectTimeout = null
+  }
+  if (mapInitTimeout) {
+    clearTimeout(mapInitTimeout)
+    mapInitTimeout = null
+  }
+
   // Close event source if active
   if (eventSource) {
     eventSource.close()
@@ -789,16 +803,16 @@ onMounted(() => {
     console.info(`Redirecting to stored destination: ${redirectDestination}`)
     localStorage.removeItem('strava_redirect_after_auth')
     // Small delay to ensure navbar is loaded
-    setTimeout(() => {
+    redirectTimeout = setTimeout(() => {
       router.push(redirectDestination)
-    }, 500)
+    }, 500) as unknown as number
     return // Don't initialize map if we're redirecting
   }
 
   // Small delay to ensure DOM is ready
-  setTimeout(() => {
+  mapInitTimeout = setTimeout(() => {
     initializeMap()
-  }, 100)
+  }, 100) as unknown as number
 })
 
 // Handle segment click from the segment list or map
