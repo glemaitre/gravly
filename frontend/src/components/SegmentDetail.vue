@@ -1435,7 +1435,7 @@ onUnmounted(() => {
 .content-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 50% 50%;
+  grid-template-rows: 400px 300px;
   gap: 1rem;
   flex: 1;
   grid-template-areas:
@@ -1445,7 +1445,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when comments are present */
 .content-grid.with-comments {
-  grid-template-rows: 33.33% 33.33% 33.33%;
+  grid-template-rows: 400px 300px auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1454,7 +1454,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when images are present */
 .content-grid.with-images {
-  grid-template-rows: 33.33% 33.33% 33.33%;
+  grid-template-rows: 400px 300px auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1463,7 +1463,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when both comments and images are present */
 .content-grid.with-comments.with-images {
-  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-rows: 400px 300px auto auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1473,7 +1473,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when videos are present */
 .content-grid.with-videos {
-  grid-template-rows: 33.33% 33.33% 33.33%;
+  grid-template-rows: 400px 300px auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1482,7 +1482,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when comments and videos are present */
 .content-grid.with-comments.with-videos {
-  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-rows: 400px 300px auto auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1492,7 +1492,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when images and videos are present */
 .content-grid.with-images.with-videos {
-  grid-template-rows: 25% 25% 25% 25%;
+  grid-template-rows: 400px 300px auto auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
@@ -1502,7 +1502,7 @@ onUnmounted(() => {
 
 /* Dynamic grid layout when comments, images and videos are present */
 .content-grid.with-comments.with-images.with-videos {
-  grid-template-rows: 20% 20% 20% 20% 20%;
+  grid-template-rows: 400px 300px auto auto auto;
   grid-template-areas:
     'map info'
     'elevation elevation'
