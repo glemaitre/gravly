@@ -61,19 +61,10 @@
 
           <!-- Elevation Chart Section -->
           <div class="chart-section">
-            <div class="card chart-card">
-              <div class="card-header">
-                <h3>
-                  <i class="fa-solid fa-chart-line"></i>
-                  {{ t('segmentDetail.elevation') }}
-                </h3>
-              </div>
-              <div class="card-content">
-                <div class="chart-container">
-                  <canvas ref="elevationChartRef" class="elevation-chart"></canvas>
-                </div>
-              </div>
-            </div>
+            <ElevationChart
+              :gpx-data="gpxData"
+              @chart-hover="updateCursorPositionFromChart"
+            />
           </div>
 
           <!-- Segment Information Card -->
@@ -298,32 +289,9 @@ import { onMounted, onUnmounted, ref, nextTick, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
-import {
-  Chart,
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  Title,
-  CategoryScale,
-  Filler,
-  Tooltip
-} from 'chart.js'
-import annotationPlugin from 'chartjs-plugin-annotation'
 import type { TrackResponse, GPXData, TrackVideoResponse } from '../types'
 import SegmentInfoCard from './SegmentInfoCard.vue'
-
-Chart.register(
-  LineController,
-  LineElement,
-  PointElement,
-  LinearScale,
-  CategoryScale,
-  Title,
-  Filler,
-  Tooltip,
-  annotationPlugin
-)
+import ElevationChart from './ElevationChart.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -340,8 +308,6 @@ const selectedImage = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const map = ref<any>(null)
-const elevationChart = ref<Chart | null>(null)
-const elevationChartRef = ref<HTMLCanvasElement | null>(null)
 const mapMarker = ref<any>(null)
 const trackPolyline = ref<any>(null)
 
@@ -474,7 +440,6 @@ async function loadSegmentData() {
       // Wait for DOM to be fully rendered with a small delay
       setTimeout(async () => {
         await initializeMap()
-        await initializeElevationChart()
       }, 100)
     }
   } catch (err) {
@@ -571,186 +536,6 @@ async function initializeMap() {
       distance: 0,
       elevation: firstPoint.elevation
     }
-  }
-}
-
-async function initializeElevationChart() {
-  // Only show debug logs in production/development, not during tests
-  // Check if we're in a test environment by checking for the vi mock object
-  const isTestEnv = (() => {
-    try {
-      return typeof (globalThis as any).vi !== 'undefined'
-    } catch {
-      return false
-    }
-  })()
-
-  if (!isTestEnv) {
-    console.log('Initializing elevation chart...')
-    console.log('gpxData.value:', gpxData.value)
-    console.log('elevationChartRef.value:', elevationChartRef.value)
-  }
-
-  if (!gpxData.value || !elevationChartRef.value) {
-    if (!isTestEnv) {
-      console.log('Missing required data for chart initialization')
-    }
-    return
-  }
-
-  // Check if chart is already initialized
-  if (elevationChart.value) {
-    if (!isTestEnv) {
-      console.log('Destroying existing chart')
-    }
-    elevationChart.value.destroy()
-    elevationChart.value = null
-  }
-
-  // Check if chart canvas exists
-  if (!elevationChartRef.value) {
-    console.error('Chart canvas not found')
-    return
-  }
-
-  // Ensure canvas has proper dimensions
-  const canvas = elevationChartRef.value
-  const container = canvas.parentElement
-  if (container) {
-    canvas.width = container.clientWidth
-    canvas.height = container.clientHeight
-    if (!isTestEnv) {
-      console.log('Canvas dimensions set:', canvas.width, 'x', canvas.height)
-    }
-  }
-
-  const points = gpxData.value.points
-  if (points.length === 0) {
-    if (!isTestEnv) {
-      console.log('No points data available for chart')
-    }
-    return
-  }
-
-  if (!isTestEnv) {
-    console.log('Points data:', points.length, 'points')
-    console.log('First few points:', points.slice(0, 3))
-  }
-
-  // Calculate cumulative distances in kilometers
-  const cumulativeKm: number[] = [0]
-  let cumulativeDistance = 0
-
-  for (let i = 1; i < points.length; i++) {
-    const distance = calculateDistance(
-      points[i - 1].latitude,
-      points[i - 1].longitude,
-      points[i].latitude,
-      points[i].longitude
-    )
-    cumulativeDistance += distance
-    cumulativeKm.push(cumulativeDistance / 1000) // Convert to kilometers
-  }
-
-  // Prepare chart data with x,y coordinates
-  const chartData = points.map((point, i) => ({
-    x: cumulativeKm[i],
-    y: point.elevation
-  }))
-
-  if (!isTestEnv) {
-    console.log('Chart data sample:', chartData.slice(0, 5))
-    console.log(
-      'Elevation range:',
-      Math.min(...points.map((p) => p.elevation)),
-      'to',
-      Math.max(...points.map((p) => p.elevation))
-    )
-    console.log('Distance range:', 0, 'to', cumulativeKm[cumulativeKm.length - 1])
-    // Create chart
-    console.log('Creating chart with data points:', chartData.length)
-  }
-  // Get CSS variable values from computed styles
-  const rootStyles = getComputedStyle(document.documentElement)
-  const brandPrimary = rootStyles.getPropertyValue('--brand-primary').trim()
-  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
-
-  elevationChart.value = new Chart(elevationChartRef.value, {
-    type: 'line',
-    data: {
-      datasets: [
-        {
-          label: 'Elevation',
-          data: chartData,
-          borderColor: brandPrimary || '#ff6600',
-          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.1)`,
-          fill: true,
-          tension: 0.1,
-          pointRadius: 0,
-          pointHoverRadius: 6,
-          parsing: false
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      interaction: {
-        intersect: false,
-        mode: 'index'
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            title: function (context) {
-              const xValue = context[0].parsed.x
-              return `${xValue.toFixed(2)} km`
-            },
-            label: function (context) {
-              const yValue = context.parsed.y
-              return `Elevation: ${Math.round(yValue)} m`
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          type: 'linear',
-          display: true,
-          title: {
-            display: true,
-            text: 'Distance (km)'
-          },
-          min: 0,
-          max: cumulativeKm[cumulativeKm.length - 1],
-          ticks: {
-            callback: function (value: any) {
-              return `${Number(value).toFixed(1)} km`
-            }
-          }
-        },
-        y: {
-          display: true,
-          title: {
-            display: true,
-            text: 'Elevation (m)'
-          },
-          min: Math.min(...points.map((p) => p.elevation))
-        }
-      },
-      onHover: (event, activeElements) => {
-        if (activeElements.length > 0) {
-          const pointIndex = activeElements[0].index
-          updateCursorPositionFromChart(pointIndex)
-        }
-      }
-    }
-  })
-
-  if (!isTestEnv) {
-    console.log('Chart created successfully:', elevationChart.value)
   }
 }
 
@@ -1068,9 +853,6 @@ onMounted(() => {
 onUnmounted(() => {
   if (map.value) {
     map.value.remove()
-  }
-  if (elevationChart.value) {
-    elevationChart.value.destroy()
   }
   if (mapMarker.value) {
     mapMarker.value.remove()
@@ -1524,17 +1306,6 @@ onUnmounted(() => {
   overflow: hidden;
   flex: 1;
   min-height: 200px; /* Fallback minimum height */
-}
-
-.chart-container {
-  height: 100%;
-  position: relative;
-  flex: 1;
-}
-
-.elevation-chart {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 /* Comments Section Styles */

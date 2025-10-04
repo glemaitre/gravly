@@ -250,13 +250,11 @@ describe('SegmentDetail', () => {
 
       // Set some refs to test cleanup
       wrapper.vm.map = mockMapInstance
-      wrapper.vm.elevationChart = mockChart
       wrapper.vm.mapMarker = mockMarker
 
       wrapper.unmount()
 
       expect(mockMapInstance.remove).toHaveBeenCalled()
-      expect(mockChart.destroy).toHaveBeenCalled()
       expect(mockMarker.remove).toHaveBeenCalled()
     })
   })
