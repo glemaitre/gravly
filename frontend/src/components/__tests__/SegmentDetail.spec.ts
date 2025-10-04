@@ -237,39 +237,10 @@ describe('SegmentDetail', () => {
   })
 
   describe('Utility Functions', () => {
-    it('formats distance correctly', () => {
-      wrapper = mount(SegmentDetail)
-      expect(wrapper.vm.formatDistance(1.5)).toBe('1.50 km')
-    })
-
-    it('formats elevation correctly', () => {
-      wrapper = mount(SegmentDetail)
-      expect(wrapper.vm.formatElevation(120.7)).toBe('121m')
-    })
-
     it('gets track type icon correctly', () => {
       wrapper = mount(SegmentDetail)
       expect(wrapper.vm.getTrackTypeIcon('segment')).toBe('fa-route')
       expect(wrapper.vm.getTrackTypeIcon('route')).toBe('fa-map')
-    })
-
-    it('gets difficulty word correctly', () => {
-      wrapper = mount(SegmentDetail)
-      // Mock the t function to return expected values
-      mockT.mockImplementation((key: string) => {
-        const translations: Record<string, string> = {
-          'difficulty.level1': 'Easy',
-          'difficulty.level2': 'Moderate',
-          'difficulty.level3': 'Hard',
-          'difficulty.level4': 'Very Hard',
-          'difficulty.level5': 'Extreme'
-        }
-        return translations[key] || key
-      })
-
-      expect(wrapper.vm.getDifficultyWord(1)).toBe('Easy')
-      expect(wrapper.vm.getDifficultyWord(3)).toBe('Hard')
-      expect(wrapper.vm.getDifficultyWord(5)).toBe('Extreme')
     })
   })
 

@@ -1565,8 +1565,9 @@ describe('Editor Image Upload', () => {
       type: 'image/jpeg'
     })
 
-    // Mock FileReader behavior
+    // Mock FileReader behavior to simulate async file reading
     mockFileReader.readAsDataURL.mockImplementation(() => {
+      // Use setTimeout to simulate async FileReader behavior
       setTimeout(() => {
         if (mockFileReader.onload) {
           mockFileReader.onload({
@@ -1589,9 +1590,9 @@ describe('Editor Image Upload', () => {
     // Simulate file selection by directly calling the handler
     wrapper.vm.handleImageSelect({ target: { files: fileList } } as any)
 
-    // Wait for async operations
+    // Wait for async operations - FileReader.readAsDataURL is async
     await nextTick()
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await new Promise((resolve) => setTimeout(resolve, 50)) // Increased timeout to allow FileReader to complete
 
     // Check that the image was added to the commentary but not uploaded yet
     expect(vm.commentary.images.length).toBeGreaterThanOrEqual(1)
