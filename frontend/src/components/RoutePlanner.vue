@@ -48,10 +48,10 @@
         <div v-if="routeMode === 'startEnd'" class="guided-todo-list">
           <h4 class="todo-title">
             {{ t('routePlanner.guidedTodoList') }}
-            <span class="todo-subtitle">{{
-              t('routePlanner.guidedTodoInstructions')
-            }}</span>
           </h4>
+          <p class="todo-instructions">
+            {{ t('routePlanner.guidedTodoInstructions') }}
+          </p>
           <div class="todo-items">
             <div
               class="todo-item"
@@ -117,9 +117,9 @@
               v-if="hasActiveFilters()"
               class="clear-filters-btn"
               @click="clearFilters"
-              :title="t('routePlanner.clearFilters')"
             >
               <i class="fa-solid fa-times"></i>
+              <span>{{ t('routePlanner.clearFilters') }}</span>
             </button>
           </div>
 
@@ -5325,19 +5325,11 @@ function clearAllSegments() {
 }
 
 .todo-title {
-  margin: 0 0 1rem 0;
+  margin: 0 0 0.5rem 0;
   color: #374151;
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
-}
-
-.todo-subtitle {
-  color: #6b7280;
-  font-size: 0.75rem;
-  font-weight: 400;
-  font-style: italic;
-  margin-left: 0.25rem;
 }
 
 .todo-instructions {
@@ -6249,9 +6241,9 @@ function clearAllSegments() {
 
 .filters-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .filters-title {
@@ -6259,10 +6251,7 @@ function clearAllSegments() {
   color: #374151;
   font-size: 1rem;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex: 1;
+  text-align: center;
 }
 
 .filters-title i {
@@ -6274,20 +6263,25 @@ function clearAllSegments() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 6px;
   color: #dc2626;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .clear-filters-btn:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
+}
+
+.clear-filters-btn i {
+  font-size: 0.875rem;
 }
 
 .filters-content {
