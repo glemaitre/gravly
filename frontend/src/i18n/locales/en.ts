@@ -301,6 +301,29 @@ export default {
     noSegmentsSelectedMessage:
       'Start selecting segments on the map to build your route.',
     removeSegment: 'Remove segment',
+    // Segment filters
+    filters: 'Filters',
+    clearFilters: 'Clear all filters',
+    difficulty: 'Difficulty',
+    surface: 'Surface',
+    tire: 'Tires',
+    tireDry: 'Tires (Dry)',
+    tireWet: 'Tires (Wet)',
+    dry: 'Dry',
+    wet: 'Wet',
+    surfaceTypes: {
+      bigStoneRoad: 'Big Stone Road',
+      brokenPavedRoad: 'Broken Paved Road',
+      dirtyRoad: 'Dirty Road',
+      fieldTrail: 'Field Trail',
+      forestTrail: 'Forest Trail',
+      smallStoneRoad: 'Small Stone Road'
+    },
+    tireTypes: {
+      slick: 'Slick',
+      semiSlick: 'Semi-Slick',
+      knobs: 'Knobs'
+    },
     // Waypoint context menu
     deleteWaypoint: 'Delete Waypoint',
     // Units

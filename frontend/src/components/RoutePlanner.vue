@@ -104,6 +104,400 @@
           </div>
         </div>
 
+        <!-- Segment Filters -->
+        <div
+          v-if="routeMode === 'startEnd' && startWaypoint && endWaypoint"
+          class="segment-filters-section"
+        >
+          <div class="filters-header">
+            <h4 class="filters-title">
+              {{ t('routePlanner.filters') }}
+            </h4>
+            <button
+              v-if="hasActiveFilters()"
+              class="clear-filters-btn"
+              @click="clearFilters"
+              :title="t('routePlanner.clearFilters')"
+            >
+              <i class="fa-solid fa-times"></i>
+            </button>
+          </div>
+
+          <div class="filters-content">
+            <!-- Difficulty Filter -->
+            <div class="filter-group">
+              <h5 class="filter-group-title">
+                <i class="fa-solid fa-signal"></i>
+                {{ t('routePlanner.difficulty') }}
+              </h5>
+              <div class="difficulty-range-container">
+                <div class="difficulty-sliders">
+                  <div class="slider-track-background"></div>
+                  <div
+                    class="slider-track-fill"
+                    :style="{
+                      left: `${((segmentFilters.difficultyMin - 1) / 4) * 100}%`,
+                      right: `${((5 - segmentFilters.difficultyMax) / 4) * 100}%`
+                    }"
+                  ></div>
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="1"
+                    v-model.number="segmentFilters.difficultyMin"
+                    @input="onDifficultyMinChange"
+                    class="difficulty-slider difficulty-slider-min"
+                  />
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    step="1"
+                    v-model.number="segmentFilters.difficultyMax"
+                    @input="onDifficultyMaxChange"
+                    class="difficulty-slider difficulty-slider-max"
+                  />
+                </div>
+                <div class="difficulty-range-ticks">
+                  <span
+                    v-for="tick in [1, 2, 3, 4, 5]"
+                    :key="tick"
+                    class="tick-mark"
+                    :class="{
+                      active:
+                        tick >= segmentFilters.difficultyMin &&
+                        tick <= segmentFilters.difficultyMax
+                    }"
+                  >
+                    {{ tick }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Surface Type Filter -->
+            <div class="filter-group">
+              <h5 class="filter-group-title">
+                <i class="fa-solid fa-road"></i>
+                {{ t('routePlanner.surface') }}
+              </h5>
+              <div class="filter-options">
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{
+                      active: segmentFilters.surface.includes('big-stone-road')
+                    }"
+                    @click="toggleFilter('surface', 'big-stone-road')"
+                  >
+                    <img
+                      :src="getSurfaceImage('big-stone-road')"
+                      alt="Big Stone Road"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('big-stone-road')"
+                      alt="Big Stone Road"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.bigStoneRoad')
+                    }}</span>
+                  </div>
+                </div>
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{
+                      active: segmentFilters.surface.includes('broken-paved-road')
+                    }"
+                    @click="toggleFilter('surface', 'broken-paved-road')"
+                  >
+                    <img
+                      :src="getSurfaceImage('broken-paved-road')"
+                      alt="Broken Paved Road"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('broken-paved-road')"
+                      alt="Broken Paved Road"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.brokenPavedRoad')
+                    }}</span>
+                  </div>
+                </div>
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{ active: segmentFilters.surface.includes('dirty-road') }"
+                    @click="toggleFilter('surface', 'dirty-road')"
+                  >
+                    <img
+                      :src="getSurfaceImage('dirty-road')"
+                      alt="Dirty Road"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('dirty-road')"
+                      alt="Dirty Road"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.dirtyRoad')
+                    }}</span>
+                  </div>
+                </div>
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{ active: segmentFilters.surface.includes('field-trail') }"
+                    @click="toggleFilter('surface', 'field-trail')"
+                  >
+                    <img
+                      :src="getSurfaceImage('field-trail')"
+                      alt="Field Trail"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('field-trail')"
+                      alt="Field Trail"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.fieldTrail')
+                    }}</span>
+                  </div>
+                </div>
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{ active: segmentFilters.surface.includes('forest-trail') }"
+                    @click="toggleFilter('surface', 'forest-trail')"
+                  >
+                    <img
+                      :src="getSurfaceImage('forest-trail')"
+                      alt="Forest Trail"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('forest-trail')"
+                      alt="Forest Trail"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.forestTrail')
+                    }}</span>
+                  </div>
+                </div>
+                <div class="filter-btn-wrapper">
+                  <button
+                    class="filter-btn filter-btn-with-image"
+                    :class="{
+                      active: segmentFilters.surface.includes('small-stone-road')
+                    }"
+                    @click="toggleFilter('surface', 'small-stone-road')"
+                  >
+                    <img
+                      :src="getSurfaceImage('small-stone-road')"
+                      alt="Small Stone Road"
+                      class="surface-filter-image"
+                    />
+                  </button>
+                  <div class="custom-tooltip">
+                    <img
+                      :src="getSurfaceImage('small-stone-road')"
+                      alt="Small Stone Road"
+                      class="tooltip-image"
+                    />
+                    <span class="tooltip-text">{{
+                      t('routePlanner.surfaceTypes.smallStoneRoad')
+                    }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tire Filter -->
+            <div class="filter-group">
+              <h5 class="filter-group-title">
+                <i class="fa-solid fa-circle"></i>
+                {{ t('routePlanner.tire') }}
+              </h5>
+
+              <!-- Dry Tires -->
+              <div class="tire-condition-group">
+                <div class="tire-condition-header">
+                  <i class="fa-solid fa-sun"></i>
+                  <span>{{ t('routePlanner.dry') }}</span>
+                </div>
+                <div class="filter-options">
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireDry.includes('slick') }"
+                      @click="toggleFilter('tireDry', 'slick')"
+                    >
+                      <img
+                        :src="getTireImage('slick')"
+                        alt="Slick"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('slick')"
+                        alt="Slick"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.slick')
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireDry.includes('semi-slick') }"
+                      @click="toggleFilter('tireDry', 'semi-slick')"
+                    >
+                      <img
+                        :src="getTireImage('semi-slick')"
+                        alt="Semi-Slick"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('semi-slick')"
+                        alt="Semi-Slick"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.semiSlick')
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireDry.includes('knobs') }"
+                      @click="toggleFilter('tireDry', 'knobs')"
+                    >
+                      <img
+                        :src="getTireImage('knobs')"
+                        alt="Knobs"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('knobs')"
+                        alt="Knobs"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.knobs')
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Wet Tires -->
+              <div class="tire-condition-group">
+                <div class="tire-condition-header">
+                  <i class="fa-solid fa-cloud-rain"></i>
+                  <span>{{ t('routePlanner.wet') }}</span>
+                </div>
+                <div class="filter-options">
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireWet.includes('slick') }"
+                      @click="toggleFilter('tireWet', 'slick')"
+                    >
+                      <img
+                        :src="getTireImage('slick')"
+                        alt="Slick"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('slick')"
+                        alt="Slick"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.slick')
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireWet.includes('semi-slick') }"
+                      @click="toggleFilter('tireWet', 'semi-slick')"
+                    >
+                      <img
+                        :src="getTireImage('semi-slick')"
+                        alt="Semi-Slick"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('semi-slick')"
+                        alt="Semi-Slick"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.semiSlick')
+                      }}</span>
+                    </div>
+                  </div>
+                  <div class="filter-btn-wrapper">
+                    <button
+                      class="filter-btn filter-btn-with-image"
+                      :class="{ active: segmentFilters.tireWet.includes('knobs') }"
+                      @click="toggleFilter('tireWet', 'knobs')"
+                    >
+                      <img
+                        :src="getTireImage('knobs')"
+                        alt="Knobs"
+                        class="tire-filter-image"
+                      />
+                    </button>
+                    <div class="custom-tooltip">
+                      <img
+                        :src="getTireImage('knobs')"
+                        alt="Knobs"
+                        class="tooltip-image tooltip-image-tire"
+                      />
+                      <span class="tooltip-text">{{
+                        t('routePlanner.tireTypes.knobs')
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Selected Segments -->
         <div
           v-if="routeMode === 'startEnd' && startWaypoint && endWaypoint"
@@ -317,6 +711,19 @@ import {
 import type { TrackResponse, GPXDataResponse, TrackWithGPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 
+// Import tire images
+import tireSlickUrl from '../assets/images/slick.png'
+import tireSemiSlickUrl from '../assets/images/semi-slick.png'
+import tireKnobsUrl from '../assets/images/ext.png'
+
+// Import surface images
+import bigStoneRoadUrl from '../assets/images/big-stone-road.jpeg'
+import brokenPavedRoadUrl from '../assets/images/broken-paved-road.jpeg'
+import dirtyRoadUrl from '../assets/images/dirty-road.jpeg'
+import fieldTrailUrl from '../assets/images/field-trail.jpeg'
+import forestTrailUrl from '../assets/images/forest-trail.jpeg'
+import smallStoneRoadUrl from '../assets/images/small-stone-road.jpeg'
+
 // Register Chart.js components
 Chart.register(
   LineController,
@@ -360,6 +767,32 @@ const segmentMapLayers = new Map<
 const gpxDataCache = new Map<number, TrackWithGPXDataResponse>()
 const loadingGPXData = new Set<number>()
 const isSearchingSegments = ref(false)
+
+// Segment filter state
+const segmentFilters = ref({
+  difficultyMin: 1, // Minimum difficulty level (1-5)
+  difficultyMax: 5, // Maximum difficulty level (1-5)
+  surface: [] as string[], // Array of surface types
+  tireDry: [] as string[], // Array of tire types for dry conditions
+  tireWet: [] as string[] // Array of tire types for wet conditions
+})
+
+// Tire images mapping
+const tireImages = {
+  slick: tireSlickUrl,
+  'semi-slick': tireSemiSlickUrl,
+  knobs: tireKnobsUrl
+}
+
+// Surface images mapping
+const surfaceImages = {
+  'broken-paved-road': brokenPavedRoadUrl,
+  'dirty-road': dirtyRoadUrl,
+  'small-stone-road': smallStoneRoadUrl,
+  'big-stone-road': bigStoneRoadUrl,
+  'field-trail': fieldTrailUrl,
+  'forest-trail': forestTrailUrl
+}
 
 // Drag and drop state for segment reordering
 const draggedIndex = ref<number | null>(null)
@@ -4313,6 +4746,139 @@ function reverseSegment(segment: TrackResponse) {
   }
 }
 
+// Segment filter functions
+function toggleFilter(type: 'surface' | 'tireDry' | 'tireWet', value: any) {
+  const filters = segmentFilters.value[type] as any[]
+  const index = filters.indexOf(value)
+
+  if (index >= 0) {
+    filters.splice(index, 1)
+  } else {
+    filters.push(value)
+  }
+
+  applyFiltersToSegments()
+}
+
+function onDifficultyMinChange() {
+  // Ensure min doesn't exceed max
+  if (segmentFilters.value.difficultyMin > segmentFilters.value.difficultyMax) {
+    segmentFilters.value.difficultyMin = segmentFilters.value.difficultyMax
+  }
+  applyFiltersToSegments()
+}
+
+function onDifficultyMaxChange() {
+  // Ensure max doesn't go below min
+  if (segmentFilters.value.difficultyMax < segmentFilters.value.difficultyMin) {
+    segmentFilters.value.difficultyMax = segmentFilters.value.difficultyMin
+  }
+  applyFiltersToSegments()
+}
+
+function clearFilters() {
+  segmentFilters.value.difficultyMin = 1
+  segmentFilters.value.difficultyMax = 5
+  segmentFilters.value.surface = []
+  segmentFilters.value.tireDry = []
+  segmentFilters.value.tireWet = []
+  applyFiltersToSegments()
+}
+
+function applyFiltersToSegments() {
+  // Hide/show segments based on filters
+  availableSegments.value.forEach((segment) => {
+    const segmentId = segment.id.toString()
+    const layerData = segmentMapLayers.get(segmentId)
+
+    if (layerData && layerData.polyline) {
+      const passesFilter = segmentPassesFilters(segment)
+
+      if (passesFilter) {
+        // Show segment
+        if (!map.hasLayer(layerData.polyline)) {
+          map.addLayer(layerData.polyline)
+        }
+        layerData.polyline.setStyle({ opacity: 0.8 })
+      } else {
+        // Hide segment
+        if (map.hasLayer(layerData.polyline)) {
+          map.removeLayer(layerData.polyline)
+        }
+      }
+    }
+  })
+}
+
+function segmentPassesFilters(segment: TrackResponse): boolean {
+  // Check if any filters are active (not at default values)
+  const isDifficultyFiltered =
+    segmentFilters.value.difficultyMin !== 1 || segmentFilters.value.difficultyMax !== 5
+  const hasActiveFilters =
+    isDifficultyFiltered ||
+    segmentFilters.value.surface.length > 0 ||
+    segmentFilters.value.tireDry.length > 0 ||
+    segmentFilters.value.tireWet.length > 0
+
+  if (!hasActiveFilters) {
+    return true
+  }
+
+  // Check difficulty filter (range)
+  if (isDifficultyFiltered) {
+    if (
+      segment.difficulty_level < segmentFilters.value.difficultyMin ||
+      segment.difficulty_level > segmentFilters.value.difficultyMax
+    ) {
+      return false
+    }
+  }
+
+  // Check surface filter
+  if (
+    segmentFilters.value.surface.length > 0 &&
+    !segmentFilters.value.surface.includes(segment.surface_type)
+  ) {
+    return false
+  }
+
+  // Check tire dry filter
+  if (
+    segmentFilters.value.tireDry.length > 0 &&
+    !segmentFilters.value.tireDry.includes(segment.tire_dry)
+  ) {
+    return false
+  }
+
+  // Check tire wet filter
+  if (
+    segmentFilters.value.tireWet.length > 0 &&
+    !segmentFilters.value.tireWet.includes(segment.tire_wet)
+  ) {
+    return false
+  }
+
+  return true
+}
+
+function hasActiveFilters(): boolean {
+  return (
+    segmentFilters.value.difficultyMin !== 1 ||
+    segmentFilters.value.difficultyMax !== 5 ||
+    segmentFilters.value.surface.length > 0 ||
+    segmentFilters.value.tireDry.length > 0 ||
+    segmentFilters.value.tireWet.length > 0
+  )
+}
+
+function getTireImage(tireType: string): string {
+  return tireImages[tireType as keyof typeof tireImages] || tireSlickUrl
+}
+
+function getSurfaceImage(surfaceType: string): string {
+  return surfaceImages[surfaceType as keyof typeof surfaceImages] || brokenPavedRoadUrl
+}
+
 // Drag and drop functions for segment reordering
 function handleDragStart(event: DragEvent, index: number) {
   draggedIndex.value = index
@@ -4755,6 +5321,7 @@ function clearAllSegments() {
   border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
   border-radius: 8px;
   padding: 1rem;
+  margin-bottom: 1rem;
 }
 
 .todo-title {
@@ -4805,13 +5372,13 @@ function clearAllSegments() {
 }
 
 .todo-item.completed {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
   cursor: help;
 }
 
 .todo-item.completed .todo-text {
-  color: #059669;
+  color: #1d4ed8;
 }
 
 .todo-checkbox {
@@ -4829,8 +5396,8 @@ function clearAllSegments() {
 }
 
 .todo-item.completed .todo-checkbox {
-  color: #059669;
-  background: rgba(34, 197, 94, 0.2);
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .todo-checkbox i {
@@ -5666,6 +6233,429 @@ function clearAllSegments() {
   font-size: 0.6rem;
   color: #333;
   font-weight: 500;
+}
+
+/* Segment filters section styles */
+.segment-filters-section {
+  background: rgba(var(--brand-primary-rgb), 0.05);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.2);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.filters-title {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.filters-title i {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.clear-filters-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.clear-filters-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.filters-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group-title {
+  margin: 0;
+  color: #374151;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.filter-group-title i {
+  font-size: 0.75rem;
+  color: var(--brand-primary);
+}
+
+.filter-group-title .fa-cloud-rain {
+  color: #3b82f6; /* Blue color for cloud icon */
+}
+
+/* Tire condition grouping */
+.tire-condition-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(229, 231, 235, 0.8);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.tire-condition-group:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(209, 213, 219, 0.9);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.tire-condition-group:first-of-type {
+  margin-top: 0.5rem;
+}
+
+.tire-condition-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-bottom: 0.25rem;
+}
+
+.tire-condition-header i {
+  font-size: 0.7rem;
+}
+
+.tire-condition-header .fa-sun {
+  color: #f59e0b; /* Orange/yellow for sun */
+}
+
+.tire-condition-header .fa-cloud-rain {
+  color: #3b82f6; /* Blue for rain */
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Difficulty range slider styles */
+.difficulty-range-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+}
+
+.difficulty-sliders {
+  position: relative;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin: 0 1.1rem;
+}
+
+.slider-track-background {
+  position: absolute;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  z-index: 1;
+}
+
+.slider-track-fill {
+  position: absolute;
+  height: 6px;
+  background: var(--brand-primary);
+  border-radius: 3px;
+  z-index: 2;
+}
+
+.difficulty-slider {
+  position: absolute;
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  outline: none;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.difficulty-slider::-webkit-slider-track {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+  border-radius: 3px;
+}
+
+.difficulty-slider::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+  border-radius: 3px;
+}
+
+.difficulty-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--brand-primary);
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 4;
+  margin-left: -9px; /* Half of thumb width to center it with tick marks */
+}
+
+.difficulty-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--brand-primary);
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 4;
+  margin-left: -9px; /* Half of thumb width to center it with tick marks */
+}
+
+.difficulty-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.difficulty-slider::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}
+
+.difficulty-range-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.tick-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+  padding: 0.25rem;
+  margin: 0 0.2rem 0 0.2rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.tick-mark.active {
+  background: var(--brand-primary);
+  color: white;
+  font-weight: 600;
+}
+
+/* Keep tire filters on one row */
+.filter-group:has(.tire-filter-image) .filter-options {
+  flex-wrap: nowrap;
+}
+
+.filter-btn {
+  padding: 0.35rem 0.65rem;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(209, 213, 219, 0.8);
+  border-radius: 4px;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: normal;
+  text-align: center;
+}
+
+.filter-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(var(--brand-primary-rgb), 0.4);
+  color: #c2410c;
+}
+
+.filter-btn.active {
+  background: var(--brand-primary);
+  border-color: #ea580c;
+  color: white;
+  font-weight: 600;
+}
+
+.filter-btn.active:hover {
+  background: #ea580c;
+  border-color: #c2410c;
+}
+
+/* Filter button wrapper for tooltip positioning */
+.filter-btn-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Tire filter buttons - 3 per row, no wrapping */
+.filter-group:has(.tire-filter-image) .filter-btn-wrapper {
+  flex: 1;
+  max-width: calc(33.333% - 0.34rem);
+}
+
+/* Surface filter buttons - 3 per row, can wrap to 2nd row */
+.filter-group:has(.surface-filter-image) .filter-btn-wrapper {
+  flex: 0 1 calc(33.333% - 0.34rem);
+}
+
+.filter-btn-with-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.filter-btn-with-image span {
+  text-align: center;
+  width: 100%;
+}
+
+.tire-filter-image {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.surface-filter-image {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Custom Tooltip Styles */
+.custom-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease,
+    transform 0.2s ease;
+  z-index: 1000;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.filter-btn-wrapper:hover .custom-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Arrow for tooltip */
+.custom-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: white;
+}
+
+.custom-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 7px solid transparent;
+  border-top-color: #e5e7eb;
+  margin-top: 1px;
+}
+
+.tooltip-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip-image-tire {
+  object-fit: contain;
+  background: #f9fafb;
+}
+
+.tooltip-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+  max-width: 150px;
 }
 
 /* Selected segments section styles */

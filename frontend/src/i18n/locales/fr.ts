@@ -306,6 +306,29 @@ export default {
     noSegmentsSelectedMessage:
       'Commencez par sélectionner des segments sur la carte pour construire votre parcours.',
     removeSegment: 'Supprimer le segment',
+    // Segment filters
+    filters: 'Filtres',
+    clearFilters: 'Effacer tous les filtres',
+    difficulty: 'Difficulté',
+    surface: 'Surface',
+    tire: 'Pneus',
+    tireDry: 'Pneus (Sec)',
+    tireWet: 'Pneus (Mouillé)',
+    dry: 'Sec',
+    wet: 'Mouillé',
+    surfaceTypes: {
+      bigStoneRoad: 'Route Grosse Pierre',
+      brokenPavedRoad: 'Route Pavée Cassée',
+      dirtyRoad: 'Chemin de Terre',
+      fieldTrail: 'Sentier de Champ',
+      forestTrail: 'Sentier Forestier',
+      smallStoneRoad: 'Route Petite Pierre'
+    },
+    tireTypes: {
+      slick: 'Slick',
+      semiSlick: 'Semi-Slick',
+      knobs: 'Crampons'
+    },
     // Waypoint context menu
     deleteWaypoint: 'Supprimer le point de passage',
     // Units
