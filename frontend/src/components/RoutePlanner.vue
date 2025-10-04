@@ -4,13 +4,13 @@
     <div class="sidebar-menu" :class="{ 'sidebar-open': showSidebar }">
       <div class="sidebar-content">
         <div class="sidebar-header">
+          <h4 class="sidebar-title">{{ t('routePlanner.routingMode') }}</h4>
           <button class="sidebar-close" @click="toggleSidebar">
             <i class="fa-solid fa-times"></i>
           </button>
         </div>
 
         <div class="sidebar-options">
-          <h4 class="mode-toggle-title">{{ t('routePlanner.routingMode') }}</h4>
           <div class="mode-toggle-container">
             <div class="mode-toggle">
               <span class="toggle-label">
@@ -110,9 +110,18 @@
           class="segment-filters-section"
         >
           <div class="filters-header">
-            <h4 class="filters-title">
-              {{ t('routePlanner.filters') }}
-            </h4>
+            <button
+              class="filters-toggle-btn"
+              @click="filtersExpanded = !filtersExpanded"
+            >
+              <h4 class="filters-title">
+                {{ t('routePlanner.filters') }}
+              </h4>
+              <i
+                class="fa-solid fa-chevron-down filters-chevron"
+                :class="{ expanded: filtersExpanded }"
+              ></i>
+            </button>
             <button
               v-if="hasActiveFilters()"
               class="clear-filters-btn"
@@ -123,7 +132,7 @@
             </button>
           </div>
 
-          <div class="filters-content">
+          <div v-show="filtersExpanded" class="filters-content">
             <!-- Difficulty Filter -->
             <div class="filter-group">
               <h5 class="filter-group-title">
@@ -776,6 +785,9 @@ const segmentFilters = ref({
   tireDry: [] as string[], // Array of tire types for dry conditions
   tireWet: [] as string[] // Array of tire types for wet conditions
 })
+
+// Filters expansion state
+const filtersExpanded = ref(false)
 
 // Tire images mapping
 const tireImages = {
@@ -5169,26 +5181,35 @@ function clearAllSegments() {
 
 .sidebar-header {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sidebar-title {
+  margin: 0;
+  color: #374151;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .sidebar-close {
   width: 32px;
   height: 32px;
   border: none;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: rgba(var(--brand-primary-rgb), 0.1);
+  color: var(--brand-primary);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
 .sidebar-close:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(var(--brand-primary-rgb), 0.2);
   transform: scale(1.05);
 }
 
@@ -5214,14 +5235,6 @@ function clearAllSegments() {
   font-size: 0.875rem;
   text-align: center;
   font-style: italic;
-}
-
-.mode-toggle-title {
-  margin: 0 0 1rem 0;
-  color: #374151;
-  font-size: 1rem;
-  font-weight: 600;
-  text-align: center;
 }
 
 .mode-toggle-container {
@@ -6242,8 +6255,25 @@ function clearAllSegments() {
 .filters-header {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 0.75rem;
+}
+
+.filters-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+}
+
+.filters-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .filters-title {
@@ -6252,11 +6282,17 @@ function clearAllSegments() {
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
+  flex: 1;
 }
 
-.filters-title i {
-  font-size: 0.9rem;
+.filters-chevron {
+  font-size: 0.875rem;
   color: #6b7280;
+  transition: transform 0.3s ease;
+}
+
+.filters-chevron.expanded {
+  transform: rotate(180deg);
 }
 
 .clear-filters-btn {
@@ -6265,19 +6301,20 @@ function clearAllSegments() {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(var(--brand-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--brand-primary-rgb), 0.3);
   border-radius: 6px;
-  color: #dc2626;
+  color: var(--brand-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.875rem;
   font-weight: 500;
+  align-self: center;
 }
 
 .clear-filters-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(var(--brand-primary-rgb), 0.15);
+  border-color: rgba(var(--brand-primary-rgb), 0.4);
 }
 
 .clear-filters-btn i {
