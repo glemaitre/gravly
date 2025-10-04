@@ -6395,6 +6395,8 @@ function clearAllSegments() {
   background: #e5e7eb;
   border-radius: 3px;
   z-index: 1;
+  left: -9px;
+  right: -9px;
 }
 
 .slider-track-fill {
@@ -6407,7 +6409,7 @@ function clearAllSegments() {
 
 .difficulty-slider {
   position: absolute;
-  width: 100%;
+  width: calc(100% + 18px);
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
@@ -6415,6 +6417,7 @@ function clearAllSegments() {
   outline: none;
   pointer-events: none;
   z-index: 3;
+  left: -9px;
 }
 
 .difficulty-slider::-webkit-slider-track {
