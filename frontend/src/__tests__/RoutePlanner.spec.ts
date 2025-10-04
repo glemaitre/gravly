@@ -685,30 +685,8 @@ describe('RoutePlanner', () => {
     it('disables undo/redo buttons initially', () => expect(wrapper).toBeDefined())
   })
 
-  describe('Elevation Section', () => {
-    beforeEach(async () => {
-      wrapper = mount(RoutePlanner, {
-        global: {
-          plugins: [i18n]
-        }
-      })
-      await nextTick()
-    })
-
-    it('renders elevation section', () => expect(wrapper).toBeDefined())
-
-    it('shows elevation toggle button', () => expect(wrapper).toBeDefined())
-
-    it('shows elevation stats in toggle', () => expect(wrapper).toBeDefined())
-
-    it('toggles elevation section visibility', async () => {
-      // don't check complex DOM state checks that require full mocking
-      expect(wrapper).toBeDefined()
-    })
-
-    it('shows chart when elevation section is expanded', async () =>
-      expect(wrapper).toBeDefined())
-  })
+  // NOTE: Unit tests for ElevationProfile component are now in ElevationProfile.spec.ts
+  // This file focuses on integration tests for the RoutePlanner with elevation features
 
   describe('Waypoint Management', () => {
     beforeEach(async () => {
