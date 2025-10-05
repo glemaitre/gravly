@@ -44,7 +44,7 @@ def create_upload_router(temp_dir, storage_manager: StorageManager | None) -> AP
             The track information of the uploaded GPX file.
         """
         # Import globals from main
-        from ..main import temp_dir as global_temp_dir
+        from ..dependencies import temp_dir as global_temp_dir
 
         if not file.filename.endswith(".gpx"):
             raise HTTPException(status_code=400, detail="File must be a GPX file")
@@ -119,8 +119,8 @@ def create_upload_router(temp_dir, storage_manager: StorageManager | None) -> AP
             Dictionary containing image_id and image_url.
         """
         # Import globals from main
-        from ..main import storage_manager as global_storage_manager
-        from ..main import temp_dir as global_temp_dir
+        from ..dependencies import storage_manager as global_storage_manager
+        from ..dependencies import temp_dir as global_temp_dir
 
         # Basic content-type validation
         if not file.content_type or not file.content_type.startswith("image/"):

@@ -24,7 +24,7 @@ def client(tmp_path, app):
 def test_authorization_check_unauthorized_user(client):
     """Test authorization check for unauthorized user."""
     # Test with unauthorized Strava ID
-    with patch("src.main.SessionLocal", None):
+    with patch("src.dependencies.SessionLocal", None):
         response = client.get("/api/auth/check-authorization?strava_id=123456")
 
     # Should return 503 when database is not initialized in test env
@@ -49,7 +49,7 @@ def test_authorization_check_missing_strava_id(client):
 
 def test_authorization_users_list(client):
     """Test listing authorized users endpoint."""
-    with patch("src.main.SessionLocal", None):
+    with patch("src.dependencies.SessionLocal", None):
         response = client.get("/api/auth/users")
 
     # Should return 503 when database is not initialized in test env
@@ -91,7 +91,7 @@ def test_authorization_check_authorized_user_success(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/check-authorization?strava_id=820773")
 
     assert response.status_code == 200
@@ -123,7 +123,7 @@ def test_authorization_check_unauthorized_user_success(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/check-authorization?strava_id=123456")
 
     assert response.status_code == 200
@@ -149,7 +149,7 @@ def test_authorization_check_database_error(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/check-authorization?strava_id=820773")
 
     assert response.status_code == 500
@@ -205,7 +205,7 @@ def test_authorization_users_list_success(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/users")
 
     assert response.status_code == 200
@@ -241,7 +241,7 @@ def test_authorization_users_list_empty(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/users")
 
     assert response.status_code == 200
@@ -266,7 +266,7 @@ def test_authorization_users_list_database_error(client):
         def __call__(self):
             return MockSession()
 
-    with patch("src.main.SessionLocal", new=MockSessionLocal()):
+    with patch("src.dependencies.SessionLocal", new=MockSessionLocal()):
         response = client.get("/api/auth/users")
 
     assert response.status_code == 500

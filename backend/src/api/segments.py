@@ -71,9 +71,9 @@ def create_segments_router(
             raise HTTPException(status_code=422, detail="Invalid track type")
 
         # Import globals from main
-        from ..main import SessionLocal as global_session_local
-        from ..main import storage_manager as global_storage_manager
-        from ..main import temp_dir as global_temp_dir
+        from ..dependencies import SessionLocal as global_session_local
+        from ..dependencies import storage_manager as global_storage_manager
+        from ..dependencies import temp_dir as global_temp_dir
         from ..utils.gpx import generate_gpx_segment
 
         # Import utility functions from their correct modules
@@ -336,7 +336,7 @@ def create_segments_router(
             Maximum number of segments to return (default: 50, max: 1000)
         """
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")
@@ -452,8 +452,8 @@ def create_segments_router(
             The GPX XML content only
         """
         # Import globals from main
-        from ..main import SessionLocal as global_session_local
-        from ..main import storage_manager as global_storage_manager
+        from ..dependencies import SessionLocal as global_session_local
+        from ..dependencies import storage_manager as global_storage_manager
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")
@@ -516,7 +516,7 @@ def create_segments_router(
             Basic track information
         """
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")
@@ -574,8 +574,8 @@ def create_segments_router(
             The parsed GPX data with points, stats, and bounds
         """
         # Import globals from main
-        from ..main import SessionLocal as global_session_local
-        from ..main import storage_manager as global_storage_manager
+        from ..dependencies import SessionLocal as global_session_local
+        from ..dependencies import storage_manager as global_storage_manager
         from ..utils.gpx import extract_from_gpx_file
 
         if not global_session_local:
@@ -652,7 +652,7 @@ def create_segments_router(
             List of track images with their metadata
         """
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")
@@ -715,7 +715,7 @@ def create_segments_router(
             List of track videos with their metadata
         """
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")
@@ -824,9 +824,9 @@ def create_segments_router(
             raise HTTPException(status_code=422, detail="Invalid track type")
 
         # Import globals from main
-        from ..main import SessionLocal as global_session_local
-        from ..main import storage_manager as global_storage_manager
-        from ..main import temp_dir as global_temp_dir
+        from ..dependencies import SessionLocal as global_session_local
+        from ..dependencies import storage_manager as global_storage_manager
+        from ..dependencies import temp_dir as global_temp_dir
         from ..utils.gpx import generate_gpx_segment
 
         # Import utility functions from their correct modules
@@ -1066,8 +1066,8 @@ def create_segments_router(
             Success message with deleted track information
         """
         # Import globals from main
-        from ..main import SessionLocal as global_session_local
-        from ..main import storage_manager as global_storage_manager
+        from ..dependencies import SessionLocal as global_session_local
+        from ..dependencies import storage_manager as global_storage_manager
 
         if not global_session_local:
             raise HTTPException(status_code=500, detail="Database not available")

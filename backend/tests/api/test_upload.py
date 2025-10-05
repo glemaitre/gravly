@@ -147,7 +147,7 @@ def test_upload_gpx_no_file(client):
     assert response.status_code == 422  # Validation error
 
 
-@patch("src.main.temp_dir", None)
+@patch("src.dependencies.temp_dir", None)
 def test_upload_gpx_no_temp_directory(client, sample_gpx_file):
     """Test upload when temporary directory is not initialized."""
     with open(sample_gpx_file, "rb") as f:
@@ -267,7 +267,7 @@ def test_upload_image_no_content_type(client):
     assert "File must be an image" in data["detail"]
 
 
-@patch("src.main.temp_dir", None)
+@patch("src.dependencies.temp_dir", None)
 def test_upload_image_no_temp_directory(client, tmp_path):
     """Test upload when temporary directory is not initialized."""
     test_image_content = create_test_image_bytes("JPEG")
@@ -284,7 +284,7 @@ def test_upload_image_no_temp_directory(client, tmp_path):
     assert "Temporary directory not initialized" in data["detail"]
 
 
-@patch("src.main.storage_manager", None)
+@patch("src.dependencies.storage_manager", None)
 def test_upload_image_no_storage_manager(client, tmp_path):
     """Test upload when storage manager is not initialized."""
     test_image_content = create_test_image_bytes("JPEG")
@@ -406,7 +406,7 @@ def test_upload_image_file_write_failure(client, tmp_path):
     assert "Failed to upload image" in data["detail"]
 
 
-@patch("src.main.storage_manager")
+@patch("src.dependencies.storage_manager")
 def test_upload_image_storage_upload_failure(mock_storage_manager, client, tmp_path):
     """Test upload when storage manager upload fails."""
 
@@ -427,7 +427,7 @@ def test_upload_image_storage_upload_failure(mock_storage_manager, client, tmp_p
     assert "Storage upload failed" in data["detail"]
 
 
-@patch("src.main.storage_manager")
+@patch("src.dependencies.storage_manager")
 def test_upload_image_url_generation_failure(mock_storage_manager, client, tmp_path):
     """Test upload when URL generation fails."""
 
@@ -470,7 +470,7 @@ def test_upload_image_cleanup_on_success(mock_cleanup, client, tmp_path):
 def test_upload_image_cleanup_on_failure(mock_cleanup, client, tmp_path):
     """Test that cleanup_local_file is called on upload failure."""
 
-    with patch("src.main.storage_manager") as mock_storage_mgr:
+    with patch("src.dependencies.storage_manager") as mock_storage_mgr:
         mock_storage_mgr.upload_image.side_effect = Exception("Test failure")
 
         test_image_content = create_test_image_bytes("JPEG")

@@ -25,9 +25,16 @@ def create_strava_router(strava_service: StravaService, temp_dir) -> APIRouter:
     @router.get("/auth-url")
     async def get_strava_auth_url(state: str = "strava_auth"):
         """Get Strava OAuth authorization URL"""
+        from ..dependencies import strava as global_strava
+
+        if global_strava is None:
+            raise HTTPException(
+                status_code=500, detail="Strava service not initialized"
+            )
+
         try:
             redirect_uri = "http://localhost:3000/strava-callback"
-            auth_url = strava_service.get_authorization_url(redirect_uri, state)
+            auth_url = global_strava.get_authorization_url(redirect_uri, state)
             return {"auth_url": auth_url}
         except Exception as e:
             logger.error(f"Error generating Strava auth URL: {str(e)}")
@@ -96,7 +103,7 @@ def create_strava_router(strava_service: StravaService, temp_dir) -> APIRouter:
         """Get GPX data for a Strava activity"""
         try:
             # Import temp_dir from main module to access the global variable
-            from ..main import temp_dir
+            from ..dependencies import temp_dir
 
             # Check authentication by trying to get GPX
             # (will raise if not authenticated)

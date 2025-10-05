@@ -32,7 +32,7 @@ def create_auth_router(
     async def check_strava_authorization(strava_id: int):
         """Check if a Strava user is authorized to access editor feature."""
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if global_session_local is None:
             raise HTTPException(status_code=503, detail="Database not initialized")
@@ -67,7 +67,7 @@ def create_auth_router(
     async def list_authorized_users():
         """List all authorized users (admin function)."""
         # Import global SessionLocal from main
-        from ..main import SessionLocal as global_session_local
+        from ..dependencies import SessionLocal as global_session_local
 
         if global_session_local is None:
             raise HTTPException(status_code=503, detail="Database not initialized")

@@ -14,10 +14,9 @@ import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
 from PIL import Image
+from src.utils.config import LocalStorageConfig, S3StorageConfig
 from src.utils.gpx import GPXBounds, generate_gpx_segment
 from src.utils.storage import LocalStorageManager, S3Manager, cleanup_local_file
-
-from backend.src.utils.config import LocalStorageConfig, S3StorageConfig
 
 
 def create_test_image_bytes(format: str = "JPEG") -> bytes:
@@ -99,6 +98,18 @@ def main_module():
     import src.main
 
     return src.main
+
+
+@pytest.fixture
+def dependencies_module():
+    """Get access to the dependencies module for testing.
+
+    This fixture provides access to the src.dependencies module for tests that
+    need to mock or access global state like SessionLocal, storage_manager, etc.
+    """
+    import src.dependencies
+
+    return src.dependencies
 
 
 @pytest.fixture
@@ -505,7 +516,7 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
         assert response2.json()["name"] == "Second Segment"
 
 
-@patch("src.main.temp_dir", None)
+@patch("src.dependencies.temp_dir", None)
 def test_create_segment_no_temp_directory(client):
     """Test segment creation when temporary directory is not initialized."""
     response = client.post(
@@ -850,10 +861,12 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
         assert segment_response.status_code in [200, 500]
 
 
-def test_storage_manager_initialization_failure_handling(app, lifespan, main_module):
+def test_storage_manager_initialization_failure_handling(
+    app, lifespan, dependencies_module
+):
     """Test that the app handles storage manager initialization failure gracefully."""
 
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         with patch.dict(os.environ, {}, clear=True):
@@ -864,21 +877,23 @@ def test_storage_manager_initialization_failure_handling(app, lifespan, main_mod
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert main_module.storage_manager is None
+                        assert dependencies_module.storage_manager is None
                         return True
 
                 result = asyncio.run(run_lifespan())
                 assert result is True
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_storage_manager_initialization_exception_handling(app, lifespan, main_module):
+def test_storage_manager_initialization_exception_handling(
+    app, lifespan, dependencies_module
+):
     """Test that storage manager initialization exceptions are properly caught
     and logged."""
 
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         with patch.dict(
@@ -893,18 +908,18 @@ def test_storage_manager_initialization_exception_handling(app, lifespan, main_m
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert main_module.storage_manager is None
+                        assert dependencies_module.storage_manager is None
                         return True
 
                 result = asyncio.run(run_lifespan())
                 assert result is True
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
 def test_create_segment_storage_manager_not_initialized(
-    client, sample_gpx_file, main_module
+    client, sample_gpx_file, dependencies_module
 ):
     """Test segment creation when storage manager is not initialized."""
     with open(sample_gpx_file, "rb") as f:
@@ -915,10 +930,10 @@ def test_create_segment_storage_manager_not_initialized(
     assert upload_response.status_code == 200
     file_id = upload_response.json()["file_id"]
 
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
-        main_module.storage_manager = None
+        dependencies_module.storage_manager = None
 
         response = client.post(
             "/api/segments",
@@ -939,7 +954,7 @@ def test_create_segment_storage_manager_not_initialized(
         assert "Storage manager not initialized" in response.json()["detail"]
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
 @mock_aws
@@ -987,12 +1002,14 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
         assert data["file_path"].startswith(("s3://", "local://", "local:/"))
 
 
-def test_serve_storage_file_storage_manager_not_initialized(client, main_module):
+def test_serve_storage_file_storage_manager_not_initialized(
+    client, dependencies_module
+):
     """Test serving storage file when storage manager is not initialized."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
-        main_module.storage_manager = None
+        dependencies_module.storage_manager = None
 
         response = client.get("/storage/test-file.gpx")
 
@@ -1000,12 +1017,14 @@ def test_serve_storage_file_storage_manager_not_initialized(client, main_module)
         assert response.json()["detail"] == "Storage manager not initialized"
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file, main_module):
+def test_serve_storage_file_s3_mode_not_available(
+    client, sample_gpx_file, dependencies_module
+):
     """Test serving storage file when in S3 mode (not available)."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = S3StorageConfig(
@@ -1016,7 +1035,7 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file, main_
             region="us-east-1",
         )
         s3_manager = S3Manager(config)
-        main_module.storage_manager = s3_manager
+        dependencies_module.storage_manager = s3_manager
 
         response = client.get("/storage/test-file.gpx")
 
@@ -1024,14 +1043,14 @@ def test_serve_storage_file_s3_mode_not_available(client, sample_gpx_file, main_
         assert response.json()["detail"] == "File serving only available in local mode"
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_local_mode_success(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test successfully serving a file from local storage."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1040,7 +1059,7 @@ def test_serve_storage_file_local_mode_success(
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        main_module.storage_manager = local_manager
+        dependencies_module.storage_manager = local_manager
 
         test_file_path = tmp_path / "test-file.gpx"
         test_file_path.write_text(sample_gpx_file.read_text())
@@ -1056,12 +1075,12 @@ def test_serve_storage_file_local_mode_success(
         assert response.content == sample_gpx_file.read_bytes()
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_file_not_found(client, tmp_path, main_module):
+def test_serve_storage_file_file_not_found(client, tmp_path, dependencies_module):
     """Test serving storage file when file doesn't exist."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1070,7 +1089,7 @@ def test_serve_storage_file_file_not_found(client, tmp_path, main_module):
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        main_module.storage_manager = local_manager
+        dependencies_module.storage_manager = local_manager
 
         response = client.get("/storage/nonexistent-file.gpx")
 
@@ -1078,14 +1097,14 @@ def test_serve_storage_file_file_not_found(client, tmp_path, main_module):
         assert response.json()["detail"] == "File not found"
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
 def test_serve_storage_file_with_subdirectory(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test serving a file from a subdirectory."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1094,7 +1113,7 @@ def test_serve_storage_file_with_subdirectory(
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        main_module.storage_manager = local_manager
+        dependencies_module.storage_manager = local_manager
 
         subdir = tmp_path / "gpx-segments"
         subdir.mkdir()
@@ -1112,13 +1131,15 @@ def test_serve_storage_file_with_subdirectory(
         assert response.content == sample_gpx_file.read_bytes()
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_serve_storage_file_local_storage_not_available(client, tmp_path, main_module):
+def test_serve_storage_file_local_storage_not_available(
+    client, tmp_path, dependencies_module
+):
     """Test serving storage file when local storage manager doesn't have
     get_file_path method."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1127,9 +1148,9 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path, main_m
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        main_module.storage_manager = local_manager
+        dependencies_module.storage_manager = local_manager
 
-        with patch("src.main.hasattr") as mock_hasattr:
+        with patch("src.api.utils.hasattr") as mock_hasattr:
 
             def mock_hasattr_func(obj, attr):
                 if attr == "get_file_path":
@@ -1144,14 +1165,14 @@ def test_serve_storage_file_local_storage_not_available(client, tmp_path, main_m
             assert response.json()["detail"] == "Local storage not available"
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
 def test_create_segment_storage_upload_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test create segment when storage upload fails."""
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     try:
         config = LocalStorageConfig(
@@ -1160,7 +1181,7 @@ def test_create_segment_storage_upload_failure(
             base_url="http://localhost:8000/storage",
         )
         local_manager = LocalStorageManager(config)
-        main_module.storage_manager = local_manager
+        dependencies_module.storage_manager = local_manager
 
         with open(sample_gpx_file, "rb") as f:
             upload_response = client.post(
@@ -1182,7 +1203,7 @@ def test_create_segment_storage_upload_failure(
                 return "mock://test-bucket"
 
         mock_storage_manager = MockStorageManager()
-        main_module.storage_manager = mock_storage_manager
+        dependencies_module.storage_manager = mock_storage_manager
 
         segment_data = {
             "file_id": file_id,
@@ -1205,14 +1226,14 @@ def test_create_segment_storage_upload_failure(
         assert "Storage upload failed" in response.json()["detail"]
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_database_initialization_failure_handling(app, lifespan, main_module):
+def test_database_initialization_failure_handling(app, lifespan, dependencies_module):
     """Test that the app handles database initialization failure gracefully."""
 
-    original_engine = main_module.engine
-    original_session_local = main_module.SessionLocal
+    original_engine = dependencies_module.engine
+    original_session_local = dependencies_module.SessionLocal
 
     try:
         with patch.dict(os.environ, {}, clear=True):
@@ -1223,23 +1244,23 @@ def test_database_initialization_failure_handling(app, lifespan, main_module):
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert main_module.engine is None
-                        assert main_module.SessionLocal is None
+                        assert dependencies_module.engine is None
+                        assert dependencies_module.SessionLocal is None
                         return True
 
                 result = asyncio.run(run_lifespan())
                 assert result is True
 
     finally:
-        main_module.engine = original_engine
-        main_module.SessionLocal = original_session_local
+        dependencies_module.engine = original_engine
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_database_initialization_exception_handling(app, lifespan, main_module):
+def test_database_initialization_exception_handling(app, lifespan, dependencies_module):
     """Test that database initialization exceptions are properly caught and logged."""
 
-    original_engine = main_module.engine
-    original_session_local = main_module.SessionLocal
+    original_engine = dependencies_module.engine
+    original_session_local = dependencies_module.SessionLocal
 
     try:
         with patch.dict(
@@ -1260,21 +1281,21 @@ def test_database_initialization_exception_handling(app, lifespan, main_module):
 
                 async def run_lifespan():
                     async with lifespan(app):
-                        assert main_module.engine is None
-                        assert main_module.SessionLocal is None
+                        assert dependencies_module.engine is None
+                        assert dependencies_module.SessionLocal is None
                         return True
 
                 result = asyncio.run(run_lifespan())
                 assert result is True
 
     finally:
-        main_module.engine = original_engine
-        main_module.SessionLocal = original_session_local
+        dependencies_module.engine = original_engine
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_create_segment_database_exception_handling(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test create segment when database operations fail but storage succeeds."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -1297,7 +1318,7 @@ def test_create_segment_database_exception_handling(
 
         mock_path.side_effect = path_side_effect
 
-        with patch("src.main.SessionLocal") as mock_session_local:
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
 
             async def mock_session_context():
                 mock_session = mock_session_local.return_value
@@ -1340,7 +1361,7 @@ def test_create_segment_database_exception_handling(
 
 @mock_aws
 def test_create_segment_database_unavailable(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test create segment when database is not available (SessionLocal is None)."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -1363,9 +1384,9 @@ def test_create_segment_database_unavailable(
 
         mock_path.side_effect = path_side_effect
 
-        original_session_local = main_module.SessionLocal
+        original_session_local = dependencies_module.SessionLocal
         try:
-            main_module.SessionLocal = None
+            dependencies_module.SessionLocal = None
 
             response = client.post(
                 "/api/segments",
@@ -1393,17 +1414,19 @@ def test_create_segment_database_unavailable(
             assert data["file_path"].endswith(".gpx")
 
         finally:
-            main_module.SessionLocal = original_session_local
+            dependencies_module.SessionLocal = original_session_local
 
 
-def test_database_initialization_exception_in_lifespan(app, lifespan, main_module):
+def test_database_initialization_exception_in_lifespan(
+    app, lifespan, dependencies_module
+):
     """Test database initialization exception handling in lifespan function."""
-    original_engine = main_module.engine
-    original_session_local = main_module.SessionLocal
+    original_engine = dependencies_module.engine
+    original_session_local = dependencies_module.SessionLocal
 
     try:
         mock_engine = type("MockEngine", (), {})()
-        main_module.engine = mock_engine
+        dependencies_module.engine = mock_engine
 
         with patch(
             "src.main.Base.metadata.create_all",
@@ -1418,13 +1441,13 @@ def test_database_initialization_exception_in_lifespan(app, lifespan, main_modul
             assert result is True
 
     finally:
-        main_module.engine = original_engine
-        main_module.SessionLocal = original_session_local
+        dependencies_module.engine = original_engine
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_create_segment_successful_database_operations(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test create segment with successful database operations to cover the successful
     path."""
@@ -1460,7 +1483,7 @@ def test_create_segment_successful_database_operations(
         mock_session.commit = mock_commit
         mock_session.refresh = mock_refresh
 
-        with patch("src.main.SessionLocal") as mock_session_local:
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
 
             class MockAsyncContextManager:
                 async def __aenter__(self):
@@ -1718,7 +1741,7 @@ def test_search_segments_endpoint_streaming_format(client):
             assert "gpx_xml_data" not in data
 
 
-def test_search_segments_endpoint_gpx_load_error(client, main_module):
+def test_search_segments_endpoint_gpx_load_error(client, dependencies_module):
     """Test search endpoint behavior - GPX loading errors no longer affect search."""
     # Since the search endpoint no longer loads GPX data (optimization),
     # this test now verifies that the search endpoint works normally
@@ -1800,11 +1823,11 @@ def test_get_track_gpx_data_endpoint_not_found(client):
     assert "detail" in data
 
 
-def test_get_track_gpx_data_endpoint_database_unavailable(client, main_module):
+def test_get_track_gpx_data_endpoint_database_unavailable(client, dependencies_module):
     """Test GPX endpoint when database is not available."""
     # Mock database unavailability
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = None
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = None
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1813,14 +1836,14 @@ def test_get_track_gpx_data_endpoint_database_unavailable(client, main_module):
         assert data["detail"] == "Database not available"
     finally:
         # Restore original database session
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_get_track_gpx_data_endpoint_storage_unavailable(client, main_module):
+def test_get_track_gpx_data_endpoint_storage_unavailable(client, dependencies_module):
     """Test GPX endpoint when storage manager is not available."""
     # Mock storage manager unavailability
-    original_storage_manager = main_module.storage_manager
-    main_module.storage_manager = None
+    original_storage_manager = dependencies_module.storage_manager
+    dependencies_module.storage_manager = None
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1829,14 +1852,14 @@ def test_get_track_gpx_data_endpoint_storage_unavailable(client, main_module):
         assert data["detail"] == "Storage manager not available"
     finally:
         # Restore original storage manager
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
+def test_get_track_gpx_data_endpoint_storage_load_error(client, dependencies_module):
     """Test GPX endpoint when storage manager raises an exception."""
     # Mock storage manager to raise an exception
-    original_storage_manager = main_module.storage_manager
-    original_session_local = main_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
@@ -1863,8 +1886,8 @@ def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
 
             return MockResult()
 
-    main_module.storage_manager = MockStorageManager()
-    main_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1873,15 +1896,15 @@ def test_get_track_gpx_data_endpoint_storage_load_error(client, main_module):
         assert "Failed to load GPX data: Storage connection failed" in data["detail"]
     finally:
         # Restore original storage manager and session
-        main_module.storage_manager = original_storage_manager
-        main_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
+def test_get_track_gpx_data_endpoint_storage_returns_none(client, dependencies_module):
     """Test GPX endpoint when storage manager returns None (file not found)."""
     # Mock storage manager to return None
-    original_storage_manager = main_module.storage_manager
-    original_session_local = main_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
@@ -1908,8 +1931,8 @@ def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
 
             return MockResult()
 
-    main_module.storage_manager = MockStorageManager()
-    main_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -1918,15 +1941,15 @@ def test_get_track_gpx_data_endpoint_storage_returns_none(client, main_module):
         assert data["detail"] == "GPX data not found"
     finally:
         # Restore original storage manager and session
-        main_module.storage_manager = original_storage_manager
-        main_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, main_module):
+def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, dependencies_module):
     """Test GPX endpoint for gpx_bytes is None check (lines 495-500)."""
     # Mock both database and storage manager to ensure we hit the None check
-    original_session_local = main_module.SessionLocal
-    original_storage_manager = main_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
 
     # Create a mock track object that exists in database
     from datetime import datetime
@@ -1973,8 +1996,8 @@ def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, main_module):
             # Return None to test the None check in lines 495-500
             return None
 
-    main_module.SessionLocal = MockSessionLocal()
-    main_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = MockSessionLocal()
+    dependencies_module.storage_manager = MockStorageManager()
 
     try:
         response = client.get("/api/segments/456/gpx")
@@ -1996,8 +2019,8 @@ def test_get_track_gpx_data_endpoint_gpx_bytes_none_check(client, main_module):
 
     finally:
         # Restore original services
-        main_module.SessionLocal = original_session_local
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
 
 
 def test_get_track_gpx_data_endpoint_invalid_track_id(client):
@@ -2006,10 +2029,10 @@ def test_get_track_gpx_data_endpoint_invalid_track_id(client):
     assert response.status_code == 422  # Validation error for invalid integer
 
 
-def test_get_track_gpx_data_endpoint_success(client, main_module):
+def test_get_track_gpx_data_endpoint_success(client, dependencies_module):
     """Test GPX endpoint with successful GPX data retrieval."""
     # Mock storage manager to return valid GPX data
-    original_storage_manager = main_module.storage_manager
+    original_storage_manager = dependencies_module.storage_manager
 
     class MockStorageManager:
         def load_gpx_data(self, url):
@@ -2018,7 +2041,7 @@ def test_get_track_gpx_data_endpoint_success(client, main_module):
                 b'<gpx version="1.1"><trk><name>Test Track</name></trk></gpx>'
             )
 
-    main_module.storage_manager = MockStorageManager()
+    dependencies_module.storage_manager = MockStorageManager()
 
     try:
         # Use a track ID that exists in the test database (from the test data setup)
@@ -2042,10 +2065,12 @@ def test_get_track_gpx_data_endpoint_success(client, main_module):
             assert response.status_code == 404
     finally:
         # Restore original storage manager
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_get_track_gpx_data_endpoint_success_with_existing_track(client, main_module):
+def test_get_track_gpx_data_endpoint_success_with_existing_track(
+    client, dependencies_module
+):
     """Test GPX endpoint success path with a track that definitely exists."""
     # First, let's find a track that exists in the test database
     search_response = client.get(
@@ -2066,7 +2091,7 @@ def test_get_track_gpx_data_endpoint_success_with_existing_track(client, main_mo
         existing_track_id = segment_data["id"]
 
         # Mock storage manager to return valid GPX data
-        original_storage_manager = main_module.storage_manager
+        original_storage_manager = dependencies_module.storage_manager
 
         class MockStorageManager:
             def load_gpx_data(self, url):
@@ -2075,7 +2100,7 @@ def test_get_track_gpx_data_endpoint_success_with_existing_track(client, main_mo
                     b'<gpx version="1.1"><trk><name>Success Track</name></trk></gpx>'
                 )
 
-        main_module.storage_manager = MockStorageManager()
+        dependencies_module.storage_manager = MockStorageManager()
 
         try:
             # Test with the existing track ID
@@ -2094,17 +2119,19 @@ def test_get_track_gpx_data_endpoint_success_with_existing_track(client, main_mo
 
         finally:
             # Restore original storage manager
-            main_module.storage_manager = original_storage_manager
+            dependencies_module.storage_manager = original_storage_manager
     else:
         # Skip test if no tracks exist in database
         pytest.skip("No tracks found in test database")
 
 
-def test_get_track_gpx_data_endpoint_success_with_mock_database(client, main_module):
+def test_get_track_gpx_data_endpoint_success_with_mock_database(
+    client, dependencies_module
+):
     """Test GPX endpoint success path by mocking database to hit all code paths."""
     # Mock both database and storage manager to ensure we hit the success path
-    original_session_local = main_module.SessionLocal
-    original_storage_manager = main_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
 
     # Create a mock track object
     from datetime import datetime
@@ -2153,8 +2180,8 @@ def test_get_track_gpx_data_endpoint_success_with_mock_database(client, main_mod
                 b'<gpx version="1.1"><trk><name>Mock Track</name></trk></gpx>'
             )
 
-    main_module.SessionLocal = MockSessionLocal()
-    main_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = MockSessionLocal()
+    dependencies_module.storage_manager = MockStorageManager()
 
     try:
         response = client.get("/api/segments/123/gpx")
@@ -2172,14 +2199,16 @@ def test_get_track_gpx_data_endpoint_success_with_mock_database(client, main_mod
 
     finally:
         # Restore original services
-        main_module.SessionLocal = original_session_local
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_get_track_gpx_data_endpoint_track_not_found_in_database(client, main_module):
+def test_get_track_gpx_data_endpoint_track_not_found_in_database(
+    client, dependencies_module
+):
     """Test GPX endpoint when track is not found in database (line 491)."""
     # Mock database to return None (track not found)
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockSession:
         async def __aenter__(self):
@@ -2199,7 +2228,7 @@ def test_get_track_gpx_data_endpoint_track_not_found_in_database(client, main_mo
         def __call__(self):
             return MockSession()
 
-    main_module.SessionLocal = MockSessionLocal()
+    dependencies_module.SessionLocal = MockSessionLocal()
 
     try:
         response = client.get("/api/segments/99999/gpx")
@@ -2212,14 +2241,14 @@ def test_get_track_gpx_data_endpoint_track_not_found_in_database(client, main_mo
 
     finally:
         # Restore original database session
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_get_track_gpx_data_endpoint_decode_exception_path(client, main_module):
+def test_get_track_gpx_data_endpoint_decode_exception_path(client, dependencies_module):
     """Test GPX endpoint exception handling path (lines 504-508)."""
     # Mock both database and storage manager to trigger decode exception
-    original_session_local = main_module.SessionLocal
-    original_storage_manager = main_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
 
     # Create a mock track object
     from datetime import datetime
@@ -2271,8 +2300,8 @@ def test_get_track_gpx_data_endpoint_decode_exception_path(client, main_module):
 
             return MockBytes()
 
-    main_module.SessionLocal = MockSessionLocal()
-    main_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = MockSessionLocal()
+    dependencies_module.storage_manager = MockStorageManager()
 
     try:
         response = client.get("/api/segments/789/gpx")
@@ -2292,15 +2321,15 @@ def test_get_track_gpx_data_endpoint_decode_exception_path(client, main_module):
 
     finally:
         # Restore original services
-        main_module.SessionLocal = original_session_local
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
+def test_get_track_gpx_data_endpoint_decode_error(client, dependencies_module):
     """Test GPX endpoint when GPX data cannot be decoded as UTF-8."""
     # Mock storage manager to return invalid UTF-8 data
-    original_storage_manager = main_module.storage_manager
-    original_session_local = main_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
 
     class MockStorageManager:
         def load_gpx_data(self, url):
@@ -2328,8 +2357,8 @@ def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
 
             return MockResult()
 
-    main_module.storage_manager = MockStorageManager()
-    main_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -2338,14 +2367,14 @@ def test_get_track_gpx_data_endpoint_decode_error(client, main_module):
         assert "Failed to load GPX data" in data["detail"]
     finally:
         # Restore original storage manager and session
-        main_module.storage_manager = original_storage_manager
-        main_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_get_track_gpx_data_endpoint_database_error(client, main_module):
+def test_get_track_gpx_data_endpoint_database_error(client, dependencies_module):
     """Test GPX endpoint when database query fails."""
     # Mock database session to raise an exception
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockSessionLocal:
         async def __aenter__(self):
@@ -2354,7 +2383,7 @@ def test_get_track_gpx_data_endpoint_database_error(client, main_module):
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             pass
 
-    main_module.SessionLocal = MockSessionLocal
+    dependencies_module.SessionLocal = MockSessionLocal
 
     try:
         response = client.get("/api/segments/1/gpx")
@@ -2363,19 +2392,19 @@ def test_get_track_gpx_data_endpoint_database_error(client, main_module):
         assert "Internal server error" in data["detail"]
     finally:
         # Restore original database session
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_search_segments_endpoint_streaming_error(client, main_module):
+def test_search_segments_endpoint_streaming_error(client, dependencies_module):
     """Test search endpoint when streaming generation fails (covers lines 452-454)."""
     # Mock the database session to raise an exception during streaming
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockSessionLocal:
         def __call__(self):
             raise Exception("Mocked database connection error")
 
-    main_module.SessionLocal = MockSessionLocal
+    dependencies_module.SessionLocal = MockSessionLocal
 
     try:
         # Search for segments - should handle streaming error gracefully
@@ -2411,14 +2440,14 @@ def test_search_segments_endpoint_streaming_error(client, main_module):
 
     finally:
         # Restore original SessionLocal
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_search_segments_endpoint_database_not_available(client, main_module):
+def test_search_segments_endpoint_database_not_available(client, dependencies_module):
     """Test search endpoint when database is not available (covers lines 395-396)."""
     # Mock SessionLocal to be None/False to trigger database availability check
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = None
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = None
 
     try:
         # Search for segments - should return 500 error
@@ -2434,7 +2463,7 @@ def test_search_segments_endpoint_database_not_available(client, main_module):
 
     finally:
         # Restore original SessionLocal
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_search_segments_invalid_track_type(client):
@@ -2690,7 +2719,7 @@ def test_get_track_info_success(client):
     )
 
     # Mock the database session and query
-    with patch("src.main.SessionLocal") as mock_session_local:
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
 
         class MockSession:
             async def __aenter__(self):
@@ -2740,7 +2769,7 @@ def test_get_track_info_success(client):
 
 def test_get_track_info_database_not_available(client):
     """Test track info retrieval when database is not available."""
-    with patch("src.main.SessionLocal", None):
+    with patch("src.dependencies.SessionLocal", None):
         response = client.get("/api/segments/123")
 
         assert response.status_code == 500
@@ -2750,7 +2779,7 @@ def test_get_track_info_database_not_available(client):
 
 def test_get_track_info_track_not_found(client):
     """Test track info retrieval when track doesn't exist."""
-    with patch("src.main.SessionLocal") as mock_session_local:
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
 
         class MockSession:
             async def __aenter__(self):
@@ -2784,7 +2813,7 @@ def test_get_track_info_track_not_found(client):
 
 def test_get_track_info_database_exception(client):
     """Test track info retrieval when database throws an exception."""
-    with patch("src.main.SessionLocal") as mock_session_local:
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
 
         class MockSession:
             async def __aenter__(self):
@@ -2876,8 +2905,8 @@ def test_get_track_parsed_data_success(client):
     }
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager") as mock_storage_manager,
         patch("src.api.segments.gpxpy.parse"),
         patch("src.utils.gpx.extract_from_gpx_file") as mock_extract,
     ):
@@ -2924,7 +2953,7 @@ def test_get_track_parsed_data_success(client):
 
 def test_get_track_parsed_data_database_not_available(client):
     """Test track parsed data retrieval when database is not available."""
-    with patch("src.main.SessionLocal", None):
+    with patch("src.dependencies.SessionLocal", None):
         response = client.get("/api/segments/456/data")
 
         assert response.status_code == 500
@@ -2958,8 +2987,8 @@ def test_get_track_parsed_data_storage_manager_not_available(client):
     )
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager", None),
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager", None),
     ):
 
         class MockSession:
@@ -2994,7 +3023,7 @@ def test_get_track_parsed_data_storage_manager_not_available(client):
 
 def test_get_track_parsed_data_track_not_found(client):
     """Test track parsed data retrieval when track doesn't exist."""
-    with patch("src.main.SessionLocal") as mock_session_local:
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
 
         class MockSession:
             async def __aenter__(self):
@@ -3052,8 +3081,8 @@ def test_get_track_parsed_data_gpx_not_found(client):
     )
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager") as mock_storage_manager,
     ):
 
         class MockSession:
@@ -3117,8 +3146,8 @@ def test_get_track_parsed_data_gpx_parsing_failure(client):
     mock_gpx_data = b'<?xml version="1.0" encoding="UTF-8"?>\n<invalid>gpx</invalid>'
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager") as mock_storage_manager,
         patch("src.api.segments.gpxpy.parse"),
     ):
 
@@ -3188,8 +3217,8 @@ def test_get_track_parsed_data_extraction_failure(client):
     )
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager") as mock_storage_manager,
         patch("src.api.segments.gpxpy.parse"),
         patch("src.utils.gpx.extract_from_gpx_file") as mock_extract,
     ):
@@ -3230,7 +3259,7 @@ def test_get_track_parsed_data_extraction_failure(client):
 
 def test_get_track_parsed_data_database_exception(client):
     """Test track parsed data retrieval when database throws an exception."""
-    with patch("src.main.SessionLocal") as mock_session_local:
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
 
         class MockSession:
             async def __aenter__(self):
@@ -3310,8 +3339,8 @@ def test_get_track_parsed_data_file_path_none(client):
     }
 
     with (
-        patch("src.main.SessionLocal") as mock_session_local,
-        patch("src.main.storage_manager") as mock_storage_manager,
+        patch("src.dependencies.SessionLocal") as mock_session_local,
+        patch("src.dependencies.storage_manager") as mock_storage_manager,
         patch("src.api.segments.gpxpy.parse"),
         patch("src.utils.gpx.extract_from_gpx_file") as mock_extract,
     ):
@@ -3861,7 +3890,7 @@ def test_create_segment_with_multiple_images(client, tmp_path):
 
 @mock_aws
 def test_create_segment_with_image_data_database_coverage(
-    client, tmp_path, main_module
+    client, tmp_path, dependencies_module
 ):
     """Test that explicitly covers lines 523-548 in main.py with mock SessionLocal."""
 
@@ -3946,8 +3975,8 @@ def test_create_segment_with_image_data_database_coverage(
         mock_path.side_effect = path_side_effect
 
         # OVERRIDE the SessionLocal to guarantee database execution
-        original_session_local = main_module.SessionLocal
-        main_module.SessionLocal = MockSessionLocal()
+        original_session_local = dependencies_module.SessionLocal
+        dependencies_module.SessionLocal = MockSessionLocal()
 
         try:
             # Create segment with valid image data
@@ -3987,7 +4016,7 @@ def test_create_segment_with_image_data_database_coverage(
             assert segment_data["name"] == "Test Database Coverage"
 
         finally:
-            main_module.SessionLocal = original_session_local
+            dependencies_module.SessionLocal = original_session_local
 
 
 def test_create_segment_image_data_json_decode_error(client, tmp_path):
@@ -4049,7 +4078,9 @@ def test_create_segment_image_data_json_decode_error(client, tmp_path):
 
 
 @mock_aws
-def test_create_segment_trackimage_session_exception(client, tmp_path, main_module):
+def test_create_segment_trackimage_session_exception(
+    client, tmp_path, dependencies_module
+):
     """Test session add calls during TrackImage creation that trigger exception
     on lines 547-548."""
 
@@ -4117,8 +4148,8 @@ def test_create_segment_trackimage_session_exception(client, tmp_path, main_modu
         mock_path.side_effect = path_side_effect
 
         # Replace SessionLocal
-        original_session_local = main_module.SessionLocal
-        main_module.SessionLocal = FailingSessionLocalMock()
+        original_session_local = dependencies_module.SessionLocal
+        dependencies_module.SessionLocal = FailingSessionLocalMock()
 
         try:
             import json
@@ -4154,13 +4185,13 @@ def test_create_segment_trackimage_session_exception(client, tmp_path, main_modu
             assert segment_response.status_code == 200
 
         finally:
-            main_module.SessionLocal = original_session_local
+            dependencies_module.SessionLocal = original_session_local
 
 
 # ============== TRACK IMAGES ENDPOINT TESTS ==============
 
 
-def test_get_track_images_success(client, main_module):
+def test_get_track_images_success(client, dependencies_module):
     """Test successful retrieval of track images."""
     # Mock database session and track images
     mock_session = AsyncMock()
@@ -4207,7 +4238,7 @@ def test_get_track_images_success(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/images")
 
@@ -4234,7 +4265,7 @@ def test_get_track_images_success(client, main_module):
     assert data[1]["original_filename"] == "original-image2.jpg"
 
 
-def test_get_track_images_track_not_found(client, main_module):
+def test_get_track_images_track_not_found(client, dependencies_module):
     """Test retrieval of images for non-existent track."""
     # Mock database session
     mock_session = AsyncMock()
@@ -4252,7 +4283,7 @@ def test_get_track_images_track_not_found(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/999/images")
 
@@ -4261,7 +4292,7 @@ def test_get_track_images_track_not_found(client, main_module):
     assert "Track not found" in data["detail"]
 
 
-def test_get_track_images_no_images(client, main_module):
+def test_get_track_images_no_images(client, dependencies_module):
     """Test retrieval when track has no images."""
     # Mock database session
     mock_session = AsyncMock()
@@ -4286,7 +4317,7 @@ def test_get_track_images_no_images(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/images")
 
@@ -4295,10 +4326,10 @@ def test_get_track_images_no_images(client, main_module):
     assert len(data) == 0
 
 
-def test_get_track_images_database_not_available(client, main_module):
+def test_get_track_images_database_not_available(client, dependencies_module):
     """Test retrieval when database is not available."""
     # Mock SessionLocal to return None
-    main_module.SessionLocal = None
+    dependencies_module.SessionLocal = None
 
     response = client.get("/api/segments/1/images")
 
@@ -4307,7 +4338,7 @@ def test_get_track_images_database_not_available(client, main_module):
     assert "Database not available" in data["detail"]
 
 
-def test_get_track_images_database_exception(client, main_module):
+def test_get_track_images_database_exception(client, dependencies_module):
     """Test retrieval when database throws an exception."""
     # Mock database session that throws exception
     mock_session = AsyncMock()
@@ -4325,7 +4356,7 @@ def test_get_track_images_database_exception(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/images")
 
@@ -4341,7 +4372,7 @@ def test_get_track_images_invalid_track_id(client):
     assert response.status_code == 422  # Validation error for invalid integer
 
 
-def test_get_track_images_single_image(client, main_module):
+def test_get_track_images_single_image(client, dependencies_module):
     """Test retrieval of single track image."""
     # Mock database session and track image
     mock_session = AsyncMock()
@@ -4376,7 +4407,7 @@ def test_get_track_images_single_image(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/images")
 
@@ -4395,7 +4426,7 @@ def test_get_track_images_single_image(client, main_module):
 
 
 # Video endpoint tests
-def test_get_track_videos_success(client, main_module):
+def test_get_track_videos_success(client, dependencies_module):
     """Test successful retrieval of track videos."""
     # Mock database session and track videos
     mock_session = AsyncMock()
@@ -4440,7 +4471,7 @@ def test_get_track_videos_success(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/videos")
 
@@ -4465,7 +4496,7 @@ def test_get_track_videos_success(client, main_module):
     assert data[1]["platform"] == "vimeo"
 
 
-def test_get_track_videos_track_not_found(client, main_module):
+def test_get_track_videos_track_not_found(client, dependencies_module):
     """Test retrieval of videos for non-existent track."""
     # Mock database session
     mock_session = AsyncMock()
@@ -4483,7 +4514,7 @@ def test_get_track_videos_track_not_found(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/999/videos")
 
@@ -4492,7 +4523,7 @@ def test_get_track_videos_track_not_found(client, main_module):
     assert "Track not found" in data["detail"]
 
 
-def test_get_track_videos_no_videos(client, main_module):
+def test_get_track_videos_no_videos(client, dependencies_module):
     """Test retrieval when track has no videos."""
     # Mock database session
     mock_session = AsyncMock()
@@ -4517,7 +4548,7 @@ def test_get_track_videos_no_videos(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/videos")
 
@@ -4526,10 +4557,10 @@ def test_get_track_videos_no_videos(client, main_module):
     assert len(data) == 0
 
 
-def test_get_track_videos_database_not_available(client, main_module):
+def test_get_track_videos_database_not_available(client, dependencies_module):
     """Test retrieval when database is not available."""
     # Mock SessionLocal to return None
-    main_module.SessionLocal = None
+    dependencies_module.SessionLocal = None
 
     response = client.get("/api/segments/1/videos")
 
@@ -4538,7 +4569,7 @@ def test_get_track_videos_database_not_available(client, main_module):
     assert "Database not available" in data["detail"]
 
 
-def test_get_track_videos_database_exception(client, main_module):
+def test_get_track_videos_database_exception(client, dependencies_module):
     """Test retrieval when database throws an exception."""
     # Mock database session that throws exception
     mock_session = AsyncMock()
@@ -4556,7 +4587,7 @@ def test_get_track_videos_database_exception(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/videos")
 
@@ -4572,7 +4603,7 @@ def test_get_track_videos_invalid_track_id(client):
     assert response.status_code == 422  # Validation error for invalid integer
 
 
-def test_get_track_videos_single_video(client, main_module):
+def test_get_track_videos_single_video(client, dependencies_module):
     """Test retrieval of single track video."""
     # Mock database session and track video
     mock_session = AsyncMock()
@@ -4606,7 +4637,7 @@ def test_get_track_videos_single_video(client, main_module):
             pass
 
     mock_session_local = Mock(return_value=MockAsyncContextManager(mock_session))
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     response = client.get("/api/segments/1/videos")
 
@@ -4834,7 +4865,7 @@ def test_create_segment_video_data_with_invalid_structure(client, tmp_path):
 
 @mock_aws
 def test_create_segment_with_video_data_database_coverage(
-    client, tmp_path, main_module
+    client, tmp_path, dependencies_module
 ):
     """Test video processing lines 556-582 in main.py with mock SessionLocal."""
 
@@ -4921,8 +4952,8 @@ def test_create_segment_with_video_data_database_coverage(
             return MockResult()
 
     # Store original SessionLocal and replace with mock
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSessionLocal()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSessionLocal()
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -4974,12 +5005,12 @@ def test_create_segment_with_video_data_database_coverage(
         assert segment_data["name"] == "Test Segment With Videos Database"
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_create_segment_video_data_json_decode_error_database_coverage(
-    client, tmp_path, main_module
+    client, tmp_path, dependencies_module
 ):
     """Test video JSON decode error lines 581-582 in main.py with mock SessionLocal."""
 
@@ -5066,8 +5097,8 @@ def test_create_segment_video_data_json_decode_error_database_coverage(
             return MockResult()
 
     # Store original SessionLocal and replace with mock
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSessionLocal()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSessionLocal()
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -5104,12 +5135,12 @@ def test_create_segment_video_data_json_decode_error_database_coverage(
         assert segment_data["name"] == "Test Video JSON Error Database"
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_create_segment_image_data_json_decode_error_database_coverage(
-    client, tmp_path, main_module
+    client, tmp_path, dependencies_module
 ):
     """Test image JSON decode error lines 550-551 in main.py with mock SessionLocal."""
 
@@ -5196,8 +5227,8 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
             return MockResult()
 
     # Store original SessionLocal and replace with mock
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSessionLocal()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSessionLocal()
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -5234,7 +5265,7 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
         assert segment_data["name"] == "Test Image JSON Error Database"
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 # ============================================================================
@@ -5376,7 +5407,7 @@ def test_update_segment_invalid_track_type(client):
     assert "Invalid track type" in response.json()["detail"]
 
 
-@patch("src.main.temp_dir", None)
+@patch("src.dependencies.temp_dir", None)
 def test_update_segment_no_temp_directory(client):
     """Test segment update when temporary directory is not initialized."""
     response = client.put(
@@ -5400,7 +5431,7 @@ def test_update_segment_no_temp_directory(client):
     assert "Temporary directory not initialized" in response.json()["detail"]
 
 
-@patch("src.main.storage_manager", None)
+@patch("src.dependencies.storage_manager", None)
 def test_update_segment_storage_manager_not_initialized(client):
     """Test segment update when storage manager is not initialized."""
     response = client.put(
@@ -5424,7 +5455,7 @@ def test_update_segment_storage_manager_not_initialized(client):
     assert "Storage manager not initialized" in response.json()["detail"]
 
 
-@patch("src.main.SessionLocal", None)
+@patch("src.dependencies.SessionLocal", None)
 def test_update_segment_database_not_available(client):
     """Test segment update when database is not available."""
     response = client.put(
@@ -5448,10 +5479,10 @@ def test_update_segment_database_not_available(client):
     assert "Database not available" in response.json()["detail"]
 
 
-def test_update_segment_track_not_found(client, main_module):
+def test_update_segment_track_not_found(client, dependencies_module):
     """Test segment update when track doesn't exist."""
     # Mock database session to return no track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockSession:
         async def execute(self, stmt):
@@ -5471,7 +5502,7 @@ def test_update_segment_track_not_found(client, main_module):
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         response = client.put(
@@ -5495,13 +5526,13 @@ def test_update_segment_track_not_found(client, main_module):
         assert "Track not found" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_update_segment_file_not_found(client, main_module):
+def test_update_segment_file_not_found(client, dependencies_module):
     """Test segment update when uploaded file is not found."""
     # Mock database session to return a track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -5526,7 +5557,7 @@ def test_update_segment_file_not_found(client, main_module):
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         response = client.put(
@@ -5550,12 +5581,12 @@ def test_update_segment_file_not_found(client, main_module):
         assert "Uploaded file not found" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_generation_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when GPX segment generation fails."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -5571,7 +5602,7 @@ def test_update_segment_generation_failure(
     file_id = upload_response.json()["file_id"]
 
     # Mock database session to return a track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -5596,7 +5627,7 @@ def test_update_segment_generation_failure(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch(
@@ -5624,12 +5655,12 @@ def test_update_segment_generation_failure(
         assert "Failed to process GPX file" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_storage_upload_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when storage upload fails."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -5645,7 +5676,7 @@ def test_update_segment_storage_upload_failure(
     file_id = upload_response.json()["file_id"]
 
     # Mock database session to return a track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -5670,11 +5701,11 @@ def test_update_segment_storage_upload_failure(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch(
-            "src.main.storage_manager.upload_gpx_segment",
+            "src.dependencies.storage_manager.upload_gpx_segment",
             side_effect=Exception("Upload failed"),
         ):
             response = client.put(
@@ -5698,12 +5729,12 @@ def test_update_segment_storage_upload_failure(
         assert "Failed to upload to storage" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_database_exception_handling(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when database operations fail but storage succeeds."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -5719,7 +5750,7 @@ def test_update_segment_database_exception_handling(
     file_id = upload_response.json()["file_id"]
 
     # Mock database session to return a track initially, then fail on update
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -5765,11 +5796,12 @@ def test_update_segment_database_exception_handling(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch(
-            "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
+            "src.dependencies.storage_manager.delete_gpx_segment_by_url",
+            return_value=True,
         ) as mock_delete:
             response = client.put(
                 "/api/segments/1",
@@ -5794,7 +5826,7 @@ def test_update_segment_database_exception_handling(
         mock_delete.assert_called_once()
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
@@ -5903,7 +5935,7 @@ def test_update_segment_with_media(client, sample_gpx_file, tmp_path):
 
 @mock_aws
 def test_update_segment_media_json_error(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update with malformed JSON in media data."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -5919,7 +5951,7 @@ def test_update_segment_media_json_error(
     file_id = upload_response.json()["file_id"]
 
     # Mock database session to return a track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -5959,7 +5991,7 @@ def test_update_segment_media_json_error(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -5993,12 +6025,12 @@ def test_update_segment_media_json_error(
         assert response.status_code == 200
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_cleanup_old_file_success(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update with successful cleanup of old file."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6046,7 +6078,7 @@ def test_update_segment_cleanup_old_file_success(
 
     # Mock storage manager to track delete calls
     with patch(
-        "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
+        "src.dependencies.storage_manager.delete_gpx_segment_by_url", return_value=True
     ) as mock_delete:
         with patch("src.api.segments.Path") as mock_path:
 
@@ -6081,7 +6113,7 @@ def test_update_segment_cleanup_old_file_success(
 
 @mock_aws
 def test_update_segment_cleanup_old_file_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when cleanup of old file fails (should still succeed)."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6129,7 +6161,7 @@ def test_update_segment_cleanup_old_file_failure(
 
     # Mock storage manager to fail on delete
     with patch(
-        "src.main.storage_manager.delete_gpx_segment_by_url", return_value=False
+        "src.dependencies.storage_manager.delete_gpx_segment_by_url", return_value=False
     ) as mock_delete:
         with patch("src.api.segments.Path") as mock_path:
 
@@ -6165,7 +6197,7 @@ def test_update_segment_cleanup_old_file_failure(
 
 @mock_aws
 def test_update_segment_local_file_cleanup_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when local file cleanup fails."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6245,7 +6277,7 @@ def test_update_segment_local_file_cleanup_failure(
 
 @mock_aws
 def test_update_segment_with_existing_media(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update with existing images and videos to cover media deletion."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6292,7 +6324,7 @@ def test_update_segment_with_existing_media(
     track_id = segment_data["id"]
 
     # Mock database session to return existing media
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -6350,7 +6382,7 @@ def test_update_segment_with_existing_media(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -6382,12 +6414,12 @@ def test_update_segment_with_existing_media(
         assert update_response.status_code == 200
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_preserve_existing_media(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update preserves existing images and videos when adding new ones."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6434,7 +6466,7 @@ def test_update_segment_preserve_existing_media(
     track_id = segment_data["id"]
 
     # Mock database session to track media operations
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -6494,7 +6526,7 @@ def test_update_segment_preserve_existing_media(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -6573,12 +6605,12 @@ def test_update_segment_preserve_existing_media(
         assert added_video.video_url == "https://youtube.com/watch?v=new_video_1"
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_old_file_deletion_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when old file deletion fails but update still succeeds."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6625,7 +6657,7 @@ def test_update_segment_old_file_deletion_failure(
     track_id = segment_data["id"]
 
     # Mock database session
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -6670,7 +6702,7 @@ def test_update_segment_old_file_deletion_failure(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -6683,7 +6715,7 @@ def test_update_segment_old_file_deletion_failure(
             mock_path.side_effect = path_side_effect
 
             # Mock storage manager to simulate deletion failure
-            with patch("src.main.storage_manager") as mock_storage:
+            with patch("src.dependencies.storage_manager") as mock_storage:
                 mock_storage.get_storage_root_prefix.return_value = "s3://test-bucket"
                 mock_storage.delete_gpx_segment_by_url.return_value = (
                     False  # Simulate deletion failure
@@ -6716,12 +6748,12 @@ def test_update_segment_old_file_deletion_failure(
         )
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_old_file_cleanup_with_prefix(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update with old file cleanup when file path matches storage
     prefix."""
@@ -6769,7 +6801,7 @@ def test_update_segment_old_file_cleanup_with_prefix(
     track_id = segment_data["id"]
 
     # Mock database session to return a track with storage prefix path
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -6809,16 +6841,17 @@ def test_update_segment_old_file_cleanup_with_prefix(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         # Mock storage manager to return a specific prefix
         with patch(
-            "src.main.storage_manager.get_storage_root_prefix",
+            "src.dependencies.storage_manager.get_storage_root_prefix",
             return_value="s3://test-bucket",
         ):
             with patch(
-                "src.main.storage_manager.delete_gpx_segment_by_url", return_value=True
+                "src.dependencies.storage_manager.delete_gpx_segment_by_url",
+                return_value=True,
             ) as mock_delete:
                 with patch("src.api.segments.Path") as mock_path:
 
@@ -6853,12 +6886,12 @@ def test_update_segment_old_file_cleanup_with_prefix(
         )
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_old_file_cleanup_exception(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when old file cleanup raises an exception."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -6905,7 +6938,7 @@ def test_update_segment_old_file_cleanup_exception(
     track_id = segment_data["id"]
 
     # Mock database session to return a track
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -6945,16 +6978,16 @@ def test_update_segment_old_file_cleanup_exception(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         # Mock storage manager to raise exception during cleanup
         with patch(
-            "src.main.storage_manager.get_storage_root_prefix",
+            "src.dependencies.storage_manager.get_storage_root_prefix",
             return_value="s3://test-bucket",
         ):
             with patch(
-                "src.main.storage_manager.delete_gpx_segment_by_url",
+                "src.dependencies.storage_manager.delete_gpx_segment_by_url",
                 side_effect=Exception("Cleanup failed"),
             ):
                 with patch("src.api.segments.Path") as mock_path:
@@ -6987,12 +7020,12 @@ def test_update_segment_old_file_cleanup_exception(
         assert update_response.status_code == 200
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_database_error_cleanup_failure(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test segment update when database fails and cleanup of new file also fails."""
     s3_client = boto3.client("s3", region_name="us-east-1")
@@ -7008,7 +7041,7 @@ def test_update_segment_database_error_cleanup_failure(
     file_id = upload_response.json()["file_id"]
 
     # Mock database session to return a track initially, then fail on update
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -7053,12 +7086,12 @@ def test_update_segment_database_error_cleanup_failure(
     def mock_session_local():
         return MockAsyncContextManager()
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         # Mock storage manager to fail on cleanup
         with patch(
-            "src.main.storage_manager.delete_gpx_segment_by_url",
+            "src.dependencies.storage_manager.delete_gpx_segment_by_url",
             side_effect=Exception("Cleanup failed"),
         ):
             with patch("src.api.segments.Path") as mock_path:
@@ -7091,12 +7124,12 @@ def test_update_segment_database_error_cleanup_failure(
         assert "Failed to update segment" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 @mock_aws
 def test_update_segment_track_not_found_in_second_session(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test update_segment when track is not found in the second database session
     (lines 1220-1221)."""
@@ -7144,7 +7177,7 @@ def test_update_segment_track_not_found_in_second_session(
     track_id = segment_data["id"]
 
     # Mock database session to return a track in first session, None in second session
-    original_session_local = main_module.SessionLocal
+    original_session_local = dependencies_module.SessionLocal
 
     class MockTrack:
         def __init__(self):
@@ -7202,7 +7235,7 @@ def test_update_segment_track_not_found_in_second_session(
         session_counter += 1
         return MockAsyncContextManager(session_id)
 
-    main_module.SessionLocal = mock_session_local
+    dependencies_module.SessionLocal = mock_session_local
 
     try:
         with patch("src.api.segments.Path") as mock_path:
@@ -7237,10 +7270,10 @@ def test_update_segment_track_not_found_in_second_session(
         assert "Failed to update segment" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
+def test_delete_segment_success(client, sample_gpx_file, tmp_path, dependencies_module):
     """Test successful deletion of a segment with associated files."""
 
     # Mock a session that returns a track
@@ -7273,12 +7306,12 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
             pass
 
     # Mock the session
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = lambda: MockSession()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         # Mock storage manager to track delete calls
-        with patch("src.main.storage_manager") as mock_storage:
+        with patch("src.dependencies.storage_manager") as mock_storage:
             mock_storage.delete_gpx_segment_by_url.return_value = True
             mock_storage.delete_image_by_url.return_value = True
 
@@ -7296,7 +7329,7 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, main_module):
             mock_storage.delete_gpx_segment_by_url.assert_called_once()
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_delete_segment_not_found(client):
@@ -7307,7 +7340,9 @@ def test_delete_segment_not_found(client):
     assert "Track not found" in response.json()["detail"]
 
 
-def test_delete_segment_database_error(client, sample_gpx_file, tmp_path, main_module):
+def test_delete_segment_database_error(
+    client, sample_gpx_file, tmp_path, dependencies_module
+):
     """Test deletion when database operation fails."""
 
     # Mock a session that raises an exception
@@ -7328,8 +7363,8 @@ def test_delete_segment_database_error(client, sample_gpx_file, tmp_path, main_m
             pass
 
     # Mock the session
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = lambda: MockSession()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         # Delete the segment
@@ -7340,14 +7375,14 @@ def test_delete_segment_database_error(client, sample_gpx_file, tmp_path, main_m
         assert "Failed to delete track" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
-def test_delete_segment_no_database(client, main_module):
+def test_delete_segment_no_database(client, dependencies_module):
     """Test deletion when database is not available."""
     # Mock no database
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = None
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = None
 
     try:
         response = client.delete("/api/segments/1")
@@ -7356,16 +7391,16 @@ def test_delete_segment_no_database(client, main_module):
         assert "Database not available" in response.json()["detail"]
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_delete_segment_no_storage_manager(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test deletion when storage manager is not available."""
     # Mock no storage manager
-    original_storage_manager = main_module.storage_manager
-    main_module.storage_manager = None
+    original_storage_manager = dependencies_module.storage_manager
+    dependencies_module.storage_manager = None
 
     try:
         response = client.delete("/api/segments/123")
@@ -7374,10 +7409,10 @@ def test_delete_segment_no_storage_manager(
         assert "Storage manager not initialized" in response.json()["detail"]
 
     finally:
-        main_module.storage_manager = original_storage_manager
+        dependencies_module.storage_manager = original_storage_manager
 
 
-def test_delete_segment_track_not_found_in_database(client, main_module):
+def test_delete_segment_track_not_found_in_database(client, dependencies_module):
     """Test deletion when track is not found in database (mocked session)."""
 
     # Mock a session that returns None for the track (simulating track not found)
@@ -7396,8 +7431,8 @@ def test_delete_segment_track_not_found_in_database(client, main_module):
             return MockResult()
 
     # Mock the session
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = lambda: MockSession()
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         # Delete the segment
@@ -7409,11 +7444,11 @@ def test_delete_segment_track_not_found_in_database(client, main_module):
         assert response_data["detail"] == "Track not found"
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_delete_segment_gpx_deletion_exception_handling(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test that GPX file deletion exceptions are handled gracefully and logged."""
 
@@ -7447,12 +7482,12 @@ def test_delete_segment_gpx_deletion_exception_handling(
             pass
 
     # Mock the SessionLocal to return our mock session
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSession
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSession
 
     try:
         # Mock storage manager to raise an exception during GPX deletion
-        with patch("src.main.storage_manager") as mock_storage:
+        with patch("src.dependencies.storage_manager") as mock_storage:
             # Make delete_gpx_segment_by_url raise an exception
             mock_storage.delete_gpx_segment_by_url.side_effect = Exception(
                 "Storage service unavailable"
@@ -7488,11 +7523,11 @@ def test_delete_segment_gpx_deletion_exception_handling(
                 )
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_delete_segment_image_deletion_exception_handling(
-    client, sample_gpx_file, tmp_path, main_module
+    client, sample_gpx_file, tmp_path, dependencies_module
 ):
     """Test that image deletion exceptions are handled gracefully and logged."""
 
@@ -7544,12 +7579,12 @@ def test_delete_segment_image_deletion_exception_handling(
             pass
 
     # Mock the SessionLocal to return our mock session
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSession
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSession
 
     try:
         # Mock storage manager to raise exceptions during image deletion
-        with patch("src.main.storage_manager") as mock_storage:
+        with patch("src.dependencies.storage_manager") as mock_storage:
             # Make delete_gpx_segment_by_url succeed
             mock_storage.delete_gpx_segment_by_url.return_value = True
             # Mock get_storage_root_prefix to return local storage prefix
@@ -7599,14 +7634,14 @@ def test_delete_segment_image_deletion_exception_handling(
                 )
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 # Non-regression tests for specific bugs
 
 
 def test_nonregression_image_deletion_uses_storage_url_not_http_url(
-    client, main_module
+    client, dependencies_module
 ):
     """Non-regression test: Verify image deletion uses storage URL format.
 
@@ -7665,11 +7700,11 @@ def test_nonregression_image_deletion_uses_storage_url_not_http_url(
         async def commit(self):
             pass
 
-    original_session_local = main_module.SessionLocal
-    main_module.SessionLocal = MockSession
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = MockSession
 
     try:
-        with patch("src.main.storage_manager") as mock_storage:
+        with patch("src.dependencies.storage_manager") as mock_storage:
             mock_storage.delete_gpx_segment_by_url.return_value = True
             mock_storage.delete_image_by_url.return_value = True
             mock_storage.get_storage_root_prefix.return_value = "local://"
@@ -7705,11 +7740,11 @@ def test_nonregression_image_deletion_uses_storage_url_not_http_url(
             )
 
     finally:
-        main_module.SessionLocal = original_session_local
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
-    client, main_module
+    client, dependencies_module
 ):
     """Non-regression test: GPX endpoint needs both database and storage mocks.
 
@@ -7720,8 +7755,8 @@ def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
     Bug fixed: Tests were only mocking storage manager, causing them to fail
     with 404 instead of the expected storage error codes.
     """
-    original_storage_manager = main_module.storage_manager
-    original_session_local = main_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
 
     # Mock storage manager to return None (simulating file not found)
     class MockStorageManager:
@@ -7749,8 +7784,8 @@ def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
 
             return MockResult()
 
-    main_module.storage_manager = MockStorageManager()
-    main_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/123/gpx")
@@ -7763,20 +7798,20 @@ def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
         # NOT "Track not found"
 
     finally:
-        main_module.storage_manager = original_storage_manager
-        main_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local
 
 
 def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
-    client, main_module
+    client, dependencies_module
 ):
     """Non-regression test: GPX endpoint storage exceptions return 500.
 
     Verifies that when a track exists in the database but storage raises
     an exception, the endpoint returns 500 (not 404).
     """
-    original_storage_manager = main_module.storage_manager
-    original_session_local = main_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    original_session_local = dependencies_module.SessionLocal
 
     # Mock storage manager to raise an exception
     class MockStorageManager:
@@ -7804,8 +7839,8 @@ def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
 
             return MockResult()
 
-    main_module.storage_manager = MockStorageManager()
-    main_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+    dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
         response = client.get("/api/segments/456/gpx")
@@ -7817,5 +7852,5 @@ def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
         assert "Storage service unavailable" in data["detail"]
 
     finally:
-        main_module.storage_manager = original_storage_manager
-        main_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
+        dependencies_module.SessionLocal = original_session_local

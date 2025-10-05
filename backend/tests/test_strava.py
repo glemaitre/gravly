@@ -88,7 +88,9 @@ class TestStravaEndpoints:
 
     def test_get_strava_auth_url_success(self, client):
         """Test successful generation of Strava authorization URL."""
-        with patch("src.main.strava.get_authorization_url") as mock_get_auth_url:
+        with patch(
+            "src.dependencies.strava.get_authorization_url"
+        ) as mock_get_auth_url:
             mock_get_auth_url.return_value = (
                 "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
             )
@@ -106,9 +108,25 @@ class TestStravaEndpoints:
                 "http://localhost:3000/strava-callback", "strava_auth"
             )
 
+    def test_get_strava_auth_url_service_not_initialized(self, client):
+        """Test Strava auth URL when service is not initialized."""
+        from src import dependencies
+
+        original_strava = dependencies.strava
+        dependencies.strava = None
+
+        try:
+            response = client.get("/api/strava/auth-url")
+            assert response.status_code == 500
+            assert "Strava service not initialized" in response.json()["detail"]
+        finally:
+            dependencies.strava = original_strava
+
     def test_get_strava_auth_url_with_custom_state(self, client):
         """Test Strava authorization URL generation with custom state."""
-        with patch("src.main.strava.get_authorization_url") as mock_get_auth_url:
+        with patch(
+            "src.dependencies.strava.get_authorization_url"
+        ) as mock_get_auth_url:
             mock_get_auth_url.return_value = "https://www.strava.com/oauth/authorize?client_id=123&state=custom_state"
 
             response = client.get("/api/strava/auth-url?state=custom_state")
@@ -122,7 +140,9 @@ class TestStravaEndpoints:
 
     def test_get_strava_auth_url_error(self, client):
         """Test Strava authorization URL generation error handling."""
-        with patch("src.main.strava.get_authorization_url") as mock_get_auth_url:
+        with patch(
+            "src.dependencies.strava.get_authorization_url"
+        ) as mock_get_auth_url:
             mock_get_auth_url.side_effect = Exception("Configuration error")
 
             response = client.get("/api/strava/auth-url")
@@ -146,7 +166,7 @@ class TestStravaEndpoints:
             },
         }
 
-        with patch("src.main.strava.exchange_code_for_token") as mock_exchange:
+        with patch("src.dependencies.strava.exchange_code_for_token") as mock_exchange:
             mock_exchange.return_value = mock_token_response
 
             response = client.post(
@@ -162,7 +182,7 @@ class TestStravaEndpoints:
 
     def test_exchange_strava_code_error(self, client):
         """Test Strava code exchange error handling."""
-        with patch("src.main.strava.exchange_code_for_token") as mock_exchange:
+        with patch("src.dependencies.strava.exchange_code_for_token") as mock_exchange:
             mock_exchange.side_effect = Exception("Invalid code")
 
             response = client.post(
@@ -176,7 +196,7 @@ class TestStravaEndpoints:
 
     def test_refresh_strava_token_success(self, client):
         """Test successful Strava token refresh."""
-        with patch("src.main.strava.refresh_access_token") as mock_refresh:
+        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
             mock_refresh.return_value = True
 
             response = client.post("/api/strava/refresh-token")
@@ -189,7 +209,7 @@ class TestStravaEndpoints:
 
     def test_refresh_strava_token_failure(self, client):
         """Test Strava token refresh failure."""
-        with patch("src.main.strava.refresh_access_token") as mock_refresh:
+        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
             mock_refresh.return_value = False
 
             response = client.post("/api/strava/refresh-token")
@@ -201,7 +221,7 @@ class TestStravaEndpoints:
 
     def test_refresh_strava_token_exception(self, client):
         """Test Strava token refresh exception handling."""
-        with patch("src.main.strava.refresh_access_token") as mock_refresh:
+        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
             mock_refresh.side_effect = Exception("Token refresh error")
 
             response = client.post("/api/strava/refresh-token")
@@ -232,7 +252,7 @@ class TestStravaEndpoints:
             },
         ]
 
-        with patch("src.main.strava.get_activities") as mock_get_activities:
+        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
             mock_get_activities.return_value = mock_activities
 
             response = client.get("/api/strava/activities")
@@ -251,7 +271,7 @@ class TestStravaEndpoints:
         """Test Strava activities retrieval with custom pagination."""
         mock_activities = [{"id": "12345", "name": "Test Activity"}]
 
-        with patch("src.main.strava.get_activities") as mock_get_activities:
+        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
             mock_get_activities.return_value = mock_activities
 
             response = client.get("/api/strava/activities?page=2&per_page=10")
@@ -264,7 +284,7 @@ class TestStravaEndpoints:
 
     def test_get_strava_activities_error(self, client):
         """Test Strava activities retrieval error handling."""
-        with patch("src.main.strava.get_activities") as mock_get_activities:
+        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
             mock_get_activities.side_effect = Exception("API error")
 
             response = client.get("/api/strava/activities")
@@ -277,7 +297,7 @@ class TestStravaEndpoints:
     def test_get_strava_activities_http_exception(self, client):
         """Test Strava activities retrieval HTTPException handling."""
 
-        with patch("src.main.strava.get_activities") as mock_get_activities:
+        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
             mock_get_activities.side_effect = HTTPException(
                 status_code=401, detail="Unauthorized access"
             )
@@ -335,8 +355,8 @@ class TestStravaEndpoints:
 </gpx>"""
 
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir") as mock_temp_dir,
             patch("src.api.strava.extract_from_gpx_file") as mock_extract,
             patch("src.api.strava.gpxpy.parse"),
             patch("builtins.open", create=True),
@@ -360,7 +380,7 @@ class TestStravaEndpoints:
 
     def test_get_strava_activity_gpx_no_data(self, client):
         """Test Strava activity GPX retrieval when no GPX data available."""
-        with patch("src.main.strava.get_activity_gpx") as mock_get_gpx:
+        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
             mock_get_gpx.return_value = None
 
             response = client.get("/api/strava/activities/12345/gpx")
@@ -373,8 +393,8 @@ class TestStravaEndpoints:
     def test_get_strava_activity_gpx_no_temp_dir(self, client):
         """Test Strava activity GPX retrieval when temp directory not initialized."""
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir", None),
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir", None),
         ):
             mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
 
@@ -388,8 +408,8 @@ class TestStravaEndpoints:
     def test_get_strava_activity_gpx_save_error(self, client):
         """Test Strava activity GPX retrieval with file save error."""
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir") as mock_temp_dir,
             patch("builtins.open", side_effect=OSError("Permission denied")),
         ):
             mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
@@ -405,8 +425,8 @@ class TestStravaEndpoints:
     def test_get_strava_activity_gpx_parse_error(self, client):
         """Test Strava activity GPX retrieval with GPX parse error."""
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir") as mock_temp_dir,
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
@@ -426,8 +446,8 @@ class TestStravaEndpoints:
     def test_get_strava_activity_gpx_extract_error(self, client):
         """Test Strava activity GPX retrieval with GPX extraction error."""
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir") as mock_temp_dir,
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
@@ -450,7 +470,7 @@ class TestStravaEndpoints:
 
     def test_get_strava_activity_gpx_general_error(self, client):
         """Test Strava activity GPX retrieval with general error."""
-        with patch("src.main.strava.get_activity_gpx") as mock_get_gpx:
+        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
             mock_get_gpx.side_effect = Exception("Network error")
 
             response = client.get("/api/strava/activities/12345/gpx")
@@ -463,7 +483,7 @@ class TestStravaEndpoints:
     def test_get_strava_activity_gpx_http_exception(self, client):
         """Test Strava activity GPX retrieval HTTPException handling."""
 
-        with patch("src.main.strava.get_activity_gpx") as mock_get_gpx:
+        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
             mock_get_gpx.side_effect = HTTPException(
                 status_code=403, detail="Forbidden access to activity"
             )
@@ -498,7 +518,7 @@ class TestStravaEndpoints:
 
         # Mock the strava service's get_activities method directly (same as other
         # working tests)
-        with patch("src.main.strava.get_activities") as mock_get_activities:
+        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
             # Configure the mock to return our mock activities
             mock_get_activities.return_value = mock_activities
 
@@ -525,8 +545,8 @@ class TestStravaEndpoints:
 </gpx>"""
 
         with (
-            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.dependencies.temp_dir") as mock_temp_dir,
             patch("src.api.strava.extract_from_gpx_file") as mock_extract,
             patch("src.api.strava.gpxpy.parse"),
             patch("builtins.open", create=True),
