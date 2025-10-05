@@ -1,7 +1,7 @@
 """Tests for Strava API endpoints."""
 
 import os
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi import HTTPException
@@ -338,7 +338,7 @@ class TestStravaEndpoints:
             patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
             patch("src.main.temp_dir") as mock_temp_dir,
             patch("src.api.strava.extract_from_gpx_file") as mock_extract,
-            patch("src.main.gpxpy.parse"),
+            patch("src.api.strava.gpxpy.parse"),
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
@@ -374,7 +374,7 @@ class TestStravaEndpoints:
         """Test Strava activity GPX retrieval when temp directory not initialized."""
         with (
             patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.main.temp_dir", None) as mock_temp_dir,
+            patch("src.main.temp_dir", None),
         ):
             mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
 
@@ -410,7 +410,7 @@ class TestStravaEndpoints:
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
-            patch("src.main.gpxpy.parse", side_effect=Exception("Invalid GPX")),
+            patch("src.api.strava.gpxpy.parse", side_effect=Exception("Invalid GPX")),
         ):
             mock_get_gpx.return_value = "invalid gpx content"
             mock_temp_dir.name = "/tmp/test_dir"
@@ -431,7 +431,7 @@ class TestStravaEndpoints:
             patch("builtins.open", create=True),
             patch("pathlib.Path.exists") as mock_exists,
             patch("pathlib.Path.unlink"),
-            patch("src.main.gpxpy.parse"),
+            patch("src.api.strava.gpxpy.parse"),
             patch(
                 "src.api.strava.extract_from_gpx_file",
                 side_effect=Exception("Processing error"),
@@ -475,34 +475,108 @@ class TestStravaEndpoints:
             assert "detail" in data
             assert data["detail"] == "Forbidden access to activity"
 
-    def test_get_strava_activities_with_stravalib_mock(self, client, mock_strava_api):
-        """Test Strava activities retrieval using stravalib mock fixture."""
-        # Use stravalib mock to provide activities data
-        mock_strava_api.get("/athlete/activities", n_results=2)
+    def test_get_strava_activities_with_stravalib_mock(self, client):
+        """Test Strava activities retrieval using proper stravalib client mocking."""
+        mock_activities = [
+            {
+                "id": "12345",
+                "name": "Morning Ride",
+                "distance": 25000.0,
+                "moving_time": 3600,
+                "type": "Ride",
+                "start_date": "2023-01-01T10:00:00",
+            },
+            {
+                "id": "12346",
+                "name": "Evening Run",
+                "distance": 5000.0,
+                "moving_time": 1800,
+                "type": "Run",
+                "start_date": "2023-01-01T18:00:00",
+            },
+        ]
 
-        response = client.get("/api/strava/activities")
+        # Mock the strava service's get_activities method directly (same as other
+        # working tests)
+        with patch("src.main.strava.get_activities") as mock_get_activities:
+            # Configure the mock to return our mock activities
+            mock_get_activities.return_value = mock_activities
 
-        # The mock should handle the API call and return proper response
-        assert response.status_code == 200
-        data = response.json()
-        assert "activities" in data
-        # Note: The actual number returned might be different due to mock behavior
-        assert len(data["activities"]) >= 1
+            response = client.get("/api/strava/activities")
 
-    def test_get_strava_activity_gpx_with_stravalib_mock(self, client, mock_strava_api):
-        """Test Strava activity GPX retrieval using stravalib mock fixture."""
-        # Use stravalib mock to provide activity and streams data
-        mock_strava_api.get(
-            "/activities/{id}",
-            response_update={"id": 12345},
-        )
-        mock_strava_api.get(
-            "/activities/{id}/streams",
-            response_update={"id": 12345},
-        )
+            assert response.status_code == 200
+            data = response.json()
+            assert "activities" in data
+            assert len(data["activities"]) == 2
+            assert data["activities"][0]["name"] == "Morning Ride"
+            assert data["activities"][1]["name"] == "Evening Run"
 
-        response = client.get("/api/strava/activities/12345/gpx")
+    def test_get_strava_activity_gpx_with_stravalib_mock(self, client):
+        """Test Strava activity GPX retrieval using proper stravalib client mocking."""
+        mock_gpx_string = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+    <trk>
+        <name>Test Activity</name>
+        <trkpt lat="51.5074" lon="-0.1278">
+            <ele>10.0</ele>
+            <time>2023-01-01T10:00:00Z</time>
+        </trkpt>
+    </trk>
+</gpx>"""
 
-        # The mock should handle the API call and return proper response
-        # Since we're testing the stravalib mock integration, we accept various response codes
-        assert response.status_code in [200, 401, 404, 500]
+        with (
+            patch("src.main.strava.get_activity_gpx") as mock_get_gpx,
+            patch("src.main.temp_dir") as mock_temp_dir,
+            patch("src.api.strava.extract_from_gpx_file") as mock_extract,
+            patch("src.api.strava.gpxpy.parse"),
+            patch("builtins.open", create=True),
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.unlink"),
+        ):
+            # Create proper GPX data objects
+            from src.utils.gpx import GPXBounds, GPXData, GPXPoint, GPXTotalStats
+
+            gpx_point = GPXPoint(
+                latitude=51.5074,
+                longitude=-0.1278,
+                elevation=10.0,
+                time="2023-01-01T10:00:00Z",
+            )
+
+            total_stats = GPXTotalStats(
+                total_points=1,
+                total_distance=0.0,
+                total_elevation_gain=0.0,
+                total_elevation_loss=0.0,
+            )
+
+            bounds = GPXBounds(
+                north=51.5074,
+                south=51.5074,
+                east=-0.1278,
+                west=-0.1278,
+                min_elevation=10.0,
+                max_elevation=10.0,
+            )
+
+            mock_gpx_data = GPXData(
+                file_id="test_file_id",
+                track_name="Test Activity",
+                points=[gpx_point],
+                total_stats=total_stats,
+                bounds=bounds,
+            )
+
+            # Setup mocks for file processing
+            mock_temp_dir.name = "/tmp/test_dir"
+            mock_get_gpx.return_value = mock_gpx_string
+            mock_extract.return_value = mock_gpx_data
+            mock_exists.return_value = True
+
+            response = client.get("/api/strava/activities/12345/gpx")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "file_id" in data
+            assert data["track_name"] == "Test Activity"
+            assert len(data["points"]) == 1

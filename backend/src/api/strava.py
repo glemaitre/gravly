@@ -98,7 +98,8 @@ def create_strava_router(strava_service: StravaService, temp_dir) -> APIRouter:
             # Import temp_dir from main module to access the global variable
             from ..main import temp_dir
 
-            # Check authentication by trying to get GPX (will raise if not authenticated)
+            # Check authentication by trying to get GPX
+            # (will raise if not authenticated)
             gpx_string = strava_service.get_activity_gpx(activity_id)
 
             if not gpx_string:

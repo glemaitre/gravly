@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from stravalib.tests.integration.strava_api_stub import StravaAPIMock
 
 # Ensure backend src is on sys.path for imports like `from src import main`
 # When running from project root, we need to add the backend/src directory
@@ -26,12 +25,6 @@ def mock_aws_environment():
         },
     ):
         yield
-
-
-@pytest.fixture
-def mock_strava_api():
-    """Provide the stravalib mock API fixture for testing."""
-    return StravaAPIMock()
 
 
 @pytest.fixture
