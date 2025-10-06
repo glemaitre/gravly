@@ -331,6 +331,9 @@ export default {
     },
     // Waypoint context menu
     deleteWaypoint: 'Supprimer le point de passage',
+    // Info banner
+    infoBannerMessage: 'Cliquez sur {icon} pour choisir le mode de routage !',
+    infoBannerDismiss: 'Compris',
     // Units
     km: 'km',
     m: 'm'

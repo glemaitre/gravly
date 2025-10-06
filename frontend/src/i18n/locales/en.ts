@@ -326,6 +326,9 @@ export default {
     },
     // Waypoint context menu
     deleteWaypoint: 'Delete Waypoint',
+    // Info banner
+    infoBannerMessage: 'Click on {icon} to choose the routing mode!',
+    infoBannerDismiss: 'Got it',
     // Units
     km: 'km',
     m: 'm'

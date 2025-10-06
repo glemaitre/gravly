@@ -30,6 +30,25 @@
     <div class="map-container">
       <div id="route-map" class="map"></div>
 
+      <!-- Info Banner -->
+      <div v-if="showInfoBanner" class="info-banner">
+        <div class="info-banner-content">
+          <i class="fa-solid fa-info-circle info-banner-icon"></i>
+          <span class="info-banner-message">
+            <template v-for="(part, index) in infoBannerParts" :key="index">
+              <span v-if="part.type === 'text'">{{ part.content }}</span>
+              <i
+                v-else-if="part.type === 'icon'"
+                class="fa-solid fa-route banner-route-icon"
+              ></i>
+            </template>
+          </span>
+        </div>
+        <button class="info-banner-close" @click="dismissInfoBanner">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+
       <!-- Top right corner controls -->
       <div class="map-controls">
         <div class="control-group">
@@ -101,7 +120,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, nextTick, watch } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
@@ -284,6 +303,48 @@ const ELEVATION_FAILURE_SENTINEL = -9999
 // Route persistence keys
 const ROUTE_STORAGE_KEY = 'routePlanner_currentRoute'
 const MAP_STATE_STORAGE_KEY = 'routePlanner_mapState' // eslint-disable-line no-unused-vars
+const INFO_BANNER_DISMISSED_KEY = 'routePlanner_infoBannerDismissed'
+
+// Info banner state
+const showInfoBanner = ref(true)
+
+// Computed property to split the banner message and insert the icon
+const infoBannerParts = computed(() => {
+  const message = t('routePlanner.infoBannerMessage', { icon: '{icon}' })
+  const parts: Array<{ type: 'text' | 'icon'; content?: string }> = []
+
+  const messageParts = message.split('{icon}')
+
+  messageParts.forEach((part, index) => {
+    if (part) {
+      parts.push({ type: 'text', content: part })
+    }
+    if (index < messageParts.length - 1) {
+      parts.push({ type: 'icon' })
+    }
+  })
+
+  return parts
+})
+
+// Info banner management functions
+function loadInfoBannerState() {
+  try {
+    const dismissed = localStorage.getItem(INFO_BANNER_DISMISSED_KEY)
+    showInfoBanner.value = dismissed !== 'true'
+  } catch (error) {
+    console.warn('Failed to load info banner state:', error)
+  }
+}
+
+function dismissInfoBanner() {
+  showInfoBanner.value = false
+  try {
+    localStorage.setItem(INFO_BANNER_DISMISSED_KEY, 'true')
+  } catch (error) {
+    console.warn('Failed to save info banner state:', error)
+  }
+}
 
 // Cache management functions
 function saveElevationCache() {
@@ -914,6 +975,9 @@ onMounted(async () => {
   // Add CSS class to prevent scrollbars on the entire page
   document.body.classList.add('route-planner-active')
   document.documentElement.classList.add('route-planner-active')
+
+  // Load info banner dismissed state
+  loadInfoBannerState()
 
   // Load elevation cache first
   loadElevationCache()
@@ -4631,6 +4695,91 @@ function clearAllSegments() {
 }
 
 /* Map controls in top right corner */
+/* Info Banner */
+.info-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  max-width: 350px;
+  z-index: 1000;
+  background: white;
+  border-radius: 0 0 8px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-left: 4px solid var(--brand-primary);
+  animation: slideInFromLeft 0.3s ease-out;
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.info-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  white-space: nowrap;
+}
+
+.info-banner-icon {
+  color: var(--brand-primary);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.info-banner-message {
+  font-size: 0.75rem;
+  color: #333;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.banner-route-icon {
+  color: var(--brand-primary);
+  font-size: 0.8rem;
+  margin: 0 0.1rem;
+}
+
+.info-banner-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 0.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.info-banner-close:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.info-banner-close i {
+  font-size: 0.8rem;
+}
+
 .map-controls {
   position: absolute;
   top: 1rem;
@@ -4706,6 +4855,22 @@ function clearAllSegments() {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .info-banner {
+    max-width: calc(100vw - 60px); /* Account for right controls */
+  }
+
+  .info-banner-message {
+    font-size: 0.7rem;
+  }
+
+  .info-banner-icon {
+    font-size: 0.75rem;
+  }
+
+  .banner-route-icon {
+    font-size: 0.75rem;
+  }
+
   .elevation-section {
     /* Ensure mobile viewport fit */
     max-height: calc(100vh - var(--navbar-height) - 80px);
