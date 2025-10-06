@@ -52,7 +52,7 @@ class Track(Base):
     track_type: Mapped[TrackType] = mapped_column(Enum(TrackType))
     difficulty_level: Mapped[int] = mapped_column(Integer)
     surface_type: Mapped[list[str]] = mapped_column(
-        ARRAY(String), nullable=False, default=lambda: []
+        ARRAY(String), nullable=False, server_default="{}"
     )
     tire_dry: Mapped[TireType] = mapped_column(Enum(TireType))
     tire_wet: Mapped[TireType] = mapped_column(Enum(TireType))

@@ -67,7 +67,7 @@ describe('SegmentImportCard', () => {
     name: 'Test Segment',
     track_type: 'segment',
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'knobs',
     tire_wet: 'semi-slick',
     comments: 'Test comments'
@@ -582,7 +582,7 @@ describe('SegmentImportCard', () => {
       ]
 
       surfaceTypes.forEach((surfaceType) => {
-        const segment = { ...mockSegment, surface_type: surfaceType }
+        const segment = { ...mockSegment, surface_type: [surfaceType] }
 
         wrapper = mount(SegmentImportCard, {
           props: {

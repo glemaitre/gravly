@@ -153,7 +153,7 @@ describe('SegmentDetail', () => {
     barycenter_latitude: 45.75,
     barycenter_longitude: 4.85,
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'semi-slick',
     tire_wet: 'knobs',
     comments: 'Test segment for testing'
@@ -339,7 +339,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -456,7 +456,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -527,7 +527,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -627,7 +627,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -721,7 +721,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -814,7 +814,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -907,7 +907,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -990,7 +990,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1128,7 +1128,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1238,7 +1238,7 @@ describe('SegmentDetail Image Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1369,7 +1369,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1472,7 +1472,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1543,7 +1543,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1668,7 +1668,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1741,7 +1741,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1874,7 +1874,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -1993,7 +1993,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -2120,7 +2120,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'
@@ -2206,7 +2206,7 @@ describe('SegmentDetail Video Gallery', () => {
               name: 'Test Segment',
               track_type: 'segment',
               difficulty_level: 3,
-              surface_type: 'forest-trail',
+              surface_type: ['forest-trail'],
               tire_dry: 'slick',
               tire_wet: 'slick',
               comments: 'Test comments'

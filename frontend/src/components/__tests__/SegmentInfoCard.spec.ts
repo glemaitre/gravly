@@ -26,7 +26,7 @@ describe('SegmentInfoCard', () => {
       name: 'Test Segment',
       track_type: 'segment',
       difficulty_level: 3,
-      surface_type: 'broken-paved-road',
+      surface_type: ['broken-paved-road'],
       tire_dry: 'semi-slick',
       tire_wet: 'knobs',
       barycenter_latitude: 45.5,
@@ -256,7 +256,7 @@ describe('SegmentInfoCard', () => {
       ]
 
       surfaceTypes.forEach((surfaceType) => {
-        const testSegment = { ...mockSegment, surface_type: surfaceType }
+        const testSegment = { ...mockSegment, surface_type: [surfaceType] }
         const wrapper = mount(SegmentInfoCard, {
           props: {
             segment: testSegment,
@@ -599,7 +599,7 @@ describe('SegmentInfoCard', () => {
 
   describe('Edge Cases', () => {
     it('should handle missing surface type gracefully', () => {
-      const testSegment = { ...mockSegment, surface_type: '' }
+      const testSegment = { ...mockSegment, surface_type: [''] }
       const wrapper = mount(SegmentInfoCard, {
         props: {
           segment: testSegment,
@@ -611,7 +611,7 @@ describe('SegmentInfoCard', () => {
       })
 
       const surfaceText = wrapper.find('.surface-text')
-      expect(surfaceText.text()).toBe('')
+      expect(surfaceText.text()).toBe('N/A')
     })
 
     it('should handle missing tire type gracefully', () => {

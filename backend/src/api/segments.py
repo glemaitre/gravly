@@ -83,7 +83,10 @@ def create_segments_router(
                 if st not in allowed_surface_types:
                     raise HTTPException(
                         status_code=422,
-                        detail=f"Invalid surface type: {st}. Allowed values: {allowed_surface_types}",
+                        detail=(
+                            f"Invalid surface type: {st}. "
+                            f"Allowed values: {allowed_surface_types}"
+                        ),
                     )
         except json.JSONDecodeError:
             raise HTTPException(
@@ -425,7 +428,7 @@ def create_segments_router(
                             name=track.name,
                             track_type=track.track_type.value,
                             difficulty_level=track.difficulty_level,
-                            surface_type=track.surface_type.value,
+                            surface_type=track.surface_type,
                             tire_dry=track.tire_dry.value,
                             tire_wet=track.tire_wet.value,
                             comments=track.comments or "",
@@ -856,7 +859,10 @@ def create_segments_router(
                 if st not in allowed_surface_types:
                     raise HTTPException(
                         status_code=422,
-                        detail=f"Invalid surface type: {st}. Allowed values: {allowed_surface_types}",
+                        detail=(
+                            f"Invalid surface type: {st}. "
+                            f"Allowed values: {allowed_surface_types}"
+                        ),
                     )
         except json.JSONDecodeError:
             raise HTTPException(

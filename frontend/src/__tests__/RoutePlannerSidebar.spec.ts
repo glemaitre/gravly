@@ -61,7 +61,7 @@ const createMockSegment = (id: number, name: string, overrides = {}) => ({
   barycenter_longitude: 3.979509,
   track_type: 'gravel',
   difficulty_level: 3,
-  surface_type: 'broken-paved-road',
+  surface_type: ['broken-paved-road'],
   tire_dry: 'slick',
   tire_wet: 'knobs',
   comments: '',
@@ -588,7 +588,7 @@ describe('RoutePlannerSidebar', () => {
       createMockSegment(1, 'Test Segment 1'),
       createMockSegment(2, 'Test Segment 2', {
         difficulty_level: 4,
-        surface_type: 'dirty-road',
+        surface_type: ['dirty-road'],
         tire_dry: 'semi-slick'
       })
     ]

@@ -145,7 +145,7 @@ describe('SegmentImportModal', () => {
     name: 'Test Segment',
     track_type: 'segment',
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'semi-slick',
     tire_wet: 'knobs',
     comments: 'Test comments'

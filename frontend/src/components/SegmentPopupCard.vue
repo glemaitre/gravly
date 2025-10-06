@@ -36,9 +36,31 @@
       <div class="segment-info-grid">
         <div class="info-section">
           <div class="info-label">Surface</div>
-          <div class="info-value">
-            <i class="fa-solid fa-road"></i>
-            <span>{{ formatSurfaceType(segment.surface_type) }}</span>
+          <div class="info-value surface-nav">
+            <button
+              v-if="segment.surface_type.length > 1"
+              class="surface-nav-btn"
+              @click.stop="previousSurface"
+              :disabled="currentSurfaceIndex === 0"
+              title="Previous surface type"
+            >
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div class="surface-content">
+              <span class="surface-text">{{ getCurrentSurfaceType() }}</span>
+              <span v-if="segment.surface_type.length > 1" class="surface-indicator">
+                {{ currentSurfaceIndex + 1 }}/{{ segment.surface_type.length }}
+              </span>
+            </div>
+            <button
+              v-if="segment.surface_type.length > 1"
+              class="surface-nav-btn"
+              @click.stop="nextSurface"
+              :disabled="currentSurfaceIndex === segment.surface_type.length - 1"
+              title="Next surface type"
+            >
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
           </div>
         </div>
 
@@ -69,7 +91,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { TrackResponse, GPXData } from '../types'
 
 // Props
@@ -78,6 +100,9 @@ const props = defineProps<{
   isSelected: boolean
   gpxData?: GPXData | null
 }>()
+
+// State for surface type navigation
+const currentSurfaceIndex = ref(0)
 
 // Computed stats display
 const statsDisplay = computed(() => {
@@ -98,6 +123,27 @@ const statsDisplay = computed(() => {
   }
 })
 
+// Surface type navigation functions
+function getCurrentSurfaceType(): string {
+  if (!props.segment.surface_type || props.segment.surface_type.length === 0) {
+    return 'N/A'
+  }
+  const surfaceType = props.segment.surface_type[currentSurfaceIndex.value]
+  return formatSurfaceType(surfaceType)
+}
+
+function previousSurface(): void {
+  if (currentSurfaceIndex.value > 0) {
+    currentSurfaceIndex.value--
+  }
+}
+
+function nextSurface(): void {
+  if (currentSurfaceIndex.value < props.segment.surface_type.length - 1) {
+    currentSurfaceIndex.value++
+  }
+}
+
 // Formatting helper functions
 function formatDistance(meters: number): string {
   if (meters < 1000) {
@@ -111,6 +157,7 @@ function formatElevation(meters: number): string {
 }
 
 function formatSurfaceType(surfaceType: string): string {
+  if (!surfaceType) return ''
   return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
@@ -273,6 +320,65 @@ function formatTireType(tireType: string): string {
 .info-value.difficulty {
   color: #e67e22;
   font-weight: 600;
+}
+
+/* Surface navigation styles */
+.info-value.surface-nav {
+  gap: 2px;
+  width: 100%;
+  position: relative;
+}
+
+.surface-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 1;
+  flex-direction: column;
+}
+
+.surface-text {
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.2;
+  color: #333;
+}
+
+.surface-indicator {
+  font-size: 0.55rem;
+  color: #999;
+  font-weight: 400;
+}
+
+.surface-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.surface-nav-btn:hover:not(:disabled) {
+  background-color: rgba(var(--brand-primary-rgb), 0.1);
+  transform: scale(1.1);
+}
+
+.surface-nav-btn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.surface-nav-btn i {
+  font-size: 0.6rem;
 }
 
 .tire-recommendations {

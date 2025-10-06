@@ -53,7 +53,7 @@ describe('SegmentImportCard', () => {
     name: 'Test Segment',
     track_type: 'segment',
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'semi-slick',
     tire_wet: 'knobs',
     comments: 'Test comments'
@@ -593,7 +593,7 @@ describe('SegmentImportCard', () => {
       // Test with unknown surface type
       const segmentWithUnknownSurface = {
         ...mockSegment,
-        surface_type: 'unknown-surface'
+        surface_type: ['unknown-surface']
       }
       await wrapper.setProps({ segment: segmentWithUnknownSurface })
 

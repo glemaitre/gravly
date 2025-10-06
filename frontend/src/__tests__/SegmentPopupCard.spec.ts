@@ -16,7 +16,7 @@ describe('SegmentPopupCard', () => {
     name: 'Test Segment',
     track_type: 'gravel',
     difficulty_level: 3,
-    surface_type: 'broken-paved-road',
+    surface_type: ['broken-paved-road'],
     tire_dry: 'slick',
     tire_wet: 'knobs',
     comments: 'Test comments'
@@ -265,7 +265,7 @@ describe('SegmentPopupCard', () => {
       ]
 
       surfaceTypes.forEach(({ input, expected }) => {
-        const segment = { ...mockSegment, surface_type: input }
+        const segment = { ...mockSegment, surface_type: [input] }
         const wrapper = mount(SegmentPopupCard, {
           props: {
             segment,
@@ -448,8 +448,8 @@ describe('SegmentPopupCard', () => {
       expect(wrapper.find('.fa-arrow-trend-up').exists()).toBe(true)
       expect(wrapper.find('.fa-arrow-trend-down').exists()).toBe(true)
 
-      // Info icons
-      expect(wrapper.find('.fa-road').exists()).toBe(true)
+      // Info icons (surface uses text now, not icon)
+      expect(wrapper.find('.surface-text').exists()).toBe(true)
       expect(wrapper.find('.fa-signal').exists()).toBe(true)
       expect(wrapper.find('.fa-sun').exists()).toBe(true)
       expect(wrapper.find('.fa-cloud-rain').exists()).toBe(true)

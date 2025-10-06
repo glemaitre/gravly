@@ -33,7 +33,16 @@
               <i class="fa-solid fa-road"></i>
               {{ t('segmentDetail.surface') }}
             </div>
-            <div class="info-value">
+            <div class="info-value surface-nav-container">
+              <button
+                v-if="segment.surface_type.length > 1"
+                class="surface-nav-btn"
+                @click.stop="previousSurface"
+                :disabled="currentSurfaceIndex === 0"
+                title="Previous surface type"
+              >
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
               <div class="surface-info-vertical">
                 <img
                   :src="surfaceImage"
@@ -41,7 +50,19 @@
                   class="surface-image"
                 />
                 <span class="surface-text">{{ surfaceTypeLabel }}</span>
+                <span v-if="segment.surface_type.length > 1" class="surface-indicator">
+                  {{ currentSurfaceIndex + 1 }}/{{ segment.surface_type.length }}
+                </span>
               </div>
+              <button
+                v-if="segment.surface_type.length > 1"
+                class="surface-nav-btn"
+                @click.stop="nextSurface"
+                :disabled="currentSurfaceIndex === segment.surface_type.length - 1"
+                title="Next surface type"
+              >
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
             </div>
           </div>
 
@@ -112,7 +133,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TrackResponse, GPXData } from '../types'
 
@@ -151,6 +172,22 @@ const surfaceImages = {
   'forest-trail': forestTrailUrl
 }
 
+// State for surface type navigation
+const currentSurfaceIndex = ref(0)
+
+// Surface type navigation functions
+function previousSurface(): void {
+  if (currentSurfaceIndex.value > 0) {
+    currentSurfaceIndex.value--
+  }
+}
+
+function nextSurface(): void {
+  if (currentSurfaceIndex.value < props.segment.surface_type.length - 1) {
+    currentSurfaceIndex.value++
+  }
+}
+
 // Helper functions
 function formatDistance(kilometers: number): string {
   return `${kilometers.toFixed(2)} km`
@@ -161,7 +198,7 @@ function formatElevation(meters: number): string {
 }
 
 function formatSurfaceType(surfaceType: string): string {
-  if (!surfaceType) return ''
+  if (!surfaceType) return 'N/A'
   return (
     t(`surface.${surfaceType}`) ||
     surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
@@ -188,6 +225,7 @@ function getTireImage(tireType: string): string {
 }
 
 function getSurfaceImage(surfaceType: string): string {
+  if (!surfaceType) return brokenPavedRoadUrl
   return surfaceImages[surfaceType as keyof typeof surfaceImages] || brokenPavedRoadUrl
 }
 
@@ -206,8 +244,21 @@ function getDifficultyWord(level: number): string {
 const difficultyLevel = computed(() => props.segment.difficulty_level || 0)
 const difficultyWord = computed(() => getDifficultyWord(difficultyLevel.value))
 
-const surfaceTypeLabel = computed(() => formatSurfaceType(props.segment.surface_type))
-const surfaceImage = computed(() => getSurfaceImage(props.segment.surface_type))
+const surfaceTypeLabel = computed(() => {
+  if (!props.segment.surface_type || props.segment.surface_type.length === 0) {
+    return 'N/A'
+  }
+  const currentType = props.segment.surface_type[currentSurfaceIndex.value]
+  return formatSurfaceType(currentType)
+})
+
+const surfaceImage = computed(() => {
+  if (!props.segment.surface_type || props.segment.surface_type.length === 0) {
+    return brokenPavedRoadUrl
+  }
+  const currentType = props.segment.surface_type[currentSurfaceIndex.value]
+  return getSurfaceImage(currentType)
+})
 
 const tireDryLabel = computed(() => formatTireType(props.segment.tire_dry))
 const tireDryImage = computed(() => getTireImage(props.segment.tire_dry))
@@ -368,11 +419,58 @@ const formattedElevationLoss = computed(() =>
   text-align: center;
 }
 
+.surface-nav-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 180px;
+}
+
 .surface-info-vertical {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  min-width: 120px;
+  max-width: 120px;
+}
+
+.surface-indicator {
+  font-size: 0.7rem;
+  color: #999;
+  font-weight: 400;
+  margin-top: 0.25rem;
+}
+
+.surface-nav-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.surface-nav-btn:hover:not(:disabled) {
+  background-color: rgba(var(--brand-primary-rgb), 0.1);
+  transform: scale(1.1);
+}
+
+.surface-nav-btn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.surface-nav-btn i {
+  font-size: 0.9rem;
 }
 
 .surface-image {
@@ -387,6 +485,10 @@ const formattedElevationLoss = computed(() =>
   font-weight: 500;
   color: #111827;
   text-align: center;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tire-recommendations-compact {

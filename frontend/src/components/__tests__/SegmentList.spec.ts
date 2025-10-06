@@ -55,7 +55,7 @@ describe('SegmentList', () => {
     name,
     track_type: 'segment',
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'semi-slick',
     tire_wet: 'knobs',
     comments: `Test segment ${id}`
@@ -343,7 +343,7 @@ describe('SegmentList', () => {
         barycenter_latitude: 45.75,
         barycenter_longitude: 4.85,
         difficulty_level: 1,
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         tire_dry: 'semi-slick',
         tire_wet: 'knobs',
         comments: ''

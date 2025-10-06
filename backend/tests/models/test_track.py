@@ -71,7 +71,8 @@ def test_track_model_creation():
 
 def test_track_model_optional_fields():
     """Test Track model with minimal required fields."""
-    track = Track(file_path="/path/to/track.gpx", name="Minimal Track")
+    # surface_type is required (non-nullable), so we provide an empty list
+    track = Track(file_path="/path/to/track.gpx", name="Minimal Track", surface_type=[])
 
     assert track.file_path == "/path/to/track.gpx"
     assert track.name == "Minimal Track"
@@ -83,7 +84,7 @@ def test_track_model_optional_fields():
     assert track.barycenter_longitude is None
     assert track.track_type is None
     assert track.difficulty_level is None
-    assert track.surface_type == []  # Changed from None to empty list
+    assert track.surface_type == []
     assert track.tire_dry is None
     assert track.tire_wet is None
     assert track.comments is None

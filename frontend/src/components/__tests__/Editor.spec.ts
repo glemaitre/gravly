@@ -425,7 +425,7 @@ describe('Editor', () => {
     vm.trailConditions = {
       tire_dry: 'slick',
       tire_wet: 'semi-slick',
-      surface_type: 'forest-trail',
+      surface_type: ['forest-trail'],
       difficulty_level: 3
     }
     await wrapper.vm.$nextTick()
@@ -1353,7 +1353,7 @@ describe('Editor Image Upload', () => {
         track_type: 'segment',
         tire_dry: 'knobs',
         tire_wet: 'semi-slick',
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         difficulty_level: 4,
         comments: 'Challenging mountain trail with technical sections'
       }
@@ -1365,13 +1365,7 @@ describe('Editor Image Upload', () => {
       vm.trailConditions = {
         tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
         tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-        surface_type: mockSegment.surface_type as
-          | 'broken-paved-road'
-          | 'dirty-road'
-          | 'small-stone-road'
-          | 'big-stone-road'
-          | 'field-trail'
-          | 'forest-trail',
+        surface_type: mockSegment.surface_type,
         difficulty_level: mockSegment.difficulty_level
       }
       vm.commentary = {
@@ -1386,7 +1380,7 @@ describe('Editor Image Upload', () => {
       expect(vm.trackType).toBe('segment')
       expect(vm.trailConditions.tire_dry).toBe('knobs')
       expect(vm.trailConditions.tire_wet).toBe('semi-slick')
-      expect(vm.trailConditions.surface_type).toBe('forest-trail')
+      expect(vm.trailConditions.surface_type).toEqual(['forest-trail'])
       expect(vm.trailConditions.difficulty_level).toBe(4)
       expect(vm.commentary.text).toBe(
         'Challenging mountain trail with technical sections'
@@ -1404,7 +1398,7 @@ describe('Editor Image Upload', () => {
         track_type: 'route',
         tire_dry: 'slick',
         tire_wet: 'slick',
-        surface_type: 'broken-paved-road',
+        surface_type: ['broken-paved-road'],
         difficulty_level: 2,
         comments: 'Easy city route for beginners'
       }
@@ -1416,13 +1410,7 @@ describe('Editor Image Upload', () => {
       vm.trailConditions = {
         tire_dry: mockRoute.tire_dry as 'slick' | 'semi-slick' | 'knobs',
         tire_wet: mockRoute.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-        surface_type: mockRoute.surface_type as
-          | 'broken-paved-road'
-          | 'dirty-road'
-          | 'small-stone-road'
-          | 'big-stone-road'
-          | 'field-trail'
-          | 'forest-trail',
+        surface_type: mockRoute.surface_type,
         difficulty_level: mockRoute.difficulty_level
       }
       vm.commentary = {
@@ -1437,7 +1425,7 @@ describe('Editor Image Upload', () => {
       expect(vm.trackType).toBe('route')
       expect(vm.trailConditions.tire_dry).toBe('slick')
       expect(vm.trailConditions.tire_wet).toBe('slick')
-      expect(vm.trailConditions.surface_type).toBe('broken-paved-road')
+      expect(vm.trailConditions.surface_type).toEqual(['broken-paved-road'])
       expect(vm.trailConditions.difficulty_level).toBe(2)
       expect(vm.commentary.text).toBe('Easy city route for beginners')
     })
@@ -1450,7 +1438,7 @@ describe('Editor Image Upload', () => {
         track_type: 'segment',
         tire_dry: 'semi-slick',
         tire_wet: 'knobs',
-        surface_type: 'dirty-road',
+        surface_type: ['dirty-road'],
         difficulty_level: 3,
         comments: null
       }
@@ -1462,13 +1450,7 @@ describe('Editor Image Upload', () => {
       vm.trailConditions = {
         tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
         tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-        surface_type: mockSegment.surface_type as
-          | 'broken-paved-road'
-          | 'dirty-road'
-          | 'small-stone-road'
-          | 'big-stone-road'
-          | 'field-trail'
-          | 'forest-trail',
+        surface_type: mockSegment.surface_type,
         difficulty_level: mockSegment.difficulty_level
       }
       vm.commentary = {
@@ -1483,7 +1465,7 @@ describe('Editor Image Upload', () => {
       expect(vm.trackType).toBe('segment')
       expect(vm.trailConditions.tire_dry).toBe('semi-slick')
       expect(vm.trailConditions.tire_wet).toBe('knobs')
-      expect(vm.trailConditions.surface_type).toBe('dirty-road')
+      expect(vm.trailConditions.surface_type).toEqual(['dirty-road'])
       expect(vm.trailConditions.difficulty_level).toBe(3)
       expect(vm.commentary.text).toBe('')
     })
@@ -1496,7 +1478,7 @@ describe('Editor Image Upload', () => {
         track_type: 'segment',
         tire_dry: 'knobs',
         tire_wet: 'knobs',
-        surface_type: 'big-stone-road',
+        surface_type: ['big-stone-road'],
         difficulty_level: 5,
         comments: undefined
       }
@@ -1508,13 +1490,7 @@ describe('Editor Image Upload', () => {
       vm.trailConditions = {
         tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
         tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-        surface_type: mockSegment.surface_type as
-          | 'broken-paved-road'
-          | 'dirty-road'
-          | 'small-stone-road'
-          | 'big-stone-road'
-          | 'field-trail'
-          | 'forest-trail',
+        surface_type: mockSegment.surface_type,
         difficulty_level: mockSegment.difficulty_level
       }
       vm.commentary = {
@@ -1529,7 +1505,7 @@ describe('Editor Image Upload', () => {
       expect(vm.trackType).toBe('segment')
       expect(vm.trailConditions.tire_dry).toBe('knobs')
       expect(vm.trailConditions.tire_wet).toBe('knobs')
-      expect(vm.trailConditions.surface_type).toBe('big-stone-road')
+      expect(vm.trailConditions.surface_type).toEqual(['big-stone-road'])
       expect(vm.trailConditions.difficulty_level).toBe(5)
       expect(vm.commentary.text).toBe('')
     })
@@ -1551,7 +1527,7 @@ describe('Editor Image Upload', () => {
           track_type: 'segment',
           tire_dry: 'slick',
           tire_wet: 'semi-slick',
-          surface_type: surfaceType,
+          surface_type: [surfaceType],
           difficulty_level: 3,
           comments: `Test segment with ${surfaceType}`
         }
@@ -1560,18 +1536,12 @@ describe('Editor Image Upload', () => {
         vm.trailConditions = {
           tire_dry: 'slick',
           tire_wet: 'semi-slick',
-          surface_type: mockSegment.surface_type as
-            | 'broken-paved-road'
-            | 'dirty-road'
-            | 'small-stone-road'
-            | 'big-stone-road'
-            | 'field-trail'
-            | 'forest-trail',
+          surface_type: mockSegment.surface_type,
           difficulty_level: 3
         }
 
         // Verify surface type is set correctly
-        expect(vm.trailConditions.surface_type).toBe(surfaceType)
+        expect(vm.trailConditions.surface_type).toEqual([surfaceType])
       }
     })
 
@@ -1586,7 +1556,7 @@ describe('Editor Image Upload', () => {
             track_type: 'segment',
             tire_dry: tireDry,
             tire_wet: tireWet,
-            surface_type: 'forest-trail',
+            surface_type: ['forest-trail'],
             difficulty_level: 3,
             comments: `Test segment with ${tireDry} dry and ${tireWet} wet`
           }
@@ -1595,7 +1565,7 @@ describe('Editor Image Upload', () => {
           vm.trailConditions = {
             tire_dry: mockSegment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
             tire_wet: mockSegment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-            surface_type: 'forest-trail',
+            surface_type: ['forest-trail'],
             difficulty_level: 3
           }
 
@@ -1614,7 +1584,7 @@ describe('Editor Image Upload', () => {
           track_type: 'segment',
           tire_dry: 'slick',
           tire_wet: 'semi-slick',
-          surface_type: 'forest-trail',
+          surface_type: ['forest-trail'],
           difficulty_level: difficulty,
           comments: `Test segment with difficulty ${difficulty}`
         }
@@ -1623,7 +1593,7 @@ describe('Editor Image Upload', () => {
         vm.trailConditions = {
           tire_dry: 'slick',
           tire_wet: 'semi-slick',
-          surface_type: 'forest-trail',
+          surface_type: ['forest-trail'],
           difficulty_level: mockSegment.difficulty_level
         }
 
@@ -1639,7 +1609,7 @@ describe('Editor Image Upload', () => {
         track_type: 'segment',
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         difficulty_level: 3,
         comments: 'Test comments'
       }
@@ -1713,7 +1683,7 @@ describe('Editor Image Upload', () => {
       vm.trailConditions = {
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         difficulty_level: 3
       }
       vm.commentary = { text: 'Test commentary', video_links: [], images: [] }
@@ -1943,7 +1913,7 @@ describe('Editor Image Upload', () => {
       expect(vm.trailConditions).toEqual({
         tire_dry: 'slick',
         tire_wet: 'slick',
-        surface_type: 'forest-trail',
+        surface_type: [],
         difficulty_level: 3
       })
       expect(vm.commentary).toEqual({ text: '', video_links: [], images: [] })

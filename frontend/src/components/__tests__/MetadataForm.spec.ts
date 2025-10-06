@@ -81,13 +81,7 @@ function createWrapper(props = {}) {
     trailConditions: {
       tire_dry: 'slick' as 'slick' | 'semi-slick' | 'knobs',
       tire_wet: 'slick' as 'slick' | 'semi-slick' | 'knobs',
-      surface_type: 'forest-trail' as
-        | 'broken-paved-road'
-        | 'dirty-road'
-        | 'small-stone-road'
-        | 'big-stone-road'
-        | 'field-trail'
-        | 'forest-trail',
+      surface_type: ['forest-trail'],
       difficulty_level: 3
     } as TrailConditions,
     commentary: {
@@ -168,7 +162,7 @@ describe('MetadataForm', () => {
         trailConditions: {
           tire_dry: 'slick',
           tire_wet: 'slick',
-          surface_type: 'forest-trail',
+          surface_type: ['forest-trail'],
           difficulty_level: 4
         }
       })
@@ -211,7 +205,7 @@ describe('MetadataForm', () => {
         trailConditions: {
           tire_dry: 'slick',
           tire_wet: 'slick',
-          surface_type: 'broken-paved-road',
+          surface_type: ['broken-paved-road'],
           difficulty_level: 3
         }
       })
@@ -227,7 +221,7 @@ describe('MetadataForm', () => {
       const emitted = wrapper.emitted(
         'update:trailConditions'
       )![0][0] as TrailConditions
-      expect(emitted.surface_type).toBe('dirty-road')
+      expect(emitted.surface_type).toContain('dirty-road')
     })
   })
 

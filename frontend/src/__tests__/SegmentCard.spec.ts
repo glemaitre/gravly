@@ -20,7 +20,7 @@ describe('SegmentCard', () => {
     name,
     track_type: 'segment',
     difficulty_level: 3,
-    surface_type: 'forest-trail',
+    surface_type: ['forest-trail'],
     tire_dry: 'semi-slick',
     tire_wet: 'knobs',
     comments: `Test segment ${id}`,
@@ -206,7 +206,7 @@ describe('SegmentCard', () => {
   describe('Surface Type', () => {
     it('should display formatted surface type', () => {
       const segment = createMockSegment(1, 'Test Segment', {
-        surface_type: 'forest-trail'
+        surface_type: ['forest-trail']
       })
       const wrapper = mount(SegmentCard, {
         props: { segment, stats: createMockStats() }
@@ -224,7 +224,7 @@ describe('SegmentCard', () => {
       ]
 
       testCases.forEach(({ input, expected }) => {
-        const segment = createMockSegment(1, 'Test Segment', { surface_type: input })
+        const segment = createMockSegment(1, 'Test Segment', { surface_type: [input] })
         const wrapper = mount(SegmentCard, {
           props: { segment, stats: createMockStats() }
         })
@@ -235,7 +235,7 @@ describe('SegmentCard', () => {
     })
 
     it('should handle empty surface type', () => {
-      const segment = createMockSegment(1, 'Test Segment', { surface_type: '' })
+      const segment = createMockSegment(1, 'Test Segment', { surface_type: [''] })
       const wrapper = mount(SegmentCard, {
         props: { segment, stats: createMockStats() }
       })
@@ -244,14 +244,15 @@ describe('SegmentCard', () => {
       expect(surfaceInfo.text()).toBe('')
     })
 
-    it('should display surface type icon', () => {
+    it('should display surface type text', () => {
       const segment = createMockSegment(1, 'Test Segment')
       const wrapper = mount(SegmentCard, {
         props: { segment, stats: createMockStats() }
       })
 
-      const surfaceIcon = wrapper.find('.info-section .info-value .fa-road')
-      expect(surfaceIcon.exists()).toBe(true)
+      const surfaceText = wrapper.find('.surface-text')
+      expect(surfaceText.exists()).toBe(true)
+      expect(surfaceText.text()).toBe('Forest Trail')
     })
   })
 
@@ -527,7 +528,7 @@ describe('SegmentCard', () => {
 
     it('should handle special characters in surface and tire types', () => {
       const segment = createMockSegment(1, 'Test Segment', {
-        surface_type: 'test-surface-type',
+        surface_type: ['test-surface-type'],
         tire_dry: 'test-tire-dry',
         tire_wet: 'test-tire-wet'
       })

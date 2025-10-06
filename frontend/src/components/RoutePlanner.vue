@@ -4187,10 +4187,10 @@ function segmentPassesFilters(segment: TrackResponse): boolean {
     }
   }
 
-  // Check surface filter
+  // Check surface filter - segment matches if ANY of its surface types are in the filter
   if (
     segmentFilters.value.surface.length > 0 &&
-    !segmentFilters.value.surface.includes(segment.surface_type)
+    !segment.surface_type.some((type) => segmentFilters.value.surface.includes(type))
   ) {
     return false
   }

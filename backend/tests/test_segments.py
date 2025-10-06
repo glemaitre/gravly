@@ -2696,7 +2696,7 @@ def test_get_track_info_success(client):
     """Test successful track info retrieval."""
     from datetime import datetime
 
-    from backend.src.models.track import SurfaceType, TireType, Track, TrackType
+    from backend.src.models.track import TireType, Track, TrackType
 
     # Create a mock track object
     mock_track = Track(
@@ -2711,7 +2711,7 @@ def test_get_track_info_success(client):
         name="Test Track",
         track_type=TrackType.SEGMENT,
         difficulty_level=3,
-        surface_type=SurfaceType.FOREST_TRAIL,
+        surface_type=["forest-trail"],
         tire_dry=TireType.SEMI_SLICK,
         tire_wet=TireType.KNOBS,
         comments="Test comments",
@@ -2761,7 +2761,7 @@ def test_get_track_info_success(client):
         assert data["name"] == "Test Track"
         assert data["track_type"] == "segment"
         assert data["difficulty_level"] == 3
-        assert data["surface_type"] == "forest-trail"
+        assert data["surface_type"] == ["forest-trail"]
         assert data["tire_dry"] == "semi-slick"
         assert data["tire_wet"] == "knobs"
         assert data["comments"] == "Test comments"
@@ -3684,7 +3684,7 @@ def test_create_segment_with_image_data(client, tmp_path):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "1",
-            "surface_type": "broken-paved-road",
+            "surface_type": json.dumps(["broken-paved-road"]),
             "difficulty_level": "2",
             "commentary_text": "Test segment with images",
             "video_links": "[]",
@@ -3745,7 +3745,7 @@ def test_create_segment_with_invalid_image_data(client, tmp_path):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "0",
-            "surface_type": "broken-paved-road",
+            "surface_type": json.dumps(["broken-paved-road"]),
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
@@ -3794,7 +3794,7 @@ def test_create_segment_with_empty_image_data(client, tmp_path):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "0",
-            "surface_type": "broken-paved-road",
+            "surface_type": json.dumps(["broken-paved-road"]),
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
@@ -3872,7 +3872,7 @@ def test_create_segment_with_multiple_images(client, tmp_path):
             "file_id": file_id,
             "start_index": "0",
             "end_index": "1",
-            "surface_type": "broken-paved-road",
+            "surface_type": json.dumps(["broken-paved-road"]),
             "difficulty_level": "2",
             "commentary_text": "Test multiple images",
             "video_links": "[]",
@@ -4002,7 +4002,7 @@ def test_create_segment_with_image_data_database_coverage(
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "1",
-                    "surface_type": "broken-paved-road",
+                    "surface_type": json.dumps(["broken-paved-road"]),
                     "difficulty_level": "2",
                     "commentary_text": "Test coverage with database",
                     "video_links": "[]",
@@ -4063,7 +4063,7 @@ def test_create_segment_image_data_json_decode_error(client, tmp_path):
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "0",
-                "surface_type": "broken-paved-road",
+                "surface_type": json.dumps(["broken-paved-road"]),
                 "difficulty_level": "2",
                 "commentary_text": "Test JSON parsing error",
                 "video_links": "[]",
@@ -4174,7 +4174,7 @@ def test_create_segment_trackimage_session_exception(
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "0",
-                    "surface_type": "broken-paved-road",
+                    "surface_type": json.dumps(["broken-paved-road"]),
                     "difficulty_level": "2",
                     "commentary_text": "Testing exception paths on 547-548",
                     "video_links": "[]",
@@ -4718,7 +4718,7 @@ def test_create_segment_with_video_data(client, tmp_path):
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "0",
-                "surface_type": "broken-paved-road",
+                "surface_type": json.dumps(["broken-paved-road"]),
                 "difficulty_level": "2",
                 "commentary_text": "Test video processing",
                 "video_links": video_data,
@@ -4776,7 +4776,7 @@ def test_create_segment_video_data_json_decode_error(client, tmp_path):
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "0",
-                "surface_type": "broken-paved-road",
+                "surface_type": json.dumps(["broken-paved-road"]),
                 "difficulty_level": "2",
                 "commentary_text": "Test video JSON parsing error",
                 "video_links": "{invalid_json_format",  # Malformed JSON
@@ -4849,7 +4849,7 @@ def test_create_segment_video_data_with_invalid_structure(client, tmp_path):
                 "file_id": file_id,
                 "start_index": "0",
                 "end_index": "0",
-                "surface_type": "broken-paved-road",
+                "surface_type": json.dumps(["broken-paved-road"]),
                 "difficulty_level": "2",
                 "commentary_text": "Test video invalid structure",
                 "video_links": invalid_video_data,
@@ -4936,7 +4936,7 @@ def test_create_segment_with_video_data_database_coverage(
                         elevation_gain = 5.0
                         elevation_loss = 0.0
                         distance = 100.0
-                        surface_type = "broken-paved-road"
+                        surface_type = ["broken-paved-road"]
                         difficulty_level = 2
                         tire_dry = "slick"
                         tire_wet = "slick"
@@ -4991,7 +4991,7 @@ def test_create_segment_with_video_data_database_coverage(
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "1",
-                    "surface_type": "broken-paved-road",
+                    "surface_type": json.dumps(["broken-paved-road"]),
                     "difficulty_level": "2",
                     "commentary_text": "Test video processing with database",
                     "video_links": video_data,
@@ -5081,7 +5081,7 @@ def test_create_segment_video_data_json_decode_error_database_coverage(
                         elevation_gain = 5.0
                         elevation_loss = 0.0
                         distance = 100.0
-                        surface_type = "broken-paved-road"
+                        surface_type = ["broken-paved-road"]
                         difficulty_level = 2
                         tire_dry = "slick"
                         tire_wet = "slick"
@@ -5121,7 +5121,7 @@ def test_create_segment_video_data_json_decode_error_database_coverage(
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "1",
-                    "surface_type": "broken-paved-road",
+                    "surface_type": json.dumps(["broken-paved-road"]),
                     "difficulty_level": "2",
                     "commentary_text": "Test video JSON parsing error with database",
                     "video_links": "{invalid_json_format",  # Malformed JSON
@@ -5211,7 +5211,7 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
                         elevation_gain = 5.0
                         elevation_loss = 0.0
                         distance = 100.0
-                        surface_type = "broken-paved-road"
+                        surface_type = ["broken-paved-road"]
                         difficulty_level = 2
                         tire_dry = "slick"
                         tire_wet = "slick"
@@ -5251,7 +5251,7 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
                     "file_id": file_id,
                     "start_index": "0",
                     "end_index": "1",
-                    "surface_type": "broken-paved-road",
+                    "surface_type": json.dumps(["broken-paved-road"]),
                     "difficulty_level": "2",
                     "commentary_text": "Test image JSON parsing error with database",
                     "image_data": "{invalid_json_format",  # Malformed JSON
@@ -5339,7 +5339,7 @@ def test_update_segment_success(client, sample_gpx_file, tmp_path):
                 "file_id": file_id,
                 "start_index": "10",
                 "end_index": "80",
-                "surface_type": "dirty-road",
+                "surface_type": json.dumps(["dirty-road"]),
                 "difficulty_level": "4",
                 "commentary_text": "Updated commentary",
                 "video_links": "[]",
@@ -5355,7 +5355,7 @@ def test_update_segment_success(client, sample_gpx_file, tmp_path):
     assert updated_data["track_type"] == "route"
     assert updated_data["tire_dry"] == "knobs"
     assert updated_data["tire_wet"] == "slick"
-    assert updated_data["surface_type"] == "dirty-road"
+    assert updated_data["surface_type"] == ["dirty-road"]
     assert updated_data["difficulty_level"] == 4
     assert updated_data["comments"] == "Updated commentary"
     assert updated_data["file_path"].endswith(".gpx")
@@ -7854,3 +7854,360 @@ def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
     finally:
         dependencies_module.storage_manager = original_storage_manager
         dependencies_module.SessionLocal = original_session_local
+
+
+def test_create_segment_invalid_surface_type_json(client, tmp_path):
+    """Test create_segment with invalid JSON in surface_type parameter."""
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Test with malformed JSON in surface_type
+    response = client.post(
+        "/api/segments",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "0",
+            "surface_type": "{invalid_json",
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "surface_type must be valid JSON" in response.json()["detail"]
+
+
+def test_create_segment_invalid_surface_type_not_array(client, tmp_path):
+    """Test create_segment when surface_type is valid JSON but not an array."""
+    import json
+
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Test with valid JSON but not an array (a string)
+    response = client.post(
+        "/api/segments",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "0",
+            "surface_type": json.dumps("forest-trail"),  # String, not array
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "surface_type must be a JSON array" in response.json()["detail"]
+
+
+def test_create_segment_invalid_surface_type_value(client, tmp_path):
+    """Test create_segment with invalid surface type value in array."""
+    import json
+
+    # Setup GPX file
+    test_gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="test">
+    <trk><name>Test Track</name>
+        <trkseg>
+            <trkpt lat="45.5" lon="-73.6">
+                <ele>100.0</ele>
+                <time>2023-01-01T12:00:00Z</time>
+            </trkpt>
+        </trkseg>
+    </trk>
+</gpx>"""
+    test_gpx_path = tmp_path / "test.gpx"
+    test_gpx_path.write_bytes(test_gpx_content.encode())
+
+    with open(test_gpx_path, "rb") as f:
+        gpx_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+    assert gpx_response.status_code == 200
+    file_id = gpx_response.json()["file_id"]
+
+    # Test with invalid surface type value
+    response = client.post(
+        "/api/segments",
+        data={
+            "name": "Test Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "0",
+            "surface_type": json.dumps(["invalid-surface-type"]),
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid surface type" in response.json()["detail"]
+    assert "Allowed values" in response.json()["detail"]
+
+
+@mock_aws
+def test_update_segment_invalid_surface_json(client, sample_gpx_file, tmp_path):
+    """Test update_segment with invalid JSON in surface_type to cover lines 860-868."""
+    import json
+
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.api.segments.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": json.dumps(["forest-trail"]),
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    track_id = create_response.json()["id"]
+
+    # Test update with malformed JSON in surface_type to cover line 860
+    response = client.put(
+        f"/api/segments/{track_id}",
+        data={
+            "name": "Updated Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "50",
+            "surface_type": "{not valid json",
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "surface_type must be valid JSON" in response.json()["detail"]
+
+
+@mock_aws
+def test_update_segment_surface_not_array(client, sample_gpx_file, tmp_path):
+    """Test update_segment when surface_type is not an array to cover line 853."""
+    import json
+
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.api.segments.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": json.dumps(["forest-trail"]),
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    track_id = create_response.json()["id"]
+
+    # Test update with non-array surface_type to cover line 853
+    response = client.put(
+        f"/api/segments/{track_id}",
+        data={
+            "name": "Updated Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "50",
+            "surface_type": json.dumps("not-an-array"),
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "surface_type must be a JSON array" in response.json()["detail"]
+
+
+@mock_aws
+def test_update_segment_invalid_surface_value(client, sample_gpx_file, tmp_path):
+    """Test update_segment with invalid surface type value to cover lines 860-868."""
+    import json
+
+    s3_client = boto3.client("s3", region_name="us-east-1")
+    s3_client.create_bucket(Bucket="test-bucket")
+
+    # First, create a segment
+    with open(sample_gpx_file, "rb") as f:
+        upload_response = client.post(
+            "/api/upload-gpx", files={"file": ("test.gpx", f, "application/gpx+xml")}
+        )
+
+    assert upload_response.status_code == 200
+    file_id = upload_response.json()["file_id"]
+
+    with patch("src.api.segments.Path") as mock_path:
+
+        def path_side_effect(path_str):
+            if path_str == "../scratch/mock_gpx":
+                return tmp_path / "mock_gpx"
+            return Path(path_str)
+
+        mock_path.side_effect = path_side_effect
+
+        # Create initial segment
+        create_response = client.post(
+            "/api/segments",
+            data={
+                "name": "Original Segment",
+                "track_type": "segment",
+                "tire_dry": "slick",
+                "tire_wet": "semi-slick",
+                "file_id": file_id,
+                "start_index": "0",
+                "end_index": "50",
+                "surface_type": json.dumps(["forest-trail"]),
+                "difficulty_level": "2",
+                "commentary_text": "Original commentary",
+                "video_links": "[]",
+            },
+        )
+
+    assert create_response.status_code == 200
+    track_id = create_response.json()["id"]
+
+    # Test update with invalid surface type value to cover lines 860-868
+    response = client.put(
+        f"/api/segments/{track_id}",
+        data={
+            "name": "Updated Segment",
+            "track_type": "segment",
+            "tire_dry": "slick",
+            "tire_wet": "slick",
+            "file_id": file_id,
+            "start_index": "0",
+            "end_index": "50",
+            "surface_type": json.dumps(["invalid-type"]),
+            "difficulty_level": "2",
+            "commentary_text": "Test",
+            "video_links": "[]",
+            "image_data": "[]",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "Invalid surface type" in response.json()["detail"]
+    assert "Allowed values" in response.json()["detail"]

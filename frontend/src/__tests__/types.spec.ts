@@ -48,7 +48,7 @@ describe('Type Definitions', () => {
         name: 'Test Track',
         track_type: 'cycling',
         difficulty_level: 3,
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
         comments: 'Test comments'
@@ -168,7 +168,7 @@ describe('Type Definitions', () => {
         name: 'Test Track',
         track_type: 'cycling',
         difficulty_level: 3,
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
         comments: 'Test comments',
@@ -354,13 +354,13 @@ describe('Type Definitions', () => {
       const trailConditions: TrailConditions = {
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         difficulty_level: 3
       }
 
       expect(trailConditions.tire_dry).toBe('slick')
       expect(trailConditions.tire_wet).toBe('semi-slick')
-      expect(trailConditions.surface_type).toBe('forest-trail')
+      expect(trailConditions.surface_type).toEqual(['forest-trail'])
       expect(trailConditions.difficulty_level).toBe(3)
     })
 
@@ -368,21 +368,21 @@ describe('Type Definitions', () => {
       const slickConditions: TrailConditions = {
         tire_dry: 'slick',
         tire_wet: 'slick',
-        surface_type: 'big-stone-road',
+        surface_type: ['big-stone-road'],
         difficulty_level: 1
       }
 
       const semiSlickConditions: TrailConditions = {
         tire_dry: 'semi-slick',
         tire_wet: 'semi-slick',
-        surface_type: 'broken-paved-road',
+        surface_type: ['broken-paved-road'],
         difficulty_level: 2
       }
 
       const knobsConditions: TrailConditions = {
         tire_dry: 'knobs',
         tire_wet: 'knobs',
-        surface_type: 'dirty-road',
+        surface_type: ['dirty-road'],
         difficulty_level: 4
       }
 
@@ -418,7 +418,7 @@ describe('Type Definitions', () => {
         const trailConditions: TrailConditions = {
           tire_dry: 'slick',
           tire_wet: 'slick',
-          surface_type: 'forest-trail',
+          surface_type: ['forest-trail'],
           difficulty_level: level
         }
 
@@ -442,7 +442,7 @@ describe('Type Definitions', () => {
         name: 'Test Track',
         track_type: 'cycling',
         difficulty_level: 3,
-        surface_type: 'forest-trail',
+        surface_type: ['forest-trail'],
         tire_dry: 'slick',
         tire_wet: 'semi-slick',
         comments: 'Test comments'
