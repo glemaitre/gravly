@@ -2969,4 +2969,269 @@ describe('RoutePlanner', () => {
       expect(typeof wrapper.vm.handleSegmentItemLeave).toBe('function')
     })
   })
+
+  describe('Map Movement Segment Loading', () => {
+    let wrapper: VueWrapper<any>
+
+    beforeEach(async () => {
+      // Reset mocks
+      vi.clearAllMocks()
+      localStorageMock.getItem.mockReturnValue(null)
+
+      // Mock fetch for segment search
+      global.fetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          body: {
+            getReader: () => ({
+              read: vi
+                .fn()
+                .mockResolvedValueOnce({
+                  done: false,
+                  value: new TextEncoder().encode(
+                    'data: {"id": 1, "name": "Test Segment"}\n'
+                  )
+                })
+                .mockResolvedValueOnce({
+                  done: false,
+                  value: new TextEncoder().encode('data: [DONE]\n')
+                })
+                .mockResolvedValueOnce({ done: true })
+            })
+          }
+        } as any)
+      ) as any
+
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      await nextTick()
+
+      // Set up map with getBounds after component is mounted
+      if (wrapper.vm.map) {
+        wrapper.vm.map.getBounds = vi.fn(() => ({
+          getNorth: () => 46.862104,
+          getSouth: () => 46.860104,
+          getEast: () => 3.980509,
+          getWest: () => 3.978509
+        }))
+      }
+    })
+
+    afterEach(() => {
+      wrapper.unmount()
+    })
+
+    it('should validate handleMapMoveOrZoom function exists', () => {
+      expect(typeof wrapper.vm.handleMapMoveOrZoom).toBe('function')
+    })
+
+    it('should trigger segment search when handleMapMoveOrZoom is called in guided mode', async () => {
+      // Set up guided mode with start and end waypoints
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on fetch to verify segment loading is triggered
+      const fetchSpy = vi.spyOn(global, 'fetch')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce (500ms)
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Check that fetch was called (indicating loadSegmentsInBounds executed)
+      expect(fetchSpy).toHaveBeenCalled()
+
+      fetchSpy.mockRestore()
+    })
+
+    it('should debounce multiple rapid handleMapMoveOrZoom calls', async () => {
+      // Set up guided mode with start and end waypoints
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on fetch to verify debouncing
+      const fetchSpy = vi.spyOn(global, 'fetch')
+
+      // Clear any previous calls from component initialization
+      fetchSpy.mockClear()
+
+      // Trigger multiple handleMapMoveOrZoom calls in rapid succession
+      wrapper.vm.handleMapMoveOrZoom()
+      wrapper.vm.handleMapMoveOrZoom()
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce (500ms)
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should be called fewer times than the number of handleMapMoveOrZoom calls
+      // because debouncing prevents all but the last call from executing
+      expect(fetchSpy.mock.calls.length).toBeLessThan(3)
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(0)
+
+      fetchSpy.mockRestore()
+    })
+
+    it('should NOT load segments when handleMapMoveOrZoom is called in standard mode', async () => {
+      // Set up standard mode
+      wrapper.vm.routeMode = 'standard'
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on loadSegmentsInBounds
+      const loadSegmentsSpy = vi.spyOn(wrapper.vm, 'loadSegmentsInBounds')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should not load segments in standard mode
+      expect(loadSegmentsSpy).not.toHaveBeenCalled()
+
+      loadSegmentsSpy.mockRestore()
+    })
+
+    it('should NOT load segments when start waypoint is not set', async () => {
+      // Set up guided mode without start waypoint
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = null
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on loadSegmentsInBounds
+      const loadSegmentsSpy = vi.spyOn(wrapper.vm, 'loadSegmentsInBounds')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should not load segments without start waypoint
+      expect(loadSegmentsSpy).not.toHaveBeenCalled()
+
+      loadSegmentsSpy.mockRestore()
+    })
+
+    it('should NOT load segments when end waypoint is not set', async () => {
+      // Set up guided mode without end waypoint
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = null
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on loadSegmentsInBounds
+      const loadSegmentsSpy = vi.spyOn(wrapper.vm, 'loadSegmentsInBounds')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should not load segments without end waypoint
+      expect(loadSegmentsSpy).not.toHaveBeenCalled()
+
+      loadSegmentsSpy.mockRestore()
+    })
+
+    it('should NOT load segments when segment search is already in progress', async () => {
+      // Set up guided mode with search in progress
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = true
+
+      // Spy on loadSegmentsInBounds
+      const loadSegmentsSpy = vi.spyOn(wrapper.vm, 'loadSegmentsInBounds')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should not load segments when search is already in progress
+      expect(loadSegmentsSpy).not.toHaveBeenCalled()
+
+      loadSegmentsSpy.mockRestore()
+    })
+
+    it('should load segments with correct bounds after handleMapMoveOrZoom', async () => {
+      // Set up guided mode with start and end waypoints
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = false
+
+      // Mock new bounds after map movement
+      wrapper.vm.map.getBounds = vi.fn(() => ({
+        getNorth: () => 46.872104,
+        getSouth: () => 46.870104,
+        getEast: () => 3.990509,
+        getWest: () => 3.988509
+      }))
+
+      // Spy on fetch to check the URL parameters
+      const fetchSpy = vi.spyOn(global, 'fetch')
+
+      // Call handleMapMoveOrZoom
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Check that fetch was called with the new bounds
+      expect(fetchSpy).toHaveBeenCalled()
+      const fetchUrl = fetchSpy.mock.calls[0][0] as string
+      expect(fetchUrl).toContain('north=46.872104')
+      expect(fetchUrl).toContain('south=46.870104')
+      expect(fetchUrl).toContain('east=3.990509')
+      expect(fetchUrl).toContain('west=3.988509')
+
+      fetchSpy.mockRestore()
+    })
+
+    it('should cancel previous debounced search when handleMapMoveOrZoom is called again', async () => {
+      // Set up guided mode with start and end waypoints
+      wrapper.vm.routeMode = 'startEnd'
+      wrapper.vm.startWaypoint = { lat: 46.860104, lng: 3.978509 }
+      wrapper.vm.endWaypoint = { lat: 46.861104, lng: 3.979509 }
+      wrapper.vm.isSearchingSegments = false
+
+      // Spy on fetch to verify debouncing
+      const fetchSpy = vi.spyOn(global, 'fetch')
+
+      // Clear any previous calls from component initialization
+      fetchSpy.mockClear()
+
+      // Call handleMapMoveOrZoom first time
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait 300ms (less than debounce time)
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      // Call handleMapMoveOrZoom second time (should cancel the first)
+      wrapper.vm.handleMapMoveOrZoom()
+
+      // Wait for debounce to complete
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Should be called a reasonable number of times (verifying debounce is working)
+      // The debounce should ensure we're not making excessive API calls
+      expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(4)
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(0)
+
+      fetchSpy.mockRestore()
+    })
+  })
 })

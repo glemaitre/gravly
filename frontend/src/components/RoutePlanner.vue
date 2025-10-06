@@ -907,28 +907,8 @@ watch([startWaypoint, endWaypoint], () => {
   }
 })
 
-// Watch for map bounds changes to reload segments (debounced)
+// Timeout for debouncing segment search
 let segmentSearchTimeout: any = null
-watch(
-  () => map?.getBounds(),
-  (newBounds) => {
-    if (
-      routeMode.value === 'startEnd' &&
-      newBounds &&
-      !isSearchingSegments.value &&
-      startWaypoint.value &&
-      endWaypoint.value
-    ) {
-      if (segmentSearchTimeout) {
-        clearTimeout(segmentSearchTimeout)
-      }
-      segmentSearchTimeout = setTimeout(() => {
-        loadSegmentsInBounds()
-      }, 500) // Debounce for 500ms
-    }
-  },
-  { deep: true }
-)
 
 onMounted(async () => {
   // Add CSS class to prevent scrollbars on the entire page
@@ -974,6 +954,24 @@ onUnmounted(() => {
   }
 })
 
+// Handle map move or zoom events to reload segments in guided mode (debounced)
+function handleMapMoveOrZoom() {
+  if (
+    routeMode.value === 'startEnd' &&
+    map &&
+    !isSearchingSegments.value &&
+    startWaypoint.value &&
+    endWaypoint.value
+  ) {
+    if (segmentSearchTimeout) {
+      clearTimeout(segmentSearchTimeout)
+    }
+    segmentSearchTimeout = setTimeout(() => {
+      loadSegmentsInBounds()
+    }, 500) // Debounce for 500ms
+  }
+}
+
 function initializeMap() {
   const mapContainer = document.getElementById('route-map')
   if (!mapContainer) return
@@ -1010,6 +1008,14 @@ function initializeMap() {
     } else {
       // No route line or buffer to update
     }
+
+    // Reload segments when zoom changes in guided mode
+    handleMapMoveOrZoom()
+  })
+
+  // Add moveend listener to reload segments when map is panned
+  map.on('moveend', () => {
+    handleMapMoveOrZoom()
   })
 
   // Disable double-click waypoint addition
