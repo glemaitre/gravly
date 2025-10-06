@@ -53,7 +53,7 @@ def create_segments_router(
         file_id: str = Form(...),
         start_index: int = Form(...),
         end_index: int = Form(...),
-        surface_type: str = Form(...),
+        surface_type: str = Form(...),  # JSON array of surface types
         difficulty_level: int = Form(...),
         commentary_text: str = Form(""),
         video_links: str = Form("[]"),
@@ -69,6 +69,26 @@ def create_segments_router(
         allowed_track_types = {"segment", "route"}
         if track_type not in allowed_track_types:
             raise HTTPException(status_code=422, detail="Invalid track type")
+
+        # Parse and validate surface types
+        try:
+            surface_types = json.loads(surface_type)
+            if not isinstance(surface_types, list):
+                raise HTTPException(
+                    status_code=422, detail="surface_type must be a JSON array"
+                )
+            # Validate each surface type
+            allowed_surface_types = {st.value for st in SurfaceType}
+            for st in surface_types:
+                if st not in allowed_surface_types:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Invalid surface type: {st}. Allowed values: {allowed_surface_types}",
+                    )
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=422, detail="surface_type must be valid JSON"
+            )
 
         # Import globals from main
         from ..dependencies import SessionLocal as global_session_local
@@ -168,7 +188,7 @@ def create_segments_router(
                         name=name,
                         track_type=TrackType(track_type),
                         difficulty_level=difficulty_level,
-                        surface_type=SurfaceType(surface_type),
+                        surface_type=surface_types,
                         tire_dry=TireType(tire_dry),
                         tire_wet=TireType(tire_wet),
                         comments=commentary_text,
@@ -277,7 +297,7 @@ def create_segments_router(
             name=name,
             track_type=track_type,
             difficulty_level=difficulty_level,
-            surface_type=surface_type,
+            surface_type=surface_types,
             tire_dry=tire_dry,
             tire_wet=tire_wet,
             comments=commentary_text,
@@ -772,7 +792,7 @@ def create_segments_router(
         file_id: str = Form(...),
         start_index: int = Form(...),
         end_index: int = Form(...),
-        surface_type: str = Form(...),
+        surface_type: str = Form(...),  # JSON array of surface types
         difficulty_level: int = Form(...),
         commentary_text: str = Form(""),
         video_links: str = Form("[]"),
@@ -822,6 +842,26 @@ def create_segments_router(
         allowed_track_types = {"segment", "route"}
         if track_type not in allowed_track_types:
             raise HTTPException(status_code=422, detail="Invalid track type")
+
+        # Parse and validate surface types
+        try:
+            surface_types = json.loads(surface_type)
+            if not isinstance(surface_types, list):
+                raise HTTPException(
+                    status_code=422, detail="surface_type must be a JSON array"
+                )
+            # Validate each surface type
+            allowed_surface_types = {st.value for st in SurfaceType}
+            for st in surface_types:
+                if st not in allowed_surface_types:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Invalid surface type: {st}. Allowed values: {allowed_surface_types}",
+                    )
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=422, detail="surface_type must be valid JSON"
+            )
 
         # Import globals from main
         from ..dependencies import SessionLocal as global_session_local
@@ -946,7 +986,7 @@ def create_segments_router(
                 track.name = name
                 track.track_type = TrackType(track_type)
                 track.difficulty_level = difficulty_level
-                track.surface_type = SurfaceType(surface_type)
+                track.surface_type = surface_types
                 track.tire_dry = TireType(tire_dry)
                 track.tire_wet = TireType(tire_wet)
                 track.comments = commentary_text

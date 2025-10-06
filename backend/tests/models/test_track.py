@@ -47,7 +47,7 @@ def test_track_model_creation():
         name="Test Track",
         track_type=TrackType.SEGMENT,
         difficulty_level=3,
-        surface_type=SurfaceType.FOREST_TRAIL,
+        surface_type=["forest-trail"],
         tire_dry=TireType.KNOBS,
         tire_wet=TireType.KNOBS,
         comments="Test track for unit testing",
@@ -63,7 +63,7 @@ def test_track_model_creation():
     assert track.name == "Test Track"
     assert track.track_type == TrackType.SEGMENT
     assert track.difficulty_level == 3
-    assert track.surface_type == SurfaceType.FOREST_TRAIL
+    assert track.surface_type == ["forest-trail"]
     assert track.tire_dry == TireType.KNOBS
     assert track.tire_wet == TireType.KNOBS
     assert track.comments == "Test track for unit testing"
@@ -83,7 +83,7 @@ def test_track_model_optional_fields():
     assert track.barycenter_longitude is None
     assert track.track_type is None
     assert track.difficulty_level is None
-    assert track.surface_type is None
+    assert track.surface_type == []  # Changed from None to empty list
     assert track.tire_dry is None
     assert track.tire_wet is None
     assert track.comments is None
@@ -114,7 +114,7 @@ def test_track_create_response_model():
         name="Test Track",
         track_type="segment",
         difficulty_level=3,
-        surface_type="forest-trail",
+        surface_type=["forest-trail"],
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",
@@ -131,7 +131,7 @@ def test_track_create_response_model():
     assert response.name == "Test Track"
     assert response.track_type == "segment"
     assert response.difficulty_level == 3
-    assert response.surface_type == "forest-trail"
+    assert response.surface_type == ["forest-trail"]
     assert response.tire_dry == "knobs"
     assert response.tire_wet == "knobs"
     assert response.comments == "Test track for unit testing"
@@ -151,7 +151,7 @@ def test_track_create_response_with_string_path():
         name="Test Track",
         track_type="segment",
         difficulty_level=3,
-        surface_type="forest-trail",
+        surface_type=["forest-trail"],
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",
@@ -177,9 +177,9 @@ def test_track_model_with_all_enum_values():
         track = Track(
             file_path="/path/to/track.gpx",
             name=f"Track {surface_type.value}",
-            surface_type=surface_type,
+            surface_type=[surface_type.value],
         )
-        assert track.surface_type == surface_type
+        assert track.surface_type == [surface_type.value]
 
     # Test all TireType values
     for tire_type in TireType:
@@ -324,7 +324,7 @@ def test_track_with_gpx_data_response_creation():
         bound_west=1.0,
         barycenter_latitude=44.5,
         barycenter_longitude=1.5,
-        surface_type="forest-trail",
+        surface_type=["forest-trail"],
         difficulty_level=3,
         track_type="segment",
         tire_dry="semi-slick",
@@ -360,7 +360,7 @@ def test_track_with_gpx_data_response_none_gpx():
         bound_west=1.0,
         barycenter_latitude=44.5,
         barycenter_longitude=1.5,
-        surface_type="forest-trail",
+        surface_type=["forest-trail"],
         difficulty_level=3,
         track_type="segment",
         tire_dry="semi-slick",
@@ -500,7 +500,7 @@ def test_track_response_barycenter_fields():
         name="Test Track",
         track_type="segment",
         difficulty_level=3,
-        surface_type="forest-trail",
+        surface_type=["forest-trail"],
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",

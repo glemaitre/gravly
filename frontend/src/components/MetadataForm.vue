@@ -88,14 +88,14 @@
             v-for="(image, surfaceType) in surfaceImages"
             :key="surfaceType"
             class="surface-option"
-            :class="{ selected: modelTrailConditions.surface_type === surfaceType }"
+            :class="{ selected: isSurfaceTypeSelected(surfaceType as string) }"
           >
             <input
-              type="radio"
+              type="checkbox"
               name="surfaceType"
               :value="surfaceType"
-              :checked="modelTrailConditions.surface_type === surfaceType"
-              @change="updateSurfaceType(surfaceType as any)"
+              :checked="isSurfaceTypeSelected(surfaceType as string)"
+              @change="toggleSurfaceType(surfaceType as any)"
             />
             <img :src="image" :alt="t(`surface.${surfaceType}`)" />
             <span class="surface-caption">{{ t(`surface.${surfaceType}`) }}</span>
@@ -354,7 +354,7 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Commentary, TrailConditions } from '../types'
+import type { Commentary, TrailConditions, SurfaceType } from '../types'
 import tireSlickUrl from '../assets/images/slick.png'
 import tireSemiSlickUrl from '../assets/images/semi-slick.png'
 import tireKnobsUrl from '../assets/images/ext.png'
@@ -471,16 +471,23 @@ function setDifficultyLevel(level: number) {
   emit('update:trailConditions', newConditions)
 }
 
-function updateSurfaceType(
-  surfaceType:
-    | 'broken-paved-road'
-    | 'dirty-road'
-    | 'small-stone-road'
-    | 'big-stone-road'
-    | 'field-trail'
-    | 'forest-trail'
-) {
-  const newConditions = { ...modelTrailConditions.value, surface_type: surfaceType }
+function isSurfaceTypeSelected(surfaceType: string): boolean {
+  return modelTrailConditions.value.surface_type.includes(surfaceType as SurfaceType)
+}
+
+function toggleSurfaceType(surfaceType: SurfaceType) {
+  const currentTypes = [...modelTrailConditions.value.surface_type]
+  const index = currentTypes.indexOf(surfaceType)
+
+  if (index > -1) {
+    // Remove if already selected
+    currentTypes.splice(index, 1)
+  } else {
+    // Add if not selected
+    currentTypes.push(surfaceType)
+  }
+
+  const newConditions = { ...modelTrailConditions.value, surface_type: currentTypes }
   emit('update:trailConditions', newConditions)
 }
 

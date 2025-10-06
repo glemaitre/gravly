@@ -17,7 +17,7 @@ export interface TrackResponse {
   name: string
   track_type: string
   difficulty_level: number
-  surface_type: string
+  surface_type: string[] // Changed from string to string[]
   tire_dry: string
   tire_wet: string
   comments: string
@@ -124,15 +124,17 @@ export interface TrackVideoResponse {
   created_at: string
 }
 
+export type SurfaceType =
+  | 'big-stone-road'
+  | 'broken-paved-road'
+  | 'dirty-road'
+  | 'field-trail'
+  | 'forest-trail'
+  | 'small-stone-road'
+
 export interface TrailConditions {
   tire_dry: 'slick' | 'semi-slick' | 'knobs'
   tire_wet: 'slick' | 'semi-slick' | 'knobs'
-  surface_type:
-    | 'big-stone-road'
-    | 'broken-paved-road'
-    | 'dirty-road'
-    | 'field-trail'
-    | 'forest-trail'
-    | 'small-stone-road'
+  surface_type: SurfaceType[] // Changed to array to support multiple surface types
   difficulty_level: number // 1-5
 }

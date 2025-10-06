@@ -304,7 +304,7 @@ import SegmentImportModal from './SegmentImportModal.vue'
 import ElevationCropper from './ElevationCropper.vue'
 import MetadataForm from './MetadataForm.vue'
 import { parseGPXData } from '../utils/gpxParser'
-import type { Commentary, TrailConditions } from '../types'
+import type { Commentary, TrailConditions, SurfaceType } from '../types'
 
 type TrackPoint = {
   latitude: number
@@ -325,7 +325,7 @@ const trackType = ref<'segment' | 'route'>('segment')
 const trailConditions = ref<TrailConditions>({
   tire_dry: 'slick',
   tire_wet: 'slick',
-  surface_type: 'forest-trail',
+  surface_type: [],
   difficulty_level: 3
 })
 const submitting = ref(false)
@@ -938,13 +938,7 @@ async function handleSegmentImport(segment: any) {
     trailConditions.value = {
       tire_dry: segment.tire_dry as 'slick' | 'semi-slick' | 'knobs',
       tire_wet: segment.tire_wet as 'slick' | 'semi-slick' | 'knobs',
-      surface_type: segment.surface_type as
-        | 'broken-paved-road'
-        | 'dirty-road'
-        | 'small-stone-road'
-        | 'big-stone-road'
-        | 'field-trail'
-        | 'forest-trail',
+      surface_type: segment.surface_type as SurfaceType[],
       difficulty_level: segment.difficulty_level
     }
 
@@ -1017,7 +1011,7 @@ async function onSaveAsNew() {
     formData.append('track_type', trackType.value)
     formData.append('tire_dry', trailConditions.value.tire_dry)
     formData.append('tire_wet', trailConditions.value.tire_wet)
-    formData.append('surface_type', trailConditions.value.surface_type)
+    formData.append('surface_type', JSON.stringify(trailConditions.value.surface_type))
     formData.append(
       'difficulty_level',
       trailConditions.value.difficulty_level.toString()
@@ -1076,7 +1070,7 @@ async function onSaveAsNew() {
     trailConditions.value = {
       tire_dry: 'slick',
       tire_wet: 'slick',
-      surface_type: 'forest-trail',
+      surface_type: [],
       difficulty_level: 3
     }
     commentary.value = { text: '', video_links: [], images: [] }
@@ -1141,7 +1135,7 @@ async function onUpdate() {
     formData.append('track_type', trackType.value)
     formData.append('tire_dry', trailConditions.value.tire_dry)
     formData.append('tire_wet', trailConditions.value.tire_wet)
-    formData.append('surface_type', trailConditions.value.surface_type)
+    formData.append('surface_type', JSON.stringify(trailConditions.value.surface_type))
     formData.append(
       'difficulty_level',
       trailConditions.value.difficulty_level.toString()
@@ -1276,7 +1270,7 @@ async function onDeleteFromDb() {
     trailConditions.value = {
       tire_dry: 'slick',
       tire_wet: 'slick',
-      surface_type: 'forest-trail',
+      surface_type: [],
       difficulty_level: 3
     }
     commentary.value = { text: '', video_links: [], images: [] }

@@ -2,7 +2,7 @@ import enum
 from datetime import UTC, datetime
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, Enum, Float, Index, Integer, String, Text
+from sqlalchemy import ARRAY, DateTime, Enum, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -51,7 +51,9 @@ class Track(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     track_type: Mapped[TrackType] = mapped_column(Enum(TrackType))
     difficulty_level: Mapped[int] = mapped_column(Integer)
-    surface_type: Mapped[SurfaceType] = mapped_column(Enum(SurfaceType))
+    surface_type: Mapped[list[str]] = mapped_column(
+        ARRAY(String), nullable=False, default=lambda: []
+    )
     tire_dry: Mapped[TireType] = mapped_column(Enum(TireType))
     tire_wet: Mapped[TireType] = mapped_column(Enum(TireType))
     comments: Mapped[str] = mapped_column(Text)
@@ -82,7 +84,7 @@ class TrackResponse(BaseModel):
     name: str
     track_type: str
     difficulty_level: int
-    surface_type: str
+    surface_type: list[str]
     tire_dry: str
     tire_wet: str
     comments: str
