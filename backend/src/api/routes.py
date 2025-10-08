@@ -1,7 +1,6 @@
 """Routes API endpoints."""
 
 import logging
-import math
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -98,27 +97,22 @@ def create_routes_router(
                             ordered_segments.append(segment)
 
                     # Calculate route statistics from segments
-                    route_stats = calculate_route_statistics(
-                        ordered_segments, computed_stats, actual_route_coordinates
-                    )
+                    # (difficulty, surface types, tires)
+                    route_stats = calculate_route_statistics(ordered_segments)
                 else:
-                    # Waypoint-based route: use default values and computed stats
-                    route_stats = calculate_waypoint_route_statistics(
-                        computed_stats,
-                        interpolated_elevation_data,
-                        actual_route_coordinates,
-                    )
+                    # Waypoint-based route: use default values
+                    route_stats = calculate_waypoint_route_statistics()
 
                 if not global_storage_manager:
                     raise HTTPException(
                         status_code=500, detail="Storage manager not available"
                     )
 
-                # Create GPX file for the route
+                # Create GPX file for the route and calculate bounds
                 if segments_data:
-                    route_gpx_data = await create_route_gpx(ordered_segments)
+                    route_gpx_data, bounds = await create_route_gpx(ordered_segments)
                 else:
-                    route_gpx_data = await create_waypoint_route_gpx(
+                    route_gpx_data, bounds = await create_waypoint_route_gpx(
                         computed_stats,
                         actual_route_coordinates,
                         interpolated_elevation_data,
@@ -159,35 +153,15 @@ def create_routes_router(
                         status_code=500, detail=f"Failed to save route GPX: {str(e)}"
                     )
 
-                # Validate bounds before creating track
-                bounds_to_save = route_stats["bounds"]
-                bound_fields = {
-                    "north": bounds_to_save["north"],
-                    "south": bounds_to_save["south"],
-                    "east": bounds_to_save["east"],
-                    "west": bounds_to_save["west"],
-                    "barycenter_lat": bounds_to_save["barycenter_lat"],
-                    "barycenter_lng": bounds_to_save["barycenter_lng"],
-                }
-
-                if not all(
-                    isinstance(value, (int, float)) and math.isfinite(value)
-                    for value in bound_fields.values()
-                ):
-                    raise HTTPException(
-                        status_code=422,
-                        detail="Cannot save route with invalid bounds data",
-                    )
-
                 # Create the route track
                 route_track = Track(
                     file_path=route_file_path,
-                    bound_north=route_stats["bounds"]["north"],
-                    bound_south=route_stats["bounds"]["south"],
-                    bound_east=route_stats["bounds"]["east"],
-                    bound_west=route_stats["bounds"]["west"],
-                    barycenter_latitude=route_stats["bounds"]["barycenter_lat"],
-                    barycenter_longitude=route_stats["bounds"]["barycenter_lng"],
+                    bound_north=bounds["north"],
+                    bound_south=bounds["south"],
+                    bound_east=bounds["east"],
+                    bound_west=bounds["west"],
+                    barycenter_latitude=bounds["barycenter_lat"],
+                    barycenter_longitude=bounds["barycenter_lng"],
                     name=name.strip(),
                     track_type=TrackType.ROUTE,
                     difficulty_level=route_stats["difficulty_level"],
@@ -233,24 +207,17 @@ def create_routes_router(
     return router
 
 
-def calculate_waypoint_route_statistics(
-    computed_stats, interpolated_elevation_data=None, actual_route_coordinates=None
-):
-    """Calculate route statistics for waypoint-based routes using actual coordinates.
+def calculate_waypoint_route_statistics():
+    """Calculate route statistics for waypoint-based routes.
 
-    Parameters
-    ----------
-    computed_stats : dict
-        Pre-computed statistics from frontend (distance, elevation gain)
-    interpolated_elevation_data : list, optional
-        List of interpolated elevation data with lat, lng, elevation, distance
-    actual_route_coordinates : list, optional
-        List of actual route coordinates from the RoutePlanner
+    For waypoint-based routes, we use default values since there are no segments
+    to derive terrain characteristics from.
 
     Returns
     -------
     dict
-        Route statistics with bounds calculated from actual route coordinates
+        Route statistics with default values for difficulty, surface types,
+        and tire recommendations
     """
     # Use default values for segment-specific statistics
     default_difficulty = 2  # Medium difficulty
@@ -260,109 +227,30 @@ def calculate_waypoint_route_statistics(
     default_tire_dry = TireType.SEMI_SLICK  # Conservative recommendation
     default_tire_wet = TireType.KNOBS  # Safe for wet conditions
 
-    # Calculate bounds from actual route coordinates (preferred)
-    if actual_route_coordinates and len(actual_route_coordinates) >= 2:
-        # Filter out non-finite coordinates to avoid NaN/inf propagating
-        actual_route_coordinates = _filter_finite_coordinates(actual_route_coordinates)
-        # If not enough valid points remain, skip to next fallback
-        use_actual_coords = len(actual_route_coordinates) >= 2
-    else:
-        use_actual_coords = False
-
-    if use_actual_coords:
-        # Calculate bounds from actual route coordinates
-        lats = [point["lat"] for point in actual_route_coordinates]
-        lngs = [point["lng"] for point in actual_route_coordinates]
-
-        bounds = {
-            "north": max(lats),
-            "south": min(lats),
-            "east": max(lngs),
-            "west": min(lngs),
-            "barycenter_lat": sum(lats) / len(lats),
-            "barycenter_lng": sum(lngs) / len(lngs),
-        }
-        _ensure_finite_bounds(bounds)
-    # Fallback to interpolated elevation data if available
-    elif interpolated_elevation_data and len(interpolated_elevation_data) >= 2:
-        # Filter out non-finite coordinates from interpolated elevation data
-        interpolated_elevation_data = _filter_finite_coordinates(
-            interpolated_elevation_data
-        )
-        if len(interpolated_elevation_data) < 2:
-            # Not enough valid points, fall back to computed_stats
-            bounds = computed_stats.get(
-                "bounds",
-                {
-                    "north": 46.9,
-                    "south": 46.8,
-                    "east": 4.0,
-                    "west": 3.9,
-                    "barycenter_lat": 46.85,
-                    "barycenter_lng": 3.95,
-                },
-            )
-            _ensure_finite_bounds(bounds)
-            return {
-                "difficulty_level": default_difficulty,
-                "surface_types": default_surface_types,
-                "tire_dry": default_tire_dry,
-                "tire_wet": default_tire_wet,
-                "bounds": bounds,
-            }
-        # Calculate bounds from interpolated elevation data
-        lats = [point["lat"] for point in interpolated_elevation_data]
-        lngs = [point["lng"] for point in interpolated_elevation_data]
-
-        bounds = {
-            "north": max(lats),
-            "south": min(lats),
-            "east": max(lngs),
-            "west": min(lngs),
-            "barycenter_lat": sum(lats) / len(lats),
-            "barycenter_lng": sum(lngs) / len(lngs),
-        }
-        _ensure_finite_bounds(bounds)
-    else:
-        # Fallback to bounds from computed_stats or defaults
-        bounds = computed_stats.get(
-            "bounds",
-            {
-                "north": 46.9,
-                "south": 46.8,
-                "east": 4.0,
-                "west": 3.9,
-                "barycenter_lat": 46.85,
-                "barycenter_lng": 3.95,
-            },
-        )
-        _ensure_finite_bounds(bounds)
-
     return {
         "difficulty_level": default_difficulty,
         "surface_types": default_surface_types,
         "tire_dry": default_tire_dry,
         "tire_wet": default_tire_wet,
-        "bounds": bounds,
     }
 
 
-def calculate_route_statistics(segments, computed_stats, actual_route_coordinates=None):
+def calculate_route_statistics(segments):
     """Calculate route statistics from segments.
+
+    This function computes difficulty level, surface types, and tire recommendations
+    based on the segments in the route.
 
     Parameters
     ----------
     segments : list
         List of segment Track objects
-    computed_stats : dict
-        Pre-computed statistics from frontend
-    actual_route_coordinates : list, optional
-        List of actual route coordinates from the RoutePlanner
 
     Returns
     -------
     dict
-        Calculated route statistics
+        Calculated route statistics with difficulty, surface types,
+        and tire recommendations
     """
     if not segments:
         raise HTTPException(status_code=422, detail="No segments provided")
@@ -402,97 +290,19 @@ def calculate_route_statistics(segments, computed_stats, actual_route_coordinate
     else:
         tire_wet_recommendation = TireType.SLICK
 
-    # Calculate bounds - prefer actual route coordinates if available
-    if actual_route_coordinates and len(actual_route_coordinates) >= 2:
-        # Filter out non-finite coordinates to avoid NaN/inf propagating
-        actual_route_coordinates = _filter_finite_coordinates(actual_route_coordinates)
-        use_actual_coords = len(actual_route_coordinates) >= 2
-    else:
-        use_actual_coords = False
-
-    if use_actual_coords:
-        # Calculate bounds from actual route coordinates
-        lats = [point["lat"] for point in actual_route_coordinates]
-        lngs = [point["lng"] for point in actual_route_coordinates]
-
-        bounds = {
-            "north": max(lats),
-            "south": min(lats),
-            "east": max(lngs),
-            "west": min(lngs),
-            "barycenter_lat": sum(lats) / len(lats),
-            "barycenter_lng": sum(lngs) / len(lngs),
-        }
-        _ensure_finite_bounds(bounds)
-    else:
-        # Fallback to bounds from segments
-        min_lat = min(segment.bound_south for segment in segments)
-        max_lat = max(segment.bound_north for segment in segments)
-        min_lng = min(segment.bound_west for segment in segments)
-        max_lng = max(segment.bound_east for segment in segments)
-
-        # Calculate barycenter
-        barycenter_lat = (min_lat + max_lat) / 2
-        barycenter_lng = (min_lng + max_lng) / 2
-
-        bounds = {
-            "north": max_lat,
-            "south": min_lat,
-            "east": max_lng,
-            "west": min_lng,
-            "barycenter_lat": barycenter_lat,
-            "barycenter_lng": barycenter_lng,
-        }
-        _ensure_finite_bounds(bounds)
-
     return {
         "difficulty_level": int(avg_difficulty),
         "surface_types": surface_types,
         "tire_dry": tire_dry_recommendation,
         "tire_wet": tire_wet_recommendation,
-        "bounds": bounds,
     }
-
-
-def _ensure_finite_bounds(bounds: dict) -> None:
-    """Validate that all bound values are finite numbers.
-
-    Raises a 422 error if any value is NaN or infinite, which would break JSON encoding.
-    """
-    required_keys = (
-        "north",
-        "south",
-        "east",
-        "west",
-        "barycenter_lat",
-        "barycenter_lng",
-    )
-    for key in required_keys:
-        value = bounds.get(key)
-        if not isinstance(value, (int, float)) or not math.isfinite(value):
-            raise HTTPException(
-                status_code=422, detail=f"Invalid bound value for {key}: {value}"
-            )
-
-
-def _filter_finite_coordinates(points: list[dict]) -> list[dict]:
-    """Return only points with finite lat/lng values.
-
-    This helper prevents NaN/±inf coordinates from propagating into bounds
-    calculations, which would otherwise produce invalid JSON values.
-    """
-    filtered_points: list[dict] = []
-    for point in points:
-        lat = point.get("lat")
-        lng = point.get("lng")
-        if isinstance(lat, (int, float)) and isinstance(lng, (int, float)):
-            if math.isfinite(lat) and math.isfinite(lng):
-                filtered_points.append({"lat": float(lat), "lng": float(lng)})
-    return filtered_points
 
 
 async def create_route_gpx(segments):
     """Create GPX data for the route by combining segment GPX data.
+
+    This function also calculates bounding box and total statistics efficiently
+    by processing the GPX points.
 
     Parameters
     ----------
@@ -501,8 +311,11 @@ async def create_route_gpx(segments):
 
     Returns
     -------
-    str
-        GPX XML content for the route
+    tuple
+        A tuple containing:
+        - str: GPX XML content for the route
+        - dict: Bounding box with north, south, east, west,
+                barycenter_lat, barycenter_lng
     """
 
     if not global_storage_manager:
@@ -516,6 +329,11 @@ async def create_route_gpx(segments):
     gpx_track = GPXTrack()
     gpx_track.name = f"Route with {len(segments)} segments"
     gpx_track.description = "Route created from segments in guided mode"
+
+    # Initialize bounds tracking
+    min_lat, max_lat = None, None
+    min_lng, max_lng = None, None
+    all_lats, all_lngs = [], []
 
     # For each segment, load its GPX data and add the track points
     for segment in segments:
@@ -541,7 +359,7 @@ async def create_route_gpx(segments):
                     if is_reversed:
                         points = list(reversed(points))
 
-                    # Add all points to the segment
+                    # Add all points to the segment and track bounds
                     for point in points:
                         gpx_point = GPXTrackPoint(
                             latitude=point.latitude,
@@ -550,6 +368,19 @@ async def create_route_gpx(segments):
                             time=point.time,
                         )
                         gpx_segment.points.append(gpx_point)
+
+                        # Track bounds
+                        all_lats.append(point.latitude)
+                        all_lngs.append(point.longitude)
+
+                        if min_lat is None or point.latitude < min_lat:
+                            min_lat = point.latitude
+                        if max_lat is None or point.latitude > max_lat:
+                            max_lat = point.latitude
+                        if min_lng is None or point.longitude < min_lng:
+                            min_lng = point.longitude
+                        if max_lng is None or point.longitude > max_lng:
+                            max_lng = point.longitude
 
                     # Add the segment to the track
                     gpx_track.segments.append(gpx_segment)
@@ -562,14 +393,38 @@ async def create_route_gpx(segments):
     # Add the track to the GPX
     gpx.tracks.append(gpx_track)
 
-    # Convert to XML string
-    return gpx.to_xml()
+    # Calculate bounds
+    if min_lat is None or max_lat is None or min_lng is None or max_lng is None:
+        raise HTTPException(
+            status_code=422, detail="Unable to calculate bounds from route data"
+        )
+
+    if all_lats:
+        barycenter_lat = sum(all_lats) / len(all_lats)
+        barycenter_lng = sum(all_lngs) / len(all_lngs)
+    else:
+        barycenter_lat = (min_lat + max_lat) / 2
+        barycenter_lng = (min_lng + max_lng) / 2
+
+    bounds = {
+        "north": max_lat,
+        "south": min_lat,
+        "east": max_lng,
+        "west": min_lng,
+        "barycenter_lat": barycenter_lat,
+        "barycenter_lng": barycenter_lng,
+    }
+
+    # Convert to XML string and return with bounds
+    return gpx.to_xml(), bounds
 
 
 async def create_waypoint_route_gpx(
     computed_stats, actual_route_coordinates, interpolated_elevation_data
 ):
     """Create GPX data for waypoint-based routes using actual route coordinates.
+
+    This function also calculates bounding box by processing the GPX points.
 
     Parameters
     ----------
@@ -582,8 +437,11 @@ async def create_waypoint_route_gpx(
 
     Returns
     -------
-    str
-        GPX XML content for the waypoint route
+    tuple
+        A tuple containing:
+        - str: GPX XML content for the waypoint route
+        - dict: Bounding box with north, south, east, west,
+                barycenter_lat, barycenter_lng
     """
 
     # Extract route information from computed stats
@@ -605,6 +463,11 @@ async def create_waypoint_route_gpx(
     # Create a track segment
     gpx_segment = GPXTrackSegment()
 
+    # Initialize bounds tracking
+    min_lat, max_lat = None, None
+    min_lng, max_lng = None, None
+    all_lats, all_lngs = [], []
+
     # Use interpolated elevation data - this is required for waypoint routes
     if interpolated_elevation_data and len(interpolated_elevation_data) >= 2:
         # Use the smoothed interpolated elevation data from the RoutePlanner
@@ -622,6 +485,19 @@ async def create_waypoint_route_gpx(
                 time=point_time,
             )
             gpx_segment.points.append(point)
+
+            # Track bounds
+            all_lats.append(point_data["lat"])
+            all_lngs.append(point_data["lng"])
+
+            if min_lat is None or point_data["lat"] < min_lat:
+                min_lat = point_data["lat"]
+            if max_lat is None or point_data["lat"] > max_lat:
+                max_lat = point_data["lat"]
+            if min_lng is None or point_data["lng"] < min_lng:
+                min_lng = point_data["lng"]
+            if max_lng is None or point_data["lng"] > max_lng:
+                max_lng = point_data["lng"]
     else:
         # No valid elevation data available
         raise HTTPException(
@@ -635,5 +511,27 @@ async def create_waypoint_route_gpx(
     # Add the track to the GPX
     gpx.tracks.append(gpx_track)
 
-    # Return the GPX as XML string
-    return gpx.to_xml()
+    # Calculate bounds
+    if min_lat is None or max_lat is None or min_lng is None or max_lng is None:
+        raise HTTPException(
+            status_code=422, detail="Unable to calculate bounds from route data"
+        )
+
+    if all_lats:
+        barycenter_lat = sum(all_lats) / len(all_lats)
+        barycenter_lng = sum(all_lngs) / len(all_lngs)
+    else:
+        barycenter_lat = (min_lat + max_lat) / 2
+        barycenter_lng = (min_lng + max_lng) / 2
+
+    bounds = {
+        "north": max_lat,
+        "south": min_lat,
+        "east": max_lng,
+        "west": min_lng,
+        "barycenter_lat": barycenter_lat,
+        "barycenter_lng": barycenter_lng,
+    }
+
+    # Return the GPX as XML string and bounds
+    return gpx.to_xml(), bounds
