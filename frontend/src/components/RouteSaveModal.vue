@@ -109,8 +109,7 @@ interface Props {
     maxElevation: number
     minElevation: number
   }
-  actualRouteCoordinates: Array<{ lat: number; lng: number }>
-  interpolatedElevationData: Array<{
+  routeTrackPoints: Array<{
     lat: number
     lng: number
     elevation: number
@@ -262,8 +261,8 @@ async function confirmSaveRoute() {
         isReversed: segment.isReversed || false
       })),
       computed_stats: computedStats.value,
-      actual_route_coordinates: props.actualRouteCoordinates,
-      interpolated_elevation_data: props.interpolatedElevationData,
+      route_track_points:
+        props.selectedSegments.length === 0 ? props.routeTrackPoints : undefined,
       comments: routeComments.value.trim()
     }
 

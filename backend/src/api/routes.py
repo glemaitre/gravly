@@ -1,6 +1,7 @@
 """Routes API endpoints."""
 
 import logging
+import tempfile
 import uuid
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,7 +13,6 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from .. import dependencies
-from ..dependencies import storage_manager as global_storage_manager
 from ..models.track import (
     SurfaceType,
     TireType,
@@ -48,6 +48,8 @@ def create_routes_router(
         This endpoint takes a list of segment IDs and creates a route
         with computed statistics based on the segments.
         """
+        from ..dependencies import storage_manager as global_storage_manager
+
         if not dependencies.SessionLocal:
             raise HTTPException(status_code=500, detail="Database not configured")
 
@@ -62,8 +64,7 @@ def create_routes_router(
 
             segments_data = body.get("segments", [])
             computed_stats = body.get("computed_stats", {})
-            actual_route_coordinates = body.get("actual_route_coordinates", [])
-            interpolated_elevation_data = body.get("interpolated_elevation_data", [])
+            route_track_points = body.get("route_track_points", [])
             comments = body.get("comments", "").strip()
 
             # Create database session
@@ -114,16 +115,13 @@ def create_routes_router(
                 else:
                     route_gpx_data, bounds = await create_waypoint_route_gpx(
                         computed_stats,
-                        actual_route_coordinates,
-                        interpolated_elevation_data,
+                        route_track_points,
                     )
 
                 # Generate a unique file path for the route
                 route_file_id = str(uuid.uuid4())
 
                 # Create temporary file for GPX data
-                import tempfile
-
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".gpx", delete=False
                 ) as temp_file:
@@ -317,6 +315,7 @@ async def create_route_gpx(segments):
         - dict: Bounding box with north, south, east, west,
                 barycenter_lat, barycenter_lng
     """
+    from ..dependencies import storage_manager as global_storage_manager
 
     if not global_storage_manager:
         raise HTTPException(status_code=500, detail="Storage manager not available")
@@ -419,10 +418,8 @@ async def create_route_gpx(segments):
     return gpx.to_xml(), bounds
 
 
-async def create_waypoint_route_gpx(
-    computed_stats, actual_route_coordinates, interpolated_elevation_data
-):
-    """Create GPX data for waypoint-based routes using actual route coordinates.
+async def create_waypoint_route_gpx(computed_stats, route_track_points):
+    """Create GPX data for waypoint-based routes using route track points.
 
     This function also calculates bounding box by processing the GPX points.
 
@@ -430,10 +427,8 @@ async def create_waypoint_route_gpx(
     ----------
     computed_stats : dict
         Pre-computed statistics from frontend
-    actual_route_coordinates : list
-        List of actual route coordinates from the RoutePlanner
-    interpolated_elevation_data : list
-        List of interpolated elevation data with lat, lng, elevation, distance
+    route_track_points : list
+        List of route track points with lat, lng, elevation, and distance data
 
     Returns
     -------
@@ -468,12 +463,12 @@ async def create_waypoint_route_gpx(
     min_lng, max_lng = None, None
     all_lats, all_lngs = [], []
 
-    # Use interpolated elevation data - this is required for waypoint routes
-    if interpolated_elevation_data and len(interpolated_elevation_data) >= 2:
-        # Use the smoothed interpolated elevation data from the RoutePlanner
+    # Use route track points - this is required for waypoint routes
+    if route_track_points and len(route_track_points) >= 2:
+        # Use the smoothed route track points from the RoutePlanner
         # This data is already smoothed in the frontend to match the chart display
         start_time = datetime.now(UTC)
-        for i, point_data in enumerate(interpolated_elevation_data):
+        for i, point_data in enumerate(route_track_points):
             # Create progressive timestamps for better GPX compatibility
             point_time = start_time + timedelta(
                 seconds=i * 10
@@ -499,10 +494,10 @@ async def create_waypoint_route_gpx(
             if max_lng is None or point_data["lng"] > max_lng:
                 max_lng = point_data["lng"]
     else:
-        # No valid elevation data available
+        # No valid route track points available
         raise HTTPException(
             status_code=422,
-            detail="Interpolated elevation data is required for waypoint-based routes",
+            detail="Route track points are required for waypoint-based routes",
         )
 
     # Add the segment to the track

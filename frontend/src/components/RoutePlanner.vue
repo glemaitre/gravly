@@ -122,8 +122,7 @@
       :selected-segments="selectedSegments"
       :route-distance="routeDistance"
       :elevation-stats="elevationStats"
-      :actual-route-coordinates="actualRouteCoordinates"
-      :interpolated-elevation-data="interpolatedElevationData"
+      :route-track-points="routeTrackPoints"
       :show="showSaveModal"
       @route-saved="handleRouteSaved"
       @close="showSaveModal = false"
@@ -328,9 +327,9 @@ const elevationCache = new Map<
   Array<{ lat: number; lng: number; elevation: number; distance: number }>
 >()
 const actualRouteCoordinates = ref<Array<{ lat: number; lng: number }>>([]) // Store actual OSRM route coordinates
-const interpolatedElevationData = ref<
+const routeTrackPoints = ref<
   Array<{ lat: number; lng: number; elevation: number; distance: number }>
->([]) // Store interpolated elevation data
+>([]) // Store route track points with lat, lng, elevation, and distance
 
 // Cache configuration
 const CACHE_VERSION = '1.1' // Increment version to invalidate old cache with zeros
@@ -2213,7 +2212,7 @@ function performCompleteReset() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
-  interpolatedElevationData.value = []
+  routeTrackPoints.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -2239,8 +2238,8 @@ async function calculateElevationStats() {
     }
     elevationSegments.value = []
     actualRouteCoordinates.value = []
-    interpolatedElevationData.value = []
-    interpolatedElevationData.value = []
+    routeTrackPoints.value = []
+    routeTrackPoints.value = []
     return
   }
 
@@ -3155,7 +3154,7 @@ function clearRoute() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
-  interpolatedElevationData.value = []
+  routeTrackPoints.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -3184,7 +3183,7 @@ function clearElevationData() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
-  interpolatedElevationData.value = []
+  routeTrackPoints.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -3357,7 +3356,7 @@ async function calculateElevationFromActualRouteWithCaching() {
 
     // Store smoothed elevation data for use by RouteSaveModal
     // This ensures the GPX file contains the same data as shown in the chart
-    interpolatedElevationData.value = smoothedElevationData
+    routeTrackPoints.value = smoothedElevationData
   } catch (error) {
     console.error('Error calculating elevation from actual route:', error)
     throw error
