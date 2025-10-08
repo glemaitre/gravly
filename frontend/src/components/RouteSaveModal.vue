@@ -261,8 +261,7 @@ async function confirmSaveRoute() {
         isReversed: segment.isReversed || false
       })),
       computed_stats: computedStats.value,
-      route_track_points:
-        props.selectedSegments.length === 0 ? props.routeTrackPoints : undefined,
+      route_track_points: props.routeTrackPoints,
       comments: routeComments.value.trim()
     }
 

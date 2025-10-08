@@ -1,8 +1,13 @@
 """Tests for the routes API endpoints."""
 
+import asyncio
+
 import pytest
 from fastapi import HTTPException
-from src.api.routes import calculate_route_statistics
+from src.api.routes import (
+    calculate_route_statistics,
+    create_waypoint_route_gpx,
+)
 from src.models.track import TireType
 
 
@@ -324,3 +329,65 @@ def test_calculate_route_statistics_tire_priority():
     # Worst case: knobs for dry, semi-slick for wet
     assert result["tire_dry"] == TireType.KNOBS
     assert result["tire_wet"] == TireType.SEMI_SLICK
+
+
+def test_create_waypoint_route_gpx_with_valid_points():
+    """Test GPX creation with valid route track points."""
+    computed_stats = {
+        "distance": 10.5,
+        "elevationGain": 250,
+    }
+    route_track_points = [
+        {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
+        {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
+        {"lat": 45.02, "lng": 5.02, "elevation": 150, "distance": 2000},
+    ]
+
+    gpx_xml, bounds = asyncio.run(
+        create_waypoint_route_gpx(computed_stats, route_track_points)
+    )
+
+    # Verify GPX content
+    assert "<?xml version=" in gpx_xml
+    assert "gpx" in gpx_xml.lower()
+    assert "Route with interpolated track points" in gpx_xml
+
+    # Verify bounds
+    assert bounds["north"] == 45.02
+    assert bounds["south"] == 45.0
+    assert bounds["east"] == 5.02
+    assert bounds["west"] == 5.0
+    assert 45.0 <= bounds["barycenter_lat"] <= 45.02
+    assert 5.0 <= bounds["barycenter_lng"] <= 5.02
+
+
+def test_create_waypoint_route_gpx_empty_points():
+    """Test that empty route track points raises HTTPException."""
+    computed_stats = {
+        "distance": 10.5,
+        "elevationGain": 250,
+    }
+    route_track_points = []
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(create_waypoint_route_gpx(computed_stats, route_track_points))
+
+    assert exc_info.value.status_code == 422
+    assert "required" in exc_info.value.detail.lower()
+
+
+def test_create_waypoint_route_gpx_single_point():
+    """Test that single point raises HTTPException (need at least 2 points)."""
+    computed_stats = {
+        "distance": 0,
+        "elevationGain": 0,
+    }
+    route_track_points = [
+        {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
+    ]
+
+    with pytest.raises(HTTPException) as exc_info:
+        asyncio.run(create_waypoint_route_gpx(computed_stats, route_track_points))
+
+    assert exc_info.value.status_code == 422
+    assert "required" in exc_info.value.detail.lower()

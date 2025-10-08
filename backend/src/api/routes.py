@@ -24,6 +24,29 @@ from ..models.track import (
 logger = logging.getLogger(__name__)
 
 
+def get_tire_recommendation(tire_types: set[TireType]) -> TireType:
+    """Get the tire recommendation for the given tire types.
+
+    Parameters
+    ----------
+    tire_types : list[TireType]
+        List of tire types
+
+    Returns
+    -------
+    TireType
+        The tire recommendation
+    """
+
+    # Order: knobs > semi-slick > slick (from best to worst)
+    if TireType.KNOBS in tire_types:
+        return TireType.KNOBS
+    elif TireType.SEMI_SLICK in tire_types:
+        return TireType.SEMI_SLICK
+    else:
+        return TireType.SLICK
+
+
 def create_routes_router(
     session_local: async_sessionmaker[AsyncSession] | None,
 ) -> APIRouter:
@@ -54,24 +77,16 @@ def create_routes_router(
             raise HTTPException(status_code=500, detail="Database not configured")
 
         try:
-            # Parse request body
             body = await request.json()
 
-            # Validate required fields
             name = body.get("name")
-            if not name or not name.strip():
-                raise HTTPException(status_code=422, detail="Route name is required")
-
             segments_data = body.get("segments", [])
             computed_stats = body.get("computed_stats", {})
             route_track_points = body.get("route_track_points", [])
             comments = body.get("comments", "").strip()
 
-            # Create database session
             async with dependencies.SessionLocal() as session:
-                # Handle two types of routes: segment-based and waypoint-based
                 if segments_data:
-                    # Segment-based route: fetch segments and calculate statistics
                     segment_ids = [seg["id"] for seg in segments_data]
                     segments_query = select(Track).where(
                         and_(
@@ -87,7 +102,6 @@ def create_routes_router(
                             status_code=422, detail="One or more segments not found"
                         )
 
-                    # Create a mapping of segment data for order preservation
                     segment_map = {seg.id: seg for seg in segments}
                     ordered_segments = []
                     for seg_data in segments_data:
@@ -97,31 +111,20 @@ def create_routes_router(
                             segment.isReversed = seg_data.get("isReversed", False)
                             ordered_segments.append(segment)
 
-                    # Calculate route statistics from segments
-                    # (difficulty, surface types, tires)
-                    route_stats = calculate_route_statistics(ordered_segments)
+                    route_stats = compute_route_features_from_segments(ordered_segments)
                 else:
-                    # Waypoint-based route: use default values
-                    route_stats = calculate_waypoint_route_statistics()
+                    route_stats = compute_route_features_route()
 
                 if not global_storage_manager:
                     raise HTTPException(
                         status_code=500, detail="Storage manager not available"
                     )
 
-                # Create GPX file for the route and calculate bounds
-                if segments_data:
-                    route_gpx_data, bounds = await create_route_gpx(ordered_segments)
-                else:
-                    route_gpx_data, bounds = await create_waypoint_route_gpx(
-                        computed_stats,
-                        route_track_points,
-                    )
+                route_gpx_data, bounds = await create_route_gpx(
+                    computed_stats, route_track_points
+                )
 
-                # Generate a unique file path for the route
                 route_file_id = str(uuid.uuid4())
-
-                # Create temporary file for GPX data
                 with tempfile.NamedTemporaryFile(
                     mode="w", suffix=".gpx", delete=False
                 ) as temp_file:
@@ -129,29 +132,24 @@ def create_routes_router(
                     temp_file_path = Path(temp_file.name)
 
                 try:
-                    # Upload GPX file to storage
                     storage_key = global_storage_manager.upload_gpx_segment(
                         temp_file_path, route_file_id, prefix="routes"
                     )
 
-                    # Create proper storage URL
                     route_file_path = (
                         f"{global_storage_manager.get_storage_root_prefix()}/"
                         f"{storage_key}"
                     )
 
-                    # Clean up temporary file
                     temp_file_path.unlink()
 
                 except Exception as e:
-                    # Clean up temporary file on error
                     if temp_file_path.exists():
                         temp_file_path.unlink()
                     raise HTTPException(
                         status_code=500, detail=f"Failed to save route GPX: {str(e)}"
                     )
 
-                # Create the route track
                 route_track = Track(
                     file_path=route_file_path,
                     bound_north=bounds["north"],
@@ -175,7 +173,6 @@ def create_routes_router(
 
                 logger.info(f"Created route '{name}' with ID {route_track.id}")
 
-                # Return the created route
                 return TrackResponse(
                     id=route_track.id,
                     file_path=route_track.file_path,
@@ -205,8 +202,8 @@ def create_routes_router(
     return router
 
 
-def calculate_waypoint_route_statistics():
-    """Calculate route statistics for waypoint-based routes.
+def compute_route_features_route():
+    """Compute route features for waypoint-based routes.
 
     For waypoint-based routes, we use default values since there are no segments
     to derive terrain characteristics from.
@@ -217,24 +214,16 @@ def calculate_waypoint_route_statistics():
         Route statistics with default values for difficulty, surface types,
         and tire recommendations
     """
-    # Use default values for segment-specific statistics
-    default_difficulty = 2  # Medium difficulty
-    default_surface_types = [
-        SurfaceType.BROKEN_PAVED_ROAD.value
-    ]  # Default to paved road
-    default_tire_dry = TireType.SEMI_SLICK  # Conservative recommendation
-    default_tire_wet = TireType.KNOBS  # Safe for wet conditions
-
     return {
-        "difficulty_level": default_difficulty,
-        "surface_types": default_surface_types,
-        "tire_dry": default_tire_dry,
-        "tire_wet": default_tire_wet,
+        "difficulty_level": 2,
+        "surface_types": [SurfaceType.BROKEN_PAVED_ROAD.value],
+        "tire_dry": TireType.SEMI_SLICK,
+        "tire_wet": TireType.KNOBS,
     }
 
 
-def calculate_route_statistics(segments):
-    """Calculate route statistics from segments.
+def compute_route_features_from_segments(segments):
+    """Compute route features from segments.
 
     This function computes difficulty level, surface types, and tire recommendations
     based on the segments in the route.
@@ -250,43 +239,20 @@ def calculate_route_statistics(segments):
         Calculated route statistics with difficulty, surface types,
         and tire recommendations
     """
-    if not segments:
-        raise HTTPException(status_code=422, detail="No segments provided")
 
-    # Calculate average difficulty
-    total_difficulty = sum(segment.difficulty_level for segment in segments)
+    total_difficulty = 0
+    surface_types, dry_tire_types, wet_tire_types = [], [], []
+
+    for segment in segments:
+        total_difficulty += segment.difficulty_level
+        surface_types.extend(segment.surface_type)
+        dry_tire_types.append(segment.tire_dry.value)
+        wet_tire_types.append(segment.tire_wet.value)
+
     avg_difficulty = round(total_difficulty / len(segments), 1)
-
-    # Union of all surface types
-    all_surface_types = set()
-    for segment in segments:
-        all_surface_types.update(segment.surface_type)
-    surface_types = list(all_surface_types)
-
-    # Tire recommendation logic: separate dry and wet conditions
-    # Order: slick < semi-slick < knobs (from best to worst)
-    dry_tire_types = set()
-    wet_tire_types = set()
-
-    for segment in segments:
-        dry_tire_types.add(segment.tire_dry.value)
-        wet_tire_types.add(segment.tire_wet.value)
-
-    # Calculate dry tire recommendation (worst case scenario)
-    if "knobs" in dry_tire_types:
-        tire_dry_recommendation = TireType.KNOBS
-    elif "semi-slick" in dry_tire_types:
-        tire_dry_recommendation = TireType.SEMI_SLICK
-    else:
-        tire_dry_recommendation = TireType.SLICK
-
-    # Calculate wet tire recommendation (worst case scenario)
-    if "knobs" in wet_tire_types:
-        tire_wet_recommendation = TireType.KNOBS
-    elif "semi-slick" in wet_tire_types:
-        tire_wet_recommendation = TireType.SEMI_SLICK
-    else:
-        tire_wet_recommendation = TireType.SLICK
+    surface_types = list(set(surface_types))
+    tire_dry_recommendation = get_tire_recommendation(set(dry_tire_types))
+    tire_wet_recommendation = get_tire_recommendation(set(wet_tire_types))
 
     return {
         "difficulty_level": int(avg_difficulty),
@@ -296,132 +262,14 @@ def calculate_route_statistics(segments):
     }
 
 
-async def create_route_gpx(segments):
-    """Create GPX data for the route by combining segment GPX data.
+async def create_route_gpx(computed_stats, route_track_points):
+    """Create GPX data using interpolated route track points.
 
-    This function also calculates bounding box and total statistics efficiently
-    by processing the GPX points.
-
-    Parameters
-    ----------
-    segments : list
-        List of segment Track objects
-
-    Returns
-    -------
-    tuple
-        A tuple containing:
-        - str: GPX XML content for the route
-        - dict: Bounding box with north, south, east, west,
-                barycenter_lat, barycenter_lng
-    """
-    from ..dependencies import storage_manager as global_storage_manager
-
-    if not global_storage_manager:
-        raise HTTPException(status_code=500, detail="Storage manager not available")
-
-    # Create a new GPX object
-    gpx = gpxpy.gpx.GPX()
-    gpx.creator = "Gravly Route Planner"
-
-    # Create a track
-    gpx_track = GPXTrack()
-    gpx_track.name = f"Route with {len(segments)} segments"
-    gpx_track.description = "Route created from segments in guided mode"
-
-    # Initialize bounds tracking
-    min_lat, max_lat = None, None
-    min_lng, max_lng = None, None
-    all_lats, all_lngs = [], []
-
-    # For each segment, load its GPX data and add the track points
-    for segment in segments:
-        try:
-            # Load the segment's GPX file from storage
-            gpx_file_path = global_storage_manager.get_file_path(segment.file_path)
-
-            # Parse the GPX file
-            with open(gpx_file_path) as gpx_file:
-                segment_gpx = gpxpy.parse(gpx_file)
-
-            # Extract track points from the segment
-            # Check if we need to reverse the segment
-            is_reversed = getattr(segment, "isReversed", False)
-
-            for track in segment_gpx.tracks:
-                for track_segment in track.segments:
-                    # Create a new track segment for this part of the route
-                    gpx_segment = GPXTrackSegment()
-
-                    # Get the points, potentially reversed
-                    points = list(track_segment.points)
-                    if is_reversed:
-                        points = list(reversed(points))
-
-                    # Add all points to the segment and track bounds
-                    for point in points:
-                        gpx_point = GPXTrackPoint(
-                            latitude=point.latitude,
-                            longitude=point.longitude,
-                            elevation=point.elevation,
-                            time=point.time,
-                        )
-                        gpx_segment.points.append(gpx_point)
-
-                        # Track bounds
-                        all_lats.append(point.latitude)
-                        all_lngs.append(point.longitude)
-
-                        if min_lat is None or point.latitude < min_lat:
-                            min_lat = point.latitude
-                        if max_lat is None or point.latitude > max_lat:
-                            max_lat = point.latitude
-                        if min_lng is None or point.longitude < min_lng:
-                            min_lng = point.longitude
-                        if max_lng is None or point.longitude > max_lng:
-                            max_lng = point.longitude
-
-                    # Add the segment to the track
-                    gpx_track.segments.append(gpx_segment)
-
-        except Exception as e:
-            logger.warning(f"Error loading GPX for segment {segment.id}: {str(e)}")
-            # Continue with other segments even if one fails
-            continue
-
-    # Add the track to the GPX
-    gpx.tracks.append(gpx_track)
-
-    # Calculate bounds
-    if min_lat is None or max_lat is None or min_lng is None or max_lng is None:
-        raise HTTPException(
-            status_code=422, detail="Unable to calculate bounds from route data"
-        )
-
-    if all_lats:
-        barycenter_lat = sum(all_lats) / len(all_lats)
-        barycenter_lng = sum(all_lngs) / len(all_lngs)
-    else:
-        barycenter_lat = (min_lat + max_lat) / 2
-        barycenter_lng = (min_lng + max_lng) / 2
-
-    bounds = {
-        "north": max_lat,
-        "south": min_lat,
-        "east": max_lng,
-        "west": min_lng,
-        "barycenter_lat": barycenter_lat,
-        "barycenter_lng": barycenter_lng,
-    }
-
-    # Convert to XML string and return with bounds
-    return gpx.to_xml(), bounds
-
-
-async def create_waypoint_route_gpx(computed_stats, route_track_points):
-    """Create GPX data for waypoint-based routes using route track points.
-
-    This function also calculates bounding box by processing the GPX points.
+    This function is used for both guided mode (with segments) and free mode
+    (waypoints). It uses the interpolated route track points from OSRM routing
+    which includes elevation data and represents the actual path that will be
+    followed. This function also calculates bounding box by processing the GPX
+    points.
 
     Parameters
     ----------
@@ -434,45 +282,36 @@ async def create_waypoint_route_gpx(computed_stats, route_track_points):
     -------
     tuple
         A tuple containing:
-        - str: GPX XML content for the waypoint route
+        - str: GPX XML content for the route
         - dict: Bounding box with north, south, east, west,
                 barycenter_lat, barycenter_lng
     """
 
-    # Extract route information from computed stats
     distance = computed_stats.get("distance", 0)
     elevation_gain = computed_stats.get("elevationGain", 0)
 
-    # Create a new GPX object
     gpx = gpxpy.gpx.GPX()
     gpx.creator = "Gravly Route Planner"
 
-    # Create a track
     gpx_track = GPXTrack()
-    gpx_track.name = "Waypoint Route"
+    gpx_track.name = "Route"
     gpx_track.description = (
-        f"Route created from waypoints - Distance: {distance:.2f}km, "
+        f"Route with interpolated track points - Distance: {distance:.2f}km, "
         f"Elevation: {elevation_gain:.0f}m"
     )
 
-    # Create a track segment
     gpx_segment = GPXTrackSegment()
 
-    # Initialize bounds tracking
     min_lat, max_lat = None, None
     min_lng, max_lng = None, None
     all_lats, all_lngs = [], []
 
-    # Use route track points - this is required for waypoint routes
     if route_track_points and len(route_track_points) >= 2:
         # Use the smoothed route track points from the RoutePlanner
-        # This data is already smoothed in the frontend to match the chart display
+        # This data includes elevation and matches the chart display
         start_time = datetime.now(UTC)
         for i, point_data in enumerate(route_track_points):
-            # Create progressive timestamps for better GPX compatibility
-            point_time = start_time + timedelta(
-                seconds=i * 10
-            )  # 10 seconds between points
+            point_time = start_time + timedelta(seconds=i * 10)
             point = GPXTrackPoint(
                 point_data["lat"],
                 point_data["lng"],
@@ -481,7 +320,6 @@ async def create_waypoint_route_gpx(computed_stats, route_track_points):
             )
             gpx_segment.points.append(point)
 
-            # Track bounds
             all_lats.append(point_data["lat"])
             all_lngs.append(point_data["lng"])
 
@@ -494,19 +332,14 @@ async def create_waypoint_route_gpx(computed_stats, route_track_points):
             if max_lng is None or point_data["lng"] > max_lng:
                 max_lng = point_data["lng"]
     else:
-        # No valid route track points available
         raise HTTPException(
             status_code=422,
-            detail="Route track points are required for waypoint-based routes",
+            detail="Route track points are required to create route GPX",
         )
 
-    # Add the segment to the track
     gpx_track.segments.append(gpx_segment)
-
-    # Add the track to the GPX
     gpx.tracks.append(gpx_track)
 
-    # Calculate bounds
     if min_lat is None or max_lat is None or min_lng is None or max_lng is None:
         raise HTTPException(
             status_code=422, detail="Unable to calculate bounds from route data"
@@ -528,5 +361,4 @@ async def create_waypoint_route_gpx(computed_stats, route_track_points):
         "barycenter_lng": barycenter_lng,
     }
 
-    # Return the GPX as XML string and bounds
     return gpx.to_xml(), bounds
