@@ -82,7 +82,14 @@ describe('RoutePlannerSidebar', () => {
       tireDry: [],
       tireWet: []
     },
-    filtersExpanded: false
+    filtersExpanded: false,
+    routeDistance: 0,
+    elevationStats: {
+      totalGain: 0,
+      totalLoss: 0,
+      maxElevation: 0,
+      minElevation: 0
+    }
   }
 
   beforeEach(() => {

@@ -9,6 +9,8 @@
       :selected-segments="selectedSegments"
       :segment-filters="segmentFilters"
       :filters-expanded="filtersExpanded"
+      :route-distance="routeDistance"
+      :elevation-stats="elevationStats"
       @close="toggleSidebar"
       @toggle-mode="onToggleMode"
       @toggle-filters="filtersExpanded = !filtersExpanded"
@@ -25,6 +27,7 @@
       @segment-hover="handleSegmentItemHover"
       @segment-leave="handleSegmentItemLeave"
       @generate-route="generateStartEndRoute"
+      @route-saved="handleRouteSaved"
     />
 
     <div class="map-container">
@@ -59,6 +62,18 @@
             :class="{ active: showSidebar }"
           >
             <i class="fa-solid fa-route"></i>
+          </button>
+          <button
+            class="control-btn"
+            @click="showSaveModal = true"
+            :disabled="!canSaveRoute"
+            :title="
+              canSaveRoute
+                ? t('routePlanner.saveRoute')
+                : t('routePlanner.noRouteToSave')
+            "
+          >
+            <i class="fa-solid fa-save"></i>
           </button>
           <button
             class="control-btn"
@@ -101,6 +116,19 @@
       />
     </div>
 
+    <!-- Route Save Modal -->
+    <RouteSaveModal
+      v-if="showSaveModal"
+      :selected-segments="selectedSegments"
+      :route-distance="routeDistance"
+      :elevation-stats="elevationStats"
+      :actual-route-coordinates="actualRouteCoordinates"
+      :interpolated-elevation-data="interpolatedElevationData"
+      :show="showSaveModal"
+      @route-saved="handleRouteSaved"
+      @close="showSaveModal = false"
+    />
+
     <!-- Waypoint Context Menu -->
     <div
       v-if="contextMenu.visible"
@@ -137,6 +165,7 @@ import {
 } from 'chart.js'
 import ElevationProfile from './ElevationProfile.vue'
 import RoutePlannerSidebar from './RoutePlannerSidebar.vue'
+import RouteSaveModal from './RouteSaveModal.vue'
 import SegmentPopupCard from './SegmentPopupCard.vue'
 import type { TrackResponse, GPXDataResponse, TrackWithGPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
@@ -170,6 +199,7 @@ const { t } = useI18n()
 
 // Sidebar and mode state
 const showSidebar = ref(false)
+const showSaveModal = ref(false)
 const routeMode = ref<'standard' | 'startEnd'>('standard')
 const startWaypoint = ref<any>(null)
 const endWaypoint = ref<any>(null)
@@ -207,6 +237,14 @@ let map: any = null
 let routingControl: any = null
 let waypoints: any[] = []
 let routeLine: any = null
+// Reactive waypoints count for Vue reactivity
+const waypointsCount = ref(0)
+
+// Helper function to update waypoints and reactive count
+function updateWaypoints(newWaypoints: any[]) {
+  waypoints = newWaypoints
+  waypointsCount.value = newWaypoints.length
+}
 let routeToleranceBuffer: any = null // Invisible thick line for easier interaction
 let waypointMarkers: any[] = []
 let mapMarker: any = null // Marker for chart interaction
@@ -290,6 +328,9 @@ const elevationCache = new Map<
   Array<{ lat: number; lng: number; elevation: number; distance: number }>
 >()
 const actualRouteCoordinates = ref<Array<{ lat: number; lng: number }>>([]) // Store actual OSRM route coordinates
+const interpolatedElevationData = ref<
+  Array<{ lat: number; lng: number; elevation: number; distance: number }>
+>([]) // Store interpolated elevation data
 
 // Cache configuration
 const CACHE_VERSION = '1.1' // Increment version to invalidate old cache with zeros
@@ -325,6 +366,16 @@ const infoBannerParts = computed(() => {
   })
 
   return parts
+})
+
+// Route save functionality
+const canSaveRoute = computed(() => {
+  // Can save if we have either:
+  // 1. Selected segments (segment-based route) with distance > 0
+  // 2. Manual waypoints (2 or more waypoints for a route)
+  const hasSegments = selectedSegments.value.length > 0 && routeDistance.value > 0
+  const hasWaypoints = waypointsCount.value >= 2
+  return hasSegments || hasWaypoints
 })
 
 // Info banner management functions
@@ -384,7 +435,6 @@ function loadElevationCache() {
             }>
           )
         })
-        console.log(`Loaded ${elevationCache.size} cached elevation segments`)
       }
     }
   } catch (error) {
@@ -590,7 +640,7 @@ function preserveRouteFromStartEndMode() {
       })
     } else {
       // No waypoints from guided mode - create waypoints from start/end points
-      waypoints = []
+      updateWaypoints([])
       addWaypoint(startWaypoint.value)
       addWaypoint(endWaypoint.value)
     }
@@ -762,7 +812,7 @@ function generateStartEndRoute() {
   }
 
   // Also update the waypoints array for consistency with standard mode
-  waypoints = routeWaypoints
+  updateWaypoints(routeWaypoints)
 
   // Clear any existing regular waypoint markers since we're in start/end mode
   waypointMarkers.forEach((marker) => {
@@ -903,9 +953,6 @@ function sampleSegmentPoints(points: any[]): any[] {
     sampledPoints.push(points[totalPoints - 1]) // Last point
   }
 
-  console.log(
-    `Sampled ${sampledPoints.length} waypoints from ${totalPoints} GPX points for segment (${totalDistance.toFixed(0)}m)`
-  )
   return sampledPoints
 }
 
@@ -1298,6 +1345,7 @@ function handleRouteDragStart(e: any) {
   // Create new waypoint at the drag start position
   const newWaypoint = L.Routing.waypoint(e.latlng)
   waypoints.splice(insertIndex, 0, newWaypoint)
+  waypointsCount.value = waypoints.length
 
   // CRITICAL: Rebuild all waypoint markers to keep indices in sync
   rebuildWaypointMarkers()
@@ -1461,7 +1509,7 @@ function initializeRoutingControl() {
 
   // Listen for waypoint changes
   routingControl.on('waypointsspliced', (e: any) => {
-    waypoints = e.waypoints
+    updateWaypoints(e.waypoints)
 
     // Save route when waypoints are modified by routing control
     saveCurrentRoute()
@@ -1475,6 +1523,7 @@ function addWaypoint(latlng: any) {
   const newWaypoint = L.Routing.waypoint(latlng)
   const waypointIndex = waypoints.length
   waypoints.push(newWaypoint)
+  waypointsCount.value = waypoints.length
 
   // Save route after adding waypoint
   saveCurrentRoute()
@@ -1504,6 +1553,7 @@ function removeWaypoint(index: number) {
 
   // Remove the waypoint from the array
   waypoints.splice(index, 1)
+  waypointsCount.value = waypoints.length
 
   // Remove the marker from the map and array
   if (waypointMarkers[index]) {
@@ -1569,6 +1619,14 @@ function handleDeleteWaypoint() {
     removeWaypoint(contextMenu.value.waypointIndex)
   }
   hideContextMenu()
+}
+
+function handleRouteSaved() {
+  showSaveModal.value = false
+  // You can add additional logic here if needed, such as:
+  // - Showing a success notification
+  // - Redirecting to the saved route
+  // - Updating the UI state
 }
 
 function createWaypointMarker(index: number, latlng: any) {
@@ -1934,8 +1992,10 @@ function loadSavedRoute() {
     }
 
     // Restore waypoints
-    waypoints = routeData.waypoints.map((wpData: any) =>
-      L.Routing.waypoint(L.latLng(wpData.lat, wpData.lng), wpData.name)
+    updateWaypoints(
+      routeData.waypoints.map((wpData: any) =>
+        L.Routing.waypoint(L.latLng(wpData.lat, wpData.lng), wpData.name)
+      )
     )
 
     // Update routing control
@@ -2039,7 +2099,7 @@ function redo() {
 
 function restoreWaypointsFromState(state: any[]) {
   // Clear current waypoints
-  waypoints = []
+  updateWaypoints([])
 
   // Clear existing markers and routes
   waypointMarkers.forEach((marker) => {
@@ -2092,7 +2152,7 @@ function clearMap() {
 
 function performCompleteReset() {
   // Clear waypoints and start/end waypoints
-  waypoints = []
+  updateWaypoints([])
   startWaypoint.value = null
   endWaypoint.value = null
 
@@ -2153,6 +2213,7 @@ function performCompleteReset() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
+  interpolatedElevationData.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -2178,13 +2239,14 @@ async function calculateElevationStats() {
     }
     elevationSegments.value = []
     actualRouteCoordinates.value = []
+    interpolatedElevationData.value = []
+    interpolatedElevationData.value = []
     return
   }
 
   // Don't calculate elevation if we don't have actual route coordinates yet
   // This prevents premature API calls that cause CORS errors
   if (actualRouteCoordinates.value.length < 2) {
-    console.log('Waiting for route coordinates before calculating elevation stats...')
     return
   }
 
@@ -2620,10 +2682,7 @@ function updateCursorPosition(latlng: any) {
 
 // Segment-based elevation functions
 async function updateElevationSegments() {
-  console.log('Updating elevation segments with intelligent caching...')
   const newSegments: ElevationSegment[] = []
-  let segmentsProcessed = 0
-  let segmentsFromCache = 0
 
   for (let i = 0; i < waypoints.length - 1; i++) {
     const startPoint = waypoints[i].latLng
@@ -2646,7 +2705,6 @@ async function updateElevationSegments() {
     if (existingSegment) {
       // Segment is identical and processed, reuse it
       newSegments.push(existingSegment)
-      segmentsFromCache++
       continue
     }
 
@@ -2669,16 +2727,11 @@ async function updateElevationSegments() {
 
       // Check if cached segment contains failed elevation requests
       if (segmentHasFailedElevations(cachedPoints)) {
-        console.log(`Segment ${i}-${i + 1} has failed elevations, retrying`)
         // Process segment to retry failed elevation requests
         try {
           segment.sampledPoints = await processSegmentElevationIntelligent(segment)
           elevationCache.set(segmentHash, segment.sampledPoints)
           segment.isProcessed = true
-          segmentsProcessed++
-          console.log(
-            `Retried and updated segment ${i}-${i + 1} with ${segment.sampledPoints.length} points`
-          )
           // Save cache after successful retry
           saveElevationCache()
         } catch (error) {
@@ -2693,8 +2746,6 @@ async function updateElevationSegments() {
       } else {
         segment.sampledPoints = cachedPoints
         segment.isProcessed = true
-        segmentsFromCache++
-        console.log(`Loaded segment ${i}-${i + 1} from cache`)
       }
     } else {
       // Process new segment with intelligent chunking
@@ -2702,10 +2753,6 @@ async function updateElevationSegments() {
         segment.sampledPoints = await processSegmentElevationIntelligent(segment)
         elevationCache.set(segmentHash, segment.sampledPoints)
         segment.isProcessed = true
-        segmentsProcessed++
-        console.log(
-          `Processed new segment ${i}-${i + 1} (${segment.sampledPoints.length} points)`
-        )
 
         // Save cache after each successful segment
         saveElevationCache()
@@ -2721,9 +2768,6 @@ async function updateElevationSegments() {
   }
 
   elevationSegments.value = newSegments
-  console.log(
-    `Segment update complete: ${segmentsFromCache} from cache, ${segmentsProcessed} newly processed`
-  )
 }
 
 async function processSegmentElevationIntelligent(
@@ -2732,10 +2776,6 @@ async function processSegmentElevationIntelligent(
   // Use adaptive sampling based on segment length
   const samplingDistance = calculateOptimalSamplingDistance(segment.distance)
   const numSamples = Math.max(2, Math.ceil(segment.distance / samplingDistance))
-
-  console.log(
-    `Processing segment ${segment.startWaypointIndex}-${segment.endWaypointIndex}: ${segment.distance.toFixed(0)}m with ${numSamples} samples`
-  )
 
   // Check if we need to chunk this segment
   if (shouldChunkSegment(segment.distance)) {
@@ -2770,10 +2810,6 @@ async function processChunkedSegmentElevation(
   segment: ElevationSegment,
   totalSamples: number
 ): Promise<Array<{ lat: number; lng: number; elevation: number; distance: number }>> {
-  console.log(
-    `Chunking large segment ${segment.startWaypointIndex}-${segment.endWaypointIndex} (${totalSamples} samples)`
-  )
-
   const allSampledPoints: Array<{
     lat: number
     lng: number
@@ -2833,10 +2869,6 @@ async function processChunkedSegmentElevation(
 }
 
 async function updateAffectedSegments(changedWaypointIndex: number) {
-  console.log(
-    `Updating affected segments due to waypoint ${changedWaypointIndex} change`
-  )
-
   // Find segments that need to be updated based on the changed waypoint
   const segmentsToUpdate: number[] = []
 
@@ -2865,14 +2897,12 @@ async function updateAffectedSegments(changedWaypointIndex: number) {
 
       // Check if the segment has actually changed
       if (segment.segmentHash === newSegmentHash && segment.isProcessed) {
-        console.log(`Segment ${segmentIndex} unchanged, skipping`)
         continue
       }
 
       // Clear old cache entry if hash changed
       if (segment.segmentHash && segment.segmentHash !== newSegmentHash) {
         elevationCache.delete(segment.segmentHash)
-        console.log(`Cleared cache for changed segment ${segmentIndex}`)
       }
 
       // Update segment data
@@ -2891,9 +2921,6 @@ async function updateAffectedSegments(changedWaypointIndex: number) {
 
         // Save cache after successful update
         saveElevationCache()
-        console.log(
-          `Updated segment ${segmentIndex} with ${segment.sampledPoints.length} points`
-        )
       } catch (error) {
         console.error(`Failed to update segment ${segmentIndex}:`, error)
         // Don't throw error, continue with other segments
@@ -3006,10 +3033,6 @@ async function getElevationData(
       batches.push(points.slice(i, i + batchSize))
     }
 
-    console.log(
-      `Processing ${points.length} elevation points in ${batches.length} batches of ${batchSize} points each`
-    )
-
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
       const locations = batch.map((p) => `${p.lat},${p.lng}`).join('|')
@@ -3024,9 +3047,6 @@ async function getElevationData(
           if (retryCount > 0) {
             // Exponential backoff: 1s, 2s, 4s
             const delay = Math.pow(2, retryCount - 1) * 1000
-            console.log(
-              `Retrying batch ${batchIndex + 1} after ${delay}ms delay (attempt ${retryCount + 1}/${maxRetries + 1})`
-            )
             await new Promise((resolve) => setTimeout(resolve, delay))
           }
 
@@ -3052,10 +3072,6 @@ async function getElevationData(
           const batchElevations = data.results.map((result: any) => result.elevation)
           elevations.push(...batchElevations)
           success = true
-
-          console.log(
-            `Successfully fetched elevation data for batch ${batchIndex + 1}/${batches.length}`
-          )
         } catch (error) {
           retryCount++
           if (retryCount > maxRetries) {
@@ -3094,7 +3110,7 @@ async function getElevationData(
 
 // Enhanced clearRoute to work with history
 function clearRoute() {
-  waypoints = []
+  updateWaypoints([])
 
   // Clear saved route from localStorage
   localStorage.removeItem(ROUTE_STORAGE_KEY)
@@ -3139,6 +3155,7 @@ function clearRoute() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
+  interpolatedElevationData.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -3167,6 +3184,7 @@ function clearElevationData() {
   elevationSegments.value = []
   elevationCache.clear()
   actualRouteCoordinates.value = []
+  interpolatedElevationData.value = []
   elevationStats.value = {
     totalGain: 0,
     totalLoss: 0,
@@ -3192,18 +3210,13 @@ function toggleElevation() {
       elevationSegments.value.length > 0 &&
       elevationSegments.value.some((seg) => seg.isProcessed)
     ) {
-      console.log('Showing cached elevation data from segments')
       // Just display the existing data - no recomputation needed
       nextTick(() => {
         updateChartFromSegments()
       })
     } else if (actualRouteCoordinates.value.length >= 2) {
-      console.log('No cached elevation data, calculating for first time')
       calculateElevationStats()
     } else {
-      console.log(
-        'Route not ready yet, elevation stats will be calculated when route is loaded'
-      )
       // Set up a retry mechanism to calculate elevation when route becomes available
       const checkRouteReady = () => {
         if (actualRouteCoordinates.value.length >= 2) {
@@ -3227,8 +3240,6 @@ async function calculateElevationFromActualRouteWithCaching() {
     return
   }
 
-  console.log('Calculating elevation from actual route with segment-based caching...')
-
   try {
     // Split the actual route into segments based on waypoints
     const routeSegments = splitRouteIntoWaypointSegments(
@@ -3242,8 +3253,6 @@ async function calculateElevationFromActualRouteWithCaching() {
       elevation: number
       distance: number
     }> = []
-    let segmentsFromCache = 0
-    let segmentsProcessed = 0
     let cumulativeDistance = 0
 
     for (let i = 0; i < routeSegments.length; i++) {
@@ -3272,9 +3281,6 @@ async function calculateElevationFromActualRouteWithCaching() {
 
         // Check if cached segment contains failed elevation requests
         if (segmentHasFailedElevations(cachedData)) {
-          console.log(
-            `Segment ${i}-${i + 1} has failed elevations, retrying for stats calculation`
-          )
           try {
             // Retry elevation data for failed segments
             const sampledPoints = sampleRouteSegmentEvery100Meters(
@@ -3289,9 +3295,6 @@ async function calculateElevationFromActualRouteWithCaching() {
 
             // Update cache with retried data
             elevationCache.set(segmentHash, segmentElevationData)
-            console.log(
-              `Retried and cached segment ${i}-${i + 1} (${segmentElevationData.length} points)`
-            )
           } catch (error) {
             console.error(
               `Retry failed for segment ${i}-${i + 1} stats, using cached data:`,
@@ -3301,17 +3304,9 @@ async function calculateElevationFromActualRouteWithCaching() {
           }
         } else {
           segmentElevationData = cachedData
-          segmentsFromCache++
-          console.log(
-            `Loaded segment ${i}-${i + 1} from cache (${segmentElevationData.length} points)`
-          )
         }
       } else {
         // Process new segment
-        console.log(
-          `Processing new segment ${i}-${i + 1} (${segment.length} route points)`
-        )
-
         // Sample points along this segment of the actual route
         const sampledPoints = sampleRouteSegmentEvery100Meters(
           segment,
@@ -3329,10 +3324,6 @@ async function calculateElevationFromActualRouteWithCaching() {
 
         // Store in cache
         elevationCache.set(segmentHash, segmentElevationData)
-        segmentsProcessed++
-        console.log(
-          `Processed and cached segment ${i}-${i + 1} (${segmentElevationData.length} points)`
-        )
       }
 
       // Add to combined data (distances are already cumulative from the sampling function)
@@ -3344,15 +3335,6 @@ async function calculateElevationFromActualRouteWithCaching() {
           segmentElevationData[segmentElevationData.length - 1].distance
       }
     }
-
-    // Save cache after processing all segments
-    if (segmentsProcessed > 0) {
-      saveElevationCache()
-    }
-
-    console.log(
-      `Segment processing complete: ${segmentsFromCache} from cache, ${segmentsProcessed} newly processed`
-    )
 
     if (allElevationData.length === 0) {
       console.warn('No elevation data available')
@@ -3372,6 +3354,10 @@ async function calculateElevationFromActualRouteWithCaching() {
       elevation: smoothedElevations[index] || point.elevation
     }))
     await updateElevationChart(smoothedElevations, smoothedElevationData)
+
+    // Store smoothed elevation data for use by RouteSaveModal
+    // This ensures the GPX file contains the same data as shown in the chart
+    interpolatedElevationData.value = smoothedElevationData
   } catch (error) {
     console.error('Error calculating elevation from actual route:', error)
     throw error

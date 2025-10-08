@@ -9,16 +9,12 @@
         <button
           @click="refreshActivities"
           :disabled="isLoading"
-          class="btn btn-secondary btn-sm"
+          class="close-btn"
           :title="t('strava.refresh')"
         >
           <i class="fa-solid fa-refresh" :class="{ 'fa-spin': isLoading }"></i>
         </button>
-        <button
-          @click="$emit('close')"
-          class="btn btn-secondary btn-sm"
-          :title="t('common.close')"
-        >
+        <button @click="$emit('close')" class="close-btn" :title="t('common.close')">
           <i class="fa-solid fa-times"></i>
         </button>
       </div>
@@ -478,6 +474,30 @@ defineExpose({
 .header-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.close-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .error-message {

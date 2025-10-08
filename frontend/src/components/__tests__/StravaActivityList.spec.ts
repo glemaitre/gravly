@@ -222,8 +222,8 @@ describe('StravaActivityList', () => {
     it('should render header action buttons', () => {
       wrapper = createWrapper()
 
-      const refreshButton = wrapper.find('.header-actions .btn-secondary')
-      const closeButton = wrapper.findAll('.header-actions .btn-secondary')[1]
+      const refreshButton = wrapper.find('.header-actions .close-btn')
+      const closeButton = wrapper.findAll('.header-actions .close-btn')[1]
 
       expect(refreshButton.exists()).toBe(true)
       expect(closeButton.exists()).toBe(true)
@@ -340,7 +340,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const closeButton = wrapper.findAll('.header-actions .btn-secondary')[1]
+      const closeButton = wrapper.findAll('.header-actions .close-btn')[1]
       await closeButton.trigger('click')
 
       expect(wrapper.emitted('close')).toBeTruthy()
@@ -351,7 +351,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const refreshButton = wrapper.find('.header-actions .btn-secondary')
+      const refreshButton = wrapper.find('.header-actions .close-btn')
       await refreshButton.trigger('click')
 
       expect(mockStravaActivities.refreshActivities).toHaveBeenCalled()
@@ -363,7 +363,7 @@ describe('StravaActivityList', () => {
       wrapper = createWrapper()
       await wrapper.vm.$nextTick()
 
-      const refreshButton = wrapper.find('.header-actions .btn-secondary')
+      const refreshButton = wrapper.find('.header-actions .close-btn')
       expect(refreshButton.attributes('disabled')).toBeDefined()
     })
 
@@ -374,7 +374,7 @@ describe('StravaActivityList', () => {
       await wrapper.vm.$nextTick()
 
       // The icon might be stubbed, so we just check that the refresh button exists
-      const refreshButton = wrapper.find('.header-actions .btn-secondary')
+      const refreshButton = wrapper.find('.header-actions .close-btn')
       expect(refreshButton.exists()).toBe(true)
       expect(refreshButton.attributes('disabled')).toBeDefined()
     })

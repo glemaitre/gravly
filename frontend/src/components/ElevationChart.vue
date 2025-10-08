@@ -83,27 +83,12 @@ function calculateDistance(
 
 // Initialize the elevation chart
 async function initializeElevationChart() {
-  // Only show debug logs in production/development, not during tests
-  const isTestEnv = (() => {
-    try {
-      return typeof (globalThis as any).vi !== 'undefined'
-    } catch {
-      return false
-    }
-  })()
-
   if (!props.gpxData || !elevationChartRef.value) {
-    if (!isTestEnv) {
-      console.log('Missing required data for chart initialization')
-    }
     return
   }
 
   // Check if chart is already initialized
   if (elevationChart.value) {
-    if (!isTestEnv) {
-      console.log('Destroying existing chart')
-    }
     elevationChart.value.destroy()
     elevationChart.value = null
   }
@@ -120,22 +105,11 @@ async function initializeElevationChart() {
   if (container) {
     canvas.width = container.clientWidth
     canvas.height = container.clientHeight
-    if (!isTestEnv) {
-      console.log('Canvas dimensions set:', canvas.width, 'x', canvas.height)
-    }
   }
 
   const points = props.gpxData.points
   if (points.length === 0) {
-    if (!isTestEnv) {
-      console.log('No points data available for chart')
-    }
     return
-  }
-
-  if (!isTestEnv) {
-    console.log('Points data:', points.length, 'points')
-    console.log('First few points:', points.slice(0, 3))
   }
 
   // Calculate cumulative distances in kilometers
@@ -158,18 +132,6 @@ async function initializeElevationChart() {
     x: cumulativeKm[i],
     y: point.elevation
   }))
-
-  if (!isTestEnv) {
-    console.log('Chart data sample:', chartData.slice(0, 5))
-    console.log(
-      'Elevation range:',
-      Math.min(...points.map((p) => p.elevation)),
-      'to',
-      Math.max(...points.map((p) => p.elevation))
-    )
-    console.log('Distance range:', 0, 'to', cumulativeKm[cumulativeKm.length - 1])
-    console.log('Creating chart with data points:', chartData.length)
-  }
 
   // Get CSS variable values from computed styles
   const rootStyles = getComputedStyle(document.documentElement)
@@ -252,10 +214,6 @@ async function initializeElevationChart() {
       }
     }
   })
-
-  if (!isTestEnv) {
-    console.log('Chart created successfully:', elevationChart.value)
-  }
 }
 
 // Watch for changes in gpxData and reinitialize chart

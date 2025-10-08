@@ -2,6 +2,7 @@
 
 import json
 import logging
+import math
 import uuid
 from pathlib import Path
 
@@ -415,6 +416,26 @@ def create_segments_router(
                     yield f"data: {len(tracks)}\n\n"
 
                     for track in tracks:
+                        # Validate bounds to ensure they are finite before returning
+                        bounds = {
+                            "bound_north": track.bound_north,
+                            "bound_south": track.bound_south,
+                            "bound_east": track.bound_east,
+                            "bound_west": track.bound_west,
+                            "barycenter_latitude": track.barycenter_latitude,
+                            "barycenter_longitude": track.barycenter_longitude,
+                        }
+
+                        # Check if any bounds are non-finite and skip this track if so
+                        if not all(
+                            isinstance(value, (int, float)) and math.isfinite(value)
+                            for value in bounds.values()
+                        ):
+                            logger.warning(
+                                f"Skipping track {track.id} with non-finite bounds"
+                            )
+                            continue
+
                         # Return only overview data without GPX content
                         track_response = TrackResponse(
                             id=track.id,
@@ -552,6 +573,29 @@ def create_segments_router(
 
                 if not track:
                     raise HTTPException(status_code=404, detail="Track not found")
+
+                # Validate bounds to ensure they are finite
+                bounds = {
+                    "bound_north": track.bound_north,
+                    "bound_south": track.bound_south,
+                    "bound_east": track.bound_east,
+                    "bound_west": track.bound_west,
+                    "barycenter_latitude": track.barycenter_latitude,
+                    "barycenter_longitude": track.barycenter_longitude,
+                }
+
+                # Check if any bounds are non-finite
+                if not all(
+                    isinstance(value, (int, float)) and math.isfinite(value)
+                    for value in bounds.values()
+                ):
+                    logger.error(
+                        f"Track {track.id} has non-finite bounds, cannot return"
+                    )
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Track {track.id} has invalid bounds data: {bounds}",
+                    )
 
                 return TrackResponse(
                     id=track.id,

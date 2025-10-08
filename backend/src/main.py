@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from . import dependencies
 from .api.auth import create_auth_router
+from .api.routes import create_routes_router
 from .api.segments import create_segments_router
 from .api.strava import create_strava_router
 from .api.upload import create_upload_router
@@ -141,6 +142,9 @@ app.include_router(
 )  # Will be set in lifespan via dependencies module
 app.include_router(
     create_segments_router(None)
+)  # Will be set in lifespan via dependencies module
+app.include_router(
+    create_routes_router(None)
 )  # Will be set in lifespan via dependencies module
 
 

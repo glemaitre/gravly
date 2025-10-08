@@ -403,6 +403,13 @@ const props = defineProps<{
   selectedSegments: TrackResponse[]
   segmentFilters: SegmentFilters
   filtersExpanded: boolean
+  routeDistance: number
+  elevationStats: {
+    totalGain: number
+    totalLoss: number
+    maxElevation: number
+    minElevation: number
+  }
 }>()
 
 // Emits
@@ -423,6 +430,7 @@ const emit = defineEmits<{
   'segment-hover': [segment: TrackResponse]
   'segment-leave': [segment: TrackResponse]
   'generate-route': []
+  'route-saved': [routeId: number]
 }>()
 
 // i18n
@@ -554,20 +562,20 @@ function onDifficultyMaxChange(event: Event) {
   width: 32px;
   height: 32px;
   border: none;
-  background: rgba(var(--brand-primary-rgb), 0.1);
-  color: var(--brand-primary);
+  background: #f3f4f6;
+  color: #6b7280;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .sidebar-close:hover {
-  background: rgba(var(--brand-primary-rgb), 0.2);
-  transform: scale(1.05);
+  background: #e5e7eb;
+  color: #374151;
 }
 
 .sidebar-options {

@@ -246,7 +246,6 @@ export default {
   routePlanner: {
     planning: 'Planification de Route',
     clearRoute: 'Effacer la Route',
-    saveRoute: 'Sauvegarder la Route',
     loadRoute: 'Charger la Route',
     routeInfo: 'Informations de Route',
     distance: 'Distance',
@@ -296,6 +295,29 @@ export default {
     todoSetEndPoint: "Définir le point d'arrivée",
     clickStartPoint: 'Cliquez sur la carte pour définir le point de départ',
     clickEndPoint: "Cliquez sur la carte pour définir le point d'arrivée",
+    // Save Route Button
+    saveRoute: 'Sauvegarder la sortie',
+    saveRouteTitle: 'Sauvegarder la sortie',
+    routeName: 'Nom de la sortie',
+    routeNamePlaceholder: 'Entrez le nom de la sortie',
+    routeStats: 'Statistiques de la sortie',
+    routeComments: 'Commentaires',
+    routeCommentsPlaceholder: 'Ajoutez des notes supplémentaires sur cette sortie...',
+    defaultRouteName: 'Ma sortie',
+    noSegmentsSelected: 'Aucun segment sélectionné',
+    noRouteDistance: 'Aucune distance calculée',
+    noRouteToSave: 'Aucune sortie disponible à sauvegarder',
+    noSegmentData: 'N/A (parcours manuel)',
+    routeSavedSuccessfully: 'Sortie sauvegardée avec succès !',
+    saveRouteError: 'Échec de la sauvegarde de la sortie',
+    noSurfaceData: 'Aucune donnée de surface',
+    // Surface type labels
+    bigStoneRoad: 'Route en gros cailloux',
+    brokenPavedRoad: 'Route pavée cassée',
+    dirtyRoad: 'Route sale',
+    fieldTrail: 'Sentier de champ',
+    forestTrail: 'Sentier forestier',
+    smallStoneRoad: 'Route en petits cailloux',
     startSet: 'Point de départ défini',
     startNotSet: 'Point de départ non défini',
     endSet: "Point d'arrivée défini",
@@ -355,6 +377,8 @@ export default {
     cancel: 'Annuler',
     confirm: 'Confirmer',
     loading: 'Chargement...',
-    continue: 'Continuer'
+    continue: 'Continuer',
+    save: 'Sauvegarder',
+    saving: 'Sauvegarde...'
   }
 }

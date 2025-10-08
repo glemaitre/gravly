@@ -243,7 +243,6 @@ export default {
   routePlanner: {
     planning: 'Route Planning',
     clearRoute: 'Clear Route',
-    saveRoute: 'Save Route',
     loadRoute: 'Load Route',
     routeInfo: 'Route Information',
     distance: 'Distance',
@@ -291,6 +290,29 @@ export default {
     todoSetEndPoint: 'Set ending point',
     clickStartPoint: 'Click on the map to set the starting point',
     clickEndPoint: 'Click on the map to set the ending point',
+    // Save Route Button
+    saveRoute: 'Save Route',
+    saveRouteTitle: 'Save Route',
+    routeName: 'Route Name',
+    routeNamePlaceholder: 'Enter route name',
+    routeStats: 'Route Statistics',
+    routeComments: 'Comments',
+    routeCommentsPlaceholder: 'Add any additional notes about this route...',
+    defaultRouteName: 'My Route',
+    noSegmentsSelected: 'No segments selected',
+    noRouteDistance: 'No route distance calculated',
+    noRouteToSave: 'No route available to save',
+    noSegmentData: 'N/A (waypoint route)',
+    routeSavedSuccessfully: 'Route saved successfully!',
+    saveRouteError: 'Failed to save route',
+    noSurfaceData: 'No surface data',
+    // Surface type labels
+    bigStoneRoad: 'Big stone road',
+    brokenPavedRoad: 'Broken paved road',
+    dirtyRoad: 'Dirty road',
+    fieldTrail: 'Field trail',
+    forestTrail: 'Forest trail',
+    smallStoneRoad: 'Small stone road',
     startSet: 'Start point set',
     startNotSet: 'Start point not set',
     endSet: 'End point set',
@@ -350,6 +372,8 @@ export default {
     cancel: 'Cancel',
     confirm: 'Confirm',
     loading: 'Loading...',
-    continue: 'Continue'
+    continue: 'Continue',
+    save: 'Save',
+    saving: 'Saving...'
   }
 }
