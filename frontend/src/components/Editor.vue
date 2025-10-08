@@ -1001,6 +1001,16 @@ async function onSaveAsNew() {
     return
   }
 
+  // Validate that at least one surface type is selected
+  if (trailConditions.value.surface_type.length === 0) {
+    console.error('Form validation failed: no surface type selected')
+    showError.value = true
+    currentErrorMessage.value = t('message.surfaceTypeRequired')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+    return
+  }
+
   submitting.value = true
   showError.value = false
   currentErrorMessage.value = ''
@@ -1120,6 +1130,16 @@ async function onUpdate() {
 
     showError.value = true
     currentErrorMessage.value = t('message.loadGpxFirst')
+    showUploadSuccess.value = false
+    showSegmentSuccess.value = false
+    return
+  }
+
+  // Validate that at least one surface type is selected
+  if (trailConditions.value.surface_type.length === 0) {
+    console.error('Form validation failed: no surface type selected')
+    showError.value = true
+    currentErrorMessage.value = t('message.surfaceTypeRequired')
     showUploadSuccess.value = false
     showSegmentSuccess.value = false
     return

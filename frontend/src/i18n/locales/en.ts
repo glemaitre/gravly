@@ -105,7 +105,8 @@ export default {
     uploading: 'Uploading GPX file...',
     uploadError: 'Error uploading GPX file',
     uploadSuccess: 'GPX file uploaded successfully',
-    noActivity: 'No recent activity'
+    noActivity: 'No recent activity',
+    surfaceTypeRequired: 'Please select at least one surface type'
   },
 
   // Navbar

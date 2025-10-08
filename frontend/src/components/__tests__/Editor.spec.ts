@@ -678,6 +678,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -714,6 +715,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -747,6 +749,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -780,6 +783,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -816,6 +820,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -826,6 +831,118 @@ describe('Editor', () => {
     // Clean up
     ;(global as any).fetch = undefined
     vi.restoreAllMocks()
+  })
+
+  it('should validate that at least one surface type is selected on save', async () => {
+    const wrapper = mountEditor()
+
+    // Set up component state to pass all validation except surface type
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+    vm.trailConditions.surface_type = [] // No surface type selected
+
+    // Submit form
+    await vm.onSaveAsNew()
+
+    // Verify error state
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Please select at least one surface type')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+  })
+
+  it('should validate that at least one surface type is selected on update', async () => {
+    const wrapper = mountEditor()
+
+    // Set up component state to pass all validation except surface type
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.isUpdateMode = true
+    vm.updatingSegmentId = 123
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+    vm.trailConditions.surface_type = [] // No surface type selected
+
+    // Submit form
+    await vm.onUpdate()
+
+    // Verify error state
+    expect(vm.showError).toBe(true)
+    expect(vm.currentErrorMessage).toBe('Please select at least one surface type')
+    expect(vm.showUploadSuccess).toBe(false)
+    expect(vm.showSegmentSuccess).toBe(false)
+  })
+
+  it('should allow save when at least one surface type is selected', async () => {
+    const wrapper = mountEditor()
+
+    // Mock successful fetch response
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 1, name: 'Test Track' })
+    })
+
+    // Set up component state to pass all validation including surface type
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail'] // At least one surface type selected
+
+    // Submit form
+    await vm.onSaveAsNew()
+
+    // Verify fetch was called (no validation error)
+    expect((global as any).fetch).toHaveBeenCalled()
+
+    // Clean up
+    ;(global as any).fetch = undefined
+  })
+
+  it('should allow update when at least one surface type is selected', async () => {
+    const wrapper = mountEditor()
+
+    // Mock successful fetch response
+    ;(global as any).fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 1, name: 'Test Track' })
+    })
+
+    // Set up component state to pass all validation including surface type
+    const vm = wrapper.vm as any
+    vm.loaded = true
+    vm.isUpdateMode = true
+    vm.updatingSegmentId = 123
+    vm.points = [
+      { latitude: 45.0, longitude: 4.0, elevation: 100, time: '2023-01-01T10:00:00Z' },
+      { latitude: 45.1, longitude: 4.1, elevation: 110, time: '2023-01-01T10:01:00Z' }
+    ]
+    vm.uploadedFileId = 'test-file-123'
+    vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['broken-paved-road', 'forest-trail'] // Multiple surface types
+
+    // Submit form
+    await vm.onUpdate()
+
+    // Verify fetch was called (no validation error)
+    expect((global as any).fetch).toHaveBeenCalled()
+
+    // Clean up
+    ;(global as any).fetch = undefined
   })
 
   it('resets submitting state in finally block', async () => {
@@ -846,6 +963,7 @@ describe('Editor', () => {
     ]
     vm.uploadedFileId = 'test-file-123'
     vm.name = 'Test Track'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Submit form
     await vm.onSaveAsNew()
@@ -1093,6 +1211,7 @@ describe('Editor Image Upload', () => {
       { lat: 1, lng: 1 }
     ]
     vm.uploadedFileId = 'test-file-id'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     // Add an image to commentary (not uploaded yet)
     const mockFile = new File(['test-image-content'], 'test-image.jpg', {
@@ -1199,6 +1318,7 @@ describe('Editor Image Upload', () => {
       { lat: 1, lng: 1 }
     ]
     vm.uploadedFileId = 'test-file-id'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     await nextTick()
 
@@ -1275,6 +1395,7 @@ describe('Editor Image Upload', () => {
       { lat: 1, lng: 1 }
     ]
     vm.uploadedFileId = 'test-file-id'
+    vm.trailConditions.surface_type = ['forest-trail']
 
     await nextTick()
 

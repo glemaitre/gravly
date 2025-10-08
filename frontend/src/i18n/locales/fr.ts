@@ -106,7 +106,8 @@ export default {
     uploading: 'Téléchargement du fichier GPX...',
     uploadError: 'Erreur lors du téléchargement du fichier GPX',
     uploadSuccess: 'Fichier GPX téléchargé avec succès',
-    noActivity: 'Aucune activité récente'
+    noActivity: 'Aucune activité récente',
+    surfaceTypeRequired: 'Veuillez sélectionner au moins un type de surface'
   },
 
   // Navbar

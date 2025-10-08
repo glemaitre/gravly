@@ -80,7 +80,9 @@
       <div class="trail-subsection">
         <div class="subsection-header">
           <span class="icon" aria-hidden="true"><i class="fa-solid fa-road"></i></span>
-          <span class="subsection-title">{{ surfaceTypeLabel }}</span>
+          <span class="subsection-title"
+            >{{ surfaceTypeLabel }} <span class="req">{{ t('required') }}</span></span
+          >
         </div>
 
         <div class="surface-options">
