@@ -295,6 +295,16 @@ export default {
     startEndModeDescription:
       "Commencez par choisir vos points de départ et d'arrivée, sélectionnez vos segments de gravel à traverser et nous générerons le parcours pour vous.",
     chooseNextWaypoint: 'Choisissez votre prochain point de passage.',
+    freeModeTitleInstructions: 'Comment créer votre parcours :',
+    clickMapToAddWaypoint: 'Cliquez sur la carte pour ajouter un point de passage',
+    dragWaypointToMove: 'Faites glisser un point de passage pour le déplacer',
+    dragRouteToInsertWaypoint:
+      'Faites glisser la ligne de parcours pour insérer un point de passage',
+    rightClickWaypointToRemove:
+      'Cliquez-droit sur un point de passage pour le supprimer',
+    mapNavigationTitle: 'Navigation de la carte :',
+    dragMapToPan: 'Faites glisser la carte pour vous déplacer',
+    scrollToZoom: 'Faites défiler ou pincez pour zoomer',
     guidedTodoList: 'Étapes',
     guidedTodoInstructions: 'Définir les points de repère sur la carte',
     todoSetStartPoint: 'Définir le point de départ',

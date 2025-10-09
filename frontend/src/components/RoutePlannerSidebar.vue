@@ -40,7 +40,44 @@
 
       <!-- Free Mode Instructions -->
       <div v-if="routeMode === 'standard'" class="free-mode-instructions">
-        <p class="instruction-text">{{ t('routePlanner.chooseNextWaypoint') }}</p>
+        <h4 class="instructions-title">
+          {{ t('routePlanner.freeModeTitleInstructions') }}
+        </h4>
+        <ul class="instructions-list">
+          <li>
+            <i class="fa-solid fa-map-pin"></i>
+            {{ t('routePlanner.clickMapToAddWaypoint') }}
+          </li>
+          <li>
+            <i class="fa-solid fa-hand-pointer"></i>
+            {{ t('routePlanner.dragWaypointToMove') }}
+          </li>
+          <li>
+            <i class="fa-solid fa-route"></i>
+            {{ t('routePlanner.dragRouteToInsertWaypoint') }}
+          </li>
+          <li>
+            <i class="fa-solid fa-trash-alt"></i>
+            {{ t('routePlanner.rightClickWaypointToRemove') }}
+          </li>
+        </ul>
+      </div>
+
+      <!-- Map Navigation Instructions -->
+      <div v-if="routeMode === 'standard'" class="map-navigation-instructions">
+        <h4 class="instructions-title">
+          {{ t('routePlanner.mapNavigationTitle') }}
+        </h4>
+        <ul class="instructions-list">
+          <li>
+            <i class="fa-solid fa-hand"></i>
+            {{ t('routePlanner.dragMapToPan') }}
+          </li>
+          <li>
+            <i class="fa-solid fa-magnifying-glass-plus"></i>
+            {{ t('routePlanner.scrollToZoom') }}
+          </li>
+        </ul>
       </div>
 
       <!-- Guided Mode Todo List -->
@@ -592,6 +629,49 @@ function onDifficultyMaxChange(event: Event) {
   border-radius: 6px;
   border: 1px solid rgba(229, 231, 235, 0.3);
   flex-shrink: 0;
+}
+
+.map-navigation-instructions {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(243, 244, 246, 0.8);
+  border-radius: 6px;
+  border: 1px solid rgba(229, 231, 235, 0.3);
+  flex-shrink: 0;
+}
+
+.instructions-title {
+  margin: 0 0 0.75rem 0;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.instructions-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.instructions-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.instructions-list li i {
+  font-size: 0.75rem;
+  color: var(--brand-primary);
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
 }
 
 .instruction-text {
