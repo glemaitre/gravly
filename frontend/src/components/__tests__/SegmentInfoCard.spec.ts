@@ -543,7 +543,7 @@ describe('SegmentInfoCard', () => {
       const labels = wrapper.findAll('.info-label')
       expect(labels[0].text()).toContain('Difficulty')
       expect(labels[1].text()).toContain('Surface')
-      expect(labels[2].text()).toContain('Tire recommendations')
+      expect(labels[2].text()).toContain('Tire Rec')
     })
 
     it('should display labels in French when locale is changed', async () => {
@@ -569,7 +569,7 @@ describe('SegmentInfoCard', () => {
       const labels = wrapper.findAll('.info-label')
       expect(labels[0].text()).toContain('Difficulté')
       expect(labels[1].text()).toContain('Surface')
-      expect(labels[2].text()).toContain('Recommandations de pneu')
+      expect(labels[2].text()).toContain('Rec. Pneu')
     })
   })
 

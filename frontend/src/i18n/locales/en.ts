@@ -168,7 +168,7 @@ export default {
     elevation: 'Elevation',
     difficulty: 'Difficulty',
     surface: 'Surface',
-    tireRecommendations: 'Tire recommendations',
+    tireRecommendations: 'Tire Rec',
     statistics: 'Statistics',
     distance: 'Distance',
     elevationGain: 'Elevation Gain',

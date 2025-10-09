@@ -42,6 +42,11 @@
             <RouteInfoCard
               :stats="computedStats"
               :has-segment-data="props.routeFeatures !== null"
+              :editable="true"
+              @update:difficulty="handleDifficultyUpdate"
+              @update:surface-types="handleSurfaceTypesUpdate"
+              @update:tire-dry="handleTireDryUpdate"
+              @update:tire-wet="handleTireWetUpdate"
             />
           </div>
 
@@ -85,7 +90,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStravaApi } from '../composables/useStravaApi'
 import type { SurfaceType } from '../types'
@@ -145,10 +150,38 @@ const showSuccessMessage = ref(false)
 const showErrorMessage = ref(false)
 const errorMessage = ref('')
 
+// Editable route features state
+const editableDifficulty = ref<number>(0)
+const editableSurfaceTypes = ref<string[]>([])
+const editableTireDry = ref<string>('slick')
+const editableTireWet = ref<string>('slick')
+
 // Modal visibility - use external prop if provided, otherwise use internal state
 const isModalVisible = computed(() => {
   return props.show !== undefined ? props.show : showSaveModal.value
 })
+
+// Initialize editable values when modal becomes visible
+watch(
+  isModalVisible,
+  (newValue) => {
+    if (newValue) {
+      // Initialize editable values from props or defaults
+      if (props.routeFeatures) {
+        editableDifficulty.value = props.routeFeatures.difficulty_level
+        editableSurfaceTypes.value = [...props.routeFeatures.surface_types]
+        editableTireDry.value = props.routeFeatures.tire_dry
+        editableTireWet.value = props.routeFeatures.tire_wet
+      } else {
+        editableDifficulty.value = 2
+        editableSurfaceTypes.value = ['broken-paved-road']
+        editableTireDry.value = 'semi-slick'
+        editableTireWet.value = 'knobs'
+      }
+    }
+  },
+  { immediate: true }
+)
 
 // Computed properties
 const isDisabled = computed(() => {
@@ -163,28 +196,45 @@ const disabledTitle = computed(() => {
 })
 
 const computedStats = computed((): RouteStats => {
+  // Check if editable values have been initialized (modal is open)
+  const isInitialized =
+    editableDifficulty.value > 0 || editableSurfaceTypes.value.length > 0
+
   if (!props.routeFeatures) {
-    // For waypoint routes (no features), show basic route info
+    // For waypoint routes (no features), show basic route info with editable values
     return {
       distance: props.routeDistance,
-      difficulty: 0, // No difficulty for waypoint routes
+      difficulty: editableDifficulty.value || 0,
       elevationGain: props.elevationStats.totalGain,
       elevationLoss: props.elevationStats.totalLoss,
-      surfaceTypes: [], // No surface data for waypoint routes
-      tireDry: 'slick', // Default recommendation
-      tireWet: 'slick' // Default recommendation
+      surfaceTypes: editableSurfaceTypes.value as SurfaceType[],
+      tireDry: (editableTireDry.value as 'slick' | 'semi-slick' | 'knobs') || 'slick',
+      tireWet: (editableTireWet.value as 'slick' | 'semi-slick' | 'knobs') || 'slick'
     }
   }
 
-  // Use the computed route features from backend
+  // If not initialized, use the route features directly
+  if (!isInitialized) {
+    return {
+      distance: props.routeDistance,
+      difficulty: props.routeFeatures.difficulty_level,
+      elevationGain: props.elevationStats.totalGain,
+      elevationLoss: props.elevationStats.totalLoss,
+      surfaceTypes: props.routeFeatures.surface_types as SurfaceType[],
+      tireDry: props.routeFeatures.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+      tireWet: props.routeFeatures.tire_wet as 'slick' | 'semi-slick' | 'knobs'
+    }
+  }
+
+  // Use the editable values (modal is open and values are initialized)
   return {
     distance: props.routeDistance,
-    difficulty: props.routeFeatures.difficulty_level,
+    difficulty: editableDifficulty.value,
     elevationGain: props.elevationStats.totalGain,
     elevationLoss: props.elevationStats.totalLoss,
-    surfaceTypes: props.routeFeatures.surface_types as SurfaceType[],
-    tireDry: props.routeFeatures.tire_dry as 'slick' | 'semi-slick' | 'knobs',
-    tireWet: props.routeFeatures.tire_wet as 'slick' | 'semi-slick' | 'knobs'
+    surfaceTypes: editableSurfaceTypes.value as SurfaceType[],
+    tireDry: editableTireDry.value as 'slick' | 'semi-slick' | 'knobs',
+    tireWet: editableTireWet.value as 'slick' | 'semi-slick' | 'knobs'
   }
 })
 
@@ -197,12 +247,34 @@ function handleSaveRoute() {
   showErrorMessage.value = false
 }
 
+// Handlers for route feature updates
+function handleDifficultyUpdate(difficulty: number) {
+  editableDifficulty.value = difficulty
+}
+
+function handleSurfaceTypesUpdate(surfaceTypes: SurfaceType[]) {
+  editableSurfaceTypes.value = surfaceTypes as string[]
+}
+
+function handleTireDryUpdate(tireDry: 'slick' | 'semi-slick' | 'knobs') {
+  editableTireDry.value = tireDry
+}
+
+function handleTireWetUpdate(tireWet: 'slick' | 'semi-slick' | 'knobs') {
+  editableTireWet.value = tireWet
+}
+
 function closeSaveModal() {
   showSaveModal.value = false
   routeName.value = ''
   routeComments.value = ''
   showErrorMessage.value = false
   errorMessage.value = ''
+  // Reset editable values
+  editableDifficulty.value = 0
+  editableSurfaceTypes.value = []
+  editableTireDry.value = 'slick'
+  editableTireWet.value = 'slick'
   emit('close')
 }
 
@@ -214,17 +286,17 @@ async function confirmSaveRoute() {
   errorMessage.value = ''
 
   try {
-    // Create the route data
+    // Create the route data with editable values
     const routeData: any = {
       name: routeName.value.trim(),
       track_type: 'route',
       computed_stats: computedStats.value,
       route_track_points: props.routeTrackPoints,
-      route_features: props.routeFeatures || {
-        difficulty_level: 2,
-        surface_types: ['broken_paved_road'],
-        tire_dry: 'semi-slick',
-        tire_wet: 'knobs'
+      route_features: {
+        difficulty_level: editableDifficulty.value,
+        surface_types: editableSurfaceTypes.value,
+        tire_dry: editableTireDry.value,
+        tire_wet: editableTireWet.value
       },
       comments: routeComments.value.trim()
     }
@@ -343,7 +415,7 @@ async function confirmSaveRoute() {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
   max-width: 600px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 80vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -440,7 +512,7 @@ async function confirmSaveRoute() {
 .modal-footer {
   display: flex;
   gap: 0.75rem;
-  padding: 1.5rem;
+  padding: 0.5rem;
   border-top: 1px solid #e5e7eb;
   justify-content: flex-end;
 }

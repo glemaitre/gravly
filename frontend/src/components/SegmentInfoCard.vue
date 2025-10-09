@@ -368,7 +368,7 @@ const formattedElevationLoss = computed(() =>
 }
 
 .info-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #6b7280;
   text-align: center;
@@ -482,8 +482,9 @@ const formattedElevationLoss = computed(() =>
 }
 
 .surface-text {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #111827;
+  color: #374151;
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -550,8 +551,9 @@ const formattedElevationLoss = computed(() =>
 }
 
 .tire-text {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #111827;
+  color: #374151;
   text-align: center;
 }
 
@@ -595,8 +597,8 @@ const formattedElevationLoss = computed(() =>
 
 .stat-value {
   font-size: 0.875rem;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 500;
+  color: #374151;
   text-align: center;
 }
 

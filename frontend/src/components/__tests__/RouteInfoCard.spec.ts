@@ -114,8 +114,9 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      expect(wrapper.find('.stats-grid').exists()).toBe(true)
-      const statItems = wrapper.findAll('.stat-item')
+      const secondRow = wrapper.findAll('.info-row')[1]
+      expect(secondRow.exists()).toBe(true)
+      const statItems = secondRow.findAll('.info-item-compact')
       expect(statItems).toHaveLength(3) // distance, elevation gain, elevation loss
     })
   })
@@ -147,7 +148,8 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      expect(wrapper.find('.stats-grid').exists()).toBe(true)
+      const secondRow = wrapper.findAll('.info-row')[1]
+      expect(secondRow.exists()).toBe(true)
     })
   })
 
@@ -468,6 +470,426 @@ describe('RouteInfoCard', () => {
 
       const statValues = wrapper.findAll('.stat-value')
       expect(statValues[1].text()).toContain('124') // rounded
+    })
+  })
+
+  describe('Editing Functionality', () => {
+    describe('Editable Prop', () => {
+      it('should show edit icons when editable is true', () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const editIcons = wrapper.findAll('.edit-icon')
+        expect(editIcons.length).toBeGreaterThan(0)
+      })
+
+      it('should not show edit icons when editable is false', () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: false
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const editIcons = wrapper.findAll('.edit-icon')
+        expect(editIcons).toHaveLength(0)
+      })
+
+      it('should add editable class when editable is true', () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const editableItems = wrapper.findAll('.info-item-compact.editable')
+        expect(editableItems.length).toBeGreaterThan(0)
+      })
+    })
+
+    describe('Difficulty Editor', () => {
+      it('should open difficulty editor when clicking on difficulty item', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const difficultyItem = wrapper.findAll('.info-item-compact.editable')[0]
+        await difficultyItem.trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(true)
+      })
+
+      it('should show 5 difficulty buttons', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const difficultyItem = wrapper.findAll('.info-item-compact.editable')[0]
+        await difficultyItem.trigger('click')
+
+        const buttons = wrapper.findAll('.difficulty-btn')
+        expect(buttons).toHaveLength(5)
+      })
+
+      it('should emit update:difficulty event when selecting a difficulty', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const difficultyItem = wrapper.findAll('.info-item-compact.editable')[0]
+        await difficultyItem.trigger('click')
+
+        const button = wrapper.findAll('.difficulty-btn')[2] // Select level 3
+        await button.trigger('click')
+
+        expect(wrapper.emitted('update:difficulty')).toBeTruthy()
+        expect(wrapper.emitted('update:difficulty')![0]).toEqual([3])
+      })
+
+      it('should close difficulty editor when clicking close button', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const difficultyItem = wrapper.findAll('.info-item-compact.editable')[0]
+        await difficultyItem.trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(true)
+
+        const closeButton = wrapper.find('.close-editor-btn')
+        await closeButton.trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(false)
+      })
+    })
+
+    describe('Surface Editor', () => {
+      it('should open surface editor when clicking on surface item', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+
+        expect(wrapper.find('.surface-editor').exists()).toBe(true)
+      })
+
+      it('should show all surface options', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+
+        const surfaceOptions = wrapper.findAll('.surface-option-compact')
+        expect(surfaceOptions.length).toBe(6) // 6 surface types
+      })
+
+      it('should emit update:surfaceTypes event when toggling a surface', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+
+        const surfaceOption = wrapper.findAll('.surface-option-compact')[0]
+        const checkbox = surfaceOption.find('input[type="checkbox"]')
+        await checkbox.trigger('change')
+
+        expect(wrapper.emitted('update:surfaceTypes')).toBeTruthy()
+      })
+
+      it('should close surface editor when clicking close button', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+
+        expect(wrapper.find('.surface-editor').exists()).toBe(true)
+
+        const closeButton = wrapper.find('.close-editor-btn')
+        await closeButton.trigger('click')
+
+        expect(wrapper.find('.surface-editor').exists()).toBe(false)
+      })
+    })
+
+    describe('Tire Editor', () => {
+      it('should open tire editor when clicking on tire item', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        expect(wrapper.find('.tire-editor').exists()).toBe(true)
+      })
+
+      it('should show tire options for dry and wet conditions', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        const tireOptions = wrapper.findAll('.tire-option-compact')
+        expect(tireOptions.length).toBe(6) // 3 options x 2 conditions
+      })
+
+      it('should emit update:tireDry event when selecting dry tire', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        const dryTireOption = wrapper.findAll('.tire-option-compact')[0]
+        const radio = dryTireOption.find('input[type="radio"]')
+        await radio.trigger('change')
+
+        expect(wrapper.emitted('update:tireDry')).toBeTruthy()
+      })
+
+      it('should emit update:tireWet event when selecting wet tire', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        const wetTireOption = wrapper.findAll('.tire-option-compact')[3]
+        const radio = wetTireOption.find('input[type="radio"]')
+        await radio.trigger('change')
+
+        expect(wrapper.emitted('update:tireWet')).toBeTruthy()
+      })
+
+      it('should close tire editor when clicking close button', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        expect(wrapper.find('.tire-editor').exists()).toBe(true)
+
+        const closeButton = wrapper.find('.close-editor-btn')
+        await closeButton.trigger('click')
+
+        expect(wrapper.find('.tire-editor').exists()).toBe(false)
+      })
+    })
+
+    describe('Editor Mutual Exclusivity', () => {
+      it('should close difficulty editor when opening surface editor', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        // Open difficulty editor
+        const difficultyItem = wrapper.findAll('.info-item-compact.editable')[0]
+        await difficultyItem.trigger('click')
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(true)
+
+        // Open surface editor
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(false)
+        expect(wrapper.find('.surface-editor').exists()).toBe(true)
+      })
+
+      it('should close surface editor when opening tire editor', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        // Open surface editor
+        const surfaceItem = wrapper.findAll('.info-item-compact.editable')[1]
+        await surfaceItem.trigger('click')
+        expect(wrapper.find('.surface-editor').exists()).toBe(true)
+
+        // Open tire editor
+        const tireItem = wrapper.findAll('.info-item-compact.editable')[2]
+        await tireItem.trigger('click')
+
+        expect(wrapper.find('.surface-editor').exists()).toBe(false)
+        expect(wrapper.find('.tire-editor').exists()).toBe(true)
+      })
+    })
+
+    describe('Non-editable Mode', () => {
+      it('should not open editors when editable is false', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: true,
+            editable: false
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const items = wrapper.findAll('.info-item-compact')
+        await items[0].trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(false)
+        expect(wrapper.find('.surface-editor').exists()).toBe(false)
+        expect(wrapper.find('.tire-editor').exists()).toBe(false)
+      })
+
+      it('should not open editors when hasSegmentData is false', async () => {
+        const wrapper = mount(RouteInfoCard, {
+          props: {
+            stats: mockStats,
+            hasSegmentData: false,
+            editable: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const items = wrapper.findAll('.info-item-compact')
+        await items[0].trigger('click')
+
+        expect(wrapper.find('.difficulty-editor').exists()).toBe(false)
+        expect(wrapper.find('.surface-editor').exists()).toBe(false)
+        expect(wrapper.find('.tire-editor').exists()).toBe(false)
+      })
     })
   })
 })

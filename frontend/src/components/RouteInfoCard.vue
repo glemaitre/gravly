@@ -4,29 +4,67 @@
       <!-- Top Row: Difficulty, Surface, Tires -->
       <div class="info-row">
         <!-- Difficulty -->
-        <div class="info-item-compact">
+        <div
+          class="info-item-compact"
+          :class="{
+            editable: editable && hasSegmentData,
+            editing: isEditingDifficulty
+          }"
+          @click="editable && hasSegmentData && toggleDifficultyEditor()"
+        >
           <div class="info-label">
             <i class="fa-solid fa-signal"></i>
             {{ t('segmentDetail.difficulty') }}
+            <i
+              v-if="editable && hasSegmentData"
+              class="fa-solid fa-pencil edit-icon"
+            ></i>
           </div>
           <div class="info-value">
-            <div v-if="hasSegmentData" class="difficulty-display">
+            <div
+              v-if="hasSegmentData && !isEditingDifficulty"
+              class="difficulty-display"
+            >
               <span class="difficulty-level">{{ difficultyLevel }}</span>
               <span class="difficulty-word">{{ difficultyWord }}</span>
+            </div>
+            <div v-else-if="isEditingDifficulty" class="difficulty-editor" @click.stop>
+              <div class="difficulty-buttons">
+                <button
+                  v-for="level in [1, 2, 3, 4, 5]"
+                  :key="level"
+                  class="difficulty-btn"
+                  :class="{ active: editableDifficulty === level }"
+                  @click="updateDifficulty(level)"
+                >
+                  {{ level }}
+                </button>
+              </div>
+              <button class="close-editor-btn" @click.stop="closeDifficultyEditor">
+                <i class="fa-solid fa-check"></i>
+              </button>
             </div>
             <div v-else class="no-data">{{ t('routePlanner.noSegmentData') }}</div>
           </div>
         </div>
 
         <!-- Surface Type -->
-        <div class="info-item-compact">
+        <div
+          class="info-item-compact"
+          :class="{ editable: editable && hasSegmentData, editing: isEditingSurface }"
+          @click="editable && hasSegmentData && toggleSurfaceEditor()"
+        >
           <div class="info-label">
             <i class="fa-solid fa-road"></i>
             {{ t('segmentDetail.surface') }}
+            <i
+              v-if="editable && hasSegmentData"
+              class="fa-solid fa-pencil edit-icon"
+            ></i>
           </div>
           <div class="info-value surface-nav-container">
             <button
-              v-if="surfaceTypes.length > 1"
+              v-if="surfaceTypes.length > 1 && !isEditingSurface"
               class="surface-nav-btn"
               @click.stop="previousSurface"
               :disabled="currentSurfaceIndex === 0"
@@ -34,7 +72,10 @@
             >
               <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <div v-if="hasSegmentData" class="surface-info-vertical">
+            <div
+              v-if="hasSegmentData && !isEditingSurface"
+              class="surface-info-vertical"
+            >
               <img
                 :src="currentSurfaceImage"
                 :alt="currentSurfaceLabel"
@@ -45,9 +86,31 @@
                 {{ currentSurfaceIndex + 1 }}/{{ surfaceTypes.length }}
               </span>
             </div>
+            <div v-else-if="isEditingSurface" class="surface-editor" @click.stop>
+              <div class="surface-options-grid">
+                <label
+                  v-for="(image, surfaceType) in surfaceImages"
+                  :key="surfaceType"
+                  class="surface-option-compact"
+                  :class="{ selected: isSurfaceTypeSelected(surfaceType as string) }"
+                >
+                  <input
+                    type="checkbox"
+                    :value="surfaceType"
+                    :checked="isSurfaceTypeSelected(surfaceType as string)"
+                    @change="toggleSurfaceType(surfaceType as any)"
+                  />
+                  <img :src="image" :alt="t(`surface.${surfaceType}`)" />
+                  <span class="surface-caption">{{ t(`surface.${surfaceType}`) }}</span>
+                </label>
+              </div>
+              <button class="close-editor-btn" @click.stop="closeSurfaceEditor">
+                <i class="fa-solid fa-check"></i>
+              </button>
+            </div>
             <div v-else class="no-data">{{ t('routePlanner.noSegmentData') }}</div>
             <button
-              v-if="surfaceTypes.length > 1"
+              v-if="surfaceTypes.length > 1 && !isEditingSurface"
               class="surface-nav-btn"
               @click.stop="nextSurface"
               :disabled="currentSurfaceIndex === surfaceTypes.length - 1"
@@ -59,13 +122,24 @@
         </div>
 
         <!-- Tire Recommendations -->
-        <div class="info-item-compact">
+        <div
+          class="info-item-compact"
+          :class="{ editable: editable && hasSegmentData, editing: isEditingTires }"
+          @click="editable && hasSegmentData && toggleTireEditor()"
+        >
           <div class="info-label">
             <i class="fa-solid fa-circle"></i>
             {{ t('segmentDetail.tireRecommendations') }}
+            <i
+              v-if="editable && hasSegmentData"
+              class="fa-solid fa-pencil edit-icon"
+            ></i>
           </div>
           <div class="info-value">
-            <div v-if="hasSegmentData" class="tire-recommendations-compact">
+            <div
+              v-if="hasSegmentData && !isEditingTires"
+              class="tire-recommendations-compact"
+            >
               <div class="tire-recommendation-compact">
                 <div class="tire-header">
                   <i class="fa-solid fa-sun"></i>
@@ -87,36 +161,104 @@
                 </div>
               </div>
             </div>
+            <div v-else-if="isEditingTires" class="tire-editor" @click.stop>
+              <div class="tire-groups-compact">
+                <div class="tire-group-compact">
+                  <div class="tire-group-header">
+                    <i class="fa-solid fa-sun"></i>
+                    <span>{{ t('segmentDetail.dry') }}</span>
+                  </div>
+                  <div class="tire-options">
+                    <label
+                      v-for="tireType in ['slick', 'semi-slick', 'knobs']"
+                      :key="tireType"
+                      class="tire-option-compact"
+                      :class="{ selected: editableTireDry === tireType }"
+                    >
+                      <input
+                        type="radio"
+                        name="tire-dry"
+                        :value="tireType"
+                        :checked="editableTireDry === tireType"
+                        @change="updateTireDry(tireType as any)"
+                      />
+                      <img
+                        :src="getTireImage(tireType)"
+                        :alt="formatTireType(tireType)"
+                      />
+                      <span class="tire-caption">{{ formatTireType(tireType) }}</span>
+                    </label>
+                  </div>
+                </div>
+                <div class="tire-group-compact">
+                  <div class="tire-group-header">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                    <span>{{ t('segmentDetail.wet') }}</span>
+                  </div>
+                  <div class="tire-options">
+                    <label
+                      v-for="tireType in ['slick', 'semi-slick', 'knobs']"
+                      :key="tireType"
+                      class="tire-option-compact"
+                      :class="{ selected: editableTireWet === tireType }"
+                    >
+                      <input
+                        type="radio"
+                        name="tire-wet"
+                        :value="tireType"
+                        :checked="editableTireWet === tireType"
+                        @change="updateTireWet(tireType as any)"
+                      />
+                      <img
+                        :src="getTireImage(tireType)"
+                        :alt="formatTireType(tireType)"
+                      />
+                      <span class="tire-caption">{{ formatTireType(tireType) }}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <button class="close-editor-btn" @click.stop="closeTireEditor">
+                <i class="fa-solid fa-check"></i>
+              </button>
+            </div>
             <div v-else class="no-data">{{ t('routePlanner.noSegmentData') }}</div>
           </div>
         </div>
       </div>
 
-      <!-- Statistics -->
-      <div class="info-item">
-        <div class="info-value">
-          <div class="stats-grid">
-            <div class="stat-item">
-              <span class="stat-label">
-                <i class="fa-solid fa-route"></i>
-                {{ t('segmentDetail.distance') }}
-              </span>
-              <span class="stat-value">{{ formattedDistance }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">
-                <i class="fa-solid fa-arrow-trend-up"></i>
-                {{ t('segmentDetail.elevationGain') }}
-              </span>
-              <span class="stat-value">{{ formattedElevationGain }}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">
-                <i class="fa-solid fa-arrow-trend-down"></i>
-                {{ t('segmentDetail.elevationLoss') }}
-              </span>
-              <span class="stat-value">{{ formattedElevationLoss }}</span>
-            </div>
+      <!-- Bottom Row: Statistics -->
+      <div class="info-row">
+        <!-- Distance -->
+        <div class="info-item-compact">
+          <div class="info-label">
+            <i class="fa-solid fa-route"></i>
+            {{ t('segmentDetail.distance') }}
+          </div>
+          <div class="info-value">
+            <span class="stat-value">{{ formattedDistance }}</span>
+          </div>
+        </div>
+
+        <!-- Elevation Gain -->
+        <div class="info-item-compact">
+          <div class="info-label">
+            <i class="fa-solid fa-arrow-trend-up"></i>
+            {{ t('segmentDetail.elevationGain') }}
+          </div>
+          <div class="info-value">
+            <span class="stat-value">{{ formattedElevationGain }}</span>
+          </div>
+        </div>
+
+        <!-- Elevation Loss -->
+        <div class="info-item-compact">
+          <div class="info-label">
+            <i class="fa-solid fa-arrow-trend-down"></i>
+            {{ t('segmentDetail.elevationLoss') }}
+          </div>
+          <div class="info-value">
+            <span class="stat-value">{{ formattedElevationLoss }}</span>
           </div>
         </div>
       </div>
@@ -125,7 +267,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { SurfaceType } from '../types'
 
@@ -156,7 +298,45 @@ interface RouteStats {
 const props = defineProps<{
   stats: RouteStats
   hasSegmentData: boolean
+  editable?: boolean
 }>()
+
+// Emits
+const emit = defineEmits<{
+  'update:difficulty': [difficulty: number]
+  'update:surfaceTypes': [surfaceTypes: SurfaceType[]]
+  'update:tireDry': [tireDry: 'slick' | 'semi-slick' | 'knobs']
+  'update:tireWet': [tireWet: 'slick' | 'semi-slick' | 'knobs']
+}>()
+
+// Editing state
+const isEditingDifficulty = ref(false)
+const isEditingSurface = ref(false)
+const isEditingTires = ref(false)
+
+// Editable values (local state)
+const editableDifficulty = ref(props.stats.difficulty)
+const editableSurfaceTypes = ref<SurfaceType[]>([...props.stats.surfaceTypes])
+const editableTireDry = ref(props.stats.tireDry)
+const editableTireWet = ref(props.stats.tireWet)
+
+// Watch for changes in props and update editable values
+watch(
+  () => props.stats,
+  (newStats) => {
+    if (!isEditingDifficulty.value) {
+      editableDifficulty.value = newStats.difficulty
+    }
+    if (!isEditingSurface.value) {
+      editableSurfaceTypes.value = [...newStats.surfaceTypes]
+    }
+    if (!isEditingTires.value) {
+      editableTireDry.value = newStats.tireDry
+      editableTireWet.value = newStats.tireWet
+    }
+  },
+  { deep: true }
+)
 
 // Image mappings
 const tireImages = {
@@ -188,6 +368,87 @@ function nextSurface(): void {
   if (currentSurfaceIndex.value < surfaceTypes.value.length - 1) {
     currentSurfaceIndex.value++
   }
+}
+
+// Editor toggle functions
+function toggleDifficultyEditor(): void {
+  if (!props.editable || !props.hasSegmentData) return
+  isEditingDifficulty.value = !isEditingDifficulty.value
+  if (isEditingDifficulty.value) {
+    // Close other editors
+    isEditingSurface.value = false
+    isEditingTires.value = false
+  }
+}
+
+function toggleSurfaceEditor(): void {
+  if (!props.editable || !props.hasSegmentData) return
+  isEditingSurface.value = !isEditingSurface.value
+  if (isEditingSurface.value) {
+    // Close other editors
+    isEditingDifficulty.value = false
+    isEditingTires.value = false
+  }
+}
+
+function toggleTireEditor(): void {
+  if (!props.editable || !props.hasSegmentData) return
+  isEditingTires.value = !isEditingTires.value
+  if (isEditingTires.value) {
+    // Close other editors
+    isEditingDifficulty.value = false
+    isEditingSurface.value = false
+  }
+}
+
+// Difficulty editor functions
+function updateDifficulty(level: number): void {
+  editableDifficulty.value = level
+  emit('update:difficulty', level)
+}
+
+function closeDifficultyEditor(): void {
+  isEditingDifficulty.value = false
+}
+
+// Surface editor functions
+function isSurfaceTypeSelected(surfaceType: string): boolean {
+  return editableSurfaceTypes.value.includes(surfaceType as SurfaceType)
+}
+
+function toggleSurfaceType(surfaceType: SurfaceType): void {
+  const currentTypes = [...editableSurfaceTypes.value]
+  const index = currentTypes.indexOf(surfaceType)
+
+  if (index > -1) {
+    // Remove if already selected
+    currentTypes.splice(index, 1)
+  } else {
+    // Add if not selected
+    currentTypes.push(surfaceType)
+  }
+
+  editableSurfaceTypes.value = currentTypes
+  emit('update:surfaceTypes', currentTypes)
+}
+
+function closeSurfaceEditor(): void {
+  isEditingSurface.value = false
+}
+
+// Tire editor functions
+function updateTireDry(tireType: 'slick' | 'semi-slick' | 'knobs'): void {
+  editableTireDry.value = tireType
+  emit('update:tireDry', tireType)
+}
+
+function updateTireWet(tireType: 'slick' | 'semi-slick' | 'knobs'): void {
+  editableTireWet.value = tireType
+  emit('update:tireWet', tireType)
+}
+
+function closeTireEditor(): void {
+  isEditingTires.value = false
 }
 
 // Helper functions
@@ -247,7 +508,9 @@ function getDifficultyWord(level: number): string {
 }
 
 // Computed properties
-const surfaceTypes = computed(() => props.stats.surfaceTypes || [])
+const surfaceTypes = computed(() =>
+  isEditingSurface.value ? editableSurfaceTypes.value : props.stats.surfaceTypes || []
+)
 
 const difficultyLevel = computed(() => {
   if (!props.hasSegmentData) return 0
@@ -311,16 +574,22 @@ const formattedElevationLoss = computed(() =>
   gap: 0.5rem;
 }
 
-.info-item-compact:nth-child(1) {
+/* First row: Difficulty, Surface, Tire */
+.info-row:first-child .info-item-compact:nth-child(1) {
   flex: 1;
 }
 
-.info-item-compact:nth-child(2) {
+.info-row:first-child .info-item-compact:nth-child(2) {
   flex: 1;
 }
 
-.info-item-compact:nth-child(3) {
+.info-row:first-child .info-item-compact:nth-child(3) {
   flex: 2;
+}
+
+/* Second row: Distance, Elevation Gain, Elevation Loss */
+.info-row:nth-child(2) .info-item-compact {
+  flex: 1;
 }
 
 .info-item-compact {
@@ -341,7 +610,7 @@ const formattedElevationLoss = computed(() =>
 }
 
 .info-label {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: #6b7280;
   text-align: center;
@@ -445,10 +714,10 @@ const formattedElevationLoss = computed(() =>
 }
 
 .surface-text {
-  font-weight: 500;
-  color: #111827;
-  text-align: center;
   font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
   width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -514,56 +783,236 @@ const formattedElevationLoss = computed(() =>
 }
 
 .tire-text {
+  font-size: 0.875rem;
   font-weight: 500;
-  color: #111827;
+  color: #374151;
   text-align: center;
-  font-size: 0.7rem;
   line-height: 1.2;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
-.stats-grid {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
+.stat-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
 }
 
-.stat-item {
+/* Editable styles */
+.info-item-compact.editable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.info-item-compact.editable:hover {
+  background: #f9fafb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.info-item-compact.editing {
+  background: #f9fafb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-left: 0.25rem;
+}
+
+/* Difficulty Editor */
+.difficulty-editor {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  padding: 0.75rem 0.5rem;
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #e5e7eb;
-  min-height: 70px;
+  width: 100%;
+  padding: 0.5rem;
 }
 
-.stat-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6b7280;
-  text-align: center;
+.difficulty-buttons {
   display: flex;
-  align-items: center;
+  gap: 0.5rem;
   justify-content: center;
-  gap: 0.25rem;
 }
 
-.stat-label i {
-  font-size: 0.625rem;
+.difficulty-btn {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.difficulty-btn:hover {
+  border-color: var(--brand-500, #ff6600);
+  color: var(--brand-500, #ff6600);
+}
+
+.difficulty-btn.active {
+  background: var(--brand-500, #ff6600);
+  border-color: var(--brand-500, #ff6600);
   color: white;
 }
 
-.stat-value {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #111827;
+/* Surface Editor */
+.surface-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  width: 100%;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.surface-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.surface-option-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.surface-option-compact input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.surface-option-compact img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.surface-option-compact .surface-caption {
+  font-size: 0.7rem;
+  color: #374151;
   text-align: center;
+  font-weight: 500;
+}
+
+.surface-option-compact.selected {
+  border-color: var(--brand-500, #ff6600);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
+  background: var(--brand-50, #ffe6d5);
+}
+
+/* Tire Editor */
+.tire-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  width: 100%;
+}
+
+.tire-groups-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tire-group-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tire-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.tire-group-header i {
+  color: var(--brand-500, #ff6600);
+}
+
+.tire-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tire-option-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 0.5rem;
+  cursor: pointer;
+  background: #fff;
+  transition: all 0.2s;
+}
+
+.tire-option-compact input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tire-option-compact img {
+  width: 2rem;
+  height: 2rem;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.tire-option-compact .tire-caption {
+  font-size: 0.7rem;
+  color: #374151;
+  text-align: center;
+  font-weight: 500;
+}
+
+.tire-option-compact.selected {
+  border-color: var(--brand-500, #ff6600);
+  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
+  background: var(--brand-50, #ffe6d5);
+}
+
+/* Close editor button */
+.close-editor-btn {
+  align-self: center;
+  padding: 0.5rem 1rem;
+  background: var(--brand-500, #ff6600);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.close-editor-btn:hover {
+  background: var(--brand-600, #e65c00);
 }
 
 /* Responsive layout adjustments */
@@ -573,15 +1022,21 @@ const formattedElevationLoss = computed(() =>
     gap: 0.75rem;
   }
 
-  .info-item-compact:nth-child(1),
-  .info-item-compact:nth-child(2),
-  .info-item-compact:nth-child(3) {
-    flex: 1;
+  .info-row .info-item-compact {
+    flex: 1 !important;
   }
 
   .tire-recommendations-compact {
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .surface-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tire-options {
+    flex-direction: column;
   }
 }
 </style>
