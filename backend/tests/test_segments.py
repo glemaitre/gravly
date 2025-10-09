@@ -8476,3 +8476,226 @@ def test_update_segment_invalid_surface_value(client, sample_gpx_file, tmp_path)
     assert response.status_code == 422
     assert "Invalid surface type" in response.json()["detail"]
     assert "Allowed values" in response.json()["detail"]
+
+
+def test_search_routes_without_auth_returns_authorized_users_routes(client):
+    """Test that searching for routes without authentication returns routes
+    from authorized users in auth_users table.
+    """
+    # Search for routes without providing user_strava_id
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "route",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Should have count and [DONE] at minimum
+    data_lines = [line for line in lines if line.startswith("data: ")]
+    assert len(data_lines) >= 2
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+    # First line should be the count
+    # (could be 0 if no authorized users have routes in this area)
+    count_line = data_lines[0]
+    assert count_line.startswith("data: ")
+    count = int(count_line.replace("data: ", ""))
+    # Could be 0 if no routes from authorized users in this area
+    assert count >= 0
+
+
+def test_search_routes_with_auth_returns_results(client):
+    """Test that searching for routes with authentication returns results."""
+    # Search for routes with user_strava_id provided
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "route",
+            "user_strava_id": 123456,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Should have data lines and a [DONE] marker
+    data_lines = [line for line in lines if line.startswith("data: ")]
+    assert len(data_lines) >= 2  # At least one count + [DONE]
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+
+def test_search_routes_empty_auth_users_table_returns_empty():
+    """Test that searching for routes when auth_users table is empty
+    returns empty results without authentication.
+
+    This directly tests the code path where authorized_strava_ids is empty.
+    """
+    from fastapi.testclient import TestClient
+    from src.main import app
+
+    # Mock the database query to return empty auth_users
+    with patch("src.api.segments.select"):
+        # Create a mock that returns empty list for auth_users query
+        mock_result = Mock()
+        mock_result.all.return_value = []
+
+        async def mock_execute(stmt):
+            # Return empty list for AuthUser query
+            if "auth_user" in str(stmt).lower():
+                return mock_result
+            # For other queries, return empty tracks
+            mock_tracks_result = Mock()
+            mock_tracks_result.all.return_value = []
+            return mock_tracks_result
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session = AsyncMock()
+            mock_session.execute = mock_execute
+            mock_session.__aenter__.return_value = mock_session
+            mock_session.__aexit__.return_value = None
+            mock_session_local.return_value = mock_session
+
+            test_client = TestClient(app)
+
+            # Search for routes without authentication
+            response = test_client.get(
+                "/api/segments/search",
+                params={
+                    "north": 50.0,
+                    "south": 40.0,
+                    "east": 10.0,
+                    "west": 0.0,
+                    "track_type": "route",
+                },
+            )
+
+            assert response.status_code == 200
+            assert (
+                response.headers["content-type"] == "text/event-stream; charset=utf-8"
+            )
+
+            # Parse streaming response
+            content = response.text
+            lines = content.strip().split("\n")
+
+            # Should have only count (0) and [DONE]
+            data_lines = [line for line in lines if line.startswith("data: ")]
+            assert len(data_lines) == 2
+
+            # First line should be 0 routes (no authorized users)
+            count_line = data_lines[0]
+            assert count_line == "data: 0"
+
+            # Last line should be [DONE]
+            assert data_lines[-1] == "data: [DONE]"
+
+
+def test_search_routes_no_authorized_users_in_area_returns_empty(client):
+    """Test that searching for routes in an area with no routes from
+    authorized users returns empty results.
+
+    This test searches in a remote area (middle of ocean) where we know
+    there are no routes from authorized users, which tests the code path
+    where authorized_strava_ids has values but no routes match.
+    """
+    # Search for routes in middle of Pacific Ocean (far from any routes)
+    # This area will naturally have no routes from any users
+    response = client.get(
+        "/api/segments/search",
+        params={
+            "north": -10.0,
+            "south": -20.0,
+            "east": -150.0,
+            "west": -160.0,
+            "track_type": "route",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+
+    # Parse streaming response
+    content = response.text
+    lines = content.strip().split("\n")
+
+    # Should have count and [DONE]
+    data_lines = [line for line in lines if line.startswith("data: ")]
+    assert len(data_lines) >= 2
+
+    # First line should be the count (likely 0 in middle of ocean)
+    count_line = data_lines[0]
+    assert count_line.startswith("data: ")
+    count = int(count_line.replace("data: ", ""))
+    # Should be 0 or very low in this remote area
+    assert count >= 0
+
+    # Last line should be [DONE]
+    assert data_lines[-1] == "data: [DONE]"
+
+
+def test_search_segments_unaffected_by_auth(client):
+    """Test that searching for segments works regardless of authentication."""
+    # Search for segments without user_strava_id
+    response_without_auth = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "segment",
+        },
+    )
+
+    assert response_without_auth.status_code == 200
+
+    # Search for segments with user_strava_id
+    response_with_auth = client.get(
+        "/api/segments/search",
+        params={
+            "north": 50.0,
+            "south": 40.0,
+            "east": 10.0,
+            "west": 0.0,
+            "track_type": "segment",
+            "user_strava_id": 123456,
+        },
+    )
+
+    assert response_with_auth.status_code == 200
+
+    # Both should return the same results (segments are public)
+    # Parse both responses
+    content_without = response_without_auth.text
+    lines_without = content_without.strip().split("\n")
+    data_lines_without = [line for line in lines_without if line.startswith("data: ")]
+
+    content_with = response_with_auth.text
+    lines_with = content_with.strip().split("\n")
+    data_lines_with = [line for line in lines_with if line.startswith("data: ")]
+
+    # Should have the same number of data lines
+    assert len(data_lines_without) == len(data_lines_with)

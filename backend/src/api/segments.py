@@ -337,6 +337,10 @@ def create_segments_router(
             le=1000,
             description="Maximum number of segments to return (default: 50)",
         ),
+        user_strava_id: int | None = Query(
+            None,
+            description="Strava ID of the authenticated user (optional)",
+        ),
     ):
         """Search for segments that are at least partially visible within the given map
         bounds using streaming.
@@ -347,6 +351,9 @@ def create_segments_router(
         segments, selecting those closest to the center of the search bounds.
         Streams segments as they are processed, allowing the frontend to start
         drawing immediately.
+
+        For routes: Only returns routes from authors who authorized storage in the
+        database. If user_strava_id is provided, also includes the user's own routes.
 
         Parameters
         ----------
@@ -362,6 +369,8 @@ def create_segments_router(
             Type of track to search for ('segment' or 'route')
         limit : int
             Maximum number of segments to return (default: 50, max: 1000)
+        user_strava_id : int | None
+            Strava ID of the authenticated user (optional, used for filtering routes)
         """
         # Import global SessionLocal from main
         from ..dependencies import SessionLocal as global_session_local
@@ -398,17 +407,43 @@ def create_segments_router(
                         )
                     ).label("distance")
 
+                    # Build filter conditions
+                    filter_conditions = [
+                        Track.bound_north > south,
+                        Track.bound_south < north,
+                        Track.bound_east > west,
+                        Track.bound_west < east,
+                        Track.track_type == track_type_enum,
+                    ]
+
+                    # For routes, filter by authorized users from auth_users table
+                    if track_type_enum == TrackType.ROUTE:
+                        from ..models.auth_user import AuthUser
+
+                        # Get all authorized strava_ids from auth_users table
+                        auth_stmt = select(AuthUser.strava_id)
+                        auth_result = await session.execute(auth_stmt)
+                        authorized_strava_ids = [row[0] for row in auth_result.all()]
+
+                        # If user is authenticated, add their strava_id to the list
+                        if user_strava_id is not None:
+                            if user_strava_id not in authorized_strava_ids:
+                                authorized_strava_ids.append(user_strava_id)
+
+                        # Filter routes to only show those from authorized users
+                        if authorized_strava_ids:
+                            filter_conditions.append(
+                                Track.strava_id.in_(authorized_strava_ids)
+                            )
+                        else:
+                            # No authorized users, return empty results
+                            yield "data: 0\n\n"
+                            yield "data: [DONE]\n\n"
+                            return
+
                     stmt = (
                         select(Track, distance_expr)
-                        .filter(
-                            and_(
-                                Track.bound_north > south,
-                                Track.bound_south < north,
-                                Track.bound_east > west,
-                                Track.bound_west < east,
-                                Track.track_type == track_type_enum,
-                            )
-                        )
+                        .filter(and_(*filter_conditions))
                         .order_by(distance_expr)
                         .limit(limit)
                     )

@@ -62,7 +62,9 @@ export default {
     route: 'Route',
     segmentTooltip: 'Segments gravel listés par des utilisateurs avancés',
     routeTooltip:
-      'Routes publiques listées par des utilisateurs avancés et vos propres routes privées précédemment sauvegardées'
+      'Routes publiques listées par des utilisateurs avancés et vos propres routes privées précédemment sauvegardées',
+    routeAuthWarning:
+      "Connectez-vous avec Strava pour voir les routes sauvegardées d'autres utilisateurs et vos propres routes"
   },
 
   // Tire conditions

@@ -24,7 +24,14 @@
         >
           <i class="fa-solid fa-map"></i>
           Routes
-          <span class="info-tooltip" :title="t('trackType.routeTooltip')">
+          <span
+            v-if="!isAuthenticated()"
+            class="warning-icon"
+            :title="t('trackType.routeAuthWarning')"
+          >
+            <i class="fa-solid fa-triangle-exclamation"></i>
+          </span>
+          <span v-else class="info-tooltip" :title="t('trackType.routeTooltip')">
             <i class="fa-solid fa-circle-info"></i>
           </span>
         </button>
@@ -86,9 +93,13 @@ import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
+import { useStravaApi } from '../composables/useStravaApi'
 import SegmentCard from './SegmentCard.vue'
 
 const { t } = useI18n()
+
+// Strava authentication
+const { isAuthenticated } = useStravaApi()
 
 interface SegmentStats {
   total_distance: number
@@ -623,5 +634,43 @@ onUnmounted(() => {
 .info-tooltip:hover,
 .info-tooltip:active {
   background: transparent;
+}
+
+/* Warning icon styles */
+.warning-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  cursor: help;
+  color: #f59e0b;
+  transition: opacity 0.2s ease;
+  position: relative;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.warning-icon:hover {
+  opacity: 0.8;
+}
+
+.warning-icon i {
+  font-size: 0.75rem;
+}
+
+/* Prevent warning icon from triggering tab button hover/active states */
+.warning-icon:hover,
+.warning-icon:active {
+  background: transparent;
+}
+
+/* Pulse animation for warning icon */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 </style>

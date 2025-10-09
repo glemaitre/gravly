@@ -62,7 +62,9 @@ export default {
     route: 'Route',
     segmentTooltip: 'Gravel segments listed by advanced users',
     routeTooltip:
-      'Public routes listed by advanced users and your own private routes previously saved'
+      'Public routes listed by advanced users and your own private routes previously saved',
+    routeAuthWarning:
+      'Login with Strava to view saved routes from other users and your own routes'
   },
 
   // Tire conditions

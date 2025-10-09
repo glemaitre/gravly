@@ -89,9 +89,13 @@ import L from 'leaflet'
 import type { TrackResponse, GPXDataResponse } from '../types'
 import { haversineDistance, getBoundingBoxCenter } from '../utils/distance'
 import { parseGPXData } from '../utils/gpxParser'
+import { useStravaApi } from '../composables/useStravaApi'
 import SegmentImportCard from './SegmentImportCard.vue'
 
 const { t } = useI18n()
+
+// Strava authentication
+const { authState, isAuthenticated } = useStravaApi()
 
 // Props
 const props = defineProps<{
@@ -445,6 +449,15 @@ function searchSegmentsInView() {
     track_type: selectedTrackType.value,
     limit: searchLimit.value.toString()
   })
+
+  // Add user_strava_id if authenticated and searching for routes
+  if (
+    selectedTrackType.value === 'route' &&
+    isAuthenticated() &&
+    authState.value.athlete?.id
+  ) {
+    params.append('user_strava_id', authState.value.athlete.id.toString())
+  }
 
   const url = `http://localhost:8000/api/segments/search?${params}`
 

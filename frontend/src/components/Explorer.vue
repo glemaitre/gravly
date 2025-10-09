@@ -75,9 +75,13 @@ import type { TrackResponse, TrackWithGPXDataResponse, GPXDataResponse } from '.
 import { parseGPXData } from '../utils/gpxParser'
 import { haversineDistance, getBoundingBoxCenter } from '../utils/distance'
 import { useMapState } from '../composables/useMapState'
+import { useStravaApi } from '../composables/useStravaApi'
 import SegmentList from './SegmentList.vue'
 
 const router = useRouter()
+
+// Strava authentication
+const { authState, isAuthenticated } = useStravaApi()
 
 // Map state management
 const { savedMapState, saveMapState, extractMapState, applyMapState } = useMapState()
@@ -483,6 +487,15 @@ function searchSegmentsInView() {
     track_type: selectedTrackType.value,
     limit: searchLimit.value.toString()
   })
+
+  // Add user_strava_id if authenticated and searching for routes
+  if (
+    selectedTrackType.value === 'route' &&
+    isAuthenticated() &&
+    authState.value.athlete?.id
+  ) {
+    params.append('user_strava_id', authState.value.athlete.id.toString())
+  }
 
   // Only clear all layers if this is the first search or switching track types
   if (isFirstSearch || isTrackTypeSwitch) {
