@@ -2677,6 +2677,113 @@ def test_search_segments_response_includes_barycenter(client):
             assert isinstance(track_data["barycenter_longitude"], (int, float))
 
 
+def test_search_segments_with_non_finite_bounds(client):
+    """Test search for segments when a track has non-finite bounds."""
+    from datetime import datetime
+
+    from backend.src.models.track import TireType, Track, TrackType
+
+    # Create mock tracks - one with valid bounds, one with non-finite bounds
+    valid_track = Track(
+        id=1,
+        file_path="test/valid.gpx",
+        bound_north=45.0,
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Valid Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=["forest-trail"],
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        created_at=datetime.now(),
+    )
+
+    invalid_track = Track(
+        id=2,
+        file_path="test/invalid.gpx",
+        bound_north=float("nan"),  # Non-finite value
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Invalid Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=["forest-trail"],
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        created_at=datetime.now(),
+    )
+
+    # Mock the database session
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def all(self):
+                        # Return both tracks (one valid, one invalid)
+                        # Distance is 0 for both (they're at the center)
+                        return [(valid_track, 0), (invalid_track, 0)]
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get(
+            "/api/segments/search",
+            params={"north": 50.0, "south": 40.0, "east": 10.0, "west": 0.0},
+        )
+
+        assert response.status_code == 200
+
+        # Parse the streaming response
+        lines = response.text.strip().split("\n")
+        data_lines = [
+            line
+            for line in lines
+            if line.startswith("data: ") and not line.startswith("data: [DONE]")
+        ]
+
+        # Should have at least the count line
+        assert len(data_lines) >= 1
+
+        # Parse the segment data (skip the count line)
+        segment_data_lines = []
+        for line in data_lines[1:]:  # Skip first line which is count
+            if line != "data: [DONE]":
+                try:
+                    import json
+
+                    segment_data = json.loads(line[6:])  # Remove 'data: ' prefix
+                    segment_data_lines.append(segment_data)
+                except json.JSONDecodeError:
+                    continue
+
+        # Should only have the valid track (invalid one should be skipped)
+        assert len(segment_data_lines) == 1
+        assert segment_data_lines[0]["id"] == 1
+        assert segment_data_lines[0]["name"] == "Valid Track"
+
+
 def test_main_module_execution():
     """Test the if __name__ == '__main__' block by importing and checking it exists."""
     import src.main
@@ -2840,6 +2947,67 @@ def test_get_track_info_database_exception(client):
         data = response.json()
         assert "Internal server error" in data["detail"]
         assert "Database connection failed" in data["detail"]
+
+
+def test_get_track_info_with_non_finite_bounds(client):
+    """Test track info retrieval when track has non-finite bounds."""
+    from datetime import datetime
+
+    from backend.src.models.track import TireType, Track, TrackType
+
+    # Create a mock track object with non-finite bounds (e.g., float('inf'))
+    mock_track = Track(
+        id=123,
+        file_path="test/path.gpx",
+        bound_north=float("inf"),  # Non-finite value
+        bound_south=44.0,
+        bound_east=5.0,
+        bound_west=3.0,
+        barycenter_latitude=44.5,
+        barycenter_longitude=4.0,
+        name="Test Track",
+        track_type=TrackType.SEGMENT,
+        difficulty_level=3,
+        surface_type=["forest-trail"],
+        tire_dry=TireType.SEMI_SLICK,
+        tire_wet=TireType.KNOBS,
+        comments="Test comments",
+        created_at=datetime.now(),
+    )
+
+    # Mock the database session and query
+    with patch("src.dependencies.SessionLocal") as mock_session_local:
+
+        class MockSession:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+            async def execute(self, stmt):
+                class MockResult:
+                    def scalar_one_or_none(self):
+                        return mock_track
+
+                return MockResult()
+
+        class MockSessionLocal:
+            async def __aenter__(self):
+                return MockSession()
+
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+
+        mock_session_local.return_value = MockSessionLocal()
+
+        response = client.get("/api/segments/123")
+
+        # Should return 422 Unprocessable Entity due to non-finite bounds
+        assert response.status_code == 422
+        data = response.json()
+        assert "invalid bounds data" in data["detail"]
+        assert "123" in data["detail"]  # Track ID should be in the error message
 
 
 def test_get_track_parsed_data_success(client):

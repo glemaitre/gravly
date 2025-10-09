@@ -246,8 +246,8 @@ def compute_route_features_from_segments(segments):
     for segment in segments:
         total_difficulty += segment.difficulty_level
         surface_types.extend(segment.surface_type)
-        dry_tire_types.append(segment.tire_dry.value)
-        wet_tire_types.append(segment.tire_wet.value)
+        dry_tire_types.append(segment.tire_dry)
+        wet_tire_types.append(segment.tire_wet)
 
     avg_difficulty = round(total_difficulty / len(segments), 1)
     surface_types = list(set(surface_types))
@@ -345,12 +345,8 @@ async def create_route_gpx(computed_stats, route_track_points):
             status_code=422, detail="Unable to calculate bounds from route data"
         )
 
-    if all_lats:
-        barycenter_lat = sum(all_lats) / len(all_lats)
-        barycenter_lng = sum(all_lngs) / len(all_lngs)
-    else:
-        barycenter_lat = (min_lat + max_lat) / 2
-        barycenter_lng = (min_lng + max_lng) / 2
+    barycenter_lat = sum(all_lats) / len(all_lats)
+    barycenter_lng = sum(all_lngs) / len(all_lngs)
 
     bounds = {
         "north": max_lat,
