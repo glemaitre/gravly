@@ -663,7 +663,7 @@ function preserveRouteFromStartEndMode() {
   }
 }
 
-function clearStartEndWaypoints(clearRoute = true) {
+function clearStartEndWaypoints(clearRoute = true, clearSegments = true) {
   startWaypoint.value = null
   endWaypoint.value = null
 
@@ -676,7 +676,10 @@ function clearStartEndWaypoints(clearRoute = true) {
   startEndMarkers.length = 0
 
   // Clear all segments and their landmarks when clearing start/end waypoints
-  clearAllSegments()
+  // unless explicitly told not to (e.g., when preserving segment cache for route saving)
+  if (clearSegments) {
+    clearAllSegments()
+  }
 
   // Only clear route if explicitly requested
   if (clearRoute) {
@@ -1515,6 +1518,22 @@ function initializeRoutingControl() {
           calculateElevationStats()
         }, 1000) // Give more time for route to be fully processed
       }, 100)
+
+      // If we're in guided mode (startEnd) and have selected segments,
+      // automatically switch to free mode after route generation
+      if (routeMode.value === 'startEnd' && selectedSegments.value.length > 0) {
+        // Clear visual segment layers but preserve segment cache for saving
+        clearSegmentVisuals()
+
+        // Preserve the generated route by converting to standard mode
+        preserveRouteFromStartEndMode()
+
+        // Clear start/end markers but keep the route and segments
+        clearStartEndWaypoints(false, false)
+
+        // Switch to standard mode
+        routeMode.value = 'standard'
+      }
     }
   })
 
@@ -4464,6 +4483,71 @@ function handleSegmentItemLeave(segment: TrackResponse) {
         opacity: 0.8
       })
     }, 150)
+  }
+}
+
+function clearSegmentVisuals() {
+  // Clear only the visual layers (polylines, popups, landmarks) but preserve segment cache
+  // This is used when switching from guided mode to free mode after route generation
+  if (!map) {
+    return
+  }
+
+  // Remove all segment layers from map (polylines, popups, and landmarks)
+  segmentMapLayers.forEach((layerData) => {
+    try {
+      // Clear any pending close timeout
+      if (layerData.closeTimeout) {
+        clearTimeout(layerData.closeTimeout)
+        layerData.closeTimeout = null
+      }
+
+      if (layerData.polyline && map.hasLayer(layerData.polyline)) {
+        map.removeLayer(layerData.polyline)
+      }
+      if (layerData.popup && map.hasLayer(layerData.popup)) {
+        map.removeLayer(layerData.popup)
+      }
+      if (layerData.startMarker && map.hasLayer(layerData.startMarker)) {
+        map.removeLayer(layerData.startMarker)
+      }
+      if (layerData.endMarker && map.hasLayer(layerData.endMarker)) {
+        map.removeLayer(layerData.endMarker)
+      }
+    } catch {
+      // Silently handle errors during cleanup
+    }
+  })
+
+  // Additional cleanup: Remove any remaining landmark markers that might not be in segmentMapLayers
+  // This is a safety net in case some landmarks weren't properly tracked
+  const allLayers = map._layers
+  Object.keys(allLayers).forEach((layerId) => {
+    const layer = allLayers[layerId]
+    // Check if it's a segment landmark marker (has the specific class)
+    if (
+      layer &&
+      layer._icon &&
+      layer._icon.className &&
+      layer._icon.className.includes('segment-landmark')
+    ) {
+      try {
+        map.removeLayer(layer)
+      } catch {
+        // Silently handle errors during cleanup
+      }
+    }
+  })
+
+  // Clear visual layer data but preserve segment and GPX cache
+  segmentMapLayers.clear()
+  availableSegments.value = []
+  // NOTE: selectedSegments and gpxDataCache are preserved for route saving
+
+  // Clear any pending search timeout to stop further segment searches
+  if (segmentSearchTimeout) {
+    clearTimeout(segmentSearchTimeout)
+    segmentSearchTimeout = null
   }
 }
 

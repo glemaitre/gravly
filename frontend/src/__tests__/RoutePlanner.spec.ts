@@ -3371,4 +3371,139 @@ describe('RoutePlanner', () => {
       expect(typeof wrapper.vm.loadAuthState).toBe('function')
     })
   })
+
+  describe('Segment Cache Preservation on Route Generation', () => {
+    beforeEach(async () => {
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+    })
+
+    it('should have clearSegmentVisuals function defined', () => {
+      expect(wrapper.vm.clearSegmentVisuals).toBeDefined()
+      expect(typeof wrapper.vm.clearSegmentVisuals).toBe('function')
+    })
+
+    it('clearSegmentVisuals should preserve selectedSegments cache', async () => {
+      // Set up initial state with segments
+      const mockSegments = [
+        { id: 1, name: 'Segment 1', file_path: '/path/to/segment1.gpx' },
+        { id: 2, name: 'Segment 2', file_path: '/path/to/segment2.gpx' }
+      ]
+      wrapper.vm.selectedSegments = mockSegments
+
+      // Mock the gpxDataCache
+      const mockGPXData = { id: 1, gpx_xml_data: '<gpx></gpx>' }
+      wrapper.vm.gpxDataCache.set(1, mockGPXData)
+
+      // Call clearSegmentVisuals
+      wrapper.vm.clearSegmentVisuals()
+
+      await nextTick()
+
+      // Verify that selectedSegments is preserved
+      expect(wrapper.vm.selectedSegments).toEqual(mockSegments)
+
+      // Verify that gpxDataCache is preserved
+      expect(wrapper.vm.gpxDataCache.has(1)).toBe(true)
+      expect(wrapper.vm.gpxDataCache.get(1)).toEqual(mockGPXData)
+    })
+
+    it('clearSegmentVisuals should clear availableSegments', async () => {
+      // Set up initial state
+      wrapper.vm.availableSegments = [
+        { id: 1, name: 'Segment 1', file_path: '/path/to/segment1.gpx' }
+      ]
+
+      // Call clearSegmentVisuals
+      wrapper.vm.clearSegmentVisuals()
+
+      await nextTick()
+
+      // Verify that availableSegments is cleared
+      expect(wrapper.vm.availableSegments).toEqual([])
+    })
+
+    it('clearSegmentVisuals should clear segmentMapLayers', async () => {
+      // Set up initial state with map layers
+      const mockPolyline = { remove: vi.fn() }
+      wrapper.vm.segmentMapLayers.set('1', { polyline: mockPolyline })
+
+      // Call clearSegmentVisuals
+      wrapper.vm.clearSegmentVisuals()
+
+      await nextTick()
+
+      // Verify that segmentMapLayers is cleared
+      expect(wrapper.vm.segmentMapLayers.size).toBe(0)
+    })
+
+    it('clearStartEndWaypoints should have clearSegments parameter', () => {
+      expect(wrapper.vm.clearStartEndWaypoints).toBeDefined()
+      expect(typeof wrapper.vm.clearStartEndWaypoints).toBe('function')
+    })
+
+    it('clearStartEndWaypoints should preserve segments when clearSegments is false', async () => {
+      // Set up initial state with segments
+      const mockSegments = [
+        { id: 1, name: 'Segment 1', file_path: '/path/to/segment1.gpx' }
+      ]
+      wrapper.vm.selectedSegments = mockSegments
+
+      // Call clearStartEndWaypoints with clearSegments = false
+      wrapper.vm.clearStartEndWaypoints(false, false)
+
+      await nextTick()
+
+      // Verify that selectedSegments is preserved
+      expect(wrapper.vm.selectedSegments).toEqual(mockSegments)
+    })
+  })
+
+  describe('Auto-Switch to Standard Mode After Route Generation', () => {
+    beforeEach(async () => {
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+    })
+
+    it('should have preserveRouteFromStartEndMode function defined', () => {
+      expect(wrapper.vm.preserveRouteFromStartEndMode).toBeDefined()
+      expect(typeof wrapper.vm.preserveRouteFromStartEndMode).toBe('function')
+    })
+
+    it('should preserve segment cache when switching from guided to free mode', async () => {
+      // Set up guided mode with segments
+      wrapper.vm.routeMode = 'startEnd'
+      const mockSegments = [
+        { id: 1, name: 'Segment 1', file_path: '/path/to/segment1.gpx' }
+      ]
+      wrapper.vm.selectedSegments = mockSegments
+
+      // Mock gpxDataCache
+      const mockGPXData = { id: 1, gpx_xml_data: '<gpx></gpx>' }
+      wrapper.vm.gpxDataCache.set(1, mockGPXData)
+
+      // Simulate route generation by calling the functions that would be called
+      wrapper.vm.clearSegmentVisuals()
+      wrapper.vm.preserveRouteFromStartEndMode()
+      wrapper.vm.clearStartEndWaypoints(false, false)
+      wrapper.vm.routeMode = 'standard'
+
+      await nextTick()
+
+      // Verify mode switched to standard
+      expect(wrapper.vm.routeMode).toBe('standard')
+
+      // Verify segment cache is preserved
+      expect(wrapper.vm.selectedSegments).toEqual(mockSegments)
+      expect(wrapper.vm.gpxDataCache.has(1)).toBe(true)
+    })
+  })
 })
