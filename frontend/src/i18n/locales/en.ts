@@ -59,7 +59,10 @@ export default {
   // Track type tabs
   trackType: {
     segment: 'Segment',
-    route: 'Route'
+    route: 'Route',
+    segmentTooltip: 'Gravel segments listed by advanced users',
+    routeTooltip:
+      'Public routes listed by advanced users and your own private routes previously saved'
   },
 
   // Tire conditions

@@ -1,6 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import Explorer from '../Explorer.vue'
+
+// Import real locale files
+import en from '../../i18n/locales/en'
+import fr from '../../i18n/locales/fr'
+
+// Create i18n instance for testing
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  fallbackLocale: 'en',
+  messages: { en, fr }
+})
 
 // Mock Vue Router
 const mockRouter = {
@@ -16,9 +29,13 @@ vi.mock('vue-router', () => ({
   useRouter: () => mockRouter
 }))
 
-// Helper function to mount component with router mock
+// Helper function to mount component with router mock and i18n
 const mountWithRouter = (component: any, options: any = {}) => {
   return mount(component, {
+    global: {
+      plugins: [i18n],
+      ...(options.global || {})
+    },
     ...options
   })
 }

@@ -1,8 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
 import SegmentList from '../SegmentList.vue'
 import SegmentCard from '../SegmentCard.vue'
 import type { TrackResponse } from '../../types'
+
+// Import real locale files
+import en from '../../i18n/locales/en'
+import fr from '../../i18n/locales/fr'
+
+// Create i18n instance for testing
+const i18n = createI18n({
+  legacy: false,
+  locale: 'en',
+  fallbackLocale: 'en',
+  messages: { en, fr }
+})
 
 // Mock the GPX parser
 vi.mock('../../utils/gpxParser', () => ({
@@ -82,6 +95,7 @@ describe('SegmentList', () => {
         loading: false
       },
       global: {
+        plugins: [i18n],
         components: { SegmentCard }
       }
     })
@@ -97,6 +111,7 @@ describe('SegmentList', () => {
         loading: false
       },
       global: {
+        plugins: [i18n],
         components: { SegmentCard }
       }
     })
@@ -112,6 +127,10 @@ describe('SegmentList', () => {
       props: {
         segments: [],
         loading: false
+      },
+      global: {
+        plugins: [i18n],
+        components: { SegmentCard }
       }
     })
 
@@ -126,6 +145,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -141,6 +164,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -164,6 +191,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -182,6 +213,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: true
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -195,6 +230,10 @@ describe('SegmentList', () => {
         props: {
           segments: [],
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -208,6 +247,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -225,6 +268,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -246,6 +293,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -266,6 +317,7 @@ describe('SegmentList', () => {
           loading: false
         },
         global: {
+          plugins: [i18n],
           components: { SegmentCard }
         }
       })
@@ -284,6 +336,7 @@ describe('SegmentList', () => {
           loading: false
         },
         global: {
+          plugins: [i18n],
           components: { SegmentCard }
         }
       })
@@ -302,6 +355,7 @@ describe('SegmentList', () => {
           loading: false
         },
         global: {
+          plugins: [i18n],
           components: { SegmentCard }
         }
       })
@@ -318,6 +372,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -355,6 +413,7 @@ describe('SegmentList', () => {
           loading: false
         },
         global: {
+          plugins: [i18n],
           components: { SegmentCard }
         }
       })
@@ -370,6 +429,7 @@ describe('SegmentList', () => {
           loading: false
         },
         global: {
+          plugins: [i18n],
           components: { SegmentCard }
         }
       })
@@ -390,6 +450,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments, // 2 segments
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -402,6 +466,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments, // 12 segments
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -414,6 +482,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments, // 12 segments
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -428,6 +500,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -444,6 +520,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -460,6 +540,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -476,6 +560,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -497,6 +585,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -520,6 +612,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -535,6 +631,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -557,6 +657,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -580,6 +684,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments,
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -600,6 +708,10 @@ describe('SegmentList', () => {
         props: {
           segments: mockSegments, // 2 segments - below display limit
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 
@@ -612,6 +724,10 @@ describe('SegmentList', () => {
         props: {
           segments: manyMockSegments, // 12 segments - above display limit
           loading: false
+        },
+        global: {
+          plugins: [i18n],
+          components: { SegmentCard }
         }
       })
 

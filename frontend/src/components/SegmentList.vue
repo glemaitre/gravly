@@ -12,6 +12,9 @@
         >
           <i class="fa-solid fa-route"></i>
           Segments
+          <span class="info-tooltip" :title="t('trackType.segmentTooltip')">
+            <i class="fa-solid fa-circle-info"></i>
+          </span>
         </button>
         <button
           type="button"
@@ -21,6 +24,9 @@
         >
           <i class="fa-solid fa-map"></i>
           Routes
+          <span class="info-tooltip" :title="t('trackType.routeTooltip')">
+            <i class="fa-solid fa-circle-info"></i>
+          </span>
         </button>
       </div>
 
@@ -77,9 +83,12 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 import SegmentCard from './SegmentCard.vue'
+
+const { t } = useI18n()
 
 interface SegmentStats {
   total_distance: number
@@ -588,5 +597,31 @@ onUnmounted(() => {
     padding: 8px 24px;
     height: 32px;
   }
+}
+
+/* Info tooltip icon styles */
+.info-tooltip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+  position: relative;
+}
+
+.info-tooltip:hover {
+  opacity: 1;
+}
+
+.info-tooltip i {
+  font-size: 0.75rem;
+}
+
+/* Prevent info icon from triggering tab button hover/active states */
+.info-tooltip:hover,
+.info-tooltip:active {
+  background: transparent;
 }
 </style>
