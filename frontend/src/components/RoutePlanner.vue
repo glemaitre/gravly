@@ -3691,8 +3691,8 @@ async function loadSegmentsInBounds() {
       return
     }
 
-    // Clear existing segments
-    clearAllSegments()
+    // Clear existing segments but preserve selection
+    clearAllSegments(false)
 
     // Parse streaming response
     const reader = response.body?.getReader()
@@ -3841,10 +3841,13 @@ function renderSegmentOnMapWithDirection(
     trackPoints = trackPoints.reverse()
   }
 
-  // Create polyline for the segment - black color as requested
+  // Check if this segment is selected to apply correct styling
+  const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
+
+  // Create polyline for the segment with appropriate styling based on selection status
   const polyline = L.polyline(trackPoints, {
-    color: '#000000', // Black color as requested
-    weight: 3,
+    color: isSelected ? 'var(--brand-primary)' : '#000000', // Orange when selected, black when not
+    weight: isSelected ? 4 : 3,
     opacity: 0.8
   }).addTo(map)
 
@@ -3943,7 +3946,6 @@ function renderSegmentOnMapWithDirection(
 
   // Create start and end landmarks for selected segments
   // Don't show landmarks if a route is currently active (they're replaced by numbered waypoints)
-  const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
   let startMarker = null
   let endMarker = null
 
@@ -4560,7 +4562,7 @@ function clearSegmentVisuals() {
   }
 }
 
-function clearAllSegments() {
+function clearAllSegments(clearSelection = true) {
   // Ensure map is available before attempting to remove layers
   if (!map) {
     return
@@ -4615,7 +4617,10 @@ function clearAllSegments() {
   // Clear all data structures
   segmentMapLayers.clear()
   availableSegments.value = []
-  selectedSegments.value = []
+  // Only clear selected segments if explicitly requested (not during zoom/pan operations)
+  if (clearSelection) {
+    selectedSegments.value = []
+  }
   gpxDataCache.clear()
   loadingGPXData.clear()
 
