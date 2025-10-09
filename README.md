@@ -5,6 +5,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-Latest-009688.svg)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.6+-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+[![codecov](https://codecov.io/gh/glemaitre/gravly/branch/main/graph/badge.svg)](https://codecov.io/gh/glemaitre/gravly)
 
 A modern web application for discovering, creating, and viewing cycling routes stored as
 GPX files. Built with Vue.js frontend, FastAPI backend, and PostgreSQL for data
@@ -1012,7 +1013,25 @@ GitHub Actions run tests on push/PR to `main` using `prefix-dev/setup-pixi`:
 - Frontend: `.github/workflows/frontend-tests.yml`
 
 Workflows activate the Pixi environment and run the Pixi tasks, posting coverage
-summaries.
+summaries and uploading coverage reports to Codecov.
+
+### Codecov Integration
+
+Test coverage is automatically uploaded to [Codecov](https://codecov.io/gh/glemaitre/gravly) on each push/PR. The coverage badge in the README shows the current coverage percentage for the entire project.
+
+**Setup for Repository Maintainers:**
+
+1. Sign up at [Codecov](https://codecov.io/) with your GitHub account
+2. Add the repository to Codecov
+3. Copy the repository upload token from Codecov settings
+4. Add the token as a GitHub secret:
+   - Go to repository **Settings** > **Secrets and variables** > **Actions**
+   - Create a new secret named `CODECOV_TOKEN`
+   - Paste the token from Codecov
+
+The workflows will automatically upload coverage reports:
+- **Backend**: XML coverage report from pytest (`backend/coverage.xml`)
+- **Frontend**: LCOV coverage report from Vitest (`frontend/coverage/lcov.info`)
 
 ## Key Features Implemented
 

@@ -103,7 +103,7 @@ cwd = "frontend"
 depends-on = ["frontend-install"]
 
 [feature.tests.tasks.test-backend]
-cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing"
+cmd = "python -m pytest backend/tests/ -q --cov=backend/src --cov-report=term-missing --cov-report=xml:backend/coverage.xml"
 
 [feature.tests.tasks.test-frontend]
 cmd = "npm install --no-audit --no-fund && npm run test:cov -- --run"
