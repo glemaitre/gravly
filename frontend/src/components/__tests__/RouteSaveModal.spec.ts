@@ -268,7 +268,7 @@ describe('RouteSaveModal', () => {
   })
 
   describe('Route Statistics Calculation', () => {
-    it('should calculate average difficulty from segments', async () => {
+    it('should calculate median difficulty from segments (even number)', async () => {
       const wrapper = createWrapper({
         selectedSegments: mockSegments,
         routeDistance: 25.5,
@@ -283,7 +283,73 @@ describe('RouteSaveModal', () => {
 
       // Check computed stats
       const stats = (wrapper.vm as any).computedStats
-      expect(stats.difficulty).toBe(3.5) // (3 + 4) / 2
+      // Median of [3, 4] is (3 + 4) / 2 = 3.5
+      expect(stats.difficulty).toBe(3.5)
+    })
+
+    it('should calculate median difficulty from segments (odd number)', async () => {
+      const threeSegments = [
+        ...mockSegments,
+        {
+          ...mockSegments[0],
+          id: 3,
+          difficulty_level: 5
+        }
+      ]
+
+      const wrapper = createWrapper({
+        selectedSegments: threeSegments,
+        routeDistance: 25.5,
+        elevationStats: {
+          totalGain: 450,
+          totalLoss: 380,
+          maxElevation: 500,
+          minElevation: 100
+        },
+        routeTrackPoints: mockRouteTrackPoints
+      })
+
+      // Check computed stats
+      const stats = (wrapper.vm as any).computedStats
+      // Median of [3, 4, 5] is 4
+      expect(stats.difficulty).toBe(4)
+    })
+
+    it('should calculate median difficulty with unsorted input', async () => {
+      const unsortedSegments = [
+        {
+          ...mockSegments[0],
+          id: 1,
+          difficulty_level: 5
+        },
+        {
+          ...mockSegments[1],
+          id: 2,
+          difficulty_level: 2
+        },
+        {
+          ...mockSegments[0],
+          id: 3,
+          difficulty_level: 3
+        }
+      ]
+
+      const wrapper = createWrapper({
+        selectedSegments: unsortedSegments,
+        routeDistance: 25.5,
+        elevationStats: {
+          totalGain: 450,
+          totalLoss: 380,
+          maxElevation: 500,
+          minElevation: 100
+        },
+        routeTrackPoints: mockRouteTrackPoints
+      })
+
+      // Check computed stats
+      const stats = (wrapper.vm as any).computedStats
+      // Median of [5, 2, 3] sorted is [2, 3, 5], median is 3
+      expect(stats.difficulty).toBe(3)
     })
 
     it('should collect all surface types from segments', async () => {

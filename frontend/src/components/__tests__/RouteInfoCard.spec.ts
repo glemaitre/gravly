@@ -58,7 +58,7 @@ describe('RouteInfoCard', () => {
       expect(wrapper.find('.info-row').exists()).toBe(true)
     })
 
-    it('should display difficulty information', () => {
+    it('should display difficulty information as integer', () => {
       const wrapper = mount(RouteInfoCard, {
         props: {
           stats: mockStats,
@@ -69,7 +69,7 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      expect(wrapper.find('.difficulty-level').text()).toBe('3.5')
+      expect(wrapper.find('.difficulty-level').text()).toBe('4') // 3.5 rounded to 4
       expect(wrapper.find('.difficulty-word').exists()).toBe(true)
     })
 
@@ -357,7 +357,7 @@ describe('RouteInfoCard', () => {
   })
 
   describe('Difficulty Levels', () => {
-    it('should display difficulty level 1 correctly', () => {
+    it('should display difficulty level 1 correctly as integer', () => {
       const easyStats = { ...mockStats, difficulty: 1 }
 
       const wrapper = mount(RouteInfoCard, {
@@ -370,10 +370,10 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      expect(wrapper.find('.difficulty-level').text()).toBe('1.0')
+      expect(wrapper.find('.difficulty-level').text()).toBe('1')
     })
 
-    it('should display difficulty level 5 correctly', () => {
+    it('should display difficulty level 5 correctly as integer', () => {
       const hardStats = { ...mockStats, difficulty: 5 }
 
       const wrapper = mount(RouteInfoCard, {
@@ -386,10 +386,10 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      expect(wrapper.find('.difficulty-level').text()).toBe('5.0')
+      expect(wrapper.find('.difficulty-level').text()).toBe('5')
     })
 
-    it('should round difficulty level for word display', () => {
+    it('should round difficulty level for display and word', () => {
       const wrapper = mount(RouteInfoCard, {
         props: {
           stats: { ...mockStats, difficulty: 3.6 },
@@ -400,9 +400,25 @@ describe('RouteInfoCard', () => {
         }
       })
 
-      // Should round to 4 for difficulty word
+      // Should round 3.6 to 4 for display
+      expect(wrapper.find('.difficulty-level').text()).toBe('4')
       const difficultyWord = wrapper.find('.difficulty-word')
       expect(difficultyWord.exists()).toBe(true)
+    })
+
+    it('should round difficulty level down when below 0.5', () => {
+      const wrapper = mount(RouteInfoCard, {
+        props: {
+          stats: { ...mockStats, difficulty: 2.4 },
+          hasSegmentData: true
+        },
+        global: {
+          plugins: [i18n]
+        }
+      })
+
+      // Should round 2.4 to 2 for display
+      expect(wrapper.find('.difficulty-level').text()).toBe('2')
     })
   })
 

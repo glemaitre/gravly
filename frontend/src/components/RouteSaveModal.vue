@@ -93,7 +93,7 @@ import RouteInfoCard from './RouteInfoCard.vue'
 
 interface RouteStats {
   distance: number // in kilometers
-  difficulty: number // average difficulty (1-5)
+  difficulty: number // median difficulty (1-5)
   elevationGain: number // in meters
   elevationLoss: number // in meters
   surfaceTypes: SurfaceType[]
@@ -174,11 +174,15 @@ const computedStats = computed((): RouteStats => {
     }
   }
 
-  // Calculate average difficulty
-  const totalDifficulty = props.selectedSegments.reduce((sum, segment) => {
-    return sum + segment.difficulty_level
-  }, 0)
-  const averageDifficulty = totalDifficulty / props.selectedSegments.length
+  // Calculate median difficulty
+  const sortedDifficulties = props.selectedSegments
+    .map((segment) => segment.difficulty_level)
+    .sort((a, b) => a - b)
+  const mid = Math.floor(sortedDifficulties.length / 2)
+  const medianDifficulty =
+    sortedDifficulties.length % 2 === 0
+      ? (sortedDifficulties[mid - 1] + sortedDifficulties[mid]) / 2
+      : sortedDifficulties[mid]
 
   // Union of all surface types
   const allSurfaceTypes = new Set<SurfaceType>()
@@ -219,7 +223,7 @@ const computedStats = computed((): RouteStats => {
 
   return {
     distance: props.routeDistance,
-    difficulty: averageDifficulty,
+    difficulty: medianDifficulty,
     elevationGain: props.elevationStats.totalGain,
     elevationLoss: props.elevationStats.totalLoss,
     surfaceTypes: Array.from(allSurfaceTypes),
@@ -379,7 +383,7 @@ async function confirmSaveRoute() {
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-width: 550px;
+  max-width: 600px;
   width: 100%;
   max-height: 90vh;
   overflow: hidden;

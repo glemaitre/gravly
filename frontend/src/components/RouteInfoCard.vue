@@ -251,7 +251,7 @@ const surfaceTypes = computed(() => props.stats.surfaceTypes || [])
 
 const difficultyLevel = computed(() => {
   if (!props.hasSegmentData) return 0
-  return props.stats.difficulty.toFixed(1)
+  return Math.round(props.stats.difficulty)
 })
 
 const difficultyWord = computed(() => {
