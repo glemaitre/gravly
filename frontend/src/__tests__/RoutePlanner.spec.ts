@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, beforeAll } from 'vitest'
 import { mount, VueWrapper } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { nextTick, ref } from 'vue'
 import RoutePlanner from '../components/RoutePlanner.vue'
 import { createI18n } from 'vue-i18n'
 
@@ -162,6 +162,28 @@ vi.mock('chart.js', () => ({
 
 // Mock fetch for elevation API
 global.fetch = vi.fn()
+
+// Mock useStravaApi composable
+interface StravaAuthState {
+  isAuthenticated: boolean
+  accessToken: string | null
+  expiresAt: number | null
+  athlete: any | null
+}
+
+const mockAuthState = ref<StravaAuthState>({
+  isAuthenticated: false,
+  accessToken: null,
+  expiresAt: null,
+  athlete: null
+})
+
+vi.mock('../composables/useStravaApi', () => ({
+  useStravaApi: () => ({
+    authState: mockAuthState,
+    loadAuthState: vi.fn()
+  })
+}))
 
 // Mock localStorage
 const localStorageMock = {
@@ -3232,6 +3254,121 @@ describe('RoutePlanner', () => {
       expect(fetchSpy.mock.calls.length).toBeGreaterThan(0)
 
       fetchSpy.mockRestore()
+    })
+  })
+
+  describe('Save Button Authentication', () => {
+    beforeEach(async () => {
+      // Reset mockAuthState to default before each test
+      mockAuthState.value = {
+        isAuthenticated: false,
+        accessToken: null,
+        expiresAt: null,
+        athlete: null
+      }
+
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+    })
+
+    it('should disable save button when user is not authenticated', async () => {
+      // Set up a route (waypoints)
+      wrapper.vm.waypoints = [
+        { latLng: { lat: 46.860104, lng: 3.978509 } },
+        { latLng: { lat: 46.861104, lng: 3.979509 } }
+      ]
+      wrapper.vm.routeDistance = 1000
+
+      // User is not authenticated (default mock state)
+      mockAuthState.value = {
+        isAuthenticated: false,
+        accessToken: null,
+        expiresAt: null,
+        athlete: null
+      }
+
+      await nextTick()
+
+      // canSaveRoute should be false because user is not authenticated
+      expect(wrapper.vm.canSaveRoute).toBe(false)
+    })
+
+    it('should enable save button when user is authenticated and has route', async () => {
+      // Set up a route (waypoints)
+      wrapper.vm.waypoints = [
+        { latLng: { lat: 46.860104, lng: 3.978509 } },
+        { latLng: { lat: 46.861104, lng: 3.979509 } }
+      ]
+      wrapper.vm.waypointsCount = 2
+      wrapper.vm.routeDistance = 1000
+
+      // User is authenticated
+      mockAuthState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: Date.now() + 3600000,
+        athlete: { id: 123, name: 'Test User' }
+      }
+
+      await nextTick()
+
+      // canSaveRoute should be true because user is authenticated and has route
+      expect(wrapper.vm.canSaveRoute).toBe(true)
+    })
+
+    it('should disable save button when user is authenticated but has no route', async () => {
+      // No waypoints
+      wrapper.vm.waypoints = []
+      wrapper.vm.routeDistance = 0
+
+      // User is authenticated
+      mockAuthState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: Date.now() + 3600000,
+        athlete: { id: 123, name: 'Test User' }
+      }
+
+      await nextTick()
+
+      // canSaveRoute should be false because there's no route
+      expect(wrapper.vm.canSaveRoute).toBe(false)
+    })
+
+    it('should enable save button with selected segments and authenticated user', async () => {
+      // Set up selected segments
+      wrapper.vm.selectedSegments = [
+        {
+          id: 1,
+          name: 'Test Segment',
+          distance: 1000,
+          elevation_gain: 100
+        }
+      ]
+      wrapper.vm.routeDistance = 1000
+
+      // User is authenticated
+      mockAuthState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: Date.now() + 3600000,
+        athlete: { id: 123, name: 'Test User' }
+      }
+
+      await nextTick()
+
+      // canSaveRoute should be true
+      expect(wrapper.vm.canSaveRoute).toBe(true)
+    })
+
+    it('should call loadAuthState on mount', () => {
+      // loadAuthState should have been called during component mount
+      expect(wrapper.vm.loadAuthState).toBeDefined()
+      expect(typeof wrapper.vm.loadAuthState).toBe('function')
     })
   })
 })

@@ -311,6 +311,7 @@ export default {
     noSegmentsSelected: 'Aucun segment sélectionné',
     noRouteDistance: 'Aucune distance calculée',
     noRouteToSave: 'Aucune sortie disponible à sauvegarder',
+    loginToSaveRoute: 'Connectez-vous avec Strava pour sauvegarder des sorties',
     noSegmentData: 'N/A (parcours manuel)',
     routeSavedSuccessfully: 'Sortie sauvegardée avec succès !',
     saveRouteError: 'Échec de la sauvegarde de la sortie',

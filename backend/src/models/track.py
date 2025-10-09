@@ -57,6 +57,7 @@ class Track(Base):
     tire_dry: Mapped[TireType] = mapped_column(Enum(TireType))
     tire_wet: Mapped[TireType] = mapped_column(Enum(TireType))
     comments: Mapped[str] = mapped_column(Text)
+    strava_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.now(UTC), nullable=False
     )
@@ -88,6 +89,7 @@ class TrackResponse(BaseModel):
     tire_dry: str
     tire_wet: str
     comments: str
+    strava_id: int
 
 
 class TrackWithGPXDataResponse(TrackResponse):

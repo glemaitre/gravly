@@ -87,6 +87,7 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useStravaApi } from '../composables/useStravaApi'
 import type { TrackResponse, SurfaceType } from '../types'
 import RouteInfoCard from './RouteInfoCard.vue'
 
@@ -128,6 +129,7 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 const { t } = useI18n()
+const { authState } = useStravaApi()
 
 // Component state
 const showSaveModal = ref(false)
@@ -253,7 +255,7 @@ async function confirmSaveRoute() {
 
   try {
     // Create the route data
-    const routeData = {
+    const routeData: any = {
       name: routeName.value.trim(),
       track_type: 'route',
       segments: props.selectedSegments.map((segment) => ({
@@ -263,6 +265,11 @@ async function confirmSaveRoute() {
       computed_stats: computedStats.value,
       route_track_points: props.routeTrackPoints,
       comments: routeComments.value.trim()
+    }
+
+    // Add strava_id if user is authenticated
+    if (authState.value.isAuthenticated && authState.value.athlete?.id) {
+      routeData.strava_id = authState.value.athlete.id
     }
 
     // Call the backend API to save the route

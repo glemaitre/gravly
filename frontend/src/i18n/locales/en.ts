@@ -306,6 +306,7 @@ export default {
     noSegmentsSelected: 'No segments selected',
     noRouteDistance: 'No route distance calculated',
     noRouteToSave: 'No route available to save',
+    loginToSaveRoute: 'Login with Strava to save routes',
     noSegmentData: 'N/A (waypoint route)',
     routeSavedSuccessfully: 'Route saved successfully!',
     saveRouteError: 'Failed to save route',

@@ -59,6 +59,7 @@ def create_segments_router(
         commentary_text: str = Form(""),
         video_links: str = Form("[]"),
         image_data: str = Form("[]"),
+        strava_id: int = Form(...),
     ):
         """Create a new segment: process uploaded GPX file with indices, upload to
         storage, and store metadata in DB.
@@ -196,6 +197,7 @@ def create_segments_router(
                         tire_dry=TireType(tire_dry),
                         tire_wet=TireType(tire_wet),
                         comments=commentary_text,
+                        strava_id=strava_id,
                     )
                     session.add(track)
                     await session.commit()
@@ -280,6 +282,7 @@ def create_segments_router(
                         tire_dry=track.tire_dry,
                         tire_wet=track.tire_wet,
                         comments=track.comments,
+                        strava_id=track.strava_id,
                     )
             except Exception as db_e:
                 logger.warning(f"Failed to store segment in database: {db_e}")
@@ -305,6 +308,7 @@ def create_segments_router(
             tire_dry=tire_dry,
             tire_wet=tire_wet,
             comments=commentary_text,
+            strava_id=strava_id,
         )
 
     @router.options("/search")
@@ -453,6 +457,7 @@ def create_segments_router(
                             tire_dry=track.tire_dry.value,
                             tire_wet=track.tire_wet.value,
                             comments=track.comments or "",
+                            strava_id=track.strava_id,
                         )
 
                         track_json = json.dumps(track_response.model_dump())
@@ -613,6 +618,7 @@ def create_segments_router(
                     tire_dry=track.tire_dry,
                     tire_wet=track.tire_wet,
                     comments=track.comments,
+                    strava_id=track.strava_id,
                 )
 
         except HTTPException:
@@ -844,6 +850,7 @@ def create_segments_router(
         commentary_text: str = Form(""),
         video_links: str = Form("[]"),
         image_data: str = Form("[]"),
+        strava_id: int = Form(...),
     ):
         """Update an existing segment: process uploaded GPX file with indices,
         upload to storage, update metadata in DB, and remove the previous file.
@@ -1040,6 +1047,7 @@ def create_segments_router(
                 track.tire_dry = TireType(tire_dry)
                 track.tire_wet = TireType(tire_wet)
                 track.comments = commentary_text
+                track.strava_id = strava_id
 
                 await session.commit()
                 await session.refresh(track)
@@ -1127,6 +1135,7 @@ def create_segments_router(
                     tire_dry=track.tire_dry,
                     tire_wet=track.tire_wet,
                     comments=track.comments,
+                    strava_id=track.strava_id,
                 )
 
         except Exception as db_e:

@@ -68,9 +68,11 @@
             @click="showSaveModal = true"
             :disabled="!canSaveRoute"
             :title="
-              canSaveRoute
-                ? t('routePlanner.saveRoute')
-                : t('routePlanner.noRouteToSave')
+              !authState.isAuthenticated
+                ? t('routePlanner.loginToSaveRoute')
+                : canSaveRoute
+                  ? t('routePlanner.saveRoute')
+                  : t('routePlanner.noRouteToSave')
             "
           >
             <i class="fa-solid fa-save"></i>
@@ -149,6 +151,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, nextTick, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useStravaApi } from '../composables/useStravaApi'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
 import {
@@ -195,6 +198,7 @@ L.Icon.Default.mergeOptions({
 })
 
 const { t } = useI18n()
+const { authState, loadAuthState } = useStravaApi()
 
 // Sidebar and mode state
 const showSidebar = ref(false)
@@ -369,6 +373,11 @@ const infoBannerParts = computed(() => {
 
 // Route save functionality
 const canSaveRoute = computed(() => {
+  // Must be authenticated to save
+  if (!authState.value.isAuthenticated) {
+    return false
+  }
+
   // Can save if we have either:
   // 1. Selected segments (segment-based route) with distance > 0
   // 2. Manual waypoints (2 or more waypoints for a route)
@@ -1018,6 +1027,9 @@ watch([startWaypoint, endWaypoint], () => {
 let segmentSearchTimeout: any = null
 
 onMounted(async () => {
+  // Load auth state from localStorage
+  loadAuthState()
+
   // Add CSS class to prevent scrollbars on the entire page
   document.body.classList.add('route-planner-active')
   document.documentElement.classList.add('route-planner-active')

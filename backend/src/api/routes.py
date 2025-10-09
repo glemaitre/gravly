@@ -84,6 +84,10 @@ def create_routes_router(
             computed_stats = body.get("computed_stats", {})
             route_track_points = body.get("route_track_points", [])
             comments = body.get("comments", "").strip()
+            strava_id = body.get("strava_id")
+
+            if strava_id is None:
+                raise HTTPException(status_code=422, detail="strava_id is required")
 
             async with dependencies.SessionLocal() as session:
                 if segments_data:
@@ -165,6 +169,7 @@ def create_routes_router(
                     tire_dry=route_stats["tire_dry"],
                     tire_wet=route_stats["tire_wet"],
                     comments=comments,
+                    strava_id=strava_id,
                 )
 
                 session.add(route_track)
@@ -189,6 +194,7 @@ def create_routes_router(
                     tire_dry=route_track.tire_dry.value,
                     tire_wet=route_track.tire_wet.value,
                     comments=route_track.comments,
+                    strava_id=route_track.strava_id,
                 )
 
         except HTTPException:

@@ -201,6 +201,7 @@ def test_create_segment_success(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "3",
                 "commentary_text": "Test commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -245,6 +246,7 @@ def test_create_segment_invalid_tire_types(client, sample_gpx_file):
             "end_index": "2",
             "surface_type": json.dumps(["forest-trail"]),
             "difficulty_level": "3",
+            "strava_id": "123456",
         },
     )
 
@@ -273,6 +275,7 @@ def test_create_segment_invalid_track_type(client, sample_gpx_file):
             "end_index": "2",
             "surface_type": json.dumps(["forest-trail"]),
             "difficulty_level": "3",
+            "strava_id": "123456",
         },
     )
 
@@ -317,6 +320,7 @@ def test_create_route_success(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "3",
                 "commentary_text": "Test route commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -352,6 +356,7 @@ def test_create_segment_file_not_found(client):
             "end_index": "2",
             "surface_type": json.dumps(["forest-trail"]),
             "difficulty_level": "3",
+            "strava_id": "123456",
         },
     )
 
@@ -447,6 +452,7 @@ def test_create_segment_with_commentary_and_media(client, sample_gpx_file, tmp_p
                 "video_links": json.dumps(
                     [{"url": "https://youtube.com/watch?v=test", "title": "Test Video"}]
                 ),
+                "strava_id": "123456",
             },
         )
 
@@ -490,6 +496,7 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
                 "end_index": "50",
                 "surface_type": json.dumps(["forest-trail"]),
                 "difficulty_level": "3",
+                "strava_id": "123456",
             },
         )
 
@@ -507,6 +514,7 @@ def test_multiple_segments_same_file(client, sample_gpx_file, tmp_path):
                 "end_index": "100",
                 "surface_type": json.dumps(["field-trail"]),
                 "difficulty_level": "4",
+                "strava_id": "123456",
             },
         )
 
@@ -531,6 +539,7 @@ def test_create_segment_no_temp_directory(client):
             "end_index": "2",
             "surface_type": json.dumps(["forest-trail"]),
             "difficulty_level": "3",
+            "strava_id": "123456",
         },
     )
 
@@ -574,6 +583,7 @@ def test_create_segment_generation_failure(
                 "end_index": "100",
                 "surface_type": json.dumps(["forest-trail"]),
                 "difficulty_level": "3",
+                "strava_id": "123456",
             },
         )
 
@@ -618,6 +628,7 @@ def test_create_segment_invalid_indices_generation(
                 "end_index": "100",
                 "surface_type": json.dumps(["forest-trail"]),
                 "difficulty_level": "3",
+                "strava_id": "123456",
             },
         )
 
@@ -851,6 +862,7 @@ def test_create_segment_endpoint_with_mock_s3(client, sample_gpx_file):
                 "end_index": 2,
                 "surface_type": json.dumps(["forest-trail"]),
                 "difficulty_level": "3",
+                "strava_id": "123456",
             },
         )
 
@@ -947,6 +959,7 @@ def test_create_segment_storage_manager_not_initialized(
                 "end_index": "100",
                 "surface_type": json.dumps(["forest-trail"]),
                 "difficulty_level": "3",
+                "strava_id": "123456",
             },
         )
 
@@ -993,6 +1006,7 @@ def test_create_segment_cleanup_local_file_failure(client, sample_gpx_file, tmp_
                     "end_index": "100",
                     "surface_type": json.dumps(["forest-trail"]),
                     "difficulty_level": "3",
+                    "strava_id": "123456",
                 },
             )
 
@@ -1215,6 +1229,7 @@ def test_create_segment_storage_upload_failure(
             "tire_wet": "semi-slick",
             "surface_type": json.dumps(["forest-trail"]),
             "difficulty_level": "3",
+            "strava_id": "123456",
         }
 
         response = client.post("/api/segments", data=segment_data)
@@ -1347,6 +1362,7 @@ def test_create_segment_database_exception_handling(
                     "difficulty_level": "3",
                     "commentary_text": "Test commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -1402,6 +1418,7 @@ def test_create_segment_database_unavailable(
                     "difficulty_level": "3",
                     "commentary_text": "Test commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -1508,6 +1525,7 @@ def test_create_segment_successful_database_operations(
                     "difficulty_level": "3",
                     "commentary_text": "Test commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -1870,6 +1888,7 @@ def test_get_track_gpx_data_endpoint_storage_load_error(client, dependencies_mod
         def __init__(self):
             self.id = 1
             self.file_path = "local:///gpx-segments/test.gpx"
+            self.strava_id = 123456
 
     # Mock database session
     class MockSession:
@@ -1915,6 +1934,7 @@ def test_get_track_gpx_data_endpoint_storage_returns_none(client, dependencies_m
         def __init__(self):
             self.id = 1
             self.file_path = "local:///gpx-segments/test.gpx"
+            self.strava_id = 123456
 
     # Mock database session
     class MockSession:
@@ -2341,6 +2361,7 @@ def test_get_track_gpx_data_endpoint_decode_error(client, dependencies_module):
         def __init__(self):
             self.id = 1
             self.file_path = "local:///gpx-segments/test.gpx"
+            self.strava_id = 123456
 
     # Mock database session
     class MockSession:
@@ -2699,6 +2720,7 @@ def test_search_segments_with_non_finite_bounds(client):
         surface_type=["forest-trail"],
         tire_dry=TireType.SEMI_SLICK,
         tire_wet=TireType.KNOBS,
+        strava_id=123456,
         created_at=datetime.now(),
     )
 
@@ -2717,6 +2739,7 @@ def test_search_segments_with_non_finite_bounds(client):
         surface_type=["forest-trail"],
         tire_dry=TireType.SEMI_SLICK,
         tire_wet=TireType.KNOBS,
+        strava_id=123456,
         created_at=datetime.now(),
     )
 
@@ -2822,6 +2845,7 @@ def test_get_track_info_success(client):
         tire_dry=TireType.SEMI_SLICK,
         tire_wet=TireType.KNOBS,
         comments="Test comments",
+        strava_id=123456,
         created_at=datetime.now(),
     )
 
@@ -3856,6 +3880,7 @@ def test_create_segment_with_image_data(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test segment with images",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": json.dumps(image_metadata),
         },
     )
@@ -3917,6 +3942,7 @@ def test_create_segment_with_invalid_image_data(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "invalid_json_data",
         },
     )
@@ -3966,6 +3992,7 @@ def test_create_segment_with_empty_image_data(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",  # Empty array
         },
     )
@@ -4044,6 +4071,7 @@ def test_create_segment_with_multiple_images(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test multiple images",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": json.dumps(image_metadata),
         },
     )
@@ -4174,6 +4202,7 @@ def test_create_segment_with_image_data_database_coverage(
                     "difficulty_level": "2",
                     "commentary_text": "Test coverage with database",
                     "video_links": "[]",
+                    "strava_id": "123456",
                     "image_data": json.dumps(valid_image_metadata),
                 },
             )
@@ -4235,6 +4264,7 @@ def test_create_segment_image_data_json_decode_error(client, tmp_path):
                 "difficulty_level": "2",
                 "commentary_text": "Test JSON parsing error",
                 "video_links": "[]",
+                "strava_id": "123456",
                 "image_data": "{invalid_json_format",  # Malformed JSON
             },
         )
@@ -4346,6 +4376,7 @@ def test_create_segment_trackimage_session_exception(
                     "difficulty_level": "2",
                     "commentary_text": "Testing exception paths on 547-548",
                     "video_links": "[]",
+                    "strava_id": "123456",
                     "image_data": json.dumps(test_image_data),
                 },
             )
@@ -4891,6 +4922,7 @@ def test_create_segment_with_video_data(client, tmp_path):
                 "commentary_text": "Test video processing",
                 "video_links": video_data,
                 "image_data": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -4949,6 +4981,7 @@ def test_create_segment_video_data_json_decode_error(client, tmp_path):
                 "commentary_text": "Test video JSON parsing error",
                 "video_links": "{invalid_json_format",  # Malformed JSON
                 "image_data": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5022,6 +5055,7 @@ def test_create_segment_video_data_with_invalid_structure(client, tmp_path):
                 "commentary_text": "Test video invalid structure",
                 "video_links": invalid_video_data,
                 "image_data": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5164,6 +5198,7 @@ def test_create_segment_with_video_data_database_coverage(
                     "commentary_text": "Test video processing with database",
                     "video_links": video_data,
                     "image_data": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -5294,6 +5329,7 @@ def test_create_segment_video_data_json_decode_error_database_coverage(
                     "commentary_text": "Test video JSON parsing error with database",
                     "video_links": "{invalid_json_format",  # Malformed JSON
                     "image_data": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -5424,6 +5460,7 @@ def test_create_segment_image_data_json_decode_error_database_coverage(
                     "commentary_text": "Test image JSON parsing error with database",
                     "image_data": "{invalid_json_format",  # Malformed JSON
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -5480,6 +5517,7 @@ def test_update_segment_success(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5511,6 +5549,7 @@ def test_update_segment_success(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "4",
                 "commentary_text": "Updated commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5545,6 +5584,7 @@ def test_update_segment_invalid_tire_types(client):
             "difficulty_level": "3",
             "commentary_text": "",
             "video_links": "[]",
+            "strava_id": "123456",
         },
     )
 
@@ -5568,6 +5608,7 @@ def test_update_segment_invalid_track_type(client):
             "difficulty_level": "3",
             "commentary_text": "",
             "video_links": "[]",
+            "strava_id": "123456",
         },
     )
 
@@ -5592,6 +5633,7 @@ def test_update_segment_no_temp_directory(client):
             "difficulty_level": "3",
             "commentary_text": "",
             "video_links": "[]",
+            "strava_id": "123456",
         },
     )
 
@@ -5616,6 +5658,7 @@ def test_update_segment_storage_manager_not_initialized(client):
             "difficulty_level": "3",
             "commentary_text": "",
             "video_links": "[]",
+            "strava_id": "123456",
         },
     )
 
@@ -5640,6 +5683,7 @@ def test_update_segment_database_not_available(client):
             "difficulty_level": "3",
             "commentary_text": "",
             "video_links": "[]",
+            "strava_id": "123456",
         },
     )
 
@@ -5687,6 +5731,7 @@ def test_update_segment_track_not_found(client, dependencies_module):
                 "difficulty_level": "3",
                 "commentary_text": "",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5706,6 +5751,7 @@ def test_update_segment_file_not_found(client, dependencies_module):
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -5742,6 +5788,7 @@ def test_update_segment_file_not_found(client, dependencies_module):
                 "difficulty_level": "3",
                 "commentary_text": "",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -5776,6 +5823,7 @@ def test_update_segment_generation_failure(
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -5816,6 +5864,7 @@ def test_update_segment_generation_failure(
                     "difficulty_level": "3",
                     "commentary_text": "",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -5850,6 +5899,7 @@ def test_update_segment_storage_upload_failure(
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -5890,6 +5940,7 @@ def test_update_segment_storage_upload_failure(
                     "difficulty_level": "3",
                     "commentary_text": "",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -5924,6 +5975,7 @@ def test_update_segment_database_exception_handling(
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         def __init__(self):
@@ -5985,6 +6037,7 @@ def test_update_segment_database_exception_handling(
                     "difficulty_level": "3",
                     "commentary_text": "",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -6036,6 +6089,7 @@ def test_update_segment_with_media(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6090,6 +6144,7 @@ def test_update_segment_with_media(client, sample_gpx_file, tmp_path):
                 "commentary_text": "Updated with media",
                 "video_links": video_links,
                 "image_data": image_data,
+                "strava_id": "123456",
             },
         )
 
@@ -6125,6 +6180,7 @@ def test_update_segment_media_json_error(
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -6185,6 +6241,7 @@ def test_update_segment_media_json_error(
                     "difficulty_level": "3",
                     "commentary_text": "",
                     "video_links": "[]",
+                    "strava_id": "123456",
                     "image_data": "{invalid_json",  # Malformed JSON
                 },
             )
@@ -6237,6 +6294,7 @@ def test_update_segment_cleanup_old_file_success(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6271,6 +6329,7 @@ def test_update_segment_cleanup_old_file_success(
                     "difficulty_level": "3",
                     "commentary_text": "Updated commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -6320,6 +6379,7 @@ def test_update_segment_cleanup_old_file_failure(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6354,6 +6414,7 @@ def test_update_segment_cleanup_old_file_failure(
                     "difficulty_level": "3",
                     "commentary_text": "Updated commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -6404,6 +6465,7 @@ def test_update_segment_local_file_cleanup_failure(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6436,6 +6498,7 @@ def test_update_segment_local_file_cleanup_failure(
                     "difficulty_level": "3",
                     "commentary_text": "Updated commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -6484,6 +6547,7 @@ def test_update_segment_with_existing_media(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6498,6 +6562,7 @@ def test_update_segment_with_existing_media(
         def __init__(self):
             self.id = track_id
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockImage:
         def __init__(self):
@@ -6576,6 +6641,7 @@ def test_update_segment_with_existing_media(
                     "difficulty_level": "3",
                     "commentary_text": "Updated commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -6626,6 +6692,7 @@ def test_update_segment_preserve_existing_media(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6640,6 +6707,7 @@ def test_update_segment_preserve_existing_media(
         def __init__(self):
             self.id = track_id
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         def __init__(self):
@@ -6744,6 +6812,7 @@ def test_update_segment_preserve_existing_media(
                     "commentary_text": "Updated commentary",
                     "image_data": image_data,
                     "video_links": video_data,
+                    "strava_id": "123456",
                 },
             )
 
@@ -6817,6 +6886,7 @@ def test_update_segment_old_file_deletion_failure(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6904,6 +6974,7 @@ def test_update_segment_old_file_deletion_failure(
                         "difficulty_level": "3",
                         "commentary_text": "Updated commentary",
                         "video_links": "[]",
+                        "strava_id": "123456",
                     },
                 )
 
@@ -6961,6 +7032,7 @@ def test_update_segment_old_file_cleanup_with_prefix(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -6975,6 +7047,7 @@ def test_update_segment_old_file_cleanup_with_prefix(
         def __init__(self):
             self.id = track_id
             self.file_path = "s3://test-bucket/gpx-segments/old_file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -7044,6 +7117,7 @@ def test_update_segment_old_file_cleanup_with_prefix(
                             "difficulty_level": "3",
                             "commentary_text": "Updated commentary",
                             "video_links": "[]",
+                            "strava_id": "123456",
                         },
                     )
 
@@ -7098,6 +7172,7 @@ def test_update_segment_old_file_cleanup_exception(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -7112,6 +7187,7 @@ def test_update_segment_old_file_cleanup_exception(
         def __init__(self):
             self.id = track_id
             self.file_path = "s3://test-bucket/gpx-segments/old_file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         async def execute(self, stmt):
@@ -7181,6 +7257,7 @@ def test_update_segment_old_file_cleanup_exception(
                             "difficulty_level": "3",
                             "commentary_text": "Updated commentary",
                             "video_links": "[]",
+                            "strava_id": "123456",
                         },
                     )
 
@@ -7215,6 +7292,7 @@ def test_update_segment_database_error_cleanup_failure(
         def __init__(self):
             self.id = 1
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         def __init__(self):
@@ -7285,6 +7363,7 @@ def test_update_segment_database_error_cleanup_failure(
                         "difficulty_level": "3",
                         "commentary_text": "",
                         "video_links": "[]",
+                        "strava_id": "123456",
                     },
                 )
 
@@ -7337,6 +7416,7 @@ def test_update_segment_track_not_found_in_second_session(
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -7351,6 +7431,7 @@ def test_update_segment_track_not_found_in_second_session(
         def __init__(self):
             self.id = track_id
             self.file_path = "old/path/file.gpx"
+            self.strava_id = 123456
 
     class MockSession:
         def __init__(self, session_id):
@@ -7429,6 +7510,7 @@ def test_update_segment_track_not_found_in_second_session(
                     "difficulty_level": "3",
                     "commentary_text": "Updated commentary",
                     "video_links": "[]",
+                    "strava_id": "123456",
                 },
             )
 
@@ -7450,6 +7532,7 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, dependencies_
             self.id = track_id
             self.name = "Test Segment"
             self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456
             self.images = []
             self.videos = []
 
@@ -7626,6 +7709,7 @@ def test_delete_segment_gpx_deletion_exception_handling(
             self.id = track_id
             self.name = "Test Segment"
             self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456
             self.images = []
             self.videos = []
 
@@ -7712,6 +7796,7 @@ def test_delete_segment_image_deletion_exception_handling(
             self.id = track_id
             self.name = "Test Segment"
             self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456
             self.images = [
                 MockImage(
                     1,
@@ -7834,6 +7919,7 @@ def test_nonregression_image_deletion_uses_storage_url_not_http_url(
             self.id = track_id
             self.name = "Test Segment"
             self.file_path = "local:///gpx-segments/test.gpx"
+            self.strava_id = 123456
             self.images = [
                 MockImage(
                     1,
@@ -7936,6 +8022,7 @@ def test_nonregression_gpx_endpoint_with_storage_error_requires_mocked_database(
         def __init__(self):
             self.id = 123
             self.file_path = "local:///gpx-segments/test-segment.gpx"
+            self.strava_id = 123456
 
     # Mock database session (REQUIRED to avoid 404)
     class MockSession:
@@ -7991,6 +8078,7 @@ def test_nonregression_gpx_endpoint_storage_exception_with_valid_track(
         def __init__(self):
             self.id = 456
             self.file_path = "local:///gpx-segments/test.gpx"
+            self.strava_id = 123456
 
     # Mock database session
     class MockSession:
@@ -8063,6 +8151,7 @@ def test_create_segment_invalid_surface_type_json(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )
@@ -8112,6 +8201,7 @@ def test_create_segment_invalid_surface_type_not_array(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )
@@ -8161,6 +8251,7 @@ def test_create_segment_invalid_surface_type_value(client, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )
@@ -8211,6 +8302,7 @@ def test_update_segment_invalid_surface_json(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -8232,6 +8324,7 @@ def test_update_segment_invalid_surface_json(client, sample_gpx_file, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )
@@ -8281,6 +8374,7 @@ def test_update_segment_surface_not_array(client, sample_gpx_file, tmp_path):
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -8302,6 +8396,7 @@ def test_update_segment_surface_not_array(client, sample_gpx_file, tmp_path):
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )
@@ -8351,6 +8446,7 @@ def test_update_segment_invalid_surface_value(client, sample_gpx_file, tmp_path)
                 "difficulty_level": "2",
                 "commentary_text": "Original commentary",
                 "video_links": "[]",
+                "strava_id": "123456",
             },
         )
 
@@ -8372,6 +8468,7 @@ def test_update_segment_invalid_surface_value(client, sample_gpx_file, tmp_path)
             "difficulty_level": "2",
             "commentary_text": "Test",
             "video_links": "[]",
+            "strava_id": "123456",
             "image_data": "[]",
         },
     )

@@ -564,6 +564,26 @@ def test_create_route_gpx_empty_all_lats_fallback():
     assert abs(bounds["barycenter_lng"] - expected_lng) < 0.0001
 
 
+def test_create_route_endpoint_missing_strava_id(client):
+    """Test route creation fails when strava_id is missing - covers lines 89-92."""
+    response = client.post(
+        "/api/routes/",
+        json={
+            "name": "Test Route",
+            "segments": [],
+            "computed_stats": {"distance": 10, "elevationGain": 100},
+            "route_track_points": [
+                {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
+                {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
+            ],
+            # strava_id intentionally omitted to test validation
+        },
+    )
+
+    assert response.status_code == 422
+    assert "strava_id is required" in response.json()["detail"]
+
+
 def test_create_route_endpoint_database_not_configured(client):
     """Test create route endpoint when database is not configured."""
     with patch("src.dependencies.SessionLocal", None):
@@ -573,6 +593,7 @@ def test_create_route_endpoint_database_not_configured(client):
                 "name": "Test Route",
                 "segments": [],
                 "computed_stats": {"distance": 10, "elevationGain": 100},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
@@ -686,6 +707,7 @@ def test_create_route_endpoint_with_segments_success(client):
                     {"id": 2, "isReversed": False},
                 ],
                 "computed_stats": {"distance": 20.5, "elevationGain": 500},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 44.95, "lng": 5.05, "elevation": 100, "distance": 0},
                     {"lat": 45.0, "lng": 5.1, "elevation": 150, "distance": 5000},
@@ -749,6 +771,7 @@ def test_create_route_endpoint_without_segments_success(client):
                 "name": "Waypoint Route",
                 "segments": [],
                 "computed_stats": {"distance": 15.0, "elevationGain": 300},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
@@ -802,6 +825,7 @@ def test_create_route_endpoint_segments_not_found(client):
                     {"id": 999, "isReversed": False},  # Non-existent segment
                 ],
                 "computed_stats": {"distance": 10.0, "elevationGain": 100},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
@@ -870,6 +894,7 @@ def test_create_route_endpoint_storage_not_available(client):
                 "name": "Test Route",
                 "segments": [{"id": 1, "isReversed": False}],
                 "computed_stats": {"distance": 10.0, "elevationGain": 100},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
@@ -943,6 +968,7 @@ def test_create_route_endpoint_storage_upload_failure(client):
                 "name": "Test Route",
                 "segments": [{"id": 1, "isReversed": False}],
                 "computed_stats": {"distance": 10.0, "elevationGain": 100},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},
@@ -973,6 +999,7 @@ def test_create_route_endpoint_general_exception(client):
                 "name": "Test Route",
                 "segments": [],
                 "computed_stats": {"distance": 10.0, "elevationGain": 100},
+                "strava_id": 999999,
                 "route_track_points": [
                     {"lat": 45.0, "lng": 5.0, "elevation": 100, "distance": 0},
                     {"lat": 45.01, "lng": 5.01, "elevation": 120, "distance": 1000},

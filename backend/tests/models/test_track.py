@@ -51,6 +51,7 @@ def test_track_model_creation():
         tire_dry=TireType.KNOBS,
         tire_wet=TireType.KNOBS,
         comments="Test track for unit testing",
+        strava_id=123456,
     )
 
     assert track.file_path == "/path/to/track.gpx"
@@ -119,6 +120,7 @@ def test_track_create_response_model():
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",
+        strava_id=123456,
     )
 
     assert response.id == 1
@@ -156,6 +158,7 @@ def test_track_create_response_with_string_path():
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",
+        strava_id=123456,
     )
 
     assert isinstance(response.file_path, str)
@@ -332,6 +335,7 @@ def test_track_with_gpx_data_response_creation():
         tire_wet="knobs",
         comments="Test comment",
         gpx_xml_data=gpx_xml_data,
+        strava_id=123456,
     )
 
     assert response.id == 1
@@ -368,6 +372,7 @@ def test_track_with_gpx_data_response_none_gpx():
         tire_wet="knobs",
         comments="Test comment",
         gpx_xml_data=None,
+        strava_id=123456,
     )
 
     assert response.gpx_xml_data is None
@@ -505,6 +510,7 @@ def test_track_response_barycenter_fields():
         tire_dry="knobs",
         tire_wet="knobs",
         comments="Test track for unit testing",
+        strava_id=123456,
     )
 
     # Test that barycenter fields are present and accessible

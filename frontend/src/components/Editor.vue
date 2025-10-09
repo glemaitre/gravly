@@ -304,6 +304,7 @@ import SegmentImportModal from './SegmentImportModal.vue'
 import ElevationCropper from './ElevationCropper.vue'
 import MetadataForm from './MetadataForm.vue'
 import { parseGPXData } from '../utils/gpxParser'
+import { useStravaApi } from '../composables/useStravaApi'
 import type { Commentary, TrailConditions, SurfaceType } from '../types'
 
 type TrackPoint = {
@@ -314,6 +315,7 @@ type TrackPoint = {
 }
 
 const { t } = useI18n()
+const { authState } = useStravaApi()
 
 onMounted(() => {})
 
@@ -1069,6 +1071,11 @@ async function onSaveAsNew() {
     }
     formData.append('image_data', JSON.stringify(imageData))
 
+    // Add strava_id if user is authenticated
+    if (authState.value.isAuthenticated && authState.value.athlete?.id) {
+      formData.append('strava_id', authState.value.athlete.id.toString())
+    }
+
     const res = await fetch('/api/segments', { method: 'POST', body: formData })
     if (!res.ok) {
       const detail = await res.text()
@@ -1202,6 +1209,11 @@ async function onUpdate() {
       }
     }
     formData.append('image_data', JSON.stringify(imageData))
+
+    // Add strava_id if user is authenticated
+    if (authState.value.isAuthenticated && authState.value.athlete?.id) {
+      formData.append('strava_id', authState.value.athlete.id.toString())
+    }
 
     const res = await fetch(`/api/segments/${updatingSegmentId.value}`, {
       method: 'PUT',
