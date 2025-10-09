@@ -64,6 +64,65 @@ def create_routes_router(
     """
     router = APIRouter(prefix="/api/routes", tags=["routes"])
 
+    @router.post("/compute-features")
+    async def compute_route_features(request: Request):
+        """Compute route features from selected segments.
+
+        This endpoint takes a list of segment IDs and returns computed
+        statistics (difficulty, surface types, tire recommendations).
+        """
+        if not dependencies.SessionLocal:
+            raise HTTPException(status_code=500, detail="Database not configured")
+
+        try:
+            body = await request.json()
+            segments_data = body.get("segments", [])
+
+            if not segments_data:
+                # Return default values for waypoint-only routes
+                return {
+                    "difficulty_level": 2,
+                    "surface_types": [SurfaceType.BROKEN_PAVED_ROAD.value],
+                    "tire_dry": TireType.SEMI_SLICK.value,
+                    "tire_wet": TireType.KNOBS.value,
+                }
+
+            async with dependencies.SessionLocal() as session:
+                segment_ids = [seg["id"] for seg in segments_data]
+                segments_query = select(Track).where(
+                    and_(
+                        Track.id.in_(segment_ids),
+                        Track.track_type == TrackType.SEGMENT,
+                    )
+                )
+                segments_result = await session.execute(segments_query)
+                segments = segments_result.scalars().all()
+
+                if len(segments) != len(segment_ids):
+                    raise HTTPException(
+                        status_code=422, detail="One or more segments not found"
+                    )
+
+                segment_map = {seg.id: seg for seg in segments}
+                ordered_segments = []
+                for seg_data in segments_data:
+                    segment_id = seg_data["id"]
+                    if segment_id in segment_map:
+                        segment = segment_map[segment_id]
+                        segment.isReversed = seg_data.get("isReversed", False)
+                        ordered_segments.append(segment)
+
+                route_stats = compute_route_features_from_segments(ordered_segments)
+                return route_stats
+
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to compute route features: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Failed to compute route features: {str(e)}"
+            )
+
     @router.post("/", response_model=TrackResponse)
     async def create_route(request: Request):
         """Create a new route from selected segments.
@@ -80,45 +139,22 @@ def create_routes_router(
             body = await request.json()
 
             name = body.get("name")
-            segments_data = body.get("segments", [])
             computed_stats = body.get("computed_stats", {})
             route_track_points = body.get("route_track_points", [])
+            route_features = body.get("route_features", {})
             comments = body.get("comments", "").strip()
             strava_id = body.get("strava_id")
 
             if strava_id is None:
                 raise HTTPException(status_code=422, detail="strava_id is required")
 
+            if not route_features:
+                raise HTTPException(
+                    status_code=422,
+                    detail="route_features is required (call /compute-features first)",
+                )
+
             async with dependencies.SessionLocal() as session:
-                if segments_data:
-                    segment_ids = [seg["id"] for seg in segments_data]
-                    segments_query = select(Track).where(
-                        and_(
-                            Track.id.in_(segment_ids),
-                            Track.track_type == TrackType.SEGMENT,
-                        )
-                    )
-                    segments_result = await session.execute(segments_query)
-                    segments = segments_result.scalars().all()
-
-                    if len(segments) != len(segment_ids):
-                        raise HTTPException(
-                            status_code=422, detail="One or more segments not found"
-                        )
-
-                    segment_map = {seg.id: seg for seg in segments}
-                    ordered_segments = []
-                    for seg_data in segments_data:
-                        segment_id = seg_data["id"]
-                        if segment_id in segment_map:
-                            segment = segment_map[segment_id]
-                            segment.isReversed = seg_data.get("isReversed", False)
-                            ordered_segments.append(segment)
-
-                    route_stats = compute_route_features_from_segments(ordered_segments)
-                else:
-                    route_stats = compute_route_features_route()
-
                 if not global_storage_manager:
                     raise HTTPException(
                         status_code=500, detail="Storage manager not available"
@@ -164,10 +200,10 @@ def create_routes_router(
                     barycenter_longitude=bounds["barycenter_lng"],
                     name=name.strip(),
                     track_type=TrackType.ROUTE,
-                    difficulty_level=route_stats["difficulty_level"],
-                    surface_type=route_stats["surface_types"],
-                    tire_dry=route_stats["tire_dry"],
-                    tire_wet=route_stats["tire_wet"],
+                    difficulty_level=route_features["difficulty_level"],
+                    surface_type=route_features["surface_types"],
+                    tire_dry=TireType(route_features["tire_dry"]),
+                    tire_wet=TireType(route_features["tire_wet"]),
                     comments=comments,
                     strava_id=strava_id,
                 )
@@ -206,26 +242,6 @@ def create_routes_router(
             )
 
     return router
-
-
-def compute_route_features_route():
-    """Compute route features for waypoint-based routes.
-
-    For waypoint-based routes, we use default values since there are no segments
-    to derive terrain characteristics from.
-
-    Returns
-    -------
-    dict
-        Route statistics with default values for difficulty, surface types,
-        and tire recommendations
-    """
-    return {
-        "difficulty_level": 2,
-        "surface_types": [SurfaceType.BROKEN_PAVED_ROAD.value],
-        "tire_dry": TireType.SEMI_SLICK,
-        "tire_wet": TireType.KNOBS,
-    }
 
 
 def compute_route_features_from_segments(segments):

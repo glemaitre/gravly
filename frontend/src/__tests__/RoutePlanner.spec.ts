@@ -1225,6 +1225,288 @@ describe('RoutePlanner', () => {
       })
     })
 
+    describe('Route Features Persistence', () => {
+      it('saves route features with route data', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        // Setup waypoints
+        wrapper.vm.waypoints = [
+          { latLng: { lat: 46.860104, lng: 3.978509 } },
+          { latLng: { lat: 46.861104, lng: 3.979509 } }
+        ]
+
+        // Setup route features (computed from backend)
+        wrapper.vm.routeFeatures = {
+          difficulty_level: 3,
+          surface_types: ['broken_paved_road', 'forest_trail'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
+        }
+
+        wrapper.vm.saveCurrentRoute()
+
+        // Verify that localStorage was called with data containing waypoints and features
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'routePlanner_currentRoute',
+          expect.stringContaining('waypoints')
+        )
+
+        // Get the actual saved data
+        const savedData = localStorageMock.setItem.mock.calls.find(
+          (call) => call[0] === 'routePlanner_currentRoute'
+        )
+        expect(savedData).toBeDefined()
+
+        if (savedData) {
+          const parsedData = JSON.parse(savedData[1])
+          expect(parsedData.routeFeatures).toBeDefined()
+          expect(parsedData.routeFeatures.difficulty_level).toBe(3)
+          expect(parsedData.routeFeatures.surface_types).toContain('broken_paved_road')
+          expect(parsedData.routeFeatures.surface_types).toContain('forest_trail')
+          expect(parsedData.routeFeatures.tire_dry).toBe('semi-slick')
+          expect(parsedData.routeFeatures.tire_wet).toBe('knobs')
+        }
+      })
+
+      it('loads route features from saved route data', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        const savedRoute = {
+          waypoints: [
+            { lat: 46.860104, lng: 3.978509, name: '' },
+            { lat: 46.861104, lng: 3.979509, name: '' }
+          ],
+          routeFeatures: {
+            difficulty_level: 3,
+            surface_types: ['broken_paved_road'],
+            tire_dry: 'slick',
+            tire_wet: 'semi-slick'
+          },
+          timestamp: new Date().toISOString()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(savedRoute))
+
+        // Mock map and routing control
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn(),
+          addMarker: vi.fn()
+        }
+
+        wrapper.vm.routingControl = {
+          setWaypoints: vi.fn()
+        }
+
+        wrapper.vm.loadSavedRoute()
+
+        // Verify that routeFeatures were restored
+        expect(wrapper.vm.routeFeatures).toBeDefined()
+        expect(wrapper.vm.routeFeatures.difficulty_level).toBe(3)
+        expect(wrapper.vm.routeFeatures.surface_types).toContain('broken_paved_road')
+        expect(wrapper.vm.routeFeatures.tire_dry).toBe('slick')
+        expect(wrapper.vm.routeFeatures.tire_wet).toBe('semi-slick')
+      })
+
+      it('handles route without features gracefully', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        const savedRoute = {
+          waypoints: [
+            { lat: 46.860104, lng: 3.978509, name: '' },
+            { lat: 46.861104, lng: 3.979509, name: '' }
+          ],
+          timestamp: new Date().toISOString()
+          // No routeFeatures property
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(savedRoute))
+
+        // Mock map and routing control
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn()
+        }
+
+        wrapper.vm.routingControl = {
+          setWaypoints: vi.fn()
+        }
+
+        const loadRoute = wrapper.vm.loadSavedRoute.bind(wrapper.vm)
+        expect(() => loadRoute()).not.toThrow()
+
+        // routeFeatures can be null for waypoint-only routes
+        expect(wrapper.vm.routeFeatures !== undefined).toBe(true)
+      })
+
+      it('saves null features for waypoint-only routes', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        wrapper.vm.waypoints = [
+          { latLng: { lat: 46.860104, lng: 3.978509 } },
+          { latLng: { lat: 46.861104, lng: 3.979509 } }
+        ]
+        wrapper.vm.routeFeatures = null // No features for waypoint route
+
+        wrapper.vm.saveCurrentRoute()
+
+        const savedData = localStorageMock.setItem.mock.calls.find(
+          (call) => call[0] === 'routePlanner_currentRoute'
+        )
+        expect(savedData).toBeDefined()
+
+        if (savedData) {
+          const parsedData = JSON.parse(savedData[1])
+          expect(parsedData.routeFeatures).toBeNull()
+        }
+      })
+
+      it('clears route features when clearing the map', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        // Setup route with features
+        wrapper.vm.routeFeatures = {
+          difficulty_level: 3,
+          surface_types: ['broken_paved_road'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
+        }
+
+        // Mock required objects with _layers for clearAllSegments
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn(),
+          _layers: {} // Empty layers object
+        }
+        wrapper.vm.routingControl = {
+          setWaypoints: vi.fn()
+        }
+        wrapper.vm.elevationChart = null
+
+        // Clear the map
+        wrapper.vm.clearMap()
+
+        // Verify route features are cleared
+        expect(wrapper.vm.routeFeatures).toBeNull()
+      })
+
+      it('clears route features when calling clearRoute', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        // Setup route with features
+        wrapper.vm.routeFeatures = {
+          difficulty_level: 4,
+          surface_types: ['forest_trail'],
+          tire_dry: 'knobs',
+          tire_wet: 'knobs'
+        }
+
+        // Mock required objects
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn()
+        }
+        wrapper.vm.routingControl = {
+          setWaypoints: vi.fn()
+        }
+        wrapper.vm.elevationChart = null
+
+        // Clear the route
+        wrapper.vm.clearRoute()
+
+        // Verify route features are cleared
+        expect(wrapper.vm.routeFeatures).toBeNull()
+      })
+
+      it('clears route features when calling clearElevationData', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        // Setup route with features
+        wrapper.vm.routeFeatures = {
+          difficulty_level: 2,
+          surface_types: ['broken_paved_road'],
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick'
+        }
+
+        // Mock required objects
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn()
+        }
+
+        // Clear elevation data
+        wrapper.vm.clearElevationData()
+
+        // Verify route features are cleared
+        expect(wrapper.vm.routeFeatures).toBeNull()
+      })
+
+      it('clears route features when calling clearStartEndWaypoints with clearRoute=true', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        // Setup route with features
+        wrapper.vm.routeFeatures = {
+          difficulty_level: 3,
+          surface_types: ['broken_paved_road'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
+        }
+
+        // Mock required objects with _layers for clearAllSegments
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn(),
+          _layers: {} // Empty layers object
+        }
+        wrapper.vm.routingControl = {
+          setWaypoints: vi.fn()
+        }
+
+        // Clear start/end waypoints with route clearing
+        wrapper.vm.clearStartEndWaypoints(true, true)
+
+        // Verify route features are cleared
+        expect(wrapper.vm.routeFeatures).toBeNull()
+      })
+
+      it('preserves route features when calling clearStartEndWaypoints with clearRoute=false', async () => {
+        expect(wrapper.exists()).toBe(true)
+        expect(wrapper.vm).toBeDefined()
+
+        const originalFeatures = {
+          difficulty_level: 3,
+          surface_types: ['broken_paved_road'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
+        }
+
+        // Setup route with features
+        wrapper.vm.routeFeatures = originalFeatures
+
+        // Mock required objects with _layers for clearAllSegments
+        wrapper.vm.map = {
+          hasLayer: vi.fn(() => false),
+          removeLayer: vi.fn(),
+          _layers: {} // Empty layers object
+        }
+
+        // Clear start/end waypoints WITHOUT clearing route
+        wrapper.vm.clearStartEndWaypoints(false, true)
+
+        // Verify route features are preserved
+        expect(wrapper.vm.routeFeatures).toEqual(originalFeatures)
+      })
+    })
+
     // DISABLED: Problematic tests - accessing component internals directly
     // TODO: Rewrite these tests to use public API only
     describe.skip('History Management', () => {

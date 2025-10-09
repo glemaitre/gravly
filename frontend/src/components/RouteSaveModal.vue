@@ -41,7 +41,7 @@
             <label>{{ t('routePlanner.routeStats') }}</label>
             <RouteInfoCard
               :stats="computedStats"
-              :has-segment-data="props.selectedSegments.length > 0"
+              :has-segment-data="props.routeFeatures !== null"
             />
           </div>
 
@@ -88,7 +88,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useStravaApi } from '../composables/useStravaApi'
-import type { TrackResponse, SurfaceType } from '../types'
+import type { SurfaceType } from '../types'
 import RouteInfoCard from './RouteInfoCard.vue'
 
 interface RouteStats {
@@ -102,7 +102,6 @@ interface RouteStats {
 }
 
 interface Props {
-  selectedSegments: TrackResponse[]
   routeDistance: number
   elevationStats: {
     totalGain: number
@@ -116,6 +115,12 @@ interface Props {
     elevation: number
     distance: number
   }>
+  routeFeatures: {
+    difficulty_level: number
+    surface_types: string[]
+    tire_dry: string
+    tire_wet: string
+  } | null
   show?: boolean
 }
 
@@ -147,13 +152,10 @@ const isModalVisible = computed(() => {
 
 // Computed properties
 const isDisabled = computed(() => {
-  return props.selectedSegments.length === 0 || !props.routeDistance
+  return !props.routeDistance
 })
 
 const disabledTitle = computed(() => {
-  if (props.selectedSegments.length === 0) {
-    return t('routePlanner.noSegmentsSelected')
-  }
   if (!props.routeDistance) {
     return t('routePlanner.noRouteDistance')
   }
@@ -161,8 +163,8 @@ const disabledTitle = computed(() => {
 })
 
 const computedStats = computed((): RouteStats => {
-  if (props.selectedSegments.length === 0) {
-    // For waypoint routes (no segments), show basic route info
+  if (!props.routeFeatures) {
+    // For waypoint routes (no features), show basic route info
     return {
       distance: props.routeDistance,
       difficulty: 0, // No difficulty for waypoint routes
@@ -174,61 +176,15 @@ const computedStats = computed((): RouteStats => {
     }
   }
 
-  // Calculate median difficulty
-  const sortedDifficulties = props.selectedSegments
-    .map((segment) => segment.difficulty_level)
-    .sort((a, b) => a - b)
-  const mid = Math.floor(sortedDifficulties.length / 2)
-  const medianDifficulty =
-    sortedDifficulties.length % 2 === 0
-      ? (sortedDifficulties[mid - 1] + sortedDifficulties[mid]) / 2
-      : sortedDifficulties[mid]
-
-  // Union of all surface types
-  const allSurfaceTypes = new Set<SurfaceType>()
-  props.selectedSegments.forEach((segment) => {
-    segment.surface_type.forEach((surface) => {
-      allSurfaceTypes.add(surface as SurfaceType)
-    })
-  })
-
-  // Tire recommendation logic: worst case scenario
-  // Order: slick < semi-slick < knobs (from best to worst)
-  let tireDry: 'slick' | 'semi-slick' | 'knobs' = 'slick'
-  let tireWet: 'slick' | 'semi-slick' | 'knobs' = 'slick'
-
-  // Calculate dry tire recommendation
-  const allDryTireTypes = new Set<string>()
-  props.selectedSegments.forEach((segment) => {
-    allDryTireTypes.add(segment.tire_dry)
-  })
-
-  if (allDryTireTypes.has('knobs')) {
-    tireDry = 'knobs'
-  } else if (allDryTireTypes.has('semi-slick')) {
-    tireDry = 'semi-slick'
-  }
-
-  // Calculate wet tire recommendation
-  const allWetTireTypes = new Set<string>()
-  props.selectedSegments.forEach((segment) => {
-    allWetTireTypes.add(segment.tire_wet)
-  })
-
-  if (allWetTireTypes.has('knobs')) {
-    tireWet = 'knobs'
-  } else if (allWetTireTypes.has('semi-slick')) {
-    tireWet = 'semi-slick'
-  }
-
+  // Use the computed route features from backend
   return {
     distance: props.routeDistance,
-    difficulty: medianDifficulty,
+    difficulty: props.routeFeatures.difficulty_level,
     elevationGain: props.elevationStats.totalGain,
     elevationLoss: props.elevationStats.totalLoss,
-    surfaceTypes: Array.from(allSurfaceTypes),
-    tireDry,
-    tireWet
+    surfaceTypes: props.routeFeatures.surface_types as SurfaceType[],
+    tireDry: props.routeFeatures.tire_dry as 'slick' | 'semi-slick' | 'knobs',
+    tireWet: props.routeFeatures.tire_wet as 'slick' | 'semi-slick' | 'knobs'
   }
 })
 
@@ -262,12 +218,14 @@ async function confirmSaveRoute() {
     const routeData: any = {
       name: routeName.value.trim(),
       track_type: 'route',
-      segments: props.selectedSegments.map((segment) => ({
-        id: segment.id,
-        isReversed: segment.isReversed || false
-      })),
       computed_stats: computedStats.value,
       route_track_points: props.routeTrackPoints,
+      route_features: props.routeFeatures || {
+        difficulty_level: 2,
+        surface_types: ['broken_paved_road'],
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs'
+      },
       comments: routeComments.value.trim()
     }
 

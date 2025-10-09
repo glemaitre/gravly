@@ -3,7 +3,6 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import RouteSaveModal from '../RouteSaveModal.vue'
 import RouteInfoCard from '../RouteInfoCard.vue'
-import type { TrackResponse } from '../../types'
 import en from '../../i18n/locales/en'
 import fr from '../../i18n/locales/fr'
 
@@ -36,7 +35,6 @@ function createWrapper(props: any, options: any = {}) {
 }
 
 describe('RouteSaveModal', () => {
-  let mockSegments: TrackResponse[]
   let mockRouteTrackPoints: Array<{
     lat: number
     lng: number
@@ -44,43 +42,20 @@ describe('RouteSaveModal', () => {
     distance: number
   }>
 
+  let mockRouteFeatures: {
+    difficulty_level: number
+    surface_types: string[]
+    tire_dry: string
+    tire_wet: string
+  }
+
   beforeEach(() => {
-    mockSegments = [
-      {
-        id: 1,
-        name: 'Segment 1',
-        track_type: 'segment',
-        difficulty_level: 3,
-        surface_type: ['broken-paved-road'],
-        tire_dry: 'semi-slick',
-        tire_wet: 'knobs',
-        barycenter_latitude: 45.5,
-        barycenter_longitude: -73.5,
-        bound_north: 45.6,
-        bound_south: 45.4,
-        bound_east: -73.4,
-        bound_west: -73.6,
-        file_path: 'test1.gpx',
-        comments: ''
-      },
-      {
-        id: 2,
-        name: 'Segment 2',
-        track_type: 'segment',
-        difficulty_level: 4,
-        surface_type: ['forest-trail'],
-        tire_dry: 'knobs',
-        tire_wet: 'knobs',
-        barycenter_latitude: 45.5,
-        barycenter_longitude: -73.5,
-        bound_north: 45.6,
-        bound_south: 45.4,
-        bound_east: -73.4,
-        bound_west: -73.6,
-        file_path: 'test2.gpx',
-        comments: ''
-      }
-    ]
+    mockRouteFeatures = {
+      difficulty_level: 3,
+      surface_types: ['broken-paved-road', 'forest-trail'],
+      tire_dry: 'semi-slick',
+      tire_wet: 'knobs'
+    }
 
     mockRouteTrackPoints = [
       { lat: 45.5, lng: -73.5, elevation: 100, distance: 0 },
@@ -95,7 +70,7 @@ describe('RouteSaveModal', () => {
   describe('Component Rendering', () => {
     it('should render save button', () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -111,7 +86,7 @@ describe('RouteSaveModal', () => {
 
     it('should render RouteInfoCard component', () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -130,7 +105,7 @@ describe('RouteSaveModal', () => {
   describe('Button State', () => {
     it('should disable save button when no segments selected', () => {
       const wrapper = createWrapper({
-        selectedSegments: [],
+        routeFeatures: null,
         routeDistance: 0,
         elevationStats: {
           totalGain: 0,
@@ -148,7 +123,7 @@ describe('RouteSaveModal', () => {
 
     it('should enable save button when segments are selected', () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -166,7 +141,7 @@ describe('RouteSaveModal', () => {
 
     it('should show disabled title when no segments selected', () => {
       const wrapper = createWrapper({
-        selectedSegments: [],
+        routeFeatures: null,
         routeDistance: 0,
         elevationStats: {
           totalGain: 0,
@@ -185,7 +160,7 @@ describe('RouteSaveModal', () => {
   describe('Modal Visibility with show prop', () => {
     it('should show modal when show prop is true', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -206,7 +181,7 @@ describe('RouteSaveModal', () => {
 
     it('should hide modal when show prop is false', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -226,7 +201,7 @@ describe('RouteSaveModal', () => {
   describe('Modal Form Elements', () => {
     it('should have route name input with maxlength when modal is shown', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -247,7 +222,7 @@ describe('RouteSaveModal', () => {
 
     it('should have comments textarea with maxlength when modal is shown', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -268,9 +243,8 @@ describe('RouteSaveModal', () => {
   })
 
   describe('Route Statistics Calculation', () => {
-    it('should calculate median difficulty from segments (even number)', async () => {
+    it('should use route features from props (difficulty from backend)', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -278,83 +252,22 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
-      })
-
-      // Check computed stats
-      const stats = (wrapper.vm as any).computedStats
-      // Median of [3, 4] is (3 + 4) / 2 = 3.5
-      expect(stats.difficulty).toBe(3.5)
-    })
-
-    it('should calculate median difficulty from segments (odd number)', async () => {
-      const threeSegments = [
-        ...mockSegments,
-        {
-          ...mockSegments[0],
-          id: 3,
-          difficulty_level: 5
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 3,
+          surface_types: ['broken-paved-road'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
         }
-      ]
-
-      const wrapper = createWrapper({
-        selectedSegments: threeSegments,
-        routeDistance: 25.5,
-        elevationStats: {
-          totalGain: 450,
-          totalLoss: 380,
-          maxElevation: 500,
-          minElevation: 100
-        },
-        routeTrackPoints: mockRouteTrackPoints
       })
 
-      // Check computed stats
+      // Check computed stats use the provided route features
       const stats = (wrapper.vm as any).computedStats
-      // Median of [3, 4, 5] is 4
-      expect(stats.difficulty).toBe(4)
-    })
-
-    it('should calculate median difficulty with unsorted input', async () => {
-      const unsortedSegments = [
-        {
-          ...mockSegments[0],
-          id: 1,
-          difficulty_level: 5
-        },
-        {
-          ...mockSegments[1],
-          id: 2,
-          difficulty_level: 2
-        },
-        {
-          ...mockSegments[0],
-          id: 3,
-          difficulty_level: 3
-        }
-      ]
-
-      const wrapper = createWrapper({
-        selectedSegments: unsortedSegments,
-        routeDistance: 25.5,
-        elevationStats: {
-          totalGain: 450,
-          totalLoss: 380,
-          maxElevation: 500,
-          minElevation: 100
-        },
-        routeTrackPoints: mockRouteTrackPoints
-      })
-
-      // Check computed stats
-      const stats = (wrapper.vm as any).computedStats
-      // Median of [5, 2, 3] sorted is [2, 3, 5], median is 3
       expect(stats.difficulty).toBe(3)
     })
 
-    it('should collect all surface types from segments', async () => {
+    it('should use difficulty from route features', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -362,7 +275,59 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 4,
+          surface_types: ['broken-paved-road', 'forest-trail'],
+          tire_dry: 'knobs',
+          tire_wet: 'knobs'
+        }
+      })
+
+      // Check computed stats
+      const stats = (wrapper.vm as any).computedStats
+      expect(stats.difficulty).toBe(4)
+    })
+
+    it('should handle different difficulty levels from backend', async () => {
+      const wrapper = createWrapper({
+        routeDistance: 25.5,
+        elevationStats: {
+          totalGain: 450,
+          totalLoss: 380,
+          maxElevation: 500,
+          minElevation: 100
+        },
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 3,
+          surface_types: ['broken-paved-road'],
+          tire_dry: 'slick',
+          tire_wet: 'semi-slick'
+        }
+      })
+
+      // Check computed stats
+      const stats = (wrapper.vm as any).computedStats
+      expect(stats.difficulty).toBe(3)
+    })
+
+    it('should use surface types from route features', async () => {
+      const wrapper = createWrapper({
+        routeDistance: 25.5,
+        elevationStats: {
+          totalGain: 450,
+          totalLoss: 380,
+          maxElevation: 500,
+          minElevation: 100
+        },
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 3,
+          surface_types: ['broken-paved-road', 'forest-trail'],
+          tire_dry: 'semi-slick',
+          tire_wet: 'knobs'
+        }
       })
 
       const stats = (wrapper.vm as any).computedStats
@@ -370,9 +335,8 @@ describe('RouteSaveModal', () => {
       expect(stats.surfaceTypes).toContain('forest-trail')
     })
 
-    it('should recommend worst-case tire for dry conditions', async () => {
+    it('should use tire recommendations from route features (dry)', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -380,17 +344,22 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 3,
+          surface_types: ['broken-paved-road'],
+          tire_dry: 'knobs',
+          tire_wet: 'semi-slick'
+        }
       })
 
       const stats = (wrapper.vm as any).computedStats
-      // Segments have semi-slick and knobs, should recommend knobs
+      // Should use the tire recommendation from backend
       expect(stats.tireDry).toBe('knobs')
     })
 
-    it('should recommend worst-case tire for wet conditions', async () => {
+    it('should use tire recommendations from route features (wet)', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -398,17 +367,22 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: {
+          difficulty_level: 3,
+          surface_types: ['broken-paved-road'],
+          tire_dry: 'slick',
+          tire_wet: 'knobs'
+        }
       })
 
       const stats = (wrapper.vm as any).computedStats
-      // Both segments have knobs for wet, should recommend knobs
+      // Should use the tire recommendation from backend
       expect(stats.tireWet).toBe('knobs')
     })
 
-    it('should use default stats for waypoint routes (no segments)', () => {
+    it('should use default stats for waypoint routes (no route features)', () => {
       const wrapper = createWrapper({
-        selectedSegments: [],
         routeDistance: 15.5,
         elevationStats: {
           totalGain: 200,
@@ -416,7 +390,8 @@ describe('RouteSaveModal', () => {
           maxElevation: 300,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures: null // No features for waypoint route
       })
 
       const stats = (wrapper.vm as any).computedStats
@@ -430,7 +405,7 @@ describe('RouteSaveModal', () => {
   describe('Form Validation', () => {
     it('should disable save button in modal when route name is empty', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -451,7 +426,7 @@ describe('RouteSaveModal', () => {
 
     it('should enable save button when route name is filled', async () => {
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -482,7 +457,7 @@ describe('RouteSaveModal', () => {
       global.fetch = mockFetch
 
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -527,7 +502,7 @@ describe('RouteSaveModal', () => {
       global.fetch = mockFetch
 
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -556,7 +531,7 @@ describe('RouteSaveModal', () => {
       global.fetch = mockFetch
 
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -584,7 +559,7 @@ describe('RouteSaveModal', () => {
       global.fetch = mockFetch
 
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -604,20 +579,21 @@ describe('RouteSaveModal', () => {
       expect(wrapper.find('.save-error-message').exists()).toBe(true)
     })
 
-    it('should include segment IDs and isReversed flags in API call', async () => {
+    it('should include route features in API call', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ id: 123 })
       })
       global.fetch = mockFetch
 
-      const segmentsWithReversed = [
-        { ...mockSegments[0], isReversed: true },
-        { ...mockSegments[1], isReversed: false }
-      ]
+      const routeFeatures = {
+        difficulty_level: 3,
+        surface_types: ['broken-paved-road', 'forest-trail'],
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs'
+      }
 
       const wrapper = createWrapper({
-        selectedSegments: segmentsWithReversed,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -626,6 +602,7 @@ describe('RouteSaveModal', () => {
           minElevation: 100
         },
         routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures,
         show: true
       })
 
@@ -636,10 +613,10 @@ describe('RouteSaveModal', () => {
 
       const callArgs = mockFetch.mock.calls[0][1]
       const bodyData = JSON.parse(callArgs.body)
-      expect(bodyData.segments[0].id).toBe(1)
-      expect(bodyData.segments[0].isReversed).toBe(true)
-      expect(bodyData.segments[1].id).toBe(2)
-      expect(bodyData.segments[1].isReversed).toBe(false)
+      expect(bodyData.route_features).toBeDefined()
+      expect(bodyData.route_features.difficulty_level).toBe(3)
+      expect(bodyData.route_features.tire_dry).toBe('semi-slick')
+      expect(bodyData.route_features.tire_wet).toBe('knobs')
     })
 
     it('should include computed stats in API call', async () => {
@@ -649,8 +626,14 @@ describe('RouteSaveModal', () => {
       })
       global.fetch = mockFetch
 
+      const routeFeatures = {
+        difficulty_level: 3,
+        surface_types: ['broken-paved-road'],
+        tire_dry: 'semi-slick',
+        tire_wet: 'knobs'
+      }
+
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -659,6 +642,7 @@ describe('RouteSaveModal', () => {
           minElevation: 100
         },
         routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures,
         show: true
       })
 
@@ -671,7 +655,7 @@ describe('RouteSaveModal', () => {
       const bodyData = JSON.parse(callArgs.body)
       expect(bodyData.computed_stats).toBeDefined()
       expect(bodyData.computed_stats.distance).toBe(25.5)
-      expect(bodyData.computed_stats.difficulty).toBe(3.5)
+      expect(bodyData.computed_stats.difficulty).toBe(3) // From route features
       expect(bodyData.computed_stats.elevationGain).toBe(450)
       expect(bodyData.computed_stats.elevationLoss).toBe(380)
     })
@@ -684,7 +668,7 @@ describe('RouteSaveModal', () => {
       global.fetch = mockFetch
 
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
+        routeFeatures: mockRouteFeatures,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -709,12 +693,13 @@ describe('RouteSaveModal', () => {
 
   describe('Tire Recommendation Logic', () => {
     it('should recommend slick when all segments have slick tires', () => {
-      const slickSegments = [
-        { ...mockSegments[0], tire_dry: 'slick', tire_wet: 'slick' }
-      ]
-
       const wrapper = createWrapper({
-        selectedSegments: slickSegments,
+        routeFeatures: {
+          difficulty_level: 2,
+          surface_types: ['broken-paved-road'],
+          tire_dry: 'slick',
+          tire_wet: 'slick'
+        },
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -730,14 +715,15 @@ describe('RouteSaveModal', () => {
       expect(stats.tireWet).toBe('slick')
     })
 
-    it('should recommend semi-slick when one segment needs it', () => {
-      const mixedSegments = [
-        { ...mockSegments[0], tire_dry: 'slick', tire_wet: 'slick' },
-        { ...mockSegments[1], tire_dry: 'semi-slick', tire_wet: 'semi-slick' }
-      ]
+    it('should use semi-slick from route features when provided', () => {
+      const routeFeatures = {
+        difficulty_level: 3,
+        surface_types: ['broken-paved-road'],
+        tire_dry: 'semi-slick',
+        tire_wet: 'semi-slick'
+      }
 
       const wrapper = createWrapper({
-        selectedSegments: mixedSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -745,7 +731,8 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures
       })
 
       const stats = (wrapper.vm as any).computedStats
@@ -753,9 +740,15 @@ describe('RouteSaveModal', () => {
       expect(stats.tireWet).toBe('semi-slick')
     })
 
-    it('should recommend knobs when any segment needs knobs', () => {
+    it('should use knobs from route features when provided', () => {
+      const routeFeatures = {
+        difficulty_level: 4,
+        surface_types: ['forest-trail'],
+        tire_dry: 'knobs',
+        tire_wet: 'knobs'
+      }
+
       const wrapper = createWrapper({
-        selectedSegments: mockSegments,
         routeDistance: 25.5,
         elevationStats: {
           totalGain: 450,
@@ -763,11 +756,12 @@ describe('RouteSaveModal', () => {
           maxElevation: 500,
           minElevation: 100
         },
-        routeTrackPoints: mockRouteTrackPoints
+        routeTrackPoints: mockRouteTrackPoints,
+        routeFeatures
       })
 
       const stats = (wrapper.vm as any).computedStats
-      // At least one segment has knobs
+      // Route features provide the tire recommendation
       expect(stats.tireDry).toBe('knobs')
       expect(stats.tireWet).toBe('knobs')
     })

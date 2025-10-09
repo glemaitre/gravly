@@ -121,10 +121,10 @@
     <!-- Route Save Modal -->
     <RouteSaveModal
       v-if="showSaveModal"
-      :selected-segments="selectedSegments"
       :route-distance="routeDistance"
       :elevation-stats="elevationStats"
       :route-track-points="routeTrackPoints"
+      :route-features="routeFeatures"
       :show="showSaveModal"
       @route-saved="handleRouteSaved"
       @close="showSaveModal = false"
@@ -234,6 +234,14 @@ const filtersExpanded = ref(false)
 // Drag and drop state for segment reordering
 const draggedIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
+
+// Route features computed from segments
+const routeFeatures = ref<{
+  difficulty_level: number
+  surface_types: string[]
+  tire_dry: string
+  tire_wet: string
+} | null>(null)
 
 // Map and routing state
 let map: any = null
@@ -683,6 +691,9 @@ function clearStartEndWaypoints(clearRoute = true, clearSegments = true) {
 
   // Only clear route if explicitly requested
   if (clearRoute) {
+    // Clear route features
+    routeFeatures.value = null
+
     // Clear any route that was generated from start/end waypoints
     if (routeLine) {
       map.removeLayer(routeLine)
@@ -797,6 +808,40 @@ function removeStartEndWaypoint(type: 'start' | 'end') {
   }
 }
 
+async function computeRouteFeatures() {
+  try {
+    const segmentsData = selectedSegments.value.map((segment) => ({
+      id: segment.id,
+      isReversed: segment.isReversed || false
+    }))
+
+    const response = await fetch('/api/routes/compute-features', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ segments: segmentsData })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to compute route features')
+    }
+
+    const features = await response.json()
+    routeFeatures.value = features
+    saveCurrentRoute() // Save with updated features
+  } catch (error) {
+    console.error('Error computing route features:', error)
+    // Set default features on error
+    routeFeatures.value = {
+      difficulty_level: 2,
+      surface_types: ['broken_paved_road'],
+      tire_dry: 'semi-slick',
+      tire_wet: 'knobs'
+    }
+  }
+}
+
 function generateStartEndRoute() {
   if (!startWaypoint.value || !endWaypoint.value) {
     return
@@ -841,6 +886,9 @@ function generateStartEndRoute() {
   if (waypoints.length >= 2) {
     calculateRouteDistance()
   }
+
+  // Compute route features based on selected segments
+  computeRouteFeatures()
 
   // The route will be generated via the same 'routesfound' event handler
   // which will call createClickableRouteLine and calculateElevationStats
@@ -1519,6 +1567,11 @@ function initializeRoutingControl() {
         }, 1000) // Give more time for route to be fully processed
       }, 100)
 
+      // Compute route features for standard waypoint routes (if not already computed)
+      if (routeMode.value === 'standard' && !routeFeatures.value) {
+        computeRouteFeatures()
+      }
+
       // If we're in guided mode (startEnd) and have selected segments,
       // automatically switch to free mode after route generation
       if (routeMode.value === 'startEnd' && selectedSegments.value.length > 0) {
@@ -1999,6 +2052,8 @@ function saveCurrentRoute() {
       lng: wp.latLng.lng,
       name: wp.name || ''
     })),
+    // Save computed route features
+    routeFeatures: routeFeatures.value,
     timestamp: new Date().toISOString()
   }
 
@@ -2027,6 +2082,11 @@ function loadSavedRoute() {
         L.Routing.waypoint(L.latLng(wpData.lat, wpData.lng), wpData.name)
       )
     )
+
+    // Restore route features if available
+    if (routeData.routeFeatures) {
+      routeFeatures.value = routeData.routeFeatures
+    }
 
     // Update routing control
     if (routingControl) {
@@ -2185,6 +2245,9 @@ function performCompleteReset() {
   updateWaypoints([])
   startWaypoint.value = null
   endWaypoint.value = null
+
+  // Clear route features
+  routeFeatures.value = null
 
   // Clear saved route from localStorage
   localStorage.removeItem(ROUTE_STORAGE_KEY)
@@ -3151,6 +3214,9 @@ async function getElevationData(
 function clearRoute() {
   updateWaypoints([])
 
+  // Clear route features
+  routeFeatures.value = null
+
   // Clear saved route from localStorage
   localStorage.removeItem(ROUTE_STORAGE_KEY)
 
@@ -3216,6 +3282,9 @@ function clearElevationData() {
     map.removeLayer(mapMarker)
     mapMarker = null
   }
+
+  // Clear route features
+  routeFeatures.value = null
 
   routeDistance.value = 0
   waypointChartIndices.value = []
