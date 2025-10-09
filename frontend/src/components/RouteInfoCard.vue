@@ -624,6 +624,19 @@ const formattedElevationLoss = computed(() =>
   color: var(--brand-500, #ff6600);
 }
 
+/* Style for stat row icons (Distance, Elevation Gain, Elevation Loss) */
+.info-row:nth-child(2) .info-label i {
+  color: white;
+  background-color: var(--brand-500, #ff6600);
+  padding: 0.5rem;
+  border-radius: 20%;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .info-value {
   font-size: 1rem;
   font-weight: 600;
@@ -947,6 +960,10 @@ const formattedElevationLoss = computed(() =>
 
 .tire-group-header i {
   color: var(--brand-500, #ff6600);
+}
+
+.tire-group-header i.fa-cloud-rain {
+  color: #3b82f6;
 }
 
 .tire-options {
