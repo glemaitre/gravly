@@ -339,7 +339,7 @@ const routeTrackPoints = ref<
 const CACHE_VERSION = '1.1' // Increment version to invalidate old cache with zeros
 const CACHE_KEY = 'elevation_cache_v' + CACHE_VERSION
 const MAX_SEGMENT_LENGTH = 5000 // 5km - segments longer than this will be chunked
-const CHUNK_SIZE = 100 // Maximum points per API call
+const CHUNK_SIZE = 2000 // Maximum points per API call
 
 // Sentinel value to indicate failed elevation requests
 const ELEVATION_FAILURE_SENTINEL = -9999
@@ -3065,8 +3065,11 @@ async function getElevationData(
 
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex]
-      const locations = batch.map((p) => `${p.lat},${p.lng}`).join('|')
-      const url = `https://api.open-elevation.com/api/v1/lookup?locations=${locations}`
+      const locations = batch.map((p) => ({
+        latitude: p.lat,
+        longitude: p.lng
+      }))
+      const url = `https://api.open-elevation.com/api/v1/lookup`
 
       let retryCount = 0
       const maxRetries = 3
@@ -3080,7 +3083,13 @@ async function getElevationData(
             await new Promise((resolve) => setTimeout(resolve, delay))
           }
 
-          const response = await fetch(url)
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ locations })
+          })
 
           if (!response.ok) {
             if (response.status === 429) {
