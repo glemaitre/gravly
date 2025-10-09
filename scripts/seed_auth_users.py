@@ -63,40 +63,40 @@ async def seed_authorized_users():
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables ensured")
 
-        # Load authorized users from environment or config
-        # Default users to seed - this should be configurable
-        default_authorized_users = [
-            {"strava_id": 820773, "firstname": None, "lastname": None},
-            # Add more users here or read from a configuration source
-        ]
-
-        # Check if we're loading from .env file for authorized users
-        # This is better practice as in requirements
+        # Load authorized users from environment variable
         auth_users_env_str = os.getenv("AUTHORIZED_STRAVA_USERS", "")
-        if auth_users_env_str.strip():
-            auth_users_to_add = []
-            for user_str in auth_users_env_str.split(","):
-                user_str = user_str.strip()
-                if user_str:
-                    try:
-                        strava_id = int(user_str)
-                        auth_users_to_add.append(
-                            {
-                                "strava_id": strava_id,
-                                "firstname": None,
-                                "lastname": None,
-                            }
-                        )
-                        logger.info(
-                            f"Will seed authorized user with Strava ID: {strava_id}"
-                        )
-                    except ValueError:
-                        logger.warning(f"Invalid Strava ID format: {user_str}")
-                        continue
-        else:
-            # Fallback to default users
-            auth_users_to_add = default_authorized_users
-            logger.info("Using default authorized users as fallback")
+        if not auth_users_env_str.strip():
+            logger.error(
+                "No authorized users found in AUTHORIZED_STRAVA_USERS environment variable"
+            )
+            logger.error(
+                "Please set AUTHORIZED_STRAVA_USERS in your .env/auth_users file"
+            )
+            return
+
+        auth_users_to_add = []
+        for user_str in auth_users_env_str.split(","):
+            user_str = user_str.strip()
+            if user_str:
+                try:
+                    strava_id = int(user_str)
+                    auth_users_to_add.append(
+                        {
+                            "strava_id": strava_id,
+                            "firstname": None,
+                            "lastname": None,
+                        }
+                    )
+                    logger.info(
+                        f"Will seed authorized user with Strava ID: {strava_id}"
+                    )
+                except ValueError:
+                    logger.warning(f"Invalid Strava ID format: {user_str}")
+                    continue
+
+        if not auth_users_to_add:
+            logger.error("No valid Strava IDs found to seed")
+            return
 
         async with SessionLocal() as session:
             for user_data in auth_users_to_add:

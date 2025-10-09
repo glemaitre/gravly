@@ -137,5 +137,8 @@ depends-on = ["pg-drop-db", "pg-stop", "pg-erase"]
 [tasks.pg-setup]
 depends-on = ["pg-init", "pg-start", "pg-create-db"]
 
+[tasks.seed-auth-users]
+cmd = "bash -c 'source .env/auth_users && python scripts/seed_auth_users.py'"
+
 [environments]
 dev = { features = ["dev", "tests", "lint"] }
