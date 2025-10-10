@@ -36,11 +36,11 @@ pixi run pg-setup
 
 # 4. Configure environment (see Environment Configuration section)
 mkdir -p .env
-# Create .env/database, .env/storage, .env/strava, .env/auth_users files
+# Create .env/database, .env/storage, .env/strava, .env/auth_users, .env/server files
 
 # 5. Start the application (in separate terminals)
-pixi run start-backend   # Terminal 1: http://localhost:8000
-pixi run start-frontend  # Terminal 2: http://localhost:5173
+pixi run start-backend   # Terminal 1: http://localhost:8000 (or configured port)
+pixi run start-frontend  # Terminal 2: http://localhost:3000 (or configured port)
 
 # 6. (Optional) Seed test data
 pixi run python scripts/test_seeding.py
@@ -140,9 +140,9 @@ pixi run python scripts/test_seeding.py
    ```
 
 4. **Access the application**:
-   - Frontend: http://localhost:5173 (Vite dev server)
-   - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+   - Frontend: http://localhost:3000 (or configured FRONTEND_PORT)
+   - Backend API: http://localhost:8000 (or configured BACKEND_PORT)
+   - API Documentation: http://localhost:8000/docs (or your backend URL)
 
 5. **Seed the database with test data** (optional):
    ```bash
@@ -155,9 +155,9 @@ pixi run python scripts/test_seeding.py
 
 ## Environment Configuration
 
-This project uses separate `.env` files for database and storage configuration. The
-backend automatically loads environment variables from `.env/storage` and
-`.env/database` files.
+This project uses separate `.env` files for database, storage, server, and API configuration. 
+The backend automatically loads environment variables from `.env/storage`, `.env/database`, 
+and `.env/server` files.
 
 ### Setup Environment Files
 
@@ -208,7 +208,17 @@ backend automatically loads environment variables from `.env/storage` and
    AUTHORIZED_STRAVA_USERS=820773,123456,789012
    ```
 
-6. **Never commit actual `.env` files** - they contain sensitive information and are
+6. **Create the server configuration file** (`.env/server`):
+   ```bash
+   # Server Configuration
+   BACKEND_PORT=8000
+   BACKEND_HOST=0.0.0.0
+   FRONTEND_PORT=3000
+   FRONTEND_URL=http://localhost:3000
+   BACKEND_URL=http://localhost:8000
+   ```
+
+7. **Never commit actual `.env` files** - they contain sensitive information and are
    already in `.gitignore`.
 
 ### Storage Configuration
@@ -217,6 +227,27 @@ The storage backend is controlled by the `STORAGE_TYPE` variable in `.env/storag
 
 - `STORAGE_TYPE=local` - Use local filesystem storage
 - `STORAGE_TYPE=s3` - Use AWS S3 storage
+
+### Server Configuration
+
+The application's server ports and URLs are configured through environment variables in 
+`.env/server`:
+
+- `BACKEND_PORT` - Backend server port (default: 8000)
+- `BACKEND_HOST` - Backend server host (default: 0.0.0.0)
+- `FRONTEND_PORT` - Frontend development server port (default: 3000)
+- `FRONTEND_URL` - Frontend URL for CORS and OAuth redirects (default: http://localhost:3000)
+- `BACKEND_URL` - Backend URL for frontend API calls (default: http://localhost:8000)
+
+**Production Deployment**: When deploying to production, update these values:
+```bash
+# Example production configuration
+BACKEND_PORT=8000
+BACKEND_HOST=0.0.0.0
+FRONTEND_PORT=80
+FRONTEND_URL=https://yourdomain.com
+BACKEND_URL=https://api.yourdomain.com
+```
 
 ### Database Configuration
 

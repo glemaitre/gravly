@@ -50,7 +50,7 @@ moto = "*"
 requests-mock = "*"
 
 [tasks.start-backend]
-cmd = "bash -c 'source ../.env/strava && uvicorn src.main:app --reload --host 0.0.0.0 --port 8000'"
+cmd = "bash -c 'source ../.env/strava && source ../.env/server && uvicorn src.main:app --reload --host $BACKEND_HOST --port $BACKEND_PORT'"
 cwd = "backend"
 
 [tasks.start-frontend]

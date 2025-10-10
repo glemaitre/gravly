@@ -14,6 +14,7 @@ from .services.strava import StravaService
 from .utils.config import (
     DatabaseConfig,
     MapConfig,
+    ServerConfig,
     StorageConfig,
     StravaConfig,
     load_environment_config,
@@ -23,7 +24,13 @@ from .utils.storage import StorageManager
 logger = logging.getLogger(__name__)
 
 # Load configuration at module level
-_db_config, _storage_config, _strava_config, _map_config = load_environment_config()
+(
+    _db_config,
+    _storage_config,
+    _strava_config,
+    _map_config,
+    _server_config,
+) = load_environment_config()
 
 # Global state
 temp_dir: TemporaryDirectory | None = None
@@ -37,6 +44,7 @@ db_config: DatabaseConfig = _db_config
 storage_config: StorageConfig = _storage_config
 strava_config: StravaConfig = _strava_config
 map_config: MapConfig = _map_config
+server_config: ServerConfig = _server_config
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

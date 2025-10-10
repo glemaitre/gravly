@@ -31,6 +31,8 @@ jobs:
       - name: Create environment file for CI
         run: |
           mkdir -p .env
+          echo "FRONTEND_URL=${{ secrets.FRONTEND_URL }}" >> .env/server
+          echo "BACKEND_URL=${{ secrets.BACKEND_URL }}" >> .env/server
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env/database
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env/database
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env/database

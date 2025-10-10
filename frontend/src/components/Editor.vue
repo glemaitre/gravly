@@ -2017,7 +2017,6 @@ ${points.value
   .content {
     margin-left: 210px;
   }
-
 }
 
 /* Responsive layout for screens under 1000px */

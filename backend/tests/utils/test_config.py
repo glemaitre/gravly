@@ -44,9 +44,13 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
-    db_config, storage_config, strava_config, map_config = load_environment_config(
-        project_root=tmp_path
-    )
+    (
+        db_config,
+        storage_config,
+        strava_config,
+        map_config,
+        server_config,
+    ) = load_environment_config(project_root=tmp_path)
 
     # Check configuration structure
     assert isinstance(db_config, DatabaseConfig)
@@ -103,9 +107,13 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
-    db_config, storage_config, strava_config, map_config = load_environment_config(
-        project_root=tmp_path
-    )
+    (
+        db_config,
+        storage_config,
+        strava_config,
+        map_config,
+        server_config,
+    ) = load_environment_config(project_root=tmp_path)
 
     assert storage_config.storage_type == "s3"
     assert isinstance(storage_config, S3StorageConfig)
@@ -451,9 +459,13 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
-    db_config, storage_config, strava_config, map_config = load_environment_config(
-        project_root=subdir
-    )
+    (
+        db_config,
+        storage_config,
+        strava_config,
+        map_config,
+        server_config,
+    ) = load_environment_config(project_root=subdir)
 
     assert db_config.host == "localhost"
     assert storage_config.storage_type == "local"
@@ -464,7 +476,13 @@ def test_default_project_root_behavior():
     # This test verifies the function doesn't crash with default behavior
     # Since we have actual .env files in the project, this should succeed
     # rather than raise an error
-    db_config, storage_config, strava_config, map_config = load_environment_config()
+    (
+        db_config,
+        storage_config,
+        strava_config,
+        map_config,
+        server_config,
+    ) = load_environment_config()
 
     # Verify we get valid configurations
     assert isinstance(db_config, DatabaseConfig)
@@ -581,9 +599,13 @@ STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
-    db_config, storage_config, strava_config, map_config = load_environment_config(
-        project_root=tmp_path
-    )
+    (
+        db_config,
+        storage_config,
+        strava_config,
+        map_config,
+        server_config,
+    ) = load_environment_config(project_root=tmp_path)
 
     # Check Strava configuration
     assert strava_config.client_id == "test_client_id"

@@ -54,18 +54,28 @@ class MapConfig(NamedTuple):
     thunderforest_api_key: str
 
 
+class ServerConfig(NamedTuple):
+    """Server configuration parameters."""
+
+    backend_host: str
+    backend_port: int
+    frontend_port: int
+    frontend_url: str
+    backend_url: str
+
+
 # Union type for storage configurations
 StorageConfig = S3StorageConfig | LocalStorageConfig
 
 
 def load_environment_config(
     project_root: Path | None = None,
-) -> tuple[DatabaseConfig, StorageConfig, StravaConfig, MapConfig]:
-    """Load environment variables from separate storage, database, and Strava files.
+) -> tuple[DatabaseConfig, StorageConfig, StravaConfig, MapConfig, ServerConfig]:
+    """Load environment variables from separate configuration files.
 
-    This function loads environment variables from .env/storage, .env/database, and
-    .env/strava files
-    in the .env folder and provides helpful error messages if no configuration is found.
+    This function loads environment variables from .env/storage, .env/database,
+    .env/strava, and .env/server files in the .env folder and provides helpful
+    error messages if no configuration is found.
 
     Parameters
     ----------
@@ -168,6 +178,17 @@ def load_environment_config(
                 f"and no example file available."
             )
 
+    # Load server configuration (optional - has sensible defaults)
+    server_file = env_folder / "server"
+    if server_file.exists():
+        load_dotenv(server_file, override=True)
+        logger.info(f"Loaded server environment variables from {server_file}")
+    else:
+        logger.info(
+            f"Server configuration file not found at {server_file}. "
+            f"Using default values (backend: 0.0.0.0:8000, frontend: localhost:3000)."
+        )
+
     # Extract database configuration from environment variables
     # All database parameters are required - no defaults
     required_db_params = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
@@ -262,4 +283,19 @@ def load_environment_config(
 
     map_config = MapConfig(thunderforest_api_key=thunderforest_api_key)
 
-    return database_config, storage_config, strava_config, map_config
+    # Extract server configuration from environment variables with defaults
+    backend_host = os.getenv("BACKEND_HOST", "0.0.0.0")
+    backend_port = int(os.getenv("BACKEND_PORT", "8000"))
+    frontend_port = int(os.getenv("FRONTEND_PORT", "3000"))
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+
+    server_config = ServerConfig(
+        backend_host=backend_host,
+        backend_port=backend_port,
+        frontend_port=frontend_port,
+        frontend_url=frontend_url,
+        backend_url=backend_url,
+    )
+
+    return database_config, storage_config, strava_config, map_config, server_config

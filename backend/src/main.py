@@ -116,13 +116,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
 
 # Configure CORS middleware
+# Use frontend URL from centralized server configuration
+allowed_origins = [
+    dependencies.server_config.frontend_url,
+    "http://localhost:3001",  # Keep for backwards compatibility
+    "http://localhost:5173",  # Keep for Vite default port
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:3001",
-        "http://localhost:5173",
-    ],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -149,4 +152,9 @@ app.include_router(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use centralized server configuration
+    uvicorn.run(
+        app,
+        host=dependencies.server_config.backend_host,
+        port=dependencies.server_config.backend_port,
+    )

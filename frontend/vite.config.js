@@ -4,43 +4,40 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 export default defineConfig(() => {
-  // Load env file from .env/strava
-  const stravaEnv = {}
-  try {
-    const envPath = resolve(process.cwd(), '../.env/strava')
-    const envContent = readFileSync(envPath, 'utf-8')
-    envContent.split('\n').forEach((line) => {
-      const [key, ...valueParts] = line.split('=')
-      if (key && valueParts.length > 0) {
-        stravaEnv[key.trim()] = valueParts.join('=').trim()
-      }
-    })
-  } catch (error) {
-    console.warn('Could not load .env/strava file:', error.message)
+  // Helper function to load env files
+  const loadEnvFile = (filename) => {
+    const env = {}
+    try {
+      const envPath = resolve(process.cwd(), `../.env/${filename}`)
+      const envContent = readFileSync(envPath, 'utf-8')
+      envContent.split('\n').forEach((line) => {
+        const [key, ...valueParts] = line.split('=')
+        if (key && valueParts.length > 0) {
+          env[key.trim()] = valueParts.join('=').trim()
+        }
+      })
+    } catch (error) {
+      console.warn(`Could not load .env/${filename} file:`, error.message)
+    }
+    return env
   }
 
-  // Load env file from .env/thunderforest
-  const thunderforestEnv = {}
-  try {
-    const envPath = resolve(process.cwd(), '../.env/thunderforest')
-    const envContent = readFileSync(envPath, 'utf-8')
-    envContent.split('\n').forEach((line) => {
-      const [key, ...valueParts] = line.split('=')
-      if (key && valueParts.length > 0) {
-        thunderforestEnv[key.trim()] = valueParts.join('=').trim()
-      }
-    })
-  } catch (error) {
-    console.warn('Could not load .env/thunderforest file:', error.message)
-  }
+  // Load env files
+  const stravaEnv = loadEnvFile('strava')
+  const thunderforestEnv = loadEnvFile('thunderforest')
+  const serverEnv = loadEnvFile('server')
+
+  // Parse port numbers with defaults
+  const frontendPort = parseInt(serverEnv.FRONTEND_PORT || '3000', 10)
+  const backendUrl = serverEnv.BACKEND_URL || 'http://localhost:8000'
 
   return {
     plugins: [vue()],
     server: {
-      port: 3000,
+      port: frontendPort,
       proxy: {
         '/api': {
-          target: 'http://localhost:8000',
+          target: backendUrl,
           changeOrigin: true,
           configure: (proxy) => {
             proxy.on('error', (err, req) => {
@@ -69,9 +66,6 @@ export default defineConfig(() => {
       __VUE_OPTIONS_API__: true,
       __VUE_PROD_DEVTOOLS__: false,
       'import.meta.env.STRAVA_CLIENT_ID': JSON.stringify(stravaEnv.STRAVA_CLIENT_ID),
-      'import.meta.env.STRAVA_CLIENT_SECRET': JSON.stringify(
-        stravaEnv.STRAVA_CLIENT_SECRET
-      ),
       'import.meta.env.THUNDERFOREST_API_KEY': JSON.stringify(
         thunderforestEnv.THUNDERFOREST_API_KEY
       )

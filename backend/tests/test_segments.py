@@ -2819,7 +2819,10 @@ def test_main_module_execution():
     with open(src.main.__file__) as f:
         content = f.read()
         assert 'if __name__ == "__main__":' in content
-        assert 'uvicorn.run(app, host="0.0.0.0", port=8000)' in content
+        # Verify that server configuration is used from centralized config
+        assert "dependencies.server_config.backend_host" in content
+        assert "dependencies.server_config.backend_port" in content
+        assert "uvicorn.run(" in content
 
 
 def test_get_track_info_success(client):

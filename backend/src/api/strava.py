@@ -33,7 +33,10 @@ def create_strava_router(strava_service: StravaService, temp_dir) -> APIRouter:
             )
 
         try:
-            redirect_uri = "http://localhost:3000/strava-callback"
+            # Use centralized server configuration for OAuth redirect
+            from ..dependencies import server_config
+
+            redirect_uri = f"{server_config.frontend_url}/strava-callback"
             auth_url = global_strava.get_authorization_url(redirect_uri, state)
             return {"auth_url": auth_url}
         except Exception as e:
