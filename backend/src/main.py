@@ -121,6 +121,8 @@ allowed_origins = [
     dependencies.server_config.frontend_url,
     "http://localhost:3001",  # Keep for backwards compatibility
     "http://localhost:5173",  # Keep for Vite default port
+    "http://gravly.cc:33000",  # http production server
+    "https://gravly.cc:33443",  # https production server
 ]
 
 app.add_middleware(
