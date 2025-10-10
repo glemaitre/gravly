@@ -1469,7 +1469,7 @@ ${points.value
   box-sizing: border-box;
   position: fixed;
   top: var(--navbar-height, 64px);
-  left: calc(50% - 500px - var(--sidebar-w));
+  left: 0;
   display: flex;
   flex-direction: column;
   height: calc(100vh - var(--navbar-height, 64px));
@@ -2018,9 +2018,6 @@ ${points.value
     margin-left: 210px;
   }
 
-  .sidebar {
-    left: 0;
-  }
 }
 
 /* Responsive layout for screens under 1000px */
@@ -2086,9 +2083,9 @@ ${points.value
 }
 
 /* For very large screens, ensure sidebar is positioned relative to content */
-@media (min-width: 1451px) {
+@media (min-width: 1700px) {
   .sidebar {
-    left: calc(50% - 500px - 230px);
+    left: calc(50% - 590px - 230px);
   }
 
   .content {
