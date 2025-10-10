@@ -119,10 +119,12 @@ app = FastAPI(title="Cycling GPX API", version="1.0.0", lifespan=lifespan)
 # Use frontend URL from centralized server configuration
 allowed_origins = [
     dependencies.server_config.frontend_url,
+    "https://gravly.cc",  # Production domain (port forwarded)
+    "http://gravly.cc",  # Production HTTP (port forwarded)
+    "https://gravly.cc:33443",  # https production server with explicit port
+    "http://gravly.cc:33000",  # http production server with explicit port
     "http://localhost:3001",  # Keep for backwards compatibility
     "http://localhost:5173",  # Keep for Vite default port
-    "http://gravly.cc:33000",  # http production server
-    "https://gravly.cc:33443",  # https production server
 ]
 
 app.add_middleware(
