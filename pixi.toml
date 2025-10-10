@@ -7,6 +7,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [dependencies]
 python = "*"
+nodejs = "*"
 fastapi = "*"
 uvicorn = "*"
 gpxpy = "*"
