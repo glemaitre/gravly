@@ -189,9 +189,7 @@ async function fetchSegmentStats() {
   isLoadingStats.value = true
 
   try {
-    const response = await fetch(
-      `http://localhost:8000/api/segments/${props.segment.id}/gpx`
-    )
+    const response = await fetch(`/api/segments/${props.segment.id}/gpx`)
     if (!response.ok) {
       console.warn(
         `Failed to fetch GPX data for segment ${props.segment.id}: ${response.statusText}`

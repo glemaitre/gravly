@@ -888,7 +888,7 @@ async function handleSegmentImport(segment: any) {
     console.info(`Importing segment: ${segment.name} (ID: ${segment.id})`)
 
     // Fetch GPX data for the segment
-    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    const response = await fetch(`/api/segments/${segment.id}/gpx`)
     if (!response.ok) {
       throw new Error(`Failed to fetch GPX data: ${response.statusText}`)
     }

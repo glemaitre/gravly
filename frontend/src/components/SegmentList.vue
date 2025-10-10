@@ -199,7 +199,7 @@ async function fetchSegmentStats(segment: TrackResponse) {
 
   try {
     // Fetch GPX data from backend
-    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    const response = await fetch(`/api/segments/${segment.id}/gpx`)
     if (!response.ok) {
       console.warn(
         `Failed to fetch GPX data for segment ${segment.id}: ${response.statusText}`

@@ -228,9 +228,7 @@ describe('SegmentImportCard', () => {
       await nextTick()
       await new Promise((resolve) => setTimeout(resolve, 100))
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        `http://localhost:8000/api/segments/${mockSegment.id}/gpx`
-      )
+      expect(mockFetch).toHaveBeenCalledWith(`/api/segments/${mockSegment.id}/gpx`)
 
       // Wait for stats to be processed
       await nextTick()

@@ -520,7 +520,7 @@ function searchSegmentsInView() {
   }
 
   // Create EventSource for streaming
-  const url = `http://localhost:8000/api/segments/search?${params}`
+  const url = `/api/segments/search?${params}`
 
   // Small delay to ensure backend is ready (removed backend connectivity test for performance)
   setTimeout(() => {
@@ -625,7 +625,7 @@ async function fetchAndRenderGPXData(track: TrackResponse) {
   loadingGPXData.add(track.id)
 
   try {
-    const response = await fetch(`http://localhost:8000/api/segments/${track.id}/gpx`)
+    const response = await fetch(`/api/segments/${track.id}/gpx`)
     if (!response.ok) {
       console.warn(
         `Failed to fetch GPX data for track ${track.id}: ${response.statusText}`

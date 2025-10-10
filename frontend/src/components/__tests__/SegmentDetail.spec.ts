@@ -330,7 +330,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -345,7 +345,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -372,7 +372,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -399,7 +399,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -447,7 +447,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock empty images response
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -462,7 +462,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -489,12 +489,12 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -518,7 +518,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -533,7 +533,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -560,7 +560,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -577,7 +577,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -618,7 +618,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -633,7 +633,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -660,7 +660,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -677,7 +677,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -712,7 +712,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -727,7 +727,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -754,7 +754,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -771,7 +771,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -805,7 +805,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -820,7 +820,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -847,7 +847,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -864,7 +864,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -898,7 +898,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock images API error
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -913,7 +913,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -940,13 +940,13 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: false,
           status: 500,
           statusText: 'Internal Server Error'
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -981,7 +981,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with multiple images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -996,7 +996,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1023,7 +1023,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1050,7 +1050,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -1119,7 +1119,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock successful API responses with multiple images
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1134,7 +1134,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1161,7 +1161,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1188,7 +1188,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -1229,7 +1229,7 @@ describe('SegmentDetail Image Gallery', () => {
     // Mock single image response
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1244,7 +1244,7 @@ describe('SegmentDetail Image Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1271,7 +1271,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1288,7 +1288,7 @@ describe('SegmentDetail Image Gallery', () => {
               }
             ])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
@@ -1360,7 +1360,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock successful API responses with videos
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1375,7 +1375,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1402,12 +1402,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]) // No images
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1463,7 +1463,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock empty videos response
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1478,7 +1478,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1505,12 +1505,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]) // No images
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]) // No videos
@@ -1534,7 +1534,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock successful API responses with other platform video
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1549,7 +1549,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1576,12 +1576,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]) // No images
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1659,7 +1659,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock successful segment and GPX responses, but failed video fetch
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1674,7 +1674,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1701,12 +1701,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([]) // No images
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: false,
           status: 404
@@ -1732,7 +1732,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock 5 videos to test pagination (more than 3 videos per page)
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1747,7 +1747,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1765,12 +1765,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1865,7 +1865,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock 5 videos to test carousel functionality
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1880,7 +1880,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1898,12 +1898,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1984,7 +1984,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock 5 videos to test pagination
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -1999,7 +1999,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2017,12 +2017,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2111,7 +2111,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock only 2 videos (less than 3 videos per page)
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2126,7 +2126,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2144,12 +2144,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2197,7 +2197,7 @@ describe('SegmentDetail Video Gallery', () => {
     // Mock videos to test responsive behavior
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
-      if (urlString === 'http://localhost:8000/api/segments/1') {
+      if (urlString === '/api/segments/1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2212,7 +2212,7 @@ describe('SegmentDetail Video Gallery', () => {
               comments: 'Test comments'
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/data') {
+      } else if (urlString === '/api/segments/1/data') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -2230,12 +2230,12 @@ describe('SegmentDetail Video Gallery', () => {
               }
             })
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/images') {
+      } else if (urlString === '/api/segments/1/images') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve([])
         } as Response)
-      } else if (urlString === 'http://localhost:8000/api/segments/1/videos') {
+      } else if (urlString === '/api/segments/1/videos') {
         return Promise.resolve({
           ok: true,
           json: () =>

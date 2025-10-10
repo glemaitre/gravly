@@ -389,18 +389,14 @@ async function loadSegmentData() {
     error.value = null
 
     // Load segment basic info
-    const segmentResponse = await fetch(
-      `http://localhost:8000/api/segments/${segmentId.value}`
-    )
+    const segmentResponse = await fetch(`/api/segments/${segmentId.value}`)
     if (!segmentResponse.ok) {
       throw new Error(`Failed to load segment: ${segmentResponse.statusText}`)
     }
     segment.value = await segmentResponse.json()
 
     // Load parsed GPX data directly from backend
-    const gpxResponse = await fetch(
-      `http://localhost:8000/api/segments/${segmentId.value}/data`
-    )
+    const gpxResponse = await fetch(`/api/segments/${segmentId.value}/data`)
     if (!gpxResponse.ok) {
       throw new Error(`Failed to load GPX data: ${gpxResponse.statusText}`)
     }
@@ -411,9 +407,7 @@ async function loadSegmentData() {
     }
 
     // Load track images
-    const imagesResponse = await fetch(
-      `http://localhost:8000/api/segments/${segmentId.value}/images`
-    )
+    const imagesResponse = await fetch(`/api/segments/${segmentId.value}/images`)
     if (imagesResponse.ok) {
       trackImages.value = await imagesResponse.json()
     } else {
@@ -423,9 +417,7 @@ async function loadSegmentData() {
     }
 
     // Load track videos
-    const videosResponse = await fetch(
-      `http://localhost:8000/api/segments/${segmentId.value}/videos`
-    )
+    const videosResponse = await fetch(`/api/segments/${segmentId.value}/videos`)
     if (videosResponse.ok) {
       trackVideos.value = await videosResponse.json()
     } else {

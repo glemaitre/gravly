@@ -130,7 +130,7 @@ global.EventSource = vi.fn(() => ({
   onmessage: null,
   onerror: null,
   readyState: 1,
-  url: 'http://localhost:8000/api/segments/search',
+  url: '/api/segments/search',
   close: vi.fn()
 })) as any
 

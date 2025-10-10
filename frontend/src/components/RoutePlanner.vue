@@ -3752,7 +3752,7 @@ async function loadSegmentsInBounds() {
       limit: '50'
     })
 
-    const url = `http://localhost:8000/api/segments/search?${params}`
+    const url = `/api/segments/search?${params}`
     const response = await fetch(url)
 
     if (!response.ok) {
@@ -3835,7 +3835,7 @@ async function loadSegmentGPXData(segment: TrackResponse) {
   loadingGPXData.add(segment.id)
 
   try {
-    const response = await fetch(`http://localhost:8000/api/segments/${segment.id}/gpx`)
+    const response = await fetch(`/api/segments/${segment.id}/gpx`)
     if (!response.ok) {
       console.warn(
         `Failed to fetch GPX data for segment ${segment.id}: ${response.statusText}`

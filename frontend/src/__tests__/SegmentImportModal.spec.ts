@@ -412,9 +412,7 @@ describe('SegmentImportModal', () => {
     it('fetches GPX data for segments', async () => {
       await (wrapper.vm as any).fetchAndRenderGPXData(mockSegment)
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        `http://localhost:8000/api/segments/${mockSegment.id}/gpx`
-      )
+      expect(global.fetch).toHaveBeenCalledWith(`/api/segments/${mockSegment.id}/gpx`)
     })
 
     it('handles GPX fetch errors gracefully', async () => {

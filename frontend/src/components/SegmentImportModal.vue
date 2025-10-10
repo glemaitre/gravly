@@ -459,7 +459,7 @@ function searchSegmentsInView() {
     params.append('user_strava_id', authState.value.athlete.id.toString())
   }
 
-  const url = `http://localhost:8000/api/segments/search?${params}`
+  const url = `/api/segments/search?${params}`
 
   setTimeout(() => {
     eventSource = new EventSource(url)
@@ -540,7 +540,7 @@ async function fetchAndRenderGPXData(track: TrackResponse) {
   loadingGPXData.add(track.id)
 
   try {
-    const response = await fetch(`http://localhost:8000/api/segments/${track.id}/gpx`)
+    const response = await fetch(`/api/segments/${track.id}/gpx`)
     if (!response.ok) {
       console.warn(
         `Failed to fetch GPX data for track ${track.id}: ${response.statusText}`

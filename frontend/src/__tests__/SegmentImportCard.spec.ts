@@ -162,9 +162,7 @@ describe('SegmentImportCard', () => {
 
   describe('Data Fetching', () => {
     it('fetches segment stats on mount', () => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        `http://localhost:8000/api/segments/${mockSegment.id}/gpx`
-      )
+      expect(global.fetch).toHaveBeenCalledWith(`/api/segments/${mockSegment.id}/gpx`)
     })
 
     it('fetches stats on hover if not already loaded', async () => {
