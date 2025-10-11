@@ -1,5 +1,19 @@
 <template>
   <div class="segment-list">
+    <!-- Left Sidebar with Filters -->
+    <SegmentFiltersSidebar
+      :show-filters="showFilters"
+      :name-filter="nameFilter"
+      :filters="filters"
+      :has-active-filters="hasActiveFilters"
+      @close="emit('closeFilters')"
+      @update:name-filter="nameFilter = $event"
+      @update:difficulty-min="updateDifficultyMin"
+      @update:difficulty-max="updateDifficultyMax"
+      @toggle-filter="toggleFilter"
+      @clear-filters="clearFilters"
+    />
+
     <!-- Filter Card -->
     <div class="filter-card">
       <!-- Sticky Track Type Tabs -->
@@ -40,10 +54,10 @@
       <!-- Scrollable Cards Container -->
       <div class="cards-container">
         <div
-          v-if="segments.length > 0"
+          v-if="filteredSegments.length > 0"
           class="segment-cards"
           :class="{
-            'segment-cards--no-button': segments.length <= initialDisplayCount
+            'segment-cards--no-button': filteredSegments.length <= initialDisplayCount
           }"
         >
           <SegmentCard
@@ -60,7 +74,7 @@
 
           <!-- Show More Button -->
           <div
-            v-if="segments.length > initialDisplayCount"
+            v-if="filteredSegments.length > initialDisplayCount"
             class="show-more-button-grid-item"
           >
             <button class="show-more-button" @click="toggleShowMore">
@@ -71,14 +85,17 @@
               <span v-if="showAll">Show Less</span>
               <span v-else>
                 Show More<br />
-                ({{ segments.length - initialDisplayCount }} more)
+                ({{ filteredSegments.length - initialDisplayCount }} more)
               </span>
             </button>
           </div>
         </div>
 
         <div v-else-if="!loading" class="no-segments">
-          <p>
+          <p v-if="hasActiveFilters">
+            {{ t('routePlanner.noSegmentsMatchingFilters') }}
+          </p>
+          <p v-else>
             No {{ selectedTrackType }}s found in the current view. Try zooming out or
             panning to a different area.
           </p>
@@ -95,6 +112,7 @@ import type { TrackResponse, GPXDataResponse, GPXData } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 import { useStravaApi } from '../composables/useStravaApi'
 import SegmentCard from './SegmentCard.vue'
+import SegmentFiltersSidebar from './SegmentFiltersSidebar.vue'
 
 const { t } = useI18n()
 
@@ -107,20 +125,33 @@ interface SegmentStats {
   total_elevation_loss: number
 }
 
+interface SegmentFilters {
+  difficultyMin: number
+  difficultyMax: number
+  surface: string[]
+  tireDry: string[]
+  tireWet: string[]
+}
+
 interface Props {
   segments: TrackResponse[]
   loading: boolean
+  showFilters?: boolean
   // eslint-disable-next-line no-unused-vars
   getDistanceFromCenter?: (segment: TrackResponse) => number
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  showFilters: false
+})
 
 const emit = defineEmits<{
   segmentClick: [segment: TrackResponse]
   segmentHover: [segment: TrackResponse]
   segmentLeave: [segment: TrackResponse]
   trackTypeChange: [trackType: 'segment' | 'route']
+  closeFilters: []
+  'filters-changed': [hasActiveFilters: boolean]
 }>()
 
 // Refs for segment stats
@@ -139,6 +170,16 @@ const hoveredSegmentId = ref<number | null>(null)
 // Show more/less functionality
 const showAll = ref(false)
 
+// Filters state
+const nameFilter = ref('')
+const filters = ref<SegmentFilters>({
+  difficultyMin: 1,
+  difficultyMax: 5,
+  surface: [],
+  tireDry: [],
+  tireWet: []
+})
+
 // Dynamic initial display count based on screen size
 const getInitialDisplayCount = () => {
   const width = window.innerWidth
@@ -156,13 +197,113 @@ const updateDisplayCount = () => {
   initialDisplayCount.value = getInitialDisplayCount()
 }
 
+// Filter segments based on active filters
+const filteredSegments = computed(() => {
+  let filtered = props.segments
+
+  // Filter by name
+  if (nameFilter.value.trim()) {
+    const searchTerm = nameFilter.value.toLowerCase().trim()
+    filtered = filtered.filter((segment) =>
+      segment.name.toLowerCase().includes(searchTerm)
+    )
+  }
+
+  // Filter by difficulty
+  filtered = filtered.filter(
+    (segment) =>
+      segment.difficulty_level >= filters.value.difficultyMin &&
+      segment.difficulty_level <= filters.value.difficultyMax
+  )
+
+  // Filter by surface type
+  if (filters.value.surface.length > 0) {
+    filtered = filtered.filter((segment) =>
+      segment.surface_type.some((surfaceType) =>
+        filters.value.surface.includes(surfaceType)
+      )
+    )
+  }
+
+  // Filter by tire dry
+  if (filters.value.tireDry.length > 0) {
+    filtered = filtered.filter((segment) =>
+      filters.value.tireDry.includes(segment.tire_dry)
+    )
+  }
+
+  // Filter by tire wet
+  if (filters.value.tireWet.length > 0) {
+    filtered = filtered.filter((segment) =>
+      filters.value.tireWet.includes(segment.tire_wet)
+    )
+  }
+
+  return filtered
+})
+
 // Computed property for displayed segments
 const displayedSegments = computed(() => {
   if (showAll.value) {
-    return props.segments
+    return filteredSegments.value
   }
-  return props.segments.slice(0, initialDisplayCount.value)
+  return filteredSegments.value.slice(0, initialDisplayCount.value)
 })
+
+// Check if there are active filters
+const hasActiveFilters = computed(() => {
+  return (
+    nameFilter.value.trim() !== '' ||
+    filters.value.difficultyMin !== 1 ||
+    filters.value.difficultyMax !== 5 ||
+    filters.value.surface.length > 0 ||
+    filters.value.tireDry.length > 0 ||
+    filters.value.tireWet.length > 0
+  )
+})
+
+// Watch hasActiveFilters and emit changes
+watch(
+  hasActiveFilters,
+  (newValue) => {
+    emit('filters-changed', newValue)
+  },
+  { immediate: true }
+)
+
+// Helper functions
+function updateDifficultyMin(value: number) {
+  if (value <= filters.value.difficultyMax) {
+    filters.value.difficultyMin = value
+  }
+}
+
+function updateDifficultyMax(value: number) {
+  if (value >= filters.value.difficultyMin) {
+    filters.value.difficultyMax = value
+  }
+}
+
+function toggleFilter(type: 'surface' | 'tireDry' | 'tireWet', value: string) {
+  const filterArray = filters.value[type]
+  const index = filterArray.indexOf(value)
+  if (index > -1) {
+    filterArray.splice(index, 1)
+  } else {
+    filterArray.push(value)
+  }
+}
+
+function clearFilters() {
+  nameFilter.value = ''
+  filters.value = {
+    difficultyMin: 1,
+    difficultyMax: 5,
+    surface: [],
+    tireDry: [],
+    tireWet: []
+  }
+}
 
 // Watch for segment changes and generate mock stats
 watch(
@@ -320,8 +461,10 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
+/* Filter Card */
 .filter-card {
   background: white;
   border: 1px solid #e1e5e9;

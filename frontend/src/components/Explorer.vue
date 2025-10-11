@@ -1,6 +1,22 @@
 <template>
   <div class="landing-page">
-    <div class="landing-content">
+    <!-- Vertical Filters Toggle Button -->
+    <button
+      type="button"
+      class="vertical-filters-toggle"
+      @click="toggleFilters"
+      :class="{ active: showFilters }"
+    >
+      <span v-if="hasActiveFilters" class="filter-active-badge"></span>
+      <i class="fa-solid fa-filter"></i>
+      <span class="vertical-text">Filters</span>
+      <div class="chevron-indicator" :class="{ rotated: showFilters }">
+        <i class="fa-solid fa-chevron-right"></i>
+        <i class="fa-solid fa-chevron-right"></i>
+      </div>
+    </button>
+
+    <div class="landing-content" :class="{ 'with-filters': showFilters }">
       <div class="content-wrapper">
         <!-- Fixed Map Section with Resizable Height -->
         <div class="map-section" :style="{ height: mapHeight + 'px' }">
@@ -54,11 +70,14 @@
             <SegmentList
               :segments="sortedSegments"
               :loading="loading"
+              :show-filters="showFilters"
               :get-distance-from-center="getSegmentDistanceFromCenter"
               @segment-click="onSegmentClick"
               @segment-hover="onSegmentHover"
               @segment-leave="onSegmentLeave"
               @track-type-change="onTrackTypeChange"
+              @close-filters="toggleFilters"
+              @filters-changed="onFiltersChanged"
             />
           </div>
         </div>
@@ -112,6 +131,10 @@ const selectedTrackType = ref<'segment' | 'route'>('segment')
 
 // Limit for search results
 const searchLimit = ref<number>(50)
+
+// Filters state
+const showFilters = ref(false)
+const hasActiveFilters = ref(false)
 
 // Map height control
 const mapHeight = ref<number>(400) // Default height in pixels
@@ -890,6 +913,14 @@ function onTrackTypeChange(trackType: 'segment' | 'route') {
   }
 }
 
+function toggleFilters() {
+  showFilters.value = !showFilters.value
+}
+
+function onFiltersChanged(active: boolean) {
+  hasActiveFilters.value = active
+}
+
 function onLimitChange() {
   // Trigger a new search with the new limit
   if (map) {
@@ -982,6 +1013,89 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Prevent overall page scrolling */
+  position: relative;
+}
+
+/* Vertical Filters Toggle Button */
+.vertical-filters-toggle {
+  position: fixed;
+  top: calc(var(--navbar-height, 60px) + 20px);
+  left: 0;
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0.5rem;
+  background: var(--brand-primary);
+  border: none;
+  border-radius: 0 8px 8px 0;
+  color: white;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  box-shadow: 2px 2px 8px rgba(var(--brand-primary-rgb), 0.3);
+  transition: all 0.3s ease;
+}
+
+.vertical-filters-toggle:hover {
+  background: var(--brand-primary-hover);
+  box-shadow: 3px 3px 12px rgba(var(--brand-primary-rgb), 0.4);
+  transform: translateX(2px);
+}
+
+.vertical-filters-toggle.active {
+  left: 300px;
+}
+
+.vertical-filters-toggle i {
+  font-size: 1.25rem;
+}
+
+.vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.05em;
+  padding-bottom: 1rem;
+}
+
+.chevron-indicator {
+  display: flex;
+  gap: 0.1rem;
+  transition: transform 0.3s ease;
+}
+
+.chevron-indicator i {
+  font-size: 0.75rem;
+}
+
+.chevron-indicator.rotated {
+  transform: rotate(180deg);
+}
+
+/* Filter Active Badge */
+.filter-active-badge {
+  display: block;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+  animation: pulse-badge 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-badge {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.9;
+  }
 }
 
 .segment-list-section {
@@ -1000,6 +1114,11 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  transition: margin-left 0.3s ease-in-out;
+}
+
+.landing-content.with-filters {
+  margin-left: 300px;
 }
 
 .content-wrapper {
@@ -1270,12 +1389,31 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .vertical-filters-toggle.active {
+    left: 280px;
+  }
+
+  .landing-content.with-filters {
+    margin-left: 280px;
+  }
+
   .content-wrapper {
     padding: 0 0.5rem;
   }
 
   .segment-list-section {
     padding: 0.5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .vertical-filters-toggle.active {
+    left: 0;
+    border-radius: 0 8px 8px 0;
+  }
+
+  .landing-content.with-filters {
+    margin-left: 0;
   }
 }
 

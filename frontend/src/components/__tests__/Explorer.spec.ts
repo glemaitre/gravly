@@ -209,8 +209,8 @@ describe('Explorer', () => {
   it('renders as a single root element', () => {
     const wrapper = mountWithRouter(Explorer)
 
-    // Should have only one root element
-    expect(wrapper.element.children.length).toBe(1)
+    // Should have root element with button and content
+    expect(wrapper.element.children.length).toBe(2) // Button + landing-content
     // Check that the root element has the landing-page class
     expect(wrapper.element.classList.contains('landing-page')).toBe(true)
   })
@@ -1418,6 +1418,122 @@ describe('Explorer', () => {
       expect(wrapper.vm.loading).toBe(false)
       expect(wrapper.vm.segments).toEqual([])
       expect(wrapper.vm.selectedTrackType).toBe('segment')
+    })
+  })
+
+  describe('Filter Badge Indicator', () => {
+    it('should not show badge when no filters are active', () => {
+      wrapper = mountWithRouter(Explorer)
+
+      expect(wrapper.vm.hasActiveFilters).toBe(false)
+      expect(wrapper.find('.filter-active-badge').exists()).toBe(false)
+    })
+
+    it('should show badge when filters are active', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      // Simulate filters being activated
+      wrapper.vm.hasActiveFilters = true
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.find('.filter-active-badge').exists()).toBe(true)
+    })
+
+    it('should update badge visibility when filters-changed event is received', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      // Initially no badge
+      expect(wrapper.find('.filter-active-badge').exists()).toBe(false)
+
+      // Simulate filters becoming active
+      wrapper.vm.onFiltersChanged(true)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.hasActiveFilters).toBe(true)
+      expect(wrapper.find('.filter-active-badge').exists()).toBe(true)
+
+      // Simulate filters being cleared
+      wrapper.vm.onFiltersChanged(false)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.hasActiveFilters).toBe(false)
+      expect(wrapper.find('.filter-active-badge').exists()).toBe(false)
+    })
+
+    it('should have proper badge styling', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      wrapper.vm.hasActiveFilters = true
+      await wrapper.vm.$nextTick()
+
+      const badge = wrapper.find('.filter-active-badge')
+      expect(badge.exists()).toBe(true)
+      expect(badge.element.tagName).toBe('SPAN')
+    })
+  })
+
+  describe('Filter Toggle Button', () => {
+    it('should render vertical filters toggle button', () => {
+      wrapper = mountWithRouter(Explorer)
+
+      const toggleBtn = wrapper.find('.vertical-filters-toggle')
+      expect(toggleBtn.exists()).toBe(true)
+    })
+
+    it('should toggle showFilters state when button is clicked', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      expect(wrapper.vm.showFilters).toBe(false)
+
+      const toggleBtn = wrapper.find('.vertical-filters-toggle')
+      await toggleBtn.trigger('click')
+
+      expect(wrapper.vm.showFilters).toBe(true)
+
+      await toggleBtn.trigger('click')
+      expect(wrapper.vm.showFilters).toBe(false)
+    })
+
+    it('should add active class when filters are open', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      const toggleBtn = wrapper.find('.vertical-filters-toggle')
+      expect(toggleBtn.classes()).not.toContain('active')
+
+      wrapper.vm.showFilters = true
+      await wrapper.vm.$nextTick()
+
+      expect(toggleBtn.classes()).toContain('active')
+    })
+
+    it('should render filter icon, text, and chevrons', () => {
+      wrapper = mountWithRouter(Explorer)
+
+      const toggleBtn = wrapper.find('.vertical-filters-toggle')
+      expect(toggleBtn.find('.fa-filter').exists()).toBe(true)
+      expect(toggleBtn.find('.vertical-text').text()).toBe('Filters')
+      expect(toggleBtn.find('.chevron-indicator').exists()).toBe(true)
+    })
+
+    it('should rotate chevrons when filters are open', async () => {
+      wrapper = mountWithRouter(Explorer)
+
+      const chevrons = wrapper.find('.chevron-indicator')
+      expect(chevrons.classes()).not.toContain('rotated')
+
+      wrapper.vm.showFilters = true
+      await wrapper.vm.$nextTick()
+
+      expect(chevrons.classes()).toContain('rotated')
+    })
+
+    it('should have two chevron icons', () => {
+      wrapper = mountWithRouter(Explorer)
+
+      const chevronIcons = wrapper
+        .find('.chevron-indicator')
+        .findAll('.fa-chevron-right')
+      expect(chevronIcons).toHaveLength(2)
     })
   })
 })

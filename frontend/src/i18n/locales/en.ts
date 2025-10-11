@@ -343,6 +343,10 @@ export default {
     // Segment filters
     filters: 'Filters',
     clearFilters: 'Clear all filters',
+    searchByName: 'Search by Name',
+    searchByNamePlaceholder: 'Enter segment name...',
+    noSegmentsMatchingFilters:
+      'No segments match your current filters. Try adjusting your filter settings.',
     difficulty: 'Difficulty',
     surface: 'Surface',
     tire: 'Tires',

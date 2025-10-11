@@ -350,6 +350,10 @@ export default {
     // Segment filters
     filters: 'Filtres',
     clearFilters: 'Effacer tous les filtres',
+    searchByName: 'Rechercher par Nom',
+    searchByNamePlaceholder: 'Entrez le nom du segment...',
+    noSegmentsMatchingFilters:
+      "Aucun segment ne correspond à vos filtres actuels. Essayez d'ajuster vos paramètres de filtre.",
     difficulty: 'Difficulté',
     surface: 'Surface',
     tire: 'Pneus',
