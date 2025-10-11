@@ -1186,13 +1186,25 @@ def create_segments_router(
             )
 
     @router.delete("/{track_id}")
-    async def delete_segment(track_id: int):
+    async def delete_segment(
+        track_id: int,
+        user_strava_id: int | None = Query(
+            None,
+            description=(
+                "Strava ID of the authenticated user (required for authorization)"
+            ),
+        ),
+    ):
         """Delete a track and all associated files from storage and database.
+
+        Only the owner of the track (matching strava_id) can delete it.
 
         Parameters
         ----------
         track_id : int
             The ID of the track to delete
+        user_strava_id : int | None
+            Strava ID of the authenticated user for authorization
 
         Returns
         -------
@@ -1224,6 +1236,19 @@ def create_segments_router(
 
                 if not track:
                     raise HTTPException(status_code=404, detail="Track not found")
+
+                # Check authorization: only the owner can delete the track
+                if user_strava_id is None:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Authentication required to delete track",
+                    )
+
+                if track.strava_id != user_strava_id:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You are not authorized to delete this track",
+                    )
 
                 # Get associated images and videos for storage cleanup
                 images = track.images

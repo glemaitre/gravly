@@ -52,6 +52,22 @@ vi.mock('vue-i18n', () => ({
   })
 }))
 
+// Mock useStravaApi
+const mockAuthState = {
+  value: {
+    isAuthenticated: false,
+    athlete: null,
+    accessToken: null,
+    tokenExpiry: null
+  }
+}
+
+vi.mock('../../composables/useStravaApi', () => ({
+  useStravaApi: () => ({
+    authState: mockAuthState
+  })
+}))
+
 // Mock Chart.js
 const mockChart = {
   destroy: vi.fn(),
@@ -3156,5 +3172,425 @@ describe('SegmentDetail Export Dropdown', () => {
     createElementSpy.mockRestore()
     appendChildSpy.mockRestore()
     removeChildSpy.mockRestore()
+  })
+})
+
+describe('SegmentDetail Delete Route Functionality', () => {
+  let wrapper: any
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+    vi.clearAllMocks()
+    // Reset authState after each test
+    mockAuthState.value = {
+      isAuthenticated: false,
+      athlete: null,
+      accessToken: null,
+      tokenExpiry: null
+    }
+  })
+
+  it('should show delete button in dropdown for routes', async () => {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323,
+              strava_id: 123456
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+    expect(exportButton.exists()).toBe(true)
+
+    // Click to open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    // Check that both download and delete buttons exist
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    expect(dropdownItems.length).toBe(2)
+
+    // First should be download
+    expect(dropdownItems[0].text()).toContain('segmentDetail.downloadGPX')
+
+    // Second should be delete
+    expect(dropdownItems[1].text()).toContain('segmentDetail.deleteRoute')
+    expect(dropdownItems[1].classes()).toContain('dropdown-item-danger')
+  })
+
+  it('should disable delete button when user is not the owner', async () => {
+    // User is authenticated but not the owner
+    mockAuthState.value = {
+      isAuthenticated: true,
+      athlete: { id: 999999 } as any,
+      accessToken: 'test-token' as any,
+      tokenExpiry: (Date.now() + 10000) as any
+    }
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323,
+              strava_id: 123456 // Different owner
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const deleteButton = dropdownItems[1]
+
+    // Delete button should be disabled
+    expect(deleteButton.attributes('disabled')).toBeDefined()
+  })
+
+  it('should enable delete button when user is the owner', async () => {
+    // User is authenticated and is the owner
+    mockAuthState.value = {
+      isAuthenticated: true,
+      athlete: { id: 123456 } as any,
+      accessToken: 'test-token' as any,
+      tokenExpiry: (Date.now() + 10000) as any
+    }
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323,
+              strava_id: 123456 // Same owner
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const deleteButton = dropdownItems[1]
+
+    // Delete button should NOT be disabled
+    expect(deleteButton.attributes('disabled')).toBeUndefined()
+  })
+
+  it('should show confirmation modal when delete button is clicked', async () => {
+    // User is authenticated and is the owner
+    mockAuthState.value = {
+      isAuthenticated: true,
+      athlete: { id: 123456 } as any,
+      accessToken: 'test-token' as any,
+      tokenExpiry: (Date.now() + 10000) as any
+    }
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323,
+              strava_id: 123456
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Modal should not be visible initially
+    let confirmModal = wrapper.find('.confirm-modal-overlay')
+    expect(confirmModal.exists()).toBe(false)
+
+    const exportButton = wrapper.find('.export-button')
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const deleteButton = dropdownItems[1]
+
+    // Click delete button
+    await deleteButton.trigger('click')
+    await nextTick()
+
+    // Modal should now be visible
+    confirmModal = wrapper.find('.confirm-modal-overlay')
+    expect(confirmModal.exists()).toBe(true)
+
+    // Check modal content
+    const modalText = confirmModal.text()
+    expect(modalText).toContain('segmentDetail.deleteRoute')
+    expect(modalText).toContain('segmentDetail.deleteRouteConfirm')
+  })
+
+  it('should close confirmation modal when cancel button is clicked', async () => {
+    // User is authenticated and is the owner
+    mockAuthState.value = {
+      isAuthenticated: true,
+      athlete: { id: 123456 } as any,
+      accessToken: 'test-token' as any,
+      tokenExpiry: (Date.now() + 10000) as any
+    }
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323,
+              strava_id: 123456
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Open dropdown and click delete
+    const exportButton = wrapper.find('.export-button')
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const deleteButton = dropdownItems[1]
+    await deleteButton.trigger('click')
+    await nextTick()
+
+    // Modal should be visible
+    let confirmModal = wrapper.find('.confirm-modal-overlay')
+    expect(confirmModal.exists()).toBe(true)
+
+    // Click cancel button
+    const cancelButton = wrapper.find('.btn-cancel')
+    await cancelButton.trigger('click')
+    await nextTick()
+
+    // Modal should be closed
+    confirmModal = wrapper.find('.confirm-modal-overlay')
+    expect(confirmModal.exists()).toBe(false)
   })
 })

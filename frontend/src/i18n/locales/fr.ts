@@ -186,7 +186,15 @@ export default {
     videoPlayback: 'Lecture vidéo',
     openVideo: 'Ouvrir la vidéo',
     export: 'Exporter',
-    downloadGPX: 'Télécharger GPX'
+    actions: 'Actions',
+    downloadGPX: 'Télécharger GPX',
+    deleteRoute: 'Supprimer la sortie',
+    deleteRouteConfirm:
+      'Êtes-vous sûr de vouloir supprimer cette sortie ? Cette action est irréversible.',
+    deleteRouteSuccess: 'Sortie supprimée avec succès',
+    deleteRouteError: 'Échec de la suppression de la sortie',
+    notRouteOwner: 'Seul le propriétaire de la sortie peut la supprimer',
+    routeNotOwned: 'Vous ne possédez pas cette sortie'
   },
 
   // Strava integration
@@ -402,6 +410,8 @@ export default {
     loading: 'Chargement...',
     continue: 'Continuer',
     save: 'Sauvegarder',
-    saving: 'Sauvegarde...'
+    saving: 'Sauvegarde...',
+    delete: 'Supprimer',
+    deleting: 'Suppression...'
   }
 }

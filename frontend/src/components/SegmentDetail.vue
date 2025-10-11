@@ -11,17 +11,26 @@
           <h1 class="segment-title">{{ segment?.name || 'Loading...' }}</h1>
         </div>
         <div class="header-actions">
-          <!-- Export dropdown - only for routes -->
+          <!-- Actions dropdown - only for routes -->
           <div v-if="segment?.track_type === 'route'" class="dropdown-container">
             <button @click="toggleExportMenu" class="export-button" ref="exportButton">
-              <i class="fa-solid fa-download"></i>
-              <span>{{ t('segmentDetail.export') }}</span>
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+              <span>{{ t('segmentDetail.actions') }}</span>
               <i class="fa-solid fa-chevron-down dropdown-icon"></i>
             </button>
             <div v-if="showExportMenu" class="dropdown-menu" ref="exportMenu">
               <button @click="downloadGPX" class="dropdown-item">
-                <i class="fa-solid fa-file-code"></i>
+                <i class="fa-solid fa-download"></i>
                 {{ t('segmentDetail.downloadGPX') }}
+              </button>
+              <button
+                @click="showDeleteConfirmation"
+                class="dropdown-item dropdown-item-danger"
+                :disabled="!isOwner"
+                :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
+              >
+                <i class="fa-solid fa-trash"></i>
+                {{ t('segmentDetail.deleteRoute') }}
               </button>
             </div>
           </div>
@@ -297,6 +306,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div
+      v-if="showDeleteConfirmModal"
+      class="confirm-modal-overlay"
+      @click="closeDeleteConfirmModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3>{{ t('segmentDetail.deleteRoute') }}</h3>
+          <button class="confirm-modal-close" @click="closeDeleteConfirmModal">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="confirm-modal-body">
+          <p>{{ t('segmentDetail.deleteRouteConfirm') }}</p>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            @click="closeDeleteConfirmModal"
+            class="btn-cancel"
+            :disabled="isDeleting"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button @click="confirmDeleteRoute" class="btn-delete" :disabled="isDeleting">
+            <i v-if="isDeleting" class="fa-solid fa-spinner fa-spin"></i>
+            {{ isDeleting ? t('common.deleting') : t('common.delete') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -308,12 +349,16 @@ import L from 'leaflet'
 import type { TrackResponse, GPXData, TrackVideoResponse } from '../types'
 import SegmentInfoCard from './SegmentInfoCard.vue'
 import ElevationChart from './ElevationChart.vue'
+import { useStravaApi } from '../composables/useStravaApi'
 
 const router = useRouter()
 const route = useRoute()
 
 // i18n
 const { t } = useI18n()
+
+// Authentication state
+const { authState } = useStravaApi()
 
 // Reactive data
 const segment = ref<TrackResponse | null>(null)
@@ -338,6 +383,8 @@ const currentModalImageIndex = ref(0) // Index of currently viewed image in moda
 const showExportMenu = ref(false) // State for export dropdown menu
 const exportButton = ref<HTMLElement | null>(null)
 const exportMenu = ref<HTMLElement | null>(null)
+const showDeleteConfirmModal = ref(false) // State for delete confirmation modal
+const isDeleting = ref(false) // State for delete operation
 
 // Current position tracking for cursor sync
 const currentPosition = ref({
@@ -391,6 +438,14 @@ const currentModalImage = computed(
   () => trackImages.value[currentModalImageIndex.value]
 )
 
+// Check if current user owns this route
+const isOwner = computed(() => {
+  if (!segment.value || !authState.value.isAuthenticated || !authState.value.athlete) {
+    return false
+  }
+  return segment.value.strava_id === authState.value.athlete.id
+})
+
 // Methods
 function goBack() {
   router.push('/')
@@ -402,6 +457,52 @@ function toggleExportMenu() {
 
 function closeExportMenu() {
   showExportMenu.value = false
+}
+
+function showDeleteConfirmation() {
+  showDeleteConfirmModal.value = true
+  closeExportMenu()
+}
+
+function closeDeleteConfirmModal() {
+  showDeleteConfirmModal.value = false
+}
+
+async function confirmDeleteRoute() {
+  if (!segment.value || !authState.value.isAuthenticated || !authState.value.athlete) {
+    return
+  }
+
+  isDeleting.value = true
+
+  try {
+    const stravaId = authState.value.athlete.id
+    const response = await fetch(
+      `/api/segments/${segmentId.value}?user_strava_id=${stravaId}`,
+      {
+        method: 'DELETE'
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(errorText || t('segmentDetail.deleteRouteError'))
+    }
+
+    // Show success message (could be improved with a toast notification)
+    alert(t('segmentDetail.deleteRouteSuccess'))
+
+    // Close modal
+    closeDeleteConfirmModal()
+
+    // Redirect to explorer
+    router.push('/')
+  } catch (err: any) {
+    console.error('Error deleting route:', err)
+    alert(err.message || t('segmentDetail.deleteRouteError'))
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 async function downloadGPX() {
@@ -1080,6 +1181,38 @@ onUnmounted(() => {
 
 .dropdown-item:hover i {
   color: var(--brand-primary);
+}
+
+.dropdown-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.dropdown-item:disabled:hover {
+  background: transparent;
+  color: #374151;
+}
+
+.dropdown-item:disabled:hover i {
+  color: #6b7280;
+}
+
+.dropdown-item-danger {
+  color: #dc2626;
+}
+
+.dropdown-item-danger:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.dropdown-item-danger i {
+  color: #dc2626;
+}
+
+.dropdown-item-danger:hover i {
+  color: #dc2626;
 }
 
 .back-button {
@@ -2106,6 +2239,149 @@ onUnmounted(() => {
     min-width: 1.5rem;
     height: 1.5rem;
     font-size: 0.75rem;
+  }
+}
+
+/* Confirmation Modal Styles */
+.confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 1rem;
+}
+
+.confirm-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.confirm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.confirm-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.confirm-modal-close {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.confirm-modal-close:hover {
+  color: #111827;
+}
+
+.confirm-modal-body {
+  padding: 1.5rem;
+}
+
+.confirm-modal-body p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.confirm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.btn-cancel,
+.btn-delete {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-cancel {
+  background: #ffffff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.btn-cancel:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-delete {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-cancel:disabled,
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 620px) {
+  .confirm-modal {
+    margin: 0 0.5rem;
+  }
+
+  .confirm-modal-header,
+  .confirm-modal-body,
+  .confirm-modal-footer {
+    padding: 1rem;
+  }
+
+  .confirm-modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .btn-cancel,
+  .btn-delete {
+    width: 100%;
+    justify-content: center;
   }
 }
 </style>

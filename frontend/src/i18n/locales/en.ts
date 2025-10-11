@@ -185,7 +185,15 @@ export default {
     videoPlayback: 'Video Playback',
     openVideo: 'Open Video',
     export: 'Export',
-    downloadGPX: 'Download GPX'
+    actions: 'Actions',
+    downloadGPX: 'Download GPX',
+    deleteRoute: 'Delete Route',
+    deleteRouteConfirm:
+      'Are you sure you want to delete this route? This action cannot be undone.',
+    deleteRouteSuccess: 'Route deleted successfully',
+    deleteRouteError: 'Failed to delete route',
+    notRouteOwner: 'Only the route owner can delete it',
+    routeNotOwned: 'You do not own this route'
   },
 
   // Strava integration
@@ -395,6 +403,8 @@ export default {
     loading: 'Loading...',
     continue: 'Continue',
     save: 'Save',
-    saving: 'Saving...'
+    saving: 'Saving...',
+    delete: 'Delete',
+    deleting: 'Deleting...'
   }
 }

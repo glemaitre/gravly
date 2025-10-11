@@ -7569,8 +7569,8 @@ def test_delete_segment_success(client, sample_gpx_file, tmp_path, dependencies_
             mock_storage.delete_gpx_segment_by_url.return_value = True
             mock_storage.delete_image_by_url.return_value = True
 
-            # Delete the segment
-            response = client.delete("/api/segments/123")
+            # Delete the segment (with matching strava_id)
+            response = client.delete("/api/segments/123?user_strava_id=123456")
 
             # Should succeed
             assert response.status_code == 200
@@ -7621,8 +7621,8 @@ def test_delete_segment_database_error(
     dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
-        # Delete the segment
-        response = client.delete("/api/segments/123")
+        # Delete the segment (with matching strava_id)
+        response = client.delete("/api/segments/123?user_strava_id=123456")
 
         # Should return 500
         assert response.status_code == 500
@@ -7657,7 +7657,7 @@ def test_delete_segment_no_storage_manager(
     dependencies_module.storage_manager = None
 
     try:
-        response = client.delete("/api/segments/123")
+        response = client.delete("/api/segments/123?user_strava_id=123456")
 
         assert response.status_code == 500
         assert "Storage manager not initialized" in response.json()["detail"]
@@ -7689,8 +7689,8 @@ def test_delete_segment_track_not_found_in_database(client, dependencies_module)
     dependencies_module.SessionLocal = lambda: MockSession()
 
     try:
-        # Delete the segment
-        response = client.delete("/api/segments/123")
+        # Delete the segment (with matching strava_id)
+        response = client.delete("/api/segments/123?user_strava_id=123456")
 
         # Should return 404 with "Track not found" message
         assert response.status_code == 404
@@ -7751,8 +7751,8 @@ def test_delete_segment_gpx_deletion_exception_handling(
 
             # Mock logger to capture warning messages
             with patch("src.api.segments.logger") as mock_logger:
-                # Delete the segment
-                response = client.delete("/api/segments/123")
+                # Delete the segment (with matching strava_id)
+                response = client.delete("/api/segments/123?user_strava_id=123456")
 
                 # Should still succeed despite storage exception
                 assert response.status_code == 200
@@ -7852,8 +7852,8 @@ def test_delete_segment_image_deletion_exception_handling(
 
             # Mock logger to capture warning messages
             with patch("src.api.segments.logger") as mock_logger:
-                # Delete the segment
-                response = client.delete("/api/segments/123")
+                # Delete the segment (with matching strava_id)
+                response = client.delete("/api/segments/123?user_strava_id=123456")
 
                 # Should still succeed despite storage exception
                 assert response.status_code == 200
@@ -7891,6 +7891,162 @@ def test_delete_segment_image_deletion_exception_handling(
 
     finally:
         dependencies_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_unauthorized_no_strava_id(client, dependencies_module):
+    """Test deletion without providing a strava_id (unauthorized)."""
+
+    # Mock a session that returns a track
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456
+            self.images = []
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+    # Mock the session
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = lambda: MockSession()
+
+    try:
+        # Delete the segment without strava_id
+        response = client.delete("/api/segments/123")
+
+        # Should return 401 Unauthorized
+        assert response.status_code == 401
+        response_data = response.json()
+        assert "Authentication required to delete track" in response_data["detail"]
+
+    finally:
+        dependencies_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_forbidden_different_owner(client, dependencies_module):
+    """Test deletion when the authenticated user is not the owner."""
+
+    # Mock a session that returns a track owned by user 123456
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456  # Track owned by user 123456
+            self.images = []
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+    # Mock the session
+    original_session_local = dependencies_module.SessionLocal
+    dependencies_module.SessionLocal = lambda: MockSession()
+
+    try:
+        # Try to delete the segment as a different user (999999)
+        response = client.delete("/api/segments/123?user_strava_id=999999")
+
+        # Should return 403 Forbidden
+        assert response.status_code == 403
+        response_data = response.json()
+        assert "You are not authorized to delete this track" in response_data["detail"]
+
+    finally:
+        dependencies_module.SessionLocal = original_session_local
+
+
+def test_delete_segment_success_with_authorization(
+    client, sample_gpx_file, tmp_path, dependencies_module
+):
+    """Test successful deletion when the authenticated user is the owner."""
+
+    # Mock a session that returns a track owned by user 123456
+    class MockTrack:
+        def __init__(self, track_id):
+            self.id = track_id
+            self.name = "Test Segment"
+            self.file_path = "gpx-segments/test.gpx"
+            self.strava_id = 123456
+            self.images = []
+            self.videos = []
+
+    class MockSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def execute(self, stmt):
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return MockTrack(123)
+
+            return MockResult()
+
+        def delete(self, obj):
+            pass
+
+        async def commit(self):
+            pass
+
+    # Mock storage manager
+    class MockStorageManager:
+        def delete_gpx_segment_by_url(self, url):
+            pass
+
+        def delete_image_by_url(self, url):
+            pass
+
+        def get_storage_root_prefix(self):
+            return "local://"
+
+    # Mock the session and storage manager
+    original_session_local = dependencies_module.SessionLocal
+    original_storage_manager = dependencies_module.storage_manager
+    dependencies_module.SessionLocal = lambda: MockSession()
+    dependencies_module.storage_manager = MockStorageManager()
+
+    try:
+        # Delete the segment as the owner (user 123456)
+        response = client.delete("/api/segments/123?user_strava_id=123456")
+
+        # Should succeed
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["message"] == "Track deleted successfully"
+        assert "deleted_track" in response_data
+        assert response_data["deleted_track"]["id"] == 123
+
+    finally:
+        dependencies_module.SessionLocal = original_session_local
+        dependencies_module.storage_manager = original_storage_manager
 
 
 # Non-regression tests for specific bugs
@@ -7966,8 +8122,8 @@ def test_nonregression_image_deletion_uses_storage_url_not_http_url(
             mock_storage.delete_image_by_url.return_value = True
             mock_storage.get_storage_root_prefix.return_value = "local://"
 
-            # Delete the segment
-            response = client.delete("/api/segments/999")
+            # Delete the segment (with matching strava_id)
+            response = client.delete("/api/segments/999?user_strava_id=123456")
 
             # Verify success
             assert response.status_code == 200

@@ -21,6 +21,7 @@ export interface TrackResponse {
   tire_dry: string
   tire_wet: string
   comments: string
+  strava_id?: number
   isReversed?: boolean // Added to track segment direction
 }
 
