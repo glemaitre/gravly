@@ -3,6 +3,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import { i18n, initializeLanguage } from './i18n'
 import { useStravaApi } from './composables/useStravaApi'
 import App from './App.vue'
+import Landing from './components/Landing.vue'
 import Editor from './components/Editor.vue'
 import Explorer from './components/Explorer.vue'
 import SegmentDetail from './components/SegmentDetail.vue'
@@ -10,7 +11,8 @@ import StravaCallback from './components/StravaCallback.vue'
 import RoutePlanner from './components/RoutePlanner.vue'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', component: Explorer },
+  { path: '/', component: Landing },
+  { path: '/explorer', component: Explorer },
   {
     path: '/editor',
     component: Editor,

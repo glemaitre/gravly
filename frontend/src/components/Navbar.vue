@@ -3,13 +3,19 @@
     <div class="navbar-container">
       <!-- Brand/Logo Section with Navigation -->
       <div class="navbar-brand">
-        <img :src="logoUrl" alt="Cycling Segments" class="navbar-logo" />
+        <router-link to="/" class="logo-link">
+          <img :src="logoUrl" alt="Gravly" class="navbar-logo" />
+        </router-link>
 
         <!-- Navigation Menu -->
         <div class="nav-menu">
-          <router-link to="/" class="nav-link" active-class="active">
-            <i class="fa-solid fa-route"></i>
+          <router-link to="/" class="nav-link" active-class="active" exact>
+            <i class="fa-solid fa-home"></i>
             <span>{{ $t('navbar.home') }}</span>
+          </router-link>
+          <router-link to="/explorer" class="nav-link" active-class="active">
+            <i class="fa-solid fa-route"></i>
+            <span>{{ $t('navbar.explorer') }}</span>
           </router-link>
           <router-link to="/route-planner" class="nav-link" active-class="active">
             <i class="fa-solid fa-map"></i>
@@ -306,6 +312,17 @@ onUnmounted(() => {
   flex-shrink: 0;
   margin-right: 1rem;
   gap: 2rem;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.logo-link:hover {
+  opacity: 0.8;
 }
 
 .navbar-logo {

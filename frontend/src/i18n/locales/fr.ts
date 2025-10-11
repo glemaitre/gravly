@@ -117,11 +117,33 @@ export default {
 
   // Navbar
   navbar: {
-    home: 'Explorer',
+    home: 'Accueil',
+    explorer: 'Explorer',
     editor: 'Éditeur',
     routePlanner: 'Planificateur',
     login: 'Connexion Strava',
     logout: 'Déconnexion'
+  },
+
+  // Landing page
+  landing: {
+    subtitle:
+      'Planifiez vos parcours gravel en toute confiance. Sachez exactement quel terrain vous attend avant de rouler.',
+    exploreSegments: 'Explorer les Segments',
+    planRoute: 'Planifier un Parcours',
+    whyGravly: 'Pourquoi Gravly ?',
+    problemTitle: 'On Connaît Tous Cette Situation',
+    problemDescription:
+      "Vous planifiez ce qui semble être le parcours gravel parfait, pour finalement vous retrouver à pousser votre vélo dans un lit de rivière rocailleux, naviguer sur un sentier qui n'existe plus, ou rouler en slicks sur du gravier meuble. Planifier des sorties gravel ne devrait pas être une loterie.",
+    feature1Title: 'Informations Terrain Réelles',
+    feature1Description:
+      'Chaque segment inclut des informations vérifiées et réelles : types de surface (asphalte, gravier, pierres, sentiers), niveaux de difficulté, recommandations de pneus pour conditions sèches et humides, et conditions réelles du terrain. Plus de mauvaises surprises.',
+    feature2Title: 'Planification Précise',
+    feature2Description:
+      "Filtrez les segments par type de surface, difficulté ou conditions. Sélectionnez exactement les segments que vous souhaitez emprunter, et notre planificateur génère le parcours complet avec des profils d'altitude détaillés. Vous gardez le contrôle.",
+    feature3Title: 'Sauvegardez et Partagez',
+    feature3Description:
+      'Enregistrez vos parcours planifiés et partagez-les avec la communauté gravel. Exportez au format GPX pour votre GPS ou compteur vélo. Constituez une collection de sorties fiables.'
   },
 
   // Language selector

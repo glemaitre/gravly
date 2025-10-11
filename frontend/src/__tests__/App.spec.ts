@@ -88,7 +88,7 @@ describe('App', () => {
 
     const logo = wrapper.find('.navbar-logo')
     expect(logo.exists()).toBe(true)
-    expect(logo.attributes('alt')).toBe('Cycling Segments')
+    expect(logo.attributes('alt')).toBe('Gravly')
   })
 
   it('shows language dropdown with correct options', () => {

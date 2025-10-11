@@ -116,11 +116,33 @@ export default {
 
   // Navbar
   navbar: {
-    home: 'Explorer',
+    home: 'Home',
+    explorer: 'Explorer',
     editor: 'Editor',
     routePlanner: 'Planner',
     login: 'Login with Strava',
     logout: 'Logout'
+  },
+
+  // Landing page
+  landing: {
+    subtitle:
+      'Plan gravel routes with confidence. Know exactly what terrain awaits you before you ride.',
+    exploreSegments: 'Explore Segments',
+    planRoute: 'Plan a Route',
+    whyGravly: 'Why Gravly?',
+    problemTitle: "We've All Been There",
+    problemDescription:
+      "You plan what looks like a perfect gravel route, only to end up pushing your bike through a rocky streambed, navigating a trail that no longer exists, or riding slicks on loose gravel. Planning gravel rides shouldn't be guesswork.",
+    feature1Title: 'Real Gravel Intelligence',
+    feature1Description:
+      'Every segment includes verified, real-world information: surface types (paved, gravel, stones, trails), difficulty levels, tire recommendations for dry and wet conditions, and actual trail conditions. No more surprises.',
+    feature2Title: 'Plan With Precision',
+    feature2Description:
+      'Filter segments by surface type, difficulty, or conditions. Select exactly which segments you want to ride through, and our planner generates the complete route with detailed elevation profiles. You stay in control.',
+    feature3Title: 'Save & Share Your Routes',
+    feature3Description:
+      'Store your planned routes and share them with the gravel community. Export to GPX format for your GPS device or cycling computer. Build a collection of rides you can trust.'
   },
 
   // Language selector
