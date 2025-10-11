@@ -151,6 +151,7 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, nextTick, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useStravaApi } from '../composables/useStravaApi'
 import L from 'leaflet'
 import 'leaflet-routing-machine'
@@ -198,6 +199,7 @@ L.Icon.Default.mergeOptions({
 })
 
 const { t } = useI18n()
+const router = useRouter()
 const { authState, loadAuthState } = useStravaApi()
 
 // Sidebar and mode state
@@ -1704,12 +1706,14 @@ function handleDeleteWaypoint() {
   hideContextMenu()
 }
 
-function handleRouteSaved() {
+function handleRouteSaved(routeId: number) {
   showSaveModal.value = false
-  // You can add additional logic here if needed, such as:
-  // - Showing a success notification
-  // - Redirecting to the saved route
-  // - Updating the UI state
+
+  // Clear the map and reset all state (like clicking the bin button)
+  performCompleteReset()
+
+  // Redirect to the segment detail view for the saved route
+  router.push(`/segment/${routeId}`)
 }
 
 function createWaypointMarker(index: number, latlng: any) {

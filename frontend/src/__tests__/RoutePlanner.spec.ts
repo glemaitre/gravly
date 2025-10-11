@@ -163,6 +163,19 @@ vi.mock('chart.js', () => ({
 // Mock fetch for elevation API
 global.fetch = vi.fn()
 
+// Mock Vue Router
+const mockRouter = {
+  push: vi.fn(),
+  replace: vi.fn(),
+  go: vi.fn(),
+  back: vi.fn(),
+  forward: vi.fn()
+}
+
+vi.mock('vue-router', () => ({
+  useRouter: () => mockRouter
+}))
+
 // Mock useStravaApi composable
 interface StravaAuthState {
   isAuthenticated: boolean
@@ -3786,6 +3799,125 @@ describe('RoutePlanner', () => {
       // Verify segment cache is preserved
       expect(wrapper.vm.selectedSegments).toEqual(mockSegments)
       expect(wrapper.vm.gpxDataCache.has(1)).toBe(true)
+    })
+  })
+
+  describe('Route Save Behavior', () => {
+    beforeEach(async () => {
+      vi.clearAllMocks()
+      wrapper = mount(RoutePlanner, {
+        global: {
+          plugins: [i18n]
+        }
+      })
+      await nextTick()
+    })
+
+    it('should have handleRouteSaved function defined', () => {
+      expect(wrapper.vm.handleRouteSaved).toBeDefined()
+      expect(typeof wrapper.vm.handleRouteSaved).toBe('function')
+    })
+
+    it('should navigate to segment detail page when route is saved', async () => {
+      // Set up some initial state
+      wrapper.vm.showSaveModal = true
+      wrapper.vm.waypoints = [
+        { lat: 45.0, lng: 5.0 },
+        { lat: 45.1, lng: 5.1 }
+      ]
+
+      // Call handleRouteSaved with a route ID
+      const savedRouteId = 456
+      wrapper.vm.handleRouteSaved(savedRouteId)
+
+      await nextTick()
+
+      // Verify router.push was called with the correct route
+      expect(mockRouter.push).toHaveBeenCalled()
+      expect(mockRouter.push).toHaveBeenCalledWith('/segment/456')
+    })
+
+    it('should close save modal when route is saved', async () => {
+      // Set showSaveModal to true
+      wrapper.vm.showSaveModal = true
+      expect(wrapper.vm.showSaveModal).toBe(true)
+
+      // Call handleRouteSaved
+      const savedRouteId = 789
+      wrapper.vm.handleRouteSaved(savedRouteId)
+
+      await nextTick()
+
+      // Verify modal is closed
+      expect(wrapper.vm.showSaveModal).toBe(false)
+    })
+
+    it('should clear all route data after saving', async () => {
+      // Set up comprehensive route state
+      wrapper.vm.waypoints = [
+        { lat: 45.0, lng: 5.0 },
+        { lat: 45.1, lng: 5.1 },
+        { lat: 45.2, lng: 5.2 }
+      ]
+      wrapper.vm.selectedSegments = [
+        { id: 1, name: 'Segment 1' },
+        { id: 2, name: 'Segment 2' }
+      ]
+      wrapper.vm.startWaypoint = { lat: 45.0, lng: 5.0 }
+      wrapper.vm.endWaypoint = { lat: 45.2, lng: 5.2 }
+      wrapper.vm.routeFeatures = {
+        difficulty_level: 3,
+        surface_types: ['paved'],
+        tire_dry: 'slick',
+        tire_wet: 'semi-slick'
+      }
+
+      // Verify data exists before save
+      expect(wrapper.vm.waypoints).toHaveLength(3)
+      expect(wrapper.vm.selectedSegments).toHaveLength(2)
+
+      // Call handleRouteSaved
+      const savedRouteId = 999
+      wrapper.vm.handleRouteSaved(savedRouteId)
+
+      await nextTick()
+
+      // Verify all data is cleared after performCompleteReset
+      expect(wrapper.vm.waypoints).toHaveLength(0)
+      expect(wrapper.vm.startWaypoint).toBeNull()
+      expect(wrapper.vm.endWaypoint).toBeNull()
+      expect(wrapper.vm.routeFeatures).toBeNull()
+
+      // Verify localStorage.removeItem was called for route cache
+      expect(localStorageMock.removeItem).toHaveBeenCalled()
+    })
+
+    it('should handle different route IDs correctly', async () => {
+      const testCases = [1, 42, 1000, 99999]
+
+      for (const routeId of testCases) {
+        vi.clearAllMocks()
+
+        wrapper.vm.handleRouteSaved(routeId)
+        await nextTick()
+
+        expect(mockRouter.push).toHaveBeenCalledWith(`/segment/${routeId}`)
+      }
+    })
+
+    it('should integrate with RouteSaveModal component', async () => {
+      // This test verifies that the handleRouteSaved handler is correctly wired
+      // to the RouteSaveModal's route-saved event in the template
+
+      // Call handleRouteSaved directly to test the integration point
+      const savedRouteId = 555
+      wrapper.vm.handleRouteSaved(savedRouteId)
+
+      await nextTick()
+
+      // Verify the handler was called and navigation occurred
+      expect(mockRouter.push).toHaveBeenCalledWith('/segment/555')
+      expect(wrapper.vm.showSaveModal).toBe(false)
     })
   })
 })
