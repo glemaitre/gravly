@@ -2298,3 +2298,863 @@ describe('SegmentDetail Video Gallery', () => {
     })
   })
 })
+
+describe('SegmentDetail Export Dropdown', () => {
+  let wrapper: any
+
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount()
+    }
+    vi.clearAllMocks()
+  })
+
+  it('should show Export button only for routes, not segments', async () => {
+    // Test with segment
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Segment',
+              track_type: 'segment',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Export button should NOT be visible for segments
+    const exportButton = wrapper.find('.export-button')
+    expect(exportButton.exists()).toBe(false)
+
+    wrapper.unmount()
+
+    // Test with route
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Export button SHOULD be visible for routes
+    const exportButtonForRoute = wrapper.find('.export-button')
+    expect(exportButtonForRoute.exists()).toBe(true)
+  })
+
+  it('should toggle dropdown menu when Export button is clicked', async () => {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+    expect(exportButton.exists()).toBe(true)
+
+    // Dropdown should not be visible initially
+    let dropdownMenu = wrapper.find('.dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(false)
+
+    // Click the export button
+    await exportButton.trigger('click')
+    await nextTick()
+
+    // Dropdown should now be visible
+    dropdownMenu = wrapper.find('.dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(true)
+
+    // Click again to close
+    await exportButton.trigger('click')
+    await nextTick()
+
+    // Dropdown should be hidden again
+    dropdownMenu = wrapper.find('.dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(false)
+  })
+
+  it('should close dropdown when clicking outside', async () => {
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    let dropdownMenu = wrapper.find('.dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(true)
+
+    // Simulate clicking outside by dispatching a click event on document
+    const clickEvent = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true
+    })
+    document.dispatchEvent(clickEvent)
+    await nextTick()
+
+    // Dropdown should be closed
+    dropdownMenu = wrapper.find('.dropdown-menu')
+    expect(dropdownMenu.exists()).toBe(false)
+  })
+
+  it('should download GPX file when "Download GPX" is clicked', async () => {
+    const mockGpxXmlData = '<?xml version="1.0"?><gpx>test</gpx>'
+
+    // Mock URL.createObjectURL and URL.revokeObjectURL
+    const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
+    const mockRevokeObjectURL = vi.fn()
+    global.URL.createObjectURL = mockCreateObjectURL
+    global.URL.revokeObjectURL = mockRevokeObjectURL
+
+    // Mock document.createElement for download link
+    const mockClick = vi.fn()
+    const mockLink = {
+      click: mockClick,
+      href: '',
+      download: '',
+      style: {},
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      parentNode: null
+    }
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement')
+    createElementSpy.mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        return mockLink as any
+      }
+      return originalCreateElement(tagName)
+    })
+
+    const originalAppendChild = document.body.appendChild.bind(document.body)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalAppendChild(node)
+      })
+
+    const originalRemoveChild = document.body.removeChild.bind(document.body)
+    const removeChildSpy = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalRemoveChild(node)
+      })
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/gpx') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ gpx_xml_data: mockGpxXmlData })
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const downloadButton = wrapper.find('.dropdown-item')
+    expect(downloadButton.exists()).toBe(true)
+
+    // Click download
+    await downloadButton.trigger('click')
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that download was triggered
+    expect(mockCreateObjectURL).toHaveBeenCalled()
+    expect(mockClick).toHaveBeenCalled()
+    expect(appendChildSpy).toHaveBeenCalled()
+    expect(removeChildSpy).toHaveBeenCalled()
+    expect(mockRevokeObjectURL).toHaveBeenCalledWith('blob:test-url')
+
+    // Cleanup
+    createElementSpy.mockRestore()
+    appendChildSpy.mockRestore()
+    removeChildSpy.mockRestore()
+  })
+
+  it('should handle GPX fetch error gracefully', async () => {
+    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    // Mock URL.createObjectURL and URL.revokeObjectURL
+    const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
+    const mockRevokeObjectURL = vi.fn()
+    global.URL.createObjectURL = mockCreateObjectURL
+    global.URL.revokeObjectURL = mockRevokeObjectURL
+
+    // Mock document.createElement for download link
+    const mockClick = vi.fn()
+    const mockLink = {
+      click: mockClick,
+      href: '',
+      download: '',
+      style: {},
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      parentNode: null
+    }
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement')
+    createElementSpy.mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        return mockLink as any
+      }
+      return originalCreateElement(tagName)
+    })
+
+    const originalAppendChild = document.body.appendChild.bind(document.body)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalAppendChild(node)
+      })
+
+    const originalRemoveChild = document.body.removeChild.bind(document.body)
+    const removeChildSpy = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalRemoveChild(node)
+      })
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/gpx') {
+        return Promise.resolve({
+          ok: false,
+          statusText: 'Not Found'
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const downloadButton = wrapper.find('.dropdown-item')
+
+    // Click download
+    await downloadButton.trigger('click')
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that error was handled
+    expect(mockAlert).toHaveBeenCalledWith(
+      'Failed to download GPX file. Please try again.'
+    )
+
+    // Cleanup
+    mockAlert.mockRestore()
+    createElementSpy.mockRestore()
+    appendChildSpy.mockRestore()
+    removeChildSpy.mockRestore()
+  })
+
+  it('should use File System Access API when available', async () => {
+    const mockGpxXmlData = '<?xml version="1.0"?><gpx>test</gpx>'
+    const mockWritable = {
+      write: vi.fn(),
+      close: vi.fn()
+    }
+    const mockHandle = {
+      createWritable: vi.fn().mockResolvedValue(mockWritable)
+    }
+    const mockShowSaveFilePicker = vi.fn().mockResolvedValue(mockHandle)
+
+    // Add the File System Access API to window
+    ;(window as any).showSaveFilePicker = mockShowSaveFilePicker
+
+    // Mock URL.createObjectURL and URL.revokeObjectURL (for fallback)
+    const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
+    const mockRevokeObjectURL = vi.fn()
+    global.URL.createObjectURL = mockCreateObjectURL
+    global.URL.revokeObjectURL = mockRevokeObjectURL
+
+    // Mock document.createElement for download link (for fallback)
+    const mockClick = vi.fn()
+    const mockLink = {
+      click: mockClick,
+      href: '',
+      download: '',
+      style: {},
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      parentNode: null
+    }
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement')
+    createElementSpy.mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        return mockLink as any
+      }
+      return originalCreateElement(tagName)
+    })
+
+    const originalAppendChild = document.body.appendChild.bind(document.body)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalAppendChild(node)
+      })
+
+    const originalRemoveChild = document.body.removeChild.bind(document.body)
+    const removeChildSpy = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalRemoveChild(node)
+      })
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/gpx') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ gpx_xml_data: mockGpxXmlData })
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const downloadButton = wrapper.find('.dropdown-item')
+
+    // Click download
+    await downloadButton.trigger('click')
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that File System Access API was used
+    expect(mockShowSaveFilePicker).toHaveBeenCalledWith({
+      suggestedName: 'test_route.gpx',
+      types: [
+        {
+          description: 'GPX Files',
+          accept: { 'application/gpx+xml': ['.gpx'] }
+        }
+      ]
+    })
+    expect(mockHandle.createWritable).toHaveBeenCalled()
+    expect(mockWritable.write).toHaveBeenCalled()
+    expect(mockWritable.close).toHaveBeenCalled()
+
+    // Cleanup
+    delete (window as any).showSaveFilePicker
+    createElementSpy.mockRestore()
+    appendChildSpy.mockRestore()
+    removeChildSpy.mockRestore()
+  })
+
+  it('should sanitize filename correctly', async () => {
+    const mockGpxXmlData = '<?xml version="1.0"?><gpx>test</gpx>'
+    const mockWritable = {
+      write: vi.fn(),
+      close: vi.fn()
+    }
+    const mockHandle = {
+      createWritable: vi.fn().mockResolvedValue(mockWritable)
+    }
+    const mockShowSaveFilePicker = vi.fn().mockResolvedValue(mockHandle)
+
+    // Add the File System Access API to window
+    ;(window as any).showSaveFilePicker = mockShowSaveFilePicker
+
+    // Mock URL.createObjectURL and URL.revokeObjectURL (for fallback)
+    const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
+    const mockRevokeObjectURL = vi.fn()
+    global.URL.createObjectURL = mockCreateObjectURL
+    global.URL.revokeObjectURL = mockRevokeObjectURL
+
+    // Mock document.createElement for download link (for fallback)
+    const mockClick = vi.fn()
+    const mockLink = {
+      click: mockClick,
+      href: '',
+      download: '',
+      style: {},
+      setAttribute: vi.fn(),
+      getAttribute: vi.fn(),
+      parentNode: null
+    }
+    const originalCreateElement = document.createElement.bind(document)
+    const createElementSpy = vi.spyOn(document, 'createElement')
+    createElementSpy.mockImplementation((tagName: string) => {
+      if (tagName === 'a') {
+        return mockLink as any
+      }
+      return originalCreateElement(tagName)
+    })
+
+    const originalAppendChild = document.body.appendChild.bind(document.body)
+    const appendChildSpy = vi
+      .spyOn(document.body, 'appendChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalAppendChild(node)
+      })
+
+    const originalRemoveChild = document.body.removeChild.bind(document.body)
+    const removeChildSpy = vi
+      .spyOn(document.body, 'removeChild')
+      .mockImplementation((node: any) => {
+        if (node === mockLink) {
+          return mockLink as any
+        }
+        return originalRemoveChild(node)
+      })
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'My Special Route! @#$%',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/gpx') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ gpx_xml_data: mockGpxXmlData })
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    const downloadButton = wrapper.find('.dropdown-item')
+
+    // Click download
+    await downloadButton.trigger('click')
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that filename was sanitized (special characters replaced with underscores)
+    expect(mockShowSaveFilePicker).toHaveBeenCalledWith({
+      suggestedName: 'my_special_route______.gpx',
+      types: [
+        {
+          description: 'GPX Files',
+          accept: { 'application/gpx+xml': ['.gpx'] }
+        }
+      ]
+    })
+
+    // Cleanup
+    delete (window as any).showSaveFilePicker
+    createElementSpy.mockRestore()
+    appendChildSpy.mockRestore()
+    removeChildSpy.mockRestore()
+  })
+})

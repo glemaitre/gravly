@@ -10,10 +10,26 @@
           ></i>
           <h1 class="segment-title">{{ segment?.name || 'Loading...' }}</h1>
         </div>
-        <button @click="goBack" class="back-button">
-          <i class="fa-solid fa-arrow-left"></i>
-          {{ t('segmentDetail.backToTrackFinder') }}
-        </button>
+        <div class="header-actions">
+          <!-- Export dropdown - only for routes -->
+          <div v-if="segment?.track_type === 'route'" class="dropdown-container">
+            <button @click="toggleExportMenu" class="export-button" ref="exportButton">
+              <i class="fa-solid fa-download"></i>
+              <span>{{ t('segmentDetail.export') }}</span>
+              <i class="fa-solid fa-chevron-down dropdown-icon"></i>
+            </button>
+            <div v-if="showExportMenu" class="dropdown-menu" ref="exportMenu">
+              <button @click="downloadGPX" class="dropdown-item">
+                <i class="fa-solid fa-file-code"></i>
+                {{ t('segmentDetail.downloadGPX') }}
+              </button>
+            </div>
+          </div>
+          <button @click="goBack" class="back-button">
+            <i class="fa-solid fa-arrow-left"></i>
+            {{ t('segmentDetail.backToTrackFinder') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -319,6 +335,9 @@ const currentImagesStart = ref(0) // Starting index for visible images
 const currentVideosPage = ref(1)
 const currentVideosStart = ref(0) // Starting index for visible videos in current page
 const currentModalImageIndex = ref(0) // Index of currently viewed image in modal
+const showExportMenu = ref(false) // State for export dropdown menu
+const exportButton = ref<HTMLElement | null>(null)
+const exportMenu = ref<HTMLElement | null>(null)
 
 // Current position tracking for cursor sync
 const currentPosition = ref({
@@ -375,6 +394,94 @@ const currentModalImage = computed(
 // Methods
 function goBack() {
   router.push('/')
+}
+
+function toggleExportMenu() {
+  showExportMenu.value = !showExportMenu.value
+}
+
+function closeExportMenu() {
+  showExportMenu.value = false
+}
+
+async function downloadGPX() {
+  if (!segment.value) return
+
+  try {
+    // Fetch GPX XML data from backend
+    const response = await fetch(`/api/segments/${segmentId.value}/gpx`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch GPX data')
+    }
+
+    const data = await response.json()
+    const gpxXmlData = data.gpx_xml_data
+
+    // Create a Blob from the GPX XML data
+    const blob = new Blob([gpxXmlData], { type: 'application/gpx+xml' })
+
+    // Create a sanitized filename from the segment name
+    const sanitizedName = segment.value.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+    const suggestedFileName = `${sanitizedName}.gpx`
+
+    // Try using the File System Access API (modern browsers)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: suggestedFileName,
+          types: [
+            {
+              description: 'GPX Files',
+              accept: { 'application/gpx+xml': ['.gpx'] }
+            }
+          ]
+        })
+
+        const writable = await handle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+
+        closeExportMenu()
+        return
+      } catch (err: any) {
+        // User cancelled or browser doesn't support it
+        if (err.name !== 'AbortError') {
+          console.warn('File System Access API failed, falling back to download:', err)
+        } else {
+          // User cancelled, just close the menu
+          closeExportMenu()
+          return
+        }
+      }
+    }
+
+    // Fallback: Create a download link
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = suggestedFileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    closeExportMenu()
+  } catch (err) {
+    console.error('Error downloading GPX file:', err)
+    alert('Failed to download GPX file. Please try again.')
+  }
+}
+
+function handleClickOutside(event: MouseEvent) {
+  if (
+    showExportMenu.value &&
+    exportButton.value &&
+    exportMenu.value &&
+    !exportButton.value.contains(event.target as Node) &&
+    !exportMenu.value.contains(event.target as Node)
+  ) {
+    closeExportMenu()
+  }
 }
 
 async function loadSegmentData() {
@@ -836,6 +943,7 @@ function updateVideosPerView() {
 onMounted(() => {
   loadSegmentData()
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('click', handleClickOutside)
   window.addEventListener('resize', updateImagesPerView)
   window.addEventListener('resize', updateVideosPerView)
   updateImagesPerView()
@@ -850,6 +958,7 @@ onUnmounted(() => {
     mapMarker.value.remove()
   }
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('resize', updateImagesPerView)
   window.removeEventListener('resize', updateVideosPerView)
 })
@@ -893,6 +1002,86 @@ onUnmounted(() => {
   color: var(--brand-primary);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dropdown-container {
+  position: relative;
+}
+
+.export-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  border-radius: 8px;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.export-button:hover {
+  background: var(--brand-primary-hover, #0ea5e9);
+  border-color: var(--brand-primary-hover, #0ea5e9);
+}
+
+.export-button .dropdown-icon {
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 200px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f9fafb;
+  color: var(--brand-primary);
+}
+
+.dropdown-item i {
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.dropdown-item:hover i {
+  color: var(--brand-primary);
+}
+
 .back-button {
   display: flex;
   align-items: center;
@@ -915,6 +1104,19 @@ onUnmounted(() => {
 
 /* Hide text on small screens, show only icon */
 @media (max-width: 850px) {
+  .export-button span {
+    display: none;
+  }
+
+  .export-button {
+    padding: 0.75rem;
+    min-width: auto;
+  }
+
+  .export-button .dropdown-icon {
+    margin-left: 0;
+  }
+
   .back-button {
     padding: 0.75rem;
     min-width: auto;

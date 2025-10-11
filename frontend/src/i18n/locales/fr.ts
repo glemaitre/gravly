@@ -184,7 +184,9 @@ export default {
     photoGallery: 'Galerie photo',
     youtubeVideos: 'Vidéos YouTube',
     videoPlayback: 'Lecture vidéo',
-    openVideo: 'Ouvrir la vidéo'
+    openVideo: 'Ouvrir la vidéo',
+    export: 'Exporter',
+    downloadGPX: 'Télécharger GPX'
   },
 
   // Strava integration
