@@ -33,12 +33,15 @@
         <div class="auth-section">
           <button
             v-if="!isAuthenticated"
-            class="strava-login-btn navbar-btn"
+            class="strava-login-btn"
             @click="handleStravaLogin"
             :disabled="isLoading"
           >
-            <i class="fab fa-strava"></i>
-            <span>{{ $t('navbar.login') }}</span>
+            <img
+              :src="stravaConnectBtn"
+              alt="Connect with Strava"
+              class="strava-btn-image"
+            />
           </button>
 
           <div v-else class="strava-user-dropdown" ref="userDropdown">
@@ -140,6 +143,7 @@ import { setLanguage, type MessageLanguages } from '../i18n'
 import { useStravaApi } from '../composables/useStravaApi'
 import { useAuthorization } from '../composables/useAuthorization'
 import logoUrl from '../assets/images/logo.svg'
+import stravaConnectBtn from '../assets/images/btn_strava_connect.png'
 
 // i18n setup
 const { locale } = useI18n()
@@ -353,19 +357,31 @@ onUnmounted(() => {
 
 /* Strava Login Button */
 .strava-login-btn {
-  background: linear-gradient(135deg, #fc4c02 0%, #ff6b35 100%);
-  color: white;
-  border-color: #fc4c02;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .strava-login-btn:hover {
-  background: linear-gradient(135deg, #e63e00 0%, #ff5a2b 100%);
-  border-color: #e63e00;
-  color: white;
+  opacity: 0.85;
+  transform: translateY(-1px);
+  background: transparent;
+  border: none;
 }
 
-.strava-login-btn i {
-  font-size: 1.1em;
+.strava-login-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.strava-btn-image {
+  display: block;
+  height: 38px;
+  width: auto;
 }
 
 /* User Dropdown */
@@ -712,8 +728,8 @@ onUnmounted(() => {
     font-size: 0.85rem;
   }
 
-  .strava-login-btn span {
-    display: none;
+  .strava-btn-image {
+    height: 34px;
   }
 
   .strava-user-btn .user-name {
@@ -743,6 +759,10 @@ onUnmounted(() => {
   .navbar-btn {
     padding: 0.3rem 0.5rem;
     font-size: 0.8rem;
+  }
+
+  .strava-btn-image {
+    height: 30px;
   }
 
   .language-name {
