@@ -496,7 +496,7 @@ async function confirmDeleteRoute() {
     closeDeleteConfirmModal()
 
     // Redirect to explorer
-    router.push('/')
+    router.push('/explorer')
   } catch (err: any) {
     console.error('Error deleting route:', err)
     alert(err.message || t('segmentDetail.deleteRouteError'))
