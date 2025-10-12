@@ -209,13 +209,23 @@ export default {
     export: 'Export',
     actions: 'Actions',
     downloadGPX: 'Download GPX',
+    shareLink: 'Share Link',
+    linkCopied: 'Link copied to clipboard',
+    shareLinkError: 'Failed to share link',
     deleteRoute: 'Delete Route',
+    deleteSegment: 'Delete Segment',
     deleteRouteConfirm:
       'Are you sure you want to delete this route? This action cannot be undone.',
+    deleteSegmentConfirm:
+      'Are you sure you want to delete this segment? This action cannot be undone.',
     deleteRouteSuccess: 'Route deleted successfully',
+    deleteSegmentSuccess: 'Segment deleted successfully',
     deleteRouteError: 'Failed to delete route',
+    deleteSegmentError: 'Failed to delete segment',
     notRouteOwner: 'Only the route owner can delete it',
-    routeNotOwned: 'You do not own this route'
+    notSegmentOwner: 'Only the segment owner can delete it',
+    routeNotOwned: 'You do not own this route',
+    segmentNotOwned: 'You do not own this segment'
   },
 
   // Strava integration

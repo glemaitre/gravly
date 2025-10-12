@@ -2325,7 +2325,7 @@ describe('SegmentDetail Export Dropdown', () => {
     vi.clearAllMocks()
   })
 
-  it('should show Export button only for routes, not segments', async () => {
+  it('should show Actions menu for both routes and segments', async () => {
     // Test with segment
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
       const urlString = url.toString()
@@ -2381,9 +2381,29 @@ describe('SegmentDetail Export Dropdown', () => {
     await nextTick()
     await new Promise((resolve) => setTimeout(resolve, 500))
 
-    // Export button should NOT be visible for segments
-    const exportButton = wrapper.find('.export-button')
-    expect(exportButton.exists()).toBe(false)
+    // Actions button should be visible for segments
+    const actionsButton = wrapper.find('.export-button')
+    expect(actionsButton.exists()).toBe(true)
+
+    // Open dropdown
+    await actionsButton.trigger('click')
+    await nextTick()
+
+    // Should only show Share Link for segments (no Download GPX, no Delete)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    expect(dropdownItems.length).toBe(1) // Only Share Link
+    expect(dropdownItems[0].text()).toContain('segmentDetail.shareLink')
+
+    // Download GPX and Delete should not be present for segments
+    const downloadButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.downloadGPX')
+    )
+    expect(downloadButton).toBeUndefined()
+
+    const deleteButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.deleteSegment')
+    )
+    expect(deleteButton).toBeUndefined()
 
     wrapper.unmount()
 
@@ -2603,6 +2623,99 @@ describe('SegmentDetail Export Dropdown', () => {
     expect(dropdownMenu.exists()).toBe(false)
   })
 
+  it('should copy share link to clipboard when "Share Link" is clicked', async () => {
+    const mockWriteText = vi.fn().mockResolvedValue(undefined)
+    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    // Mock clipboard API
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText
+      }
+    })
+
+    vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
+      const urlString = url.toString()
+      if (urlString === '/api/segments/1') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              id: 1,
+              name: 'Test Route',
+              track_type: 'route',
+              difficulty_level: 3,
+              surface_type: ['forest-trail'],
+              tire_dry: 'slick',
+              tire_wet: 'slick',
+              barycenter_latitude: 46.5197,
+              barycenter_longitude: 6.6323
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/data') {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              points: [
+                { latitude: 46.5197, longitude: 6.6323, elevation: 372 },
+                { latitude: 46.5198, longitude: 6.6324, elevation: 375 }
+              ],
+              total_stats: {
+                total_distance: 1000,
+                total_elevation_gain: 50,
+                total_elevation_loss: 30,
+                max_elevation: 400,
+                min_elevation: 350
+              }
+            })
+        } as Response)
+      } else if (urlString === '/api/segments/1/images') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      } else if (urlString === '/api/segments/1/videos') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve([])
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected URL: ${urlString}`))
+    })
+
+    wrapper = mount(SegmentDetail)
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    const exportButton = wrapper.find('.export-button')
+
+    // Open dropdown
+    await exportButton.trigger('click')
+    await nextTick()
+
+    // Find the Share Link button (first item in dropdown)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const shareLinkButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.shareLink')
+    )
+    expect(shareLinkButton).toBeDefined()
+
+    // Click share link
+    await shareLinkButton!.trigger('click')
+    await nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // Check that clipboard writeText was called with the correct URL
+    expect(mockWriteText).toHaveBeenCalledWith(`${window.location.origin}/segment/1`)
+
+    // Check that success alert was shown
+    expect(mockAlert).toHaveBeenCalledWith('segmentDetail.linkCopied')
+
+    // Cleanup
+    mockAlert.mockRestore()
+  })
+
   it('should download GPX file when "Download GPX" is clicked', async () => {
     const mockGpxXmlData = '<?xml version="1.0"?><gpx>test</gpx>'
 
@@ -2717,11 +2830,15 @@ describe('SegmentDetail Export Dropdown', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const downloadButton = wrapper.find('.dropdown-item')
-    expect(downloadButton.exists()).toBe(true)
+    // Find the Download GPX button (it's now the second item after Share Link)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const downloadButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.downloadGPX')
+    )
+    expect(downloadButton).toBeDefined()
 
     // Click download
-    await downloadButton.trigger('click')
+    await downloadButton!.trigger('click')
     await nextTick()
     await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -2852,10 +2969,15 @@ describe('SegmentDetail Export Dropdown', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const downloadButton = wrapper.find('.dropdown-item')
+    // Find the Download GPX button (it's now the second item after Share Link)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const downloadButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.downloadGPX')
+    )
+    expect(downloadButton).toBeDefined()
 
     // Click download
-    await downloadButton.trigger('click')
+    await downloadButton!.trigger('click')
     await nextTick()
     await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -2996,10 +3118,15 @@ describe('SegmentDetail Export Dropdown', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const downloadButton = wrapper.find('.dropdown-item')
+    // Find the Download GPX button (it's now the second item after Share Link)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const downloadButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.downloadGPX')
+    )
+    expect(downloadButton).toBeDefined()
 
     // Click download
-    await downloadButton.trigger('click')
+    await downloadButton!.trigger('click')
     await nextTick()
     await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -3149,10 +3276,15 @@ describe('SegmentDetail Export Dropdown', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const downloadButton = wrapper.find('.dropdown-item')
+    // Find the Download GPX button (it's now the second item after Share Link)
+    const dropdownItems = wrapper.findAll('.dropdown-item')
+    const downloadButton = dropdownItems.find((item: any) =>
+      item.text().includes('segmentDetail.downloadGPX')
+    )
+    expect(downloadButton).toBeDefined()
 
     // Click download
-    await downloadButton.trigger('click')
+    await downloadButton!.trigger('click')
     await nextTick()
     await new Promise((resolve) => setTimeout(resolve, 100))
 
@@ -3255,16 +3387,19 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    // Check that both download and delete buttons exist
+    // Check that all three buttons exist: Share Link, Download GPX, and Delete
     const dropdownItems = wrapper.findAll('.dropdown-item')
-    expect(dropdownItems.length).toBe(2)
+    expect(dropdownItems.length).toBe(3)
 
-    // First should be download
-    expect(dropdownItems[0].text()).toContain('segmentDetail.downloadGPX')
+    // First should be share link
+    expect(dropdownItems[0].text()).toContain('segmentDetail.shareLink')
 
-    // Second should be delete
-    expect(dropdownItems[1].text()).toContain('segmentDetail.deleteRoute')
-    expect(dropdownItems[1].classes()).toContain('dropdown-item-danger')
+    // Second should be download
+    expect(dropdownItems[1].text()).toContain('segmentDetail.downloadGPX')
+
+    // Third should be delete
+    expect(dropdownItems[2].text()).toContain('segmentDetail.deleteRoute')
+    expect(dropdownItems[2].classes()).toContain('dropdown-item-danger')
   })
 
   it('should disable delete button when user is not the owner', async () => {
@@ -3336,7 +3471,8 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await nextTick()
 
     const dropdownItems = wrapper.findAll('.dropdown-item')
-    const deleteButton = dropdownItems[1]
+    // Delete button is now the third item (after Share Link and Download GPX)
+    const deleteButton = dropdownItems[2]
 
     // Delete button should be disabled
     expect(deleteButton.attributes('disabled')).toBeDefined()
@@ -3490,7 +3626,8 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await nextTick()
 
     const dropdownItems = wrapper.findAll('.dropdown-item')
-    const deleteButton = dropdownItems[1]
+    // Delete button is now the third item (after Share Link and Download GPX)
+    const deleteButton = dropdownItems[2]
 
     // Click delete button
     await deleteButton.trigger('click')
@@ -3576,7 +3713,8 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await nextTick()
 
     const dropdownItems = wrapper.findAll('.dropdown-item')
-    const deleteButton = dropdownItems[1]
+    // Delete button is now the third item (after Share Link and Download GPX)
+    const deleteButton = dropdownItems[2]
     await deleteButton.trigger('click')
     await nextTick()
 

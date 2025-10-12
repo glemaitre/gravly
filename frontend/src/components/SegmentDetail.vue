@@ -11,19 +11,28 @@
           <h1 class="segment-title">{{ segment?.name || 'Loading...' }}</h1>
         </div>
         <div class="header-actions">
-          <!-- Actions dropdown - only for routes -->
-          <div v-if="segment?.track_type === 'route'" class="dropdown-container">
+          <!-- Actions dropdown - available for both routes and segments -->
+          <div class="dropdown-container">
             <button @click="toggleExportMenu" class="export-button" ref="exportButton">
               <i class="fa-solid fa-ellipsis-vertical"></i>
               <span>{{ t('segmentDetail.actions') }}</span>
               <i class="fa-solid fa-chevron-down dropdown-icon"></i>
             </button>
             <div v-if="showExportMenu" class="dropdown-menu" ref="exportMenu">
-              <button @click="downloadGPX" class="dropdown-item">
+              <button @click="shareLink" class="dropdown-item">
+                <i class="fa-solid fa-share-nodes"></i>
+                {{ t('segmentDetail.shareLink') }}
+              </button>
+              <button
+                v-if="segment?.track_type === 'route'"
+                @click="downloadGPX"
+                class="dropdown-item"
+              >
                 <i class="fa-solid fa-download"></i>
                 {{ t('segmentDetail.downloadGPX') }}
               </button>
               <button
+                v-if="segment?.track_type === 'route'"
                 @click="showDeleteConfirmation"
                 class="dropdown-item dropdown-item-danger"
                 :disabled="!isOwner"
@@ -315,13 +324,25 @@
     >
       <div class="confirm-modal" @click.stop>
         <div class="confirm-modal-header">
-          <h3>{{ t('segmentDetail.deleteRoute') }}</h3>
+          <h3>
+            {{
+              segment?.track_type === 'route'
+                ? t('segmentDetail.deleteRoute')
+                : t('segmentDetail.deleteSegment')
+            }}
+          </h3>
           <button class="confirm-modal-close" @click="closeDeleteConfirmModal">
             <i class="fa-solid fa-times"></i>
           </button>
         </div>
         <div class="confirm-modal-body">
-          <p>{{ t('segmentDetail.deleteRouteConfirm') }}</p>
+          <p>
+            {{
+              segment?.track_type === 'route'
+                ? t('segmentDetail.deleteRouteConfirm')
+                : t('segmentDetail.deleteSegmentConfirm')
+            }}
+          </p>
         </div>
         <div class="confirm-modal-footer">
           <button
@@ -331,7 +352,7 @@
           >
             {{ t('common.cancel') }}
           </button>
-          <button @click="confirmDeleteRoute" class="btn-delete" :disabled="isDeleting">
+          <button @click="confirmDelete" class="btn-delete" :disabled="isDeleting">
             <i v-if="isDeleting" class="fa-solid fa-spinner fa-spin"></i>
             {{ isDeleting ? t('common.deleting') : t('common.delete') }}
           </button>
@@ -468,12 +489,20 @@ function closeDeleteConfirmModal() {
   showDeleteConfirmModal.value = false
 }
 
-async function confirmDeleteRoute() {
+async function confirmDelete() {
   if (!segment.value || !authState.value.isAuthenticated || !authState.value.athlete) {
     return
   }
 
   isDeleting.value = true
+
+  const isRoute = segment.value.track_type === 'route'
+  const successMessage = isRoute
+    ? t('segmentDetail.deleteRouteSuccess')
+    : t('segmentDetail.deleteSegmentSuccess')
+  const errorMessage = isRoute
+    ? t('segmentDetail.deleteRouteError')
+    : t('segmentDetail.deleteSegmentError')
 
   try {
     const stravaId = authState.value.athlete.id
@@ -486,11 +515,11 @@ async function confirmDeleteRoute() {
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(errorText || t('segmentDetail.deleteRouteError'))
+      throw new Error(errorText || errorMessage)
     }
 
     // Show success message (could be improved with a toast notification)
-    alert(t('segmentDetail.deleteRouteSuccess'))
+    alert(successMessage)
 
     // Close modal
     closeDeleteConfirmModal()
@@ -498,10 +527,49 @@ async function confirmDeleteRoute() {
     // Redirect to explorer
     router.push('/explorer')
   } catch (err: any) {
-    console.error('Error deleting route:', err)
-    alert(err.message || t('segmentDetail.deleteRouteError'))
+    console.error('Error deleting:', err)
+    alert(err.message || errorMessage)
   } finally {
     isDeleting.value = false
+  }
+}
+
+async function shareLink() {
+  if (!segment.value) return
+
+  try {
+    // Create the full URL for sharing
+    const shareUrl = `${window.location.origin}/segment/${segmentId.value}`
+
+    // Try using the Web Share API first (mobile devices and modern browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: segment.value.name,
+          text: `Check out this ${segment.value.track_type === 'route' ? 'route' : 'segment'}: ${segment.value.name}`,
+          url: shareUrl
+        })
+        closeExportMenu()
+        return
+      } catch (err: any) {
+        // User cancelled or share failed, fall back to clipboard
+        if (err.name !== 'AbortError') {
+          console.warn('Web Share API failed, falling back to clipboard:', err)
+        } else {
+          // User cancelled, just close the menu
+          closeExportMenu()
+          return
+        }
+      }
+    }
+
+    // Fallback: Copy to clipboard
+    await navigator.clipboard.writeText(shareUrl)
+    alert(t('segmentDetail.linkCopied'))
+    closeExportMenu()
+  } catch (err) {
+    console.error('Error sharing link:', err)
+    alert(t('segmentDetail.shareLinkError'))
   }
 }
 

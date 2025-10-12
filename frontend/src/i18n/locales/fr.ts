@@ -210,13 +210,23 @@ export default {
     export: 'Exporter',
     actions: 'Actions',
     downloadGPX: 'Télécharger GPX',
+    shareLink: 'Partager le lien',
+    linkCopied: 'Lien copié dans le presse-papiers',
+    shareLinkError: 'Échec du partage du lien',
     deleteRoute: 'Supprimer la sortie',
+    deleteSegment: 'Supprimer le segment',
     deleteRouteConfirm:
       'Êtes-vous sûr de vouloir supprimer cette sortie ? Cette action est irréversible.',
+    deleteSegmentConfirm:
+      'Êtes-vous sûr de vouloir supprimer ce segment ? Cette action est irréversible.',
     deleteRouteSuccess: 'Sortie supprimée avec succès',
+    deleteSegmentSuccess: 'Segment supprimé avec succès',
     deleteRouteError: 'Échec de la suppression de la sortie',
+    deleteSegmentError: 'Échec de la suppression du segment',
     notRouteOwner: 'Seul le propriétaire de la sortie peut la supprimer',
-    routeNotOwned: 'Vous ne possédez pas cette sortie'
+    notSegmentOwner: 'Seul le propriétaire du segment peut le supprimer',
+    routeNotOwned: 'Vous ne possédez pas cette sortie',
+    segmentNotOwned: 'Vous ne possédez pas ce segment'
   },
 
   // Strava integration
