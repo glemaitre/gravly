@@ -9,10 +9,6 @@
 
         <!-- Navigation Menu -->
         <div class="nav-menu">
-          <router-link to="/" class="nav-link" active-class="active" exact>
-            <i class="fa-solid fa-home"></i>
-            <span>{{ $t('navbar.home') }}</span>
-          </router-link>
           <router-link to="/explorer" class="nav-link" active-class="active">
             <i class="fa-solid fa-route"></i>
             <span>{{ $t('navbar.explorer') }}</span>
