@@ -392,13 +392,49 @@
       <div v-if="routeMode === 'startEnd'" class="generate-route-section">
         <button
           class="generate-route-btn"
-          :class="{ disabled: !startWaypoint || !endWaypoint }"
-          :disabled="!startWaypoint || !endWaypoint"
+          :class="{
+            disabled:
+              !startWaypoint || !endWaypoint || routeGenerationProgress.isGenerating
+          }"
+          :disabled="
+            !startWaypoint || !endWaypoint || routeGenerationProgress.isGenerating
+          "
           @click="emit('generate-route')"
         >
-          <i class="fa-solid fa-route"></i>
-          <span>{{ t('routePlanner.generateRoute') }}</span>
+          <i
+            class="fa-solid"
+            :class="
+              routeGenerationProgress.isGenerating ? 'fa-spinner fa-spin' : 'fa-route'
+            "
+          ></i>
+          <span>{{
+            routeGenerationProgress.isGenerating
+              ? t('routePlanner.generatingRoute')
+              : t('routePlanner.generateRoute')
+          }}</span>
         </button>
+
+        <!-- Progress Bar -->
+        <div
+          v-if="routeGenerationProgress.isGenerating"
+          class="route-progress-container"
+        >
+          <div class="progress-bar-wrapper">
+            <div
+              class="progress-bar-fill"
+              :style="{
+                width: `${(routeGenerationProgress.current / routeGenerationProgress.total) * 100}%`
+              }"
+            ></div>
+          </div>
+          <div class="progress-info">
+            <span class="progress-message">{{ routeGenerationProgress.message }}</span>
+            <span class="progress-counter"
+              >{{ routeGenerationProgress.current }} /
+              {{ routeGenerationProgress.total }}</span
+            >
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -446,6 +482,12 @@ const props = defineProps<{
     totalLoss: number
     maxElevation: number
     minElevation: number
+  }
+  routeGenerationProgress: {
+    isGenerating: boolean
+    current: number
+    total: number
+    message: string
   }
 }>()
 
@@ -944,6 +986,82 @@ function onDifficultyMaxChange(event: Event) {
 
 .generate-route-btn i {
   font-size: 1rem;
+}
+
+/* Route generation progress bar */
+.route-progress-container {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.progress-bar-wrapper {
+  width: 100%;
+  height: 8px;
+  background: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand-primary) 0%, #ea580c 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.progress-message {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 500;
+  flex: 1;
+}
+
+.progress-counter {
+  font-size: 0.75rem;
+  color: var(--brand-primary);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Segment filters section styles */

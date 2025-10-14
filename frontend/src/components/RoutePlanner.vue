@@ -11,6 +11,7 @@
       :filters-expanded="filtersExpanded"
       :route-distance="routeDistance"
       :elevation-stats="elevationStats"
+      :route-generation-progress="routeGenerationProgress"
       @close="toggleSidebar"
       @toggle-mode="onToggleMode"
       @toggle-filters="filtersExpanded = !filtersExpanded"
@@ -389,6 +390,14 @@ const dragOverIndex = ref<number | null>(null)
 // Start/end waypoints for guided mode
 const startWaypoint = ref<{ lat: number; lng: number } | null>(null)
 const endWaypoint = ref<{ lat: number; lng: number } | null>(null)
+
+// Route generation progress
+const routeGenerationProgress = ref({
+  isGenerating: false,
+  current: 0,
+  total: 0,
+  message: ''
+})
 
 // ============================================================================
 // COMPUTED PROPERTIES
@@ -1919,111 +1928,157 @@ async function generateStartEndRoute() {
     return
   }
 
-  // Clear existing route
-  clearRoute()
+  // Calculate total steps:
+  // 1 for initialization + segments count + 1 for route generation + 1 for finalization
+  const totalSteps = 1 + selectedSegments.value.length + 2
 
-  // Build waypoints array from start, selected segments, and end
-  waypoints.value = []
-
-  // Add start waypoint
-  waypoints.value.push({
-    lat: startWaypoint.value.lat,
-    lng: startWaypoint.value.lng,
-    type: 'user',
-    name: 'Start'
-  })
-
-  // Add waypoints from selected segments
-  for (const segment of selectedSegments.value) {
-    // Load GPX data if not cached
-    if (!gpxDataCache.has(segment.id)) {
-      try {
-        const response = await fetch(`/api/segments/${segment.id}/gpx`)
-        const data: { gpx_xml_data: string } = await response.json()
-        const segmentWithGPX: TrackWithGPXDataResponse = {
-          ...segment,
-          gpx_data: null,
-          gpx_xml_data: data.gpx_xml_data
-        }
-        gpxDataCache.set(segment.id, segmentWithGPX)
-      } catch (error) {
-        console.error('Error loading GPX data:', error)
-        continue
-      }
-    }
-
-    const gpxData = gpxDataCache.get(segment.id)
-    if (!gpxData?.gpx_xml_data) {
-      console.warn(`No GPX data for segment ${segment.id}`)
-      continue
-    }
-
-    // Parse GPX
-    const fileId =
-      segment.file_path.split('/').pop()?.replace('.gpx', '') || String(segment.id)
-    const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
-
-    if (!parsedGPX?.points || parsedGPX.points.length === 0) {
-      console.warn(`No points in parsed GPX for segment ${segment.id}`)
-      continue
-    }
-
-    // Get start and end points of segment
-    let startPoint = parsedGPX.points[0]
-    let endPoint = parsedGPX.points[parsedGPX.points.length - 1]
-
-    // Reverse if needed
-    if (segment.isReversed) {
-      ;[startPoint, endPoint] = [endPoint, startPoint]
-    }
-
-    // Add segment start and end as waypoints
-    waypoints.value.push({
-      lat: startPoint.latitude,
-      lng: startPoint.longitude,
-      type: 'segment-start',
-      segmentId: segment.id,
-      name: `${segment.name} (start)`
-    })
-
-    waypoints.value.push({
-      lat: endPoint.latitude,
-      lng: endPoint.longitude,
-      type: 'segment-end',
-      segmentId: segment.id,
-      name: `${segment.name} (end)`
-    })
+  // Initialize progress
+  routeGenerationProgress.value = {
+    isGenerating: true,
+    current: 0,
+    total: totalSteps,
+    message: 'Initializing route...'
   }
 
-  // Add end waypoint
-  waypoints.value.push({
-    lat: endWaypoint.value.lat,
-    lng: endWaypoint.value.lng,
-    type: 'user',
-    name: 'End'
-  })
+  try {
+    // Clear existing route
+    clearRoute()
 
-  // Now generate the route using the standard route generation logic
-  await generateRoute()
+    // Build waypoints array from start, selected segments, and end
+    waypoints.value = []
 
-  // After route generation, switch to free mode and show waypoint markers
-  if (waypoints.value.length > 0) {
-    // Create waypoint markers for all waypoints
-    waypoints.value.forEach((wp, index) => {
-      createWaypointMarker(index, wp.lat, wp.lng)
+    // Add start waypoint
+    waypoints.value.push({
+      lat: startWaypoint.value.lat,
+      lng: startWaypoint.value.lng,
+      type: 'user',
+      name: 'Start'
     })
 
-    // Clear segment visuals (but keep GPX data cached for the route)
-    clearAllSegments()
+    // Step 1: Initialization complete
+    routeGenerationProgress.value.current = 1
+    routeGenerationProgress.value.message = 'Loading segment data...'
 
-    // Clear start/end markers
-    clearStartEndWaypoints()
+    // Add waypoints from selected segments
+    for (let i = 0; i < selectedSegments.value.length; i++) {
+      const segment = selectedSegments.value[i]
 
-    // Switch to standard mode
-    routeMode.value = 'standard'
+      routeGenerationProgress.value.message = `Loading segment ${i + 1}/${selectedSegments.value.length}: ${segment.name}`
 
-    // Update cursor for standard mode
-    updateMapCursor()
+      // Load GPX data if not cached
+      if (!gpxDataCache.has(segment.id)) {
+        try {
+          const response = await fetch(`/api/segments/${segment.id}/gpx`)
+          const data: { gpx_xml_data: string } = await response.json()
+          const segmentWithGPX: TrackWithGPXDataResponse = {
+            ...segment,
+            gpx_data: null,
+            gpx_xml_data: data.gpx_xml_data
+          }
+          gpxDataCache.set(segment.id, segmentWithGPX)
+        } catch (error) {
+          console.error('Error loading GPX data:', error)
+          routeGenerationProgress.value.current++
+          continue
+        }
+      }
+
+      const gpxData = gpxDataCache.get(segment.id)
+      if (!gpxData?.gpx_xml_data) {
+        console.warn(`No GPX data for segment ${segment.id}`)
+        routeGenerationProgress.value.current++
+        continue
+      }
+
+      // Parse GPX
+      const fileId =
+        segment.file_path.split('/').pop()?.replace('.gpx', '') || String(segment.id)
+      const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
+
+      if (!parsedGPX?.points || parsedGPX.points.length === 0) {
+        console.warn(`No points in parsed GPX for segment ${segment.id}`)
+        routeGenerationProgress.value.current++
+        continue
+      }
+
+      // Get start and end points of segment
+      let startPoint = parsedGPX.points[0]
+      let endPoint = parsedGPX.points[parsedGPX.points.length - 1]
+
+      // Reverse if needed
+      if (segment.isReversed) {
+        ;[startPoint, endPoint] = [endPoint, startPoint]
+      }
+
+      // Add segment start and end as waypoints
+      waypoints.value.push({
+        lat: startPoint.latitude,
+        lng: startPoint.longitude,
+        type: 'segment-start',
+        segmentId: segment.id,
+        name: `${segment.name} (start)`
+      })
+
+      waypoints.value.push({
+        lat: endPoint.latitude,
+        lng: endPoint.longitude,
+        type: 'segment-end',
+        segmentId: segment.id,
+        name: `${segment.name} (end)`
+      })
+
+      // Update progress after each segment
+      routeGenerationProgress.value.current++
+    }
+
+    // Add end waypoint
+    waypoints.value.push({
+      lat: endWaypoint.value.lat,
+      lng: endWaypoint.value.lng,
+      type: 'user',
+      name: 'End'
+    })
+
+    // Generate the route
+    routeGenerationProgress.value.message = 'Generating route paths...'
+    await generateRoute()
+    routeGenerationProgress.value.current++
+
+    // After route generation, switch to free mode and show waypoint markers
+    if (waypoints.value.length > 0) {
+      routeGenerationProgress.value.message = 'Finalizing route...'
+
+      // Create waypoint markers for all waypoints
+      waypoints.value.forEach((wp, index) => {
+        createWaypointMarker(index, wp.lat, wp.lng)
+      })
+
+      // Clear segment visuals (but keep GPX data cached for the route)
+      clearAllSegments()
+
+      // Clear start/end markers
+      clearStartEndWaypoints()
+
+      // Switch to standard mode
+      routeMode.value = 'standard'
+
+      // Update cursor for standard mode
+      updateMapCursor()
+
+      routeGenerationProgress.value.current++
+      routeGenerationProgress.value.message = 'Route complete!'
+    }
+  } catch (error) {
+    console.error('Error generating route:', error)
+    routeGenerationProgress.value.message = 'Error generating route'
+  } finally {
+    // Hide progress after a short delay
+    setTimeout(() => {
+      routeGenerationProgress.value.isGenerating = false
+      routeGenerationProgress.value.current = 0
+      routeGenerationProgress.value.total = 0
+      routeGenerationProgress.value.message = ''
+    }, 1000)
   }
 }
 

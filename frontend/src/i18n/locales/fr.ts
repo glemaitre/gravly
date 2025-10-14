@@ -382,6 +382,7 @@ export default {
     endSet: "Point d'arrivée défini",
     endNotSet: "Point d'arrivée non défini",
     generateRoute: 'Générer le parcours',
+    generatingRoute: 'Génération du parcours...',
     // Segment selection
     selectedSegments: 'Segments sélectionnés',
     noSegmentsSelectedMessage:

@@ -375,6 +375,7 @@ export default {
     endSet: 'End point set',
     endNotSet: 'End point not set',
     generateRoute: 'Generate Route',
+    generatingRoute: 'Generating Route...',
     // Segment selection
     selectedSegments: 'Selected Segments',
     noSegmentsSelectedMessage:

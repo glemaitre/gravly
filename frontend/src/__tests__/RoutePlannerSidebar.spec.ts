@@ -89,6 +89,12 @@ describe('RoutePlannerSidebar', () => {
       totalLoss: 0,
       maxElevation: 0,
       minElevation: 0
+    },
+    routeGenerationProgress: {
+      isGenerating: false,
+      current: 0,
+      total: 0,
+      message: ''
     }
   }
 
