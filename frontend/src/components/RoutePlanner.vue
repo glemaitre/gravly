@@ -990,8 +990,18 @@ function renderRoute() {
     opacity: 0.8
   }).addTo(map!)
 
-  // Fit map to route
-  map!.fitBounds(routeLine.getBounds(), { padding: [50, 50] })
+  // In standard mode, only pan to center without changing zoom
+  // In other modes, fit bounds as before
+  if (routeMode.value === 'standard') {
+    // Pan to the last waypoint (most recently added) without zooming
+    const lastWaypoint = waypoints.value[waypoints.value.length - 1]
+    if (lastWaypoint) {
+      map!.panTo([lastWaypoint.lat, lastWaypoint.lng], { animate: true, duration: 0.5 })
+    }
+  } else {
+    // Fit map to route (adjusts zoom)
+    map!.fitBounds(routeLine.getBounds(), { padding: [50, 50] })
+  }
 }
 
 function clearRoute() {
