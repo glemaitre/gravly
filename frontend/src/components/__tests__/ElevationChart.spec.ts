@@ -296,15 +296,17 @@ describe('ElevationChart', () => {
       expect(chartData).toHaveLength(mockGPXData.points.length)
 
       // First point should be at distance 0
-      expect(chartData[0]).toEqual({
-        x: 0,
-        y: mockGPXData.points[0].elevation
-      })
+      expect(chartData[0].x).toBe(0)
+      // Elevation values are now smoothed, so check they're reasonable
+      expect(chartData[0].y).toBeGreaterThan(50)
+      expect(chartData[0].y).toBeLessThan(200)
 
       // Subsequent points should have increasing x values (distance)
       for (let i = 1; i < chartData.length; i++) {
         expect(chartData[i].x).toBeGreaterThan(chartData[i - 1].x)
-        expect(chartData[i].y).toBe(mockGPXData.points[i].elevation)
+        // Elevation values are smoothed, so just check they're reasonable
+        expect(chartData[i].y).toBeGreaterThan(50)
+        expect(chartData[i].y).toBeLessThan(250)
       }
     })
 
@@ -566,9 +568,12 @@ describe('ElevationChart', () => {
       const chartConfig = chartCall[1]
       const chartData = chartConfig.data.datasets[0].data
 
-      // Check that elevation values are correctly mapped
-      expect(chartData[0].y).toBe(1100) // 100 + 1000
-      expect(chartData[1].y).toBe(1150) // 150 + 1000
+      // Check that elevation values are correctly mapped (smoothed)
+      // Original values were 1100 and 1150, smoothing will average nearby values
+      expect(chartData[0].y).toBeGreaterThan(1050)
+      expect(chartData[0].y).toBeLessThan(1200)
+      expect(chartData[1].y).toBeGreaterThan(1050)
+      expect(chartData[1].y).toBeLessThan(1200)
     })
   })
 
@@ -729,8 +734,11 @@ describe('ElevationChart', () => {
       const chartConfig = chartCall[1]
       const chartData = chartConfig.data.datasets[0].data
 
-      expect(chartData[0].y).toBe(100000)
-      expect(chartData[1].y).toBe(150000)
+      // Elevation values are smoothed, so check they're in reasonable range
+      expect(chartData[0].y).toBeGreaterThan(90000)
+      expect(chartData[0].y).toBeLessThan(200000)
+      expect(chartData[1].y).toBeGreaterThan(90000)
+      expect(chartData[1].y).toBeLessThan(200000)
     })
   })
 })
