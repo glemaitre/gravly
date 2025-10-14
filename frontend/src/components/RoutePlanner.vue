@@ -1136,11 +1136,22 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
   const popup = L.popup({
     maxWidth: 340,
     className: 'segment-hover-popup',
-    closeButton: false
+    closeButton: false,
+    autoClose: false,
+    closeOnClick: false
   }).setContent(popupContent)
+
+  // Store close timeout for this segment
+  let closeTimeout: any = null
 
   // Add hover effects and popup trigger
   polyline.on('mouseover', () => {
+    // Clear any pending close timeout
+    if (closeTimeout) {
+      clearTimeout(closeTimeout)
+      closeTimeout = null
+    }
+
     polyline.setStyle({
       weight: isSelected ? 5 : 4,
       opacity: 1
@@ -1154,17 +1165,57 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
       weight: isSelected ? 4 : 3,
       opacity: 0.8
     })
-    // Close popup on mouseout (with small delay to prevent flickering)
-    setTimeout(() => {
+    // Close popup after delay (allows mouse to move to popup)
+    closeTimeout = setTimeout(() => {
       if (map && popup) {
         map.closePopup(popup)
       }
-    }, 100)
+      closeTimeout = null
+    }, 300) // Increased delay to allow moving to popup
   })
 
   // Click to select/deselect
   polyline.on('click', () => {
     selectSegment(segment)
+  })
+
+  // Add popup open event to setup card interactions
+  popup.on('add', () => {
+    const popupElement = popup.getElement()
+    if (popupElement) {
+      const cardElement = popupElement.querySelector('.segment-popup-card')
+      if (cardElement) {
+        let justSelected = false
+
+        // Keep popup open when hovering over card
+        cardElement.addEventListener('mouseenter', () => {
+          if (closeTimeout) {
+            clearTimeout(closeTimeout)
+            closeTimeout = null
+          }
+          justSelected = false // Reset flag when re-entering
+        })
+
+        // Close popup when leaving card
+        cardElement.addEventListener('mouseleave', () => {
+          // Use shorter delay if segment was just selected
+          const delay = justSelected ? 50 : 200
+          closeTimeout = setTimeout(() => {
+            if (map && popup) {
+              map.closePopup(popup)
+            }
+            closeTimeout = null
+          }, delay)
+        })
+
+        // Click on card to select segment
+        cardElement.addEventListener('click', (e: Event) => {
+          e.stopPropagation()
+          selectSegment(segment)
+          justSelected = true // Mark that segment was just selected
+        })
+      }
+    }
   })
 
   // Store the layer reference
@@ -1173,7 +1224,8 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     polyline: polyline,
     popup: popup,
     startMarker: null,
-    endMarker: null
+    endMarker: null,
+    closeTimeout: closeTimeout
   })
 
   // If segment is already selected, add landmarks
