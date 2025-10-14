@@ -660,25 +660,54 @@ function clearAllWaypoints() {
 async function generateRoute() {
   if (waypoints.value.length < 2) return
 
-  routeSegments.value = []
-  routePoints.value = []
+  // Store the previous number of segments
+  const previousSegmentCount = routeSegments.value.length
+  const expectedSegmentCount = waypoints.value.length - 1
 
-  // Generate segments between consecutive waypoints
-  for (let i = 0; i < waypoints.value.length - 1; i++) {
-    const startWp = waypoints.value[i]
-    const endWp = waypoints.value[i + 1]
+  // Only regenerate if the number of segments changed or this is the first generation
+  if (previousSegmentCount === 0) {
+    // First generation - generate all segments
+    routeSegments.value = []
+    routePoints.value = []
 
-    // Check if this segment should be GPX or OSRM
-    const segmentInfo = findSegmentBetweenWaypoints(i, i + 1)
+    for (let i = 0; i < waypoints.value.length - 1; i++) {
+      const startWp = waypoints.value[i]
+      const endWp = waypoints.value[i + 1]
 
-    if (segmentInfo) {
-      // GPX segment
-      await generateGPXSegment(segmentInfo, startWp, endWp, i)
-    } else {
-      // OSRM segment
-      await generateOSRMSegment(startWp, endWp, i)
+      // Check if this segment should be GPX or OSRM
+      const segmentInfo = findSegmentBetweenWaypoints(i, i + 1)
+
+      if (segmentInfo) {
+        // GPX segment
+        await generateGPXSegment(segmentInfo, startWp, endWp, i)
+      } else {
+        // OSRM segment
+        await generateOSRMSegment(startWp, endWp, i)
+      }
     }
+  } else if (expectedSegmentCount > previousSegmentCount) {
+    // New waypoint added - only generate the new segment(s)
+    for (let i = previousSegmentCount; i < expectedSegmentCount; i++) {
+      const startWp = waypoints.value[i]
+      const endWp = waypoints.value[i + 1]
+
+      // Check if this segment should be GPX or OSRM
+      const segmentInfo = findSegmentBetweenWaypoints(i, i + 1)
+
+      if (segmentInfo) {
+        // GPX segment
+        await generateGPXSegment(segmentInfo, startWp, endWp, i)
+      } else {
+        // OSRM segment
+        await generateOSRMSegment(startWp, endWp, i)
+      }
+    }
+  } else if (expectedSegmentCount < previousSegmentCount) {
+    // Waypoint(s) removed - truncate the arrays
+    routeSegments.value = routeSegments.value.slice(0, expectedSegmentCount)
+    routePoints.value = routePoints.value.slice(0, expectedSegmentCount)
   }
+  // If expectedSegmentCount === previousSegmentCount, no changes needed
 
   // Render the route
   renderRoute()
@@ -688,9 +717,8 @@ function findSegmentBetweenWaypoints(
   startIndex: number,
   endIndex: number
 ): { segment: TrackResponse; isReversed: boolean } | null {
-  // In guided mode, check if there's a selected segment that matches these waypoints
-  if (routeMode.value !== 'startEnd') return null
-
+  // Check if there's a GPX segment that matches these waypoints
+  // This works in both guided and standard mode after route generation
   const startWp = waypoints.value[startIndex]
   const endWp = waypoints.value[endIndex]
 
@@ -702,7 +730,7 @@ function findSegmentBetweenWaypoints(
     startWp.type === 'segment-start' &&
     endWp.type === 'segment-end'
   ) {
-    // Find the segment in selectedSegments
+    // Find the segment in selectedSegments (still cached after mode switch)
     const segment = selectedSegments.value.find((s) => s.id === startWp.segmentId)
     if (segment) {
       return {
@@ -2156,6 +2184,7 @@ onUnmounted(() => {
   position: relative;
   width: 100%;
   height: calc(100vh - var(--navbar-height, 60px));
+  overflow: hidden;
 }
 
 .map-container {
