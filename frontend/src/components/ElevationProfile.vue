@@ -49,16 +49,21 @@
       v-if="showElevation"
       :style="{ height: elevationHeight + 'px' }"
     >
-      <!-- Elevation error message -->
-      <div v-if="elevationError" class="elevation-error">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>{{ elevationError }}</span>
-      </div>
-
       <!-- Elevation chart -->
       <div class="elevation-chart">
         <div class="chart-container">
-          <canvas ref="elevationChartRef" class="elevation-chart-canvas"></canvas>
+          <!-- Elevation error/empty state message (centered) -->
+          <div v-if="elevationError" class="elevation-empty-state">
+            <i class="fa-solid fa-mountain"></i>
+            <span>{{ elevationError }}</span>
+          </div>
+
+          <!-- Chart canvas (hidden when there's an error) -->
+          <canvas
+            v-show="!elevationError"
+            ref="elevationChartRef"
+            class="elevation-chart-canvas"
+          ></canvas>
         </div>
       </div>
     </div>
@@ -197,6 +202,11 @@ function stopResize() {
 
 // Chart management
 function createElevationChart() {
+  // Don't create chart if there's an error or no data
+  if (props.elevationError || !props.routePoints || props.routePoints.length === 0) {
+    return
+  }
+
   if (!elevationChartRef.value) return
 
   const ctx = elevationChartRef.value.getContext('2d')
@@ -295,7 +305,16 @@ function createElevationChart() {
 }
 
 function updateChartData() {
-  if (!elevationChart || !props.routePoints || props.routePoints.length === 0) return
+  // If there's an error or no points, destroy the chart
+  if (props.elevationError || !props.routePoints || props.routePoints.length === 0) {
+    if (elevationChart) {
+      elevationChart.destroy()
+      elevationChart = null
+    }
+    return
+  }
+
+  if (!elevationChart) return
 
   const distances = props.routePoints.map((p) => p.distance / 1000) // Convert to km
   const elevations = props.routePoints.map((p) => p.elevation)
@@ -317,18 +336,31 @@ watch(
   () => {
     if (props.showElevation && elevationChart) {
       updateChartData()
-    } else if (props.showElevation && !elevationChart && elevationChartRef.value) {
+    } else if (
+      props.showElevation &&
+      !elevationChart &&
+      elevationChartRef.value &&
+      !props.elevationError
+    ) {
       createElevationChart()
     }
   },
   { deep: true }
 )
 
+// Watch for elevation error changes
+watch(
+  () => props.elevationError,
+  () => {
+    updateChartData() // This will destroy the chart if there's an error
+  }
+)
+
 // Watch for show elevation changes
 watch(
   () => props.showElevation,
   async (newVal) => {
-    if (newVal) {
+    if (newVal && !props.elevationError) {
       await nextTick()
       createElevationChart()
     }
@@ -348,7 +380,7 @@ watch(
 )
 
 onMounted(() => {
-  if (props.showElevation) {
+  if (props.showElevation && !props.elevationError) {
     nextTick(() => {
       createElevationChart()
     })
@@ -626,23 +658,27 @@ defineExpose({
   border-top-color: #fff5f0;
 }
 
-.elevation-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 0.75rem 1rem;
-  margin: 0.5rem;
-  border-radius: 0.375rem;
+.elevation-empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #9ca3af;
   font-size: 0.875rem;
   font-weight: 500;
+  text-align: center;
+  padding: 1.5rem;
 }
 
-.elevation-error i {
-  font-size: 1rem;
-  flex-shrink: 0;
+.elevation-empty-state i {
+  font-size: 2.5rem;
+  color: #d1d5db;
+  opacity: 0.6;
 }
 
 .elevation-chart {

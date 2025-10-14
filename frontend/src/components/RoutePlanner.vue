@@ -1052,6 +1052,9 @@ function renderRoute() {
   const allPoints = allRoutePoints.value
   if (allPoints.length < 2) return
 
+  // Clear elevation error since we have a valid route
+  elevationError.value = null
+
   // Create polyline
   const latLngs = allPoints.map((p) => L.latLng(p.lat, p.lng))
 
@@ -2210,6 +2213,9 @@ function clearMap() {
   clearAllSegments()
   selectedSegments.value = []
   clearStartEndWaypoints()
+
+  // Set elevation error message to guide user
+  elevationError.value = t('routePlanner.noRouteMessage')
 }
 
 function undo() {
@@ -2578,6 +2584,9 @@ onMounted(async () => {
   if (dismissed === 'true') {
     showInfoBanner.value = false
   }
+
+  // Set initial elevation message
+  elevationError.value = t('routePlanner.noRouteMessage')
 })
 
 onUnmounted(() => {

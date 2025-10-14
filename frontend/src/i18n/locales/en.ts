@@ -376,6 +376,7 @@ export default {
     endNotSet: 'End point not set',
     generateRoute: 'Generate Route',
     generatingRoute: 'Generating Route...',
+    noRouteMessage: 'Start adding waypoints to see the elevation profile.',
     // Segment selection
     selectedSegments: 'Selected Segments',
     noSegmentsSelectedMessage:

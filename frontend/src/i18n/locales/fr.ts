@@ -383,6 +383,7 @@ export default {
     endNotSet: "Point d'arrivée non défini",
     generateRoute: 'Générer le parcours',
     generatingRoute: 'Génération du parcours...',
+    noRouteMessage: "Ajoutez des points de passage pour voir le profil d'élévation.",
     // Segment selection
     selectedSegments: 'Segments sélectionnés',
     noSegmentsSelectedMessage:
