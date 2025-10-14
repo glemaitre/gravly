@@ -402,6 +402,14 @@ const routeGenerationProgress = ref({
 // Map panning state
 const isPanning = ref(false)
 
+// Route dragging state for waypoint insertion
+const isDraggingRoute = ref(false)
+const draggedWaypointIndex = ref<number | null>(null)
+let tempDragMarker: any = null
+let justCompletedRouteDrag = false
+let dragStartPosition: { lat: number; lng: number } | null = null
+const DRAG_THRESHOLD = 10 // pixels - minimum movement to be considered a drag
+
 // ============================================================================
 // COMPUTED PROPERTIES
 // ============================================================================
@@ -1053,6 +1061,24 @@ function renderRoute() {
     opacity: 0.8
   }).addTo(map!)
 
+  // Add route dragging handlers for waypoint insertion (only in standard mode)
+  if (routeMode.value === 'standard') {
+    routeLine.on('mousedown', handleRouteMouseDown)
+
+    // Show grab cursor when hovering over route
+    routeLine.on('mouseover', () => {
+      if (!isDraggingRoute.value && !isPanning.value) {
+        map!.getContainer().style.cursor = 'grab'
+      }
+    })
+
+    routeLine.on('mouseout', () => {
+      if (!isDraggingRoute.value && !isPanning.value) {
+        updateMapCursor()
+      }
+    })
+  }
+
   // In standard mode, only pan to center without changing zoom
   // In other modes, fit bounds as before
   if (routeMode.value === 'standard') {
@@ -1074,6 +1100,281 @@ function clearRoute() {
   }
   routeSegments.value = []
   routePoints.value = []
+}
+
+// ============================================================================
+// ROUTE DRAGGING FOR WAYPOINT INSERTION
+// ============================================================================
+
+function handleRouteMouseDown(event: any) {
+  if (routeMode.value !== 'standard') return
+
+  // Prevent the event from propagating to the map
+  event.originalEvent.preventDefault()
+  event.originalEvent.stopPropagation()
+
+  isDraggingRoute.value = true
+  const clickLatLng = event.latlng
+
+  // Store the starting position for threshold detection
+  dragStartPosition = { lat: clickLatLng.lat, lng: clickLatLng.lng }
+
+  // Find which segment was clicked to determine insertion index
+  const insertionInfo = findInsertionPoint(clickLatLng)
+  if (!insertionInfo) return
+
+  draggedWaypointIndex.value = insertionInfo.insertIndex
+
+  // Create temporary drag marker
+  createTempDragMarker(clickLatLng, insertionInfo.insertIndex)
+
+  // Add map-level mouse move and mouse up listeners
+  map!.on('mousemove', handleRouteDragMove)
+  map!.on('mouseup', handleRouteDragEnd)
+
+  // Prevent default map dragging
+  map!.dragging.disable()
+}
+
+function findInsertionPoint(
+  clickLatLng: any
+): { insertIndex: number; segmentIndex: number } | null {
+  // Find which segment the click is closest to
+  let closestSegmentIndex = 0
+  let minDistance = Infinity
+
+  for (let i = 0; i < routePoints.value.length; i++) {
+    const segmentPoints = routePoints.value[i]
+    if (segmentPoints.length < 2) continue
+
+    for (const point of segmentPoints) {
+      const dist = calculateDistance(
+        clickLatLng.lat,
+        clickLatLng.lng,
+        point.lat,
+        point.lng
+      )
+      if (dist < minDistance) {
+        minDistance = dist
+        closestSegmentIndex = i
+      }
+    }
+  }
+
+  // Insert after the start waypoint of this segment
+  return {
+    insertIndex: closestSegmentIndex + 1,
+    segmentIndex: closestSegmentIndex
+  }
+}
+
+function createTempDragMarker(latLng: any, insertIndex: number) {
+  const zoom = map!.getZoom()
+  const { size, fontSize, border } = getMarkerSizeForZoom(zoom)
+
+  const waypointIcon = L.divIcon({
+    html: `<div class="waypoint-marker waypoint-intermediate waypoint-dragging" style="width: ${size}px; height: ${size}px; font-size: ${fontSize}px; border-width: ${border}px;">${insertIndex + 1}</div>`,
+    className: 'custom-waypoint-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  })
+
+  tempDragMarker = L.marker(latLng, {
+    icon: waypointIcon,
+    interactive: false,
+    zIndexOffset: 1000
+  }).addTo(map!)
+
+  // Update existing markers to show new numbering
+  updateWaypointNumbersForInsertion(insertIndex)
+}
+
+function updateWaypointNumbersForInsertion(insertIndex: number) {
+  const zoom = map!.getZoom()
+  const { size, fontSize, border } = getMarkerSizeForZoom(zoom)
+
+  waypointMarkers.forEach((marker, index) => {
+    if (!marker) return
+
+    // Adjust displayed number for markers after insertion point
+    const displayNumber = index >= insertIndex ? index + 2 : index + 1
+
+    const isStart = index === 0
+    const isEnd = index === waypoints.value.length - 1 && waypoints.value.length > 1
+    const markerClass = isStart
+      ? 'waypoint-start'
+      : isEnd
+        ? 'waypoint-end'
+        : 'waypoint-intermediate'
+
+    const waypointIcon = L.divIcon({
+      html: `<div class="waypoint-marker ${markerClass}" style="width: ${size}px; height: ${size}px; font-size: ${fontSize}px; border-width: ${border}px;">${displayNumber}</div>`,
+      className: 'custom-waypoint-marker',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    })
+
+    marker.setIcon(waypointIcon)
+  })
+}
+
+function handleRouteDragMove(event: any) {
+  if (!isDraggingRoute.value || !tempDragMarker) return
+
+  // Update temp marker position
+  tempDragMarker.setLatLng(event.latlng)
+}
+
+async function handleRouteDragEnd(event: any) {
+  if (!isDraggingRoute.value || draggedWaypointIndex.value === null) return
+
+  const newLatLng = event.latlng
+  const insertIndex = draggedWaypointIndex.value
+
+  // Check if we actually dragged or just clicked
+  let wasDragged = false
+  if (dragStartPosition) {
+    // Calculate pixel distance moved
+    const startPoint = map!.latLngToContainerPoint([
+      dragStartPosition.lat,
+      dragStartPosition.lng
+    ])
+    const endPoint = map!.latLngToContainerPoint([newLatLng.lat, newLatLng.lng])
+    const pixelDistance = Math.sqrt(
+      Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2)
+    )
+    wasDragged = pixelDistance > DRAG_THRESHOLD
+  }
+
+  // Remove temp marker
+  if (tempDragMarker) {
+    map!.removeLayer(tempDragMarker)
+    tempDragMarker = null
+  }
+
+  // Remove map listeners
+  map!.off('mousemove', handleRouteDragMove)
+  map!.off('mouseup', handleRouteDragEnd)
+
+  // Re-enable map dragging
+  map!.dragging.enable()
+
+  // Reset state
+  isDraggingRoute.value = false
+  draggedWaypointIndex.value = null
+  dragStartPosition = null
+
+  // If not dragged enough, just restore markers and exit
+  if (!wasDragged) {
+    updateWaypointMarkerStyles()
+    justCompletedRouteDrag = true
+    setTimeout(() => {
+      justCompletedRouteDrag = false
+    }, 100)
+    return
+  }
+
+  // Set flag to prevent the click event from firing
+  justCompletedRouteDrag = true
+
+  // Reset the flag after a short delay to avoid blocking future clicks
+  setTimeout(() => {
+    justCompletedRouteDrag = false
+  }, 100)
+
+  // Insert the new waypoint
+  waypoints.value.splice(insertIndex, 0, {
+    lat: newLatLng.lat,
+    lng: newLatLng.lng,
+    type: 'user'
+  })
+
+  // Insert the new marker
+  const newMarker = createWaypointMarkerForInsertion(
+    insertIndex,
+    newLatLng.lat,
+    newLatLng.lng
+  )
+  waypointMarkers.splice(insertIndex, 0, newMarker)
+
+  // Update all marker styles to reflect new positions and numbers
+  updateWaypointMarkerStyles()
+
+  // The segment that was clicked needs to be split into two segments
+  // We need to regenerate the segment before and after the new waypoint
+  const segmentIndex = insertIndex - 1
+
+  // Clear the old segment data at this position
+  if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+    // Remove the old segment
+    routeSegments.value.splice(segmentIndex, 1)
+    routePoints.value.splice(segmentIndex, 1)
+
+    // Generate two new segments
+    // Segment 1: from waypoint[insertIndex-1] to waypoint[insertIndex]
+    const startWp1 = waypoints.value[segmentIndex]
+    const endWp1 = waypoints.value[insertIndex]
+    await generateOSRMSegment(startWp1, endWp1, segmentIndex)
+
+    // Segment 2: from waypoint[insertIndex] to waypoint[insertIndex+1]
+    if (insertIndex < waypoints.value.length - 1) {
+      const startWp2 = waypoints.value[insertIndex]
+      const endWp2 = waypoints.value[insertIndex + 1]
+      await generateOSRMSegment(startWp2, endWp2, insertIndex)
+    }
+
+    // Rerender the route
+    renderRoute()
+  }
+}
+
+function createWaypointMarkerForInsertion(
+  index: number,
+  lat: number,
+  lng: number
+): any {
+  // Determine marker style based on position
+  const isStart = index === 0
+  const isEnd = index === waypoints.value.length - 1 && waypoints.value.length > 1
+  const markerClass = isStart
+    ? 'waypoint-start'
+    : isEnd
+      ? 'waypoint-end'
+      : 'waypoint-intermediate'
+
+  // Get zoom-based sizes
+  const zoom = map!.getZoom()
+  const { size, fontSize, border } = getMarkerSizeForZoom(zoom)
+
+  const waypointIcon = L.divIcon({
+    html: `<div class="waypoint-marker ${markerClass}" style="width: ${size}px; height: ${size}px; font-size: ${fontSize}px; border-width: ${border}px;">${index + 1}</div>`,
+    className: 'custom-waypoint-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2]
+  })
+
+  const marker = L.marker([lat, lng], {
+    icon: waypointIcon,
+    draggable: true
+  }).addTo(map!)
+
+  // Add drag event handlers
+  marker.on('dragstart', () => {
+    map!.getContainer().style.cursor = 'grabbing'
+  })
+
+  marker.on('dragend', async (event: any) => {
+    map!.getContainer().style.cursor = ''
+    updateMapCursor()
+
+    const newLatLng = event.target.getLatLng()
+    waypoints.value[index].lat = newLatLng.lat
+    waypoints.value[index].lng = newLatLng.lng
+
+    await regenerateAdjacentSegments(index)
+  })
+
+  return marker
 }
 
 // ============================================================================
@@ -1594,6 +1895,12 @@ function initializeMap() {
 
   // Click to add waypoints based on mode
   map.on('click', (e: any) => {
+    // Skip click if we just completed a route drag operation
+    if (justCompletedRouteDrag) {
+      justCompletedRouteDrag = false
+      return
+    }
+
     if (routeMode.value === 'standard') {
       addWaypoint(e.latlng.lat, e.latlng.lng)
     } else if (routeMode.value === 'startEnd') {
@@ -2773,6 +3080,26 @@ onUnmounted(() => {
 :global(.waypoint-intermediate) {
   background: #6b7280; /* Gray */
   border: 2px solid white;
+}
+
+:global(.waypoint-dragging) {
+  background: #8b5cf6; /* Purple for dragging state */
+  border: 2px solid white;
+  animation: pulse-waypoint 1s ease-in-out infinite;
+  cursor: grabbing;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.5);
+}
+
+@keyframes pulse-waypoint {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.9;
+  }
 }
 
 /* Chart cursor marker */
