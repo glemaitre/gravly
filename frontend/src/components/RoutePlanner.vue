@@ -147,7 +147,7 @@
 </template>
 
 <script lang="ts" setup>
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, createApp } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useStravaApi } from '../composables/useStravaApi'
@@ -167,6 +167,7 @@ import {
 import ElevationProfile from './ElevationProfile.vue'
 import RoutePlannerSidebar from './RoutePlannerSidebar.vue'
 import RouteSaveModal from './RouteSaveModal.vue'
+import SegmentPopupCard from './SegmentPopupCard.vue'
 import type { TrackResponse, TrackWithGPXDataResponse } from '../types'
 import { parseGPXData } from '../utils/gpxParser'
 
@@ -248,7 +249,7 @@ const smoothedRoutePoints = computed<RoutePoint[]>(() => {
   if (points.length < 3) return points
 
   // Apply moving average smoothing with larger window for smoother chart
-  const windowSize = 15 // Increased for stronger smoothing
+  const windowSize = 30 // Increased for stronger smoothing
   const smoothed: RoutePoint[] = []
 
   for (let i = 0; i < points.length; i++) {
@@ -1234,151 +1235,32 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
   }
 }
 
-function createSegmentPopup(segment: TrackResponse): string {
+function createSegmentPopup(segment: TrackResponse): HTMLElement {
   const isSelected = selectedSegments.value.some((s) => s.id === segment.id)
 
   // Get cached GPX data for stats
-  const gpxData = gpxDataCache.get(segment.id)
-  let statsHtml = ''
+  const gpxDataWithXml = gpxDataCache.get(segment.id)
+  let gpxData = null
 
-  if (gpxData && gpxData.gpx_xml_data) {
+  if (gpxDataWithXml && gpxDataWithXml.gpx_xml_data) {
     const fileId =
       segment.file_path.split('/').pop()?.replace('.gpx', '') || segment.id.toString()
-    const parsedGPX = parseGPXData(gpxData.gpx_xml_data, fileId)
-
-    if (parsedGPX && parsedGPX.total_stats) {
-      const stats = parsedGPX.total_stats
-      statsHtml = `
-        <div class="segment-stats">
-          <div class="stat-item">
-            <i class="fa-solid fa-route"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatDistance(stats.total_distance)}</span>
-              <span class="stat-label">Distance</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <i class="fa-solid fa-arrow-trend-up"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatElevation(stats.total_elevation_gain)}</span>
-              <span class="stat-label">Elevation Gain</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <i class="fa-solid fa-arrow-trend-down"></i>
-            <div class="stat-content">
-              <span class="stat-value">${formatElevation(stats.total_elevation_loss)}</span>
-              <span class="stat-label">Elevation Loss</span>
-            </div>
-          </div>
-        </div>
-      `
-    }
+    gpxData = parseGPXData(gpxDataWithXml.gpx_xml_data, fileId)
   }
 
-  // If no stats available, show loading or fallback
-  if (!statsHtml) {
-    statsHtml = `
-      <div class="segment-stats">
-        <div class="stat-item">
-          <i class="fa-solid fa-route"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Distance</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <i class="fa-solid fa-arrow-trend-up"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Elevation Gain</span>
-          </div>
-        </div>
-        <div class="stat-item">
-          <i class="fa-solid fa-arrow-trend-down"></i>
-          <div class="stat-content">
-            <span class="stat-value">...</span>
-            <span class="stat-label">Elevation Loss</span>
-          </div>
-        </div>
-      </div>
-    `
-  }
+  // Create a container for the Vue component
+  const container = document.createElement('div')
 
-  const surfaceTypes = Array.isArray(segment.surface_type)
-    ? segment.surface_type
-    : [segment.surface_type]
-  const formattedSurfaces = surfaceTypes.map((s) => formatSurfaceType(s)).join(', ')
+  // Mount the SegmentPopupCard component
+  const app = createApp(SegmentPopupCard, {
+    segment: segment,
+    isSelected: isSelected,
+    gpxData: gpxData
+  })
 
-  return `
-    <div class="segment-popup-card ${isSelected ? 'selected' : ''}">
-      <div class="segment-card-header">
-        <h4 class="segment-name" title="${segment.name}">
-          ${segment.name}
-        </h4>
-      </div>
+  app.mount(container)
 
-      <div class="segment-card-content">
-        ${statsHtml}
-      </div>
-
-      <div class="segment-card-footer">
-        <div class="segment-info-grid">
-          <div class="info-section">
-            <div class="info-label">Surface</div>
-            <div class="info-value">
-              <i class="fa-solid fa-road"></i>
-              <span>${formattedSurfaces}</span>
-            </div>
-          </div>
-
-          <div class="info-section">
-            <div class="info-label">Tires</div>
-            <div class="tire-recommendations">
-              <div class="tire-recommendation">
-                <i class="fa-solid fa-sun"></i>
-                <span class="tire-badge">${formatTireType(segment.tire_dry)}</span>
-              </div>
-              <div class="tire-recommendation">
-                <i class="fa-solid fa-cloud-rain"></i>
-                <span class="tire-badge">${formatTireType(segment.tire_wet)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-section">
-            <div class="info-label">Difficulty</div>
-            <div class="info-value difficulty">
-              <i class="fa-solid fa-signal"></i>
-              <span>${segment.difficulty_level}/5</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
-}
-
-// Helper formatting functions
-function formatDistance(meters: number): string {
-  if (meters < 1000) {
-    return `${Math.round(meters)}m`
-  }
-  return `${(meters / 1000).toFixed(1)}km`
-}
-
-function formatElevation(meters: number): string {
-  return `${Math.round(meters)}m`
-}
-
-function formatSurfaceType(surfaceType: string): string {
-  if (!surfaceType) return ''
-  return surfaceType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
-}
-
-function formatTireType(tireType: string): string {
-  if (!tireType) return ''
-  return tireType.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+  return container
 }
 
 function selectSegment(segment: TrackResponse) {
@@ -2410,6 +2292,18 @@ onUnmounted(() => {
   border-color: white;
 }
 
+/* Leaflet popup compact styling */
+:global(.segment-hover-popup .leaflet-popup-content-wrapper) {
+  padding: 0;
+  border-radius: 6px;
+}
+
+:global(.segment-hover-popup .leaflet-popup-content) {
+  margin: 0;
+  padding: 0;
+  width: auto !important;
+}
+
 /* Segment popup card styles */
 :global(.segment-popup-card) {
   border: 1px solid #e1e5e9;
@@ -2567,9 +2461,10 @@ onUnmounted(() => {
 
 :global(.tire-recommendations) {
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  flex-direction: row;
+  gap: 6px;
   width: 100%;
+  justify-content: center;
 }
 
 :global(.tire-recommendation) {
