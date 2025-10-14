@@ -1472,6 +1472,45 @@ function createWaypointMarkerForInsertion(
 // GUIDED MODE - SEGMENT MANAGEMENT
 // ============================================================================
 
+/**
+ * Check if a segment passes the current filters
+ */
+function segmentPassesFilters(segment: TrackResponse): boolean {
+  // Check difficulty range
+  if (
+    segment.difficulty_level < segmentFilters.value.difficultyMin ||
+    segment.difficulty_level > segmentFilters.value.difficultyMax
+  ) {
+    return false
+  }
+
+  // Check surface types (if filter is set)
+  if (segmentFilters.value.surface.length > 0) {
+    const hasSurfaceMatch = segment.surface_type.some((surface) =>
+      segmentFilters.value.surface.includes(surface)
+    )
+    if (!hasSurfaceMatch) {
+      return false
+    }
+  }
+
+  // Check tire dry (if filter is set)
+  if (segmentFilters.value.tireDry.length > 0) {
+    if (!segmentFilters.value.tireDry.includes(segment.tire_dry)) {
+      return false
+    }
+  }
+
+  // Check tire wet (if filter is set)
+  if (segmentFilters.value.tireWet.length > 0) {
+    if (!segmentFilters.value.tireWet.includes(segment.tire_wet)) {
+      return false
+    }
+  }
+
+  return true
+}
+
 async function loadSegmentsInBounds() {
   if (!map || routeMode.value !== 'startEnd' || isSearchingSegments.value) {
     return
@@ -1531,6 +1570,11 @@ async function loadSegmentsInBounds() {
             // Validate segment has required properties
             if (!segment.id) {
               console.warn('Segment missing ID, skipping:', segment)
+              continue
+            }
+
+            // Apply filters before adding segment
+            if (!segmentPassesFilters(segment)) {
               continue
             }
 
@@ -2622,8 +2666,35 @@ async function generateStartEndRoute() {
   }
 }
 
-function toggleFilter() {
-  // TODO: Implement filter toggle
+function toggleFilter(filterType: string, value: string) {
+  if (filterType === 'surface') {
+    const index = segmentFilters.value.surface.indexOf(value)
+    if (index > -1) {
+      // Remove filter
+      segmentFilters.value.surface.splice(index, 1)
+    } else {
+      // Add filter
+      segmentFilters.value.surface.push(value)
+    }
+  } else if (filterType === 'tireDry') {
+    const index = segmentFilters.value.tireDry.indexOf(value)
+    if (index > -1) {
+      // Remove filter
+      segmentFilters.value.tireDry.splice(index, 1)
+    } else {
+      // Add filter
+      segmentFilters.value.tireDry.push(value)
+    }
+  } else if (filterType === 'tireWet') {
+    const index = segmentFilters.value.tireWet.indexOf(value)
+    if (index > -1) {
+      // Remove filter
+      segmentFilters.value.tireWet.splice(index, 1)
+    } else {
+      // Add filter
+      segmentFilters.value.tireWet.push(value)
+    }
+  }
 }
 
 function onDifficultyMinChangeFromSidebar(value: number) {
@@ -2658,6 +2729,23 @@ watch([startWaypoint, endWaypoint], () => {
     loadSegmentsInBounds()
   }
 })
+
+// Watch for filter changes to reload segments
+watch(
+  segmentFilters,
+  () => {
+    if (
+      routeMode.value === 'startEnd' &&
+      startWaypoint.value &&
+      endWaypoint.value &&
+      !isSearchingSegments.value
+    ) {
+      // Reload segments with new filters
+      loadSegmentsInBounds()
+    }
+  },
+  { deep: true }
+)
 
 // ============================================================================
 // LIFECYCLE
