@@ -1218,7 +1218,8 @@ function createSegmentLandmark(
 
   // Get zoom-based sizes
   const zoom = map.getZoom()
-  const { size, fontSize, badgeSize, badgeFontSize } = getSegmentLandmarkSizeForZoom(zoom)
+  const { size, fontSize, badgeSize, badgeFontSize } =
+    getSegmentLandmarkSizeForZoom(zoom)
 
   // Create different icons for start and end with index
   const icon = L.divIcon({
@@ -1430,7 +1431,11 @@ function updateMapCursor() {
   }
 }
 
-function getMarkerSizeForZoom(zoom: number): { size: number; fontSize: number; border: number } {
+function getMarkerSizeForZoom(zoom: number): {
+  size: number
+  fontSize: number
+  border: number
+} {
   // More aggressive scaling based on zoom level
   // Zoom 8: very small (8px), Zoom 14: medium (20px), Zoom 18: large (32px)
   // Formula: size increases by 2px per zoom level
@@ -1445,7 +1450,12 @@ function getMarkerSizeForZoom(zoom: number): { size: number; fontSize: number; b
   }
 }
 
-function getSegmentLandmarkSizeForZoom(zoom: number): { size: number; fontSize: number; badgeSize: number; badgeFontSize: number } {
+function getSegmentLandmarkSizeForZoom(zoom: number): {
+  size: number
+  fontSize: number
+  badgeSize: number
+  badgeFontSize: number
+} {
   // Landmarks scale similarly but slightly smaller
   const baseSize = Math.max(8, Math.min(24, (zoom - 7) * 1.6))
   const badgeSize = Math.max(8, Math.min(16, baseSize * 0.7))
@@ -2077,6 +2087,16 @@ onUnmounted(() => {
 .control-btn.active {
   background: var(--brand-primary);
   color: white;
+}
+
+.control-btn.active:hover:not(:disabled) {
+  background: #e55a0d; /* Darker orange */
+  color: white;
+}
+
+/* Route button (first button) - orange icon when not active */
+.control-btn:first-child:not(.active) i {
+  color: var(--brand-primary);
 }
 
 .waypoint-context-menu {
