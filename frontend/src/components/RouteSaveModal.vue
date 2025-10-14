@@ -41,7 +41,7 @@
             <label>{{ t('routePlanner.routeStats') }}</label>
             <RouteInfoCard
               :stats="computedStats"
-              :has-segment-data="props.routeFeatures !== null"
+              :has-segment-data="true"
               :editable="true"
               @update:difficulty="handleDifficultyUpdate"
               @update:surface-types="handleSurfaceTypesUpdate"
