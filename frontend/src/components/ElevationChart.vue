@@ -127,10 +127,30 @@ async function initializeElevationChart() {
     cumulativeKm.push(cumulativeDistance / 1000) // Convert to kilometers
   }
 
-  // Prepare chart data with x,y coordinates
+  // Apply smoothing to elevation data (same as RoutePlanner)
+  const elevations = points.map((p) => p.elevation)
+  const smoothedElevations: number[] = []
+
+  if (elevations.length < 3) {
+    // Not enough points for smoothing, use original data
+    smoothedElevations.push(...elevations)
+  } else {
+    // Apply moving average smoothing with window size of 30
+    const windowSize = 30
+    for (let i = 0; i < elevations.length; i++) {
+      const start = Math.max(0, i - Math.floor(windowSize / 2))
+      const end = Math.min(elevations.length, i + Math.ceil(windowSize / 2))
+      const window = elevations.slice(start, end)
+
+      const avgElevation = window.reduce((sum, elev) => sum + elev, 0) / window.length
+      smoothedElevations.push(avgElevation)
+    }
+  }
+
+  // Prepare chart data with x,y coordinates using smoothed elevations
   const chartData = points.map((point, i) => ({
     x: cumulativeKm[i],
-    y: point.elevation
+    y: smoothedElevations[i]
   }))
 
   // Get CSS variable values from computed styles
@@ -200,7 +220,7 @@ async function initializeElevationChart() {
             display: true,
             text: 'Elevation (m)'
           },
-          min: Math.min(...points.map((p) => p.elevation))
+          min: Math.min(...smoothedElevations)
         }
       },
       onHover: (event, activeElements) => {

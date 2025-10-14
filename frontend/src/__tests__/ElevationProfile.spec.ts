@@ -165,7 +165,7 @@ describe('ElevationProfile', () => {
         }
       })
 
-      expect(wrapper.find('.elevation-error').exists()).toBe(false)
+      expect(wrapper.find('.elevation-empty-state').exists()).toBe(false)
     })
 
     it('shows error message when elevationError is provided', () => {
@@ -181,7 +181,7 @@ describe('ElevationProfile', () => {
         }
       })
 
-      const errorElement = wrapper.find('.elevation-error')
+      const errorElement = wrapper.find('.elevation-empty-state')
       expect(errorElement.exists()).toBe(true)
       expect(errorElement.text()).toContain(errorMessage)
     })

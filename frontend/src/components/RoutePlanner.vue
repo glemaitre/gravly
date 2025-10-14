@@ -487,18 +487,26 @@ const elevationStats = computed(() => {
 })
 
 const routeFeatures = computed(() => {
-  if (selectedSegments.value.length === 0) return null
+  // Extract GPX segments from routeSegments
+  const gpxSegments = routeSegments.value
+    .filter((seg) => seg.type === 'gpx' && seg.segmentId)
+    .map((seg) => seg.segmentId!)
 
-  // Compute from selected segments
-  const maxDifficulty = Math.max(
-    ...selectedSegments.value.map((s) => s.difficulty_level)
-  )
-  const allSurfaces = [
-    ...new Set(selectedSegments.value.flatMap((s) => s.surface_type))
-  ]
+  if (gpxSegments.length === 0) return null
+
+  // Find the full segment data from selectedSegments
+  const segments = gpxSegments
+    .map((segId) => selectedSegments.value.find((s) => s.id === segId))
+    .filter((s) => s !== undefined) as TrackResponse[]
+
+  if (segments.length === 0) return null
+
+  // Compute from segments used in the route
+  const maxDifficulty = Math.max(...segments.map((s) => s.difficulty_level))
+  const allSurfaces = [...new Set(segments.flatMap((s) => s.surface_type))]
 
   // Most conservative tire recommendations
-  const tires = selectedSegments.value.map((s) => ({
+  const tires = segments.map((s) => ({
     dry: s.tire_dry,
     wet: s.tire_wet
   }))
