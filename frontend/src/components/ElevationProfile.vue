@@ -66,8 +66,31 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  Chart,
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  Title,
+  CategoryScale,
+  Filler,
+  Tooltip
+} from 'chart.js'
+
+// Register Chart.js components
+Chart.register(
+  LineController,
+  LineElement,
+  PointElement,
+  LinearScale,
+  Title,
+  CategoryScale,
+  Filler,
+  Tooltip
+)
 
 // Types
 interface ElevationStats {
@@ -77,12 +100,20 @@ interface ElevationStats {
   minElevation: number
 }
 
+interface RoutePoint {
+  lat: number
+  lng: number
+  elevation: number
+  distance: number
+}
+
 // Props
 const props = defineProps<{
   showElevation: boolean
   elevationStats: ElevationStats
   elevationError: string | null
   routeDistance: number
+  routePoints: RoutePoint[]
   sidebarOpen: boolean
   elevationHeight: number
 }>()
@@ -92,6 +123,7 @@ const emit = defineEmits<{
   toggle: []
   'update:elevation-height': [height: number]
   'start-resize': [event: MouseEvent | TouchEvent]
+  'chart-hover': [point: RoutePoint | null]
 }>()
 
 // i18n
@@ -99,6 +131,7 @@ const { t } = useI18n()
 
 // Refs
 const elevationChartRef = ref<HTMLCanvasElement | null>(null)
+let elevationChart: Chart | null = null
 
 // Resize state
 const minElevationHeight = 150
@@ -161,6 +194,237 @@ function stopResize() {
   document.removeEventListener('touchmove', handleResize)
   document.removeEventListener('touchend', stopResize)
 }
+
+// Chart management
+function createElevationChart() {
+  if (!elevationChartRef.value) return
+
+  const ctx = elevationChartRef.value.getContext('2d')
+  if (!ctx) return
+
+  // Destroy existing chart
+  if (elevationChart) {
+    elevationChart.destroy()
+  }
+
+  // Create new chart
+  elevationChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        {
+          label: 'Elevation',
+          data: [],
+          borderColor: '#ea580c', // Dark orange
+          backgroundColor: 'rgba(234, 88, 12, 0.15)', // Light dark orange fill
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 6, // Larger hover point
+          pointHoverBackgroundColor: '#ea580c',
+          pointHoverBorderColor: 'white',
+          pointHoverBorderWidth: 2,
+          borderWidth: 2.5
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: true,
+          mode: 'index',
+          intersect: false,
+          callbacks: {
+            label: (context) => {
+              const elevation = context.parsed.y
+              return `Elevation: ${elevation.toFixed(1)}m`
+            },
+            title: (context) => {
+              const distance = context[0].parsed.x
+              return `Distance: ${distance.toFixed(1)}km`
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          title: {
+            display: true,
+            text: 'Distance (km)'
+          },
+          ticks: {
+            callback: (value) => {
+              if (typeof value === 'number') {
+                return value.toFixed(1)
+              }
+              return value
+            }
+          },
+          min: 0,
+          max: props.routeDistance // Set max to total route distance in km
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Elevation (m)'
+          }
+        }
+      },
+      interaction: {
+        mode: 'nearest',
+        axis: 'x',
+        intersect: false
+      },
+      onHover: (event) => {
+        handleChartHover(event)
+      }
+    }
+  })
+
+  // Add mouse leave event to clear cursor
+  if (elevationChartRef.value) {
+    elevationChartRef.value.addEventListener('mouseleave', handleChartMouseLeave)
+  }
+
+  updateChartData()
+}
+
+function updateChartData() {
+  if (!elevationChart || !props.routePoints || props.routePoints.length === 0) return
+
+  const distances = props.routePoints.map((p) => p.distance / 1000) // Convert to km
+  const elevations = props.routePoints.map((p) => p.elevation)
+
+  elevationChart.data.labels = distances as any
+  elevationChart.data.datasets[0].data = elevations as any
+
+  // Update x-axis max to match route distance
+  if (elevationChart.options.scales?.x) {
+    elevationChart.options.scales.x.max = props.routeDistance
+  }
+
+  elevationChart.update('none') // Update without animation for better performance
+}
+
+// Watch for route points changes
+watch(
+  () => props.routePoints,
+  () => {
+    if (props.showElevation && elevationChart) {
+      updateChartData()
+    } else if (props.showElevation && !elevationChart && elevationChartRef.value) {
+      createElevationChart()
+    }
+  },
+  { deep: true }
+)
+
+// Watch for show elevation changes
+watch(
+  () => props.showElevation,
+  async (newVal) => {
+    if (newVal) {
+      await nextTick()
+      createElevationChart()
+    }
+  }
+)
+
+// Watch for height changes to resize chart
+watch(
+  () => props.elevationHeight,
+  () => {
+    if (elevationChart && props.showElevation) {
+      setTimeout(() => {
+        elevationChart?.resize()
+      }, 100)
+    }
+  }
+)
+
+onMounted(() => {
+  if (props.showElevation) {
+    nextTick(() => {
+      createElevationChart()
+    })
+  }
+})
+
+function handleChartHover(event: any) {
+  if (!elevationChart || !props.routePoints || props.routePoints.length === 0) return
+
+  // Get the canvas and chart area
+  const canvas = elevationChartRef.value
+  if (!canvas) return
+
+  const chartArea = elevationChart.chartArea
+  if (!chartArea) return
+
+  // Get mouse position relative to canvas
+  const rect = canvas.getBoundingClientRect()
+  const mouseX = event.native?.offsetX ?? event.x - rect.left
+
+  // Check if mouse is within chart area
+  if (mouseX < chartArea.left || mouseX > chartArea.right) {
+    emit('chart-hover', null)
+    return
+  }
+
+  // Calculate the distance based on mouse x position
+  const xScale = elevationChart.scales.x
+  const distanceKm = xScale.getValueForPixel(mouseX)
+
+  if (distanceKm === undefined || distanceKm === null) {
+    emit('chart-hover', null)
+    return
+  }
+
+  const distanceM = distanceKm * 1000
+
+  // Find the closest point in the route
+  const closestPoint = findClosestPointByDistance(distanceM)
+
+  if (closestPoint) {
+    emit('chart-hover', closestPoint)
+  }
+}
+
+function handleChartMouseLeave() {
+  emit('chart-hover', null)
+}
+
+function findClosestPointByDistance(targetDistance: number): RoutePoint | null {
+  if (!props.routePoints || props.routePoints.length === 0) return null
+
+  let closestPoint = props.routePoints[0]
+  let minDiff = Math.abs(props.routePoints[0].distance - targetDistance)
+
+  for (const point of props.routePoints) {
+    const diff = Math.abs(point.distance - targetDistance)
+    if (diff < minDiff) {
+      minDiff = diff
+      closestPoint = point
+    }
+  }
+
+  return closestPoint
+}
+
+onUnmounted(() => {
+  if (elevationChartRef.value) {
+    elevationChartRef.value.removeEventListener('mouseleave', handleChartMouseLeave)
+  }
+
+  if (elevationChart) {
+    elevationChart.destroy()
+    elevationChart = null
+  }
+})
 
 // Expose chart ref for parent component
 defineExpose({

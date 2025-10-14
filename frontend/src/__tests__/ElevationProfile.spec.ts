@@ -35,6 +35,7 @@ describe('ElevationProfile', () => {
     },
     elevationError: null,
     routeDistance: 0,
+    routePoints: [],
     sidebarOpen: false,
     elevationHeight: 300
   }

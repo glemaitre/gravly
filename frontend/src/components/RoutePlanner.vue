@@ -106,11 +106,13 @@
         :elevation-stats="elevationStats"
         :elevation-error="elevationError"
         :route-distance="routeDistance"
+        :route-points="smoothedRoutePoints"
         :sidebar-open="showSidebar"
         :elevation-height="elevationHeight"
         @toggle="toggleElevation"
         @update:elevation-height="elevationHeight = $event"
         @start-resize="startElevationResize"
+        @chart-hover="handleChartHover"
       />
     </div>
 
@@ -240,6 +242,98 @@ const allRoutePoints = computed<RoutePoint[]>(() => {
   return routePoints.value.flat()
 })
 
+// Computed: Smoothed elevation data for display
+const smoothedRoutePoints = computed<RoutePoint[]>(() => {
+  const points = allRoutePoints.value
+  if (points.length < 3) return points
+
+  // Apply moving average smoothing with larger window for smoother chart
+  const windowSize = 15 // Increased for stronger smoothing
+  const smoothed: RoutePoint[] = []
+
+  for (let i = 0; i < points.length; i++) {
+    const start = Math.max(0, i - Math.floor(windowSize / 2))
+    const end = Math.min(points.length, i + Math.ceil(windowSize / 2))
+    const window = points.slice(start, end)
+
+    const avgElevation = window.reduce((sum, p) => sum + p.elevation, 0) / window.length
+
+    smoothed.push({
+      ...points[i],
+      elevation: avgElevation
+    })
+  }
+
+  return smoothed
+})
+
+// Computed: Reinterpolated points at 100m intervals for accurate gain/loss
+const reinterpolatedPoints = computed<RoutePoint[]>(() => {
+  const points = allRoutePoints.value
+  if (points.length < 2) return points
+
+  const INTERVAL = 100 // meters
+  const resampled: RoutePoint[] = []
+  const totalDistance = points[points.length - 1].distance
+
+  // Always include first point
+  resampled.push(points[0])
+
+  // Add points at regular 100m intervals
+  for (
+    let targetDistance = INTERVAL;
+    targetDistance < totalDistance;
+    targetDistance += INTERVAL
+  ) {
+    // Find the two points that bracket this distance
+    let i = 0
+    while (i < points.length && points[i].distance < targetDistance) {
+      i++
+    }
+
+    if (i === 0 || i >= points.length) continue
+
+    const p1 = points[i - 1]
+    const p2 = points[i]
+
+    // Linear interpolation
+    const ratio = (targetDistance - p1.distance) / (p2.distance - p1.distance)
+
+    resampled.push({
+      lat: p1.lat + (p2.lat - p1.lat) * ratio,
+      lng: p1.lng + (p2.lng - p1.lng) * ratio,
+      elevation: p1.elevation + (p2.elevation - p1.elevation) * ratio,
+      distance: targetDistance
+    })
+  }
+
+  // Always include last point
+  if (resampled[resampled.length - 1].distance !== points[points.length - 1].distance) {
+    resampled.push(points[points.length - 1])
+  }
+
+  // Apply smoothing to resampled points
+  if (resampled.length < 3) return resampled
+
+  const windowSize = 3 // Smaller window for resampled data
+  const smoothed: RoutePoint[] = []
+
+  for (let i = 0; i < resampled.length; i++) {
+    const start = Math.max(0, i - Math.floor(windowSize / 2))
+    const end = Math.min(resampled.length, i + Math.ceil(windowSize / 2))
+    const window = resampled.slice(start, end)
+
+    const avgElevation = window.reduce((sum, p) => sum + p.elevation, 0) / window.length
+
+    smoothed.push({
+      ...resampled[i],
+      elevation: avgElevation
+    })
+  }
+
+  return smoothed
+})
+
 // ============================================================================
 // UI STATE
 // ============================================================================
@@ -302,11 +396,12 @@ const endWaypoint = ref<{ lat: number; lng: number } | null>(null)
 const routeDistance = computed(() => {
   const points = allRoutePoints.value
   if (points.length === 0) return 0
-  return points[points.length - 1].distance
+  return points[points.length - 1].distance / 1000 // Convert to kilometers
 })
 
 const elevationStats = computed(() => {
-  const points = allRoutePoints.value
+  // Use reinterpolated points at 100m intervals for accurate gain/loss
+  const points = reinterpolatedPoints.value
   if (points.length === 0) {
     return {
       totalGain: 0,
@@ -316,18 +411,50 @@ const elevationStats = computed(() => {
     }
   }
 
+  // Apply threshold-based elevation calculation to filter noise
+  // This prevents counting tiny variations as gain/loss
+  const ELEVATION_THRESHOLD = 1 // meters - only count changes > 1m
+
   let totalGain = 0
   let totalLoss = 0
   let maxElev = points[0].elevation
   let minElev = points[0].elevation
 
-  for (let i = 1; i < points.length; i++) {
-    const diff = points[i].elevation - points[i - 1].elevation
-    if (diff > 0) totalGain += diff
-    else totalLoss += Math.abs(diff)
+  // Track cumulative elevation change to apply threshold
+  let cumulativeChange = 0
+  let lastSignificantElevation = points[0].elevation
 
-    maxElev = Math.max(maxElev, points[i].elevation)
-    minElev = Math.min(minElev, points[i].elevation)
+  for (let i = 1; i < points.length; i++) {
+    const currentElevation = points[i].elevation
+    const diff = currentElevation - lastSignificantElevation
+
+    cumulativeChange += diff
+
+    // Only count the change if it exceeds the threshold
+    if (Math.abs(cumulativeChange) >= ELEVATION_THRESHOLD) {
+      if (cumulativeChange > 0) {
+        totalGain += cumulativeChange
+      } else {
+        totalLoss += Math.abs(cumulativeChange)
+      }
+
+      // Reset for next accumulation
+      lastSignificantElevation = currentElevation
+      cumulativeChange = 0
+    }
+
+    // Track max/min regardless of threshold
+    maxElev = Math.max(maxElev, currentElevation)
+    minElev = Math.min(minElev, currentElevation)
+  }
+
+  // Add any remaining cumulative change
+  if (Math.abs(cumulativeChange) > 0) {
+    if (cumulativeChange > 0) {
+      totalGain += cumulativeChange
+    } else {
+      totalLoss += Math.abs(cumulativeChange)
+    }
   }
 
   return {
@@ -378,6 +505,7 @@ let map: any = null
 let routeLine: any = null
 let waypointMarkers: any[] = []
 const startEndMarkers: any[] = []
+let chartCursorMarker: any = null // Marker for chart interaction
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -710,6 +838,9 @@ async function generateOSRMSegment(
 
     // Fetch elevation data
     await fetchElevationForSegment(segmentIndex)
+
+    // Trigger chart update after elevation is fetched
+    // The computed properties will automatically update
   } catch (error) {
     console.error('Error generating OSRM segment:', error)
   }
@@ -743,7 +874,13 @@ async function fetchElevationForSegment(segmentIndex: number) {
   }
 }
 
-async function fetchElevationChunk(points: RoutePoint[]) {
+async function fetchElevationChunk(
+  points: RoutePoint[],
+  retryCount = 0
+): Promise<void> {
+  const MAX_RETRIES = 3
+  const INITIAL_DELAY = 1000 // ms
+
   try {
     const locations = points.map((p) => ({ latitude: p.lat, longitude: p.lng }))
 
@@ -752,6 +889,10 @@ async function fetchElevationChunk(points: RoutePoint[]) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ locations })
     })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
 
     const data = await response.json()
 
@@ -763,7 +904,26 @@ async function fetchElevationChunk(points: RoutePoint[]) {
       })
     }
   } catch (error) {
-    console.error('Error fetching elevation:', error)
+    console.error(
+      `Error fetching elevation (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`,
+      error
+    )
+
+    // Exponential backoff retry
+    if (retryCount < MAX_RETRIES) {
+      const delay = INITIAL_DELAY * Math.pow(2, retryCount)
+      console.log(`Retrying in ${delay}ms...`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      return fetchElevationChunk(points, retryCount + 1)
+    } else {
+      console.error('Max retries reached for elevation fetch')
+      // Set elevation to 0 for failed points
+      points.forEach((p) => {
+        if (p.elevation === undefined || p.elevation === null) {
+          p.elevation = 0
+        }
+      })
+    }
   }
 }
 
@@ -1697,6 +1857,37 @@ function startElevationResize() {
   // TODO: Implement resize
 }
 
+function handleChartHover(point: RoutePoint | null) {
+  if (!map) return
+
+  if (!point) {
+    // Remove cursor marker
+    if (chartCursorMarker) {
+      map.removeLayer(chartCursorMarker)
+      chartCursorMarker = null
+    }
+    return
+  }
+
+  // Create or update cursor marker
+  if (!chartCursorMarker) {
+    const cursorIcon = L.divIcon({
+      html: '<div class="chart-cursor-marker"></div>',
+      className: 'custom-chart-cursor',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    })
+
+    chartCursorMarker = L.marker([point.lat, point.lng], {
+      icon: cursorIcon,
+      interactive: false,
+      zIndexOffset: 1000
+    }).addTo(map)
+  } else {
+    chartCursorMarker.setLatLng([point.lat, point.lng])
+  }
+}
+
 // Segment management for sidebar
 function deselectSegment(segmentId: number) {
   const segment = selectedSegments.value.find((s) => s.id === segmentId)
@@ -2437,5 +2628,33 @@ onUnmounted(() => {
 :global(.waypoint-intermediate) {
   background: #6b7280; /* Gray */
   border: 2px solid white;
+}
+
+/* Chart cursor marker */
+:global(.custom-chart-cursor) {
+  background: transparent;
+  border: none;
+}
+
+:global(.chart-cursor-marker) {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.3);
+  animation: pulse-cursor 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-cursor {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
 }
 </style>
