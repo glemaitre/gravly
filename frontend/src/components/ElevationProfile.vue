@@ -316,6 +316,11 @@ function updateChartData() {
 
   if (!elevationChart) return
 
+  // Check if canvas is still attached to DOM before updating
+  if (!elevationChartRef.value || !elevationChartRef.value.isConnected) {
+    return
+  }
+
   const distances = props.routePoints.map((p) => p.distance / 1000) // Convert to km
   const elevations = props.routePoints.map((p) => p.elevation)
 
