@@ -631,6 +631,35 @@ function createWaypointMarker(index: number, lat: number, lng: number) {
   updateWaypointMarkerStyles()
 }
 
+function recalculateCumulativeDistances() {
+  for (let segIdx = 0; segIdx < routePoints.value.length; segIdx++) {
+    const points = routePoints.value[segIdx]
+    if (!points || points.length === 0) continue
+
+    // Get the starting cumulative distance from previous segment
+    const startingDistance =
+      segIdx > 0
+        ? routePoints.value[segIdx - 1][routePoints.value[segIdx - 1].length - 1]
+            .distance
+        : 0
+
+    // Recalculate distances for all points in this segment
+    let cumulativeDistance = startingDistance
+
+    for (let i = 0; i < points.length; i++) {
+      if (i > 0) {
+        cumulativeDistance += calculateDistance(
+          points[i - 1].lat,
+          points[i - 1].lng,
+          points[i].lat,
+          points[i].lng
+        )
+      }
+      points[i].distance = cumulativeDistance
+    }
+  }
+}
+
 async function regenerateAdjacentSegments(waypointIndex: number) {
   // Regenerate the segment before this waypoint (if exists)
   if (waypointIndex > 0) {
@@ -667,6 +696,9 @@ async function regenerateAdjacentSegments(waypointIndex: number) {
       await generateOSRMSegment(startWp, endWp, segmentIndex)
     }
   }
+
+  // Recalculate cumulative distances for all segments
+  recalculateCumulativeDistances()
 
   // Rerender the route to show updated path
   renderRoute()
@@ -1024,7 +1056,6 @@ async function fetchElevationChunk(
     // Exponential backoff retry
     if (retryCount < MAX_RETRIES) {
       const delay = INITIAL_DELAY * Math.pow(2, retryCount)
-      console.log(`Retrying in ${delay}ms...`)
       await new Promise((resolve) => setTimeout(resolve, delay))
       return fetchElevationChunk(points, retryCount + 1)
     } else {
@@ -1124,7 +1155,9 @@ function handleRouteMouseDown(event: any) {
 
   // Find which segment was clicked to determine insertion index
   const insertionInfo = findInsertionPoint(clickLatLng)
-  if (!insertionInfo) return
+  if (!insertionInfo) {
+    return
+  }
 
   draggedWaypointIndex.value = insertionInfo.insertIndex
 
@@ -1277,57 +1310,94 @@ async function handleRouteDragEnd(event: any) {
     return
   }
 
-  // Set flag to prevent the click event from firing
-  justCompletedRouteDrag = true
+  try {
+    // Set flag to prevent the click event from firing
+    justCompletedRouteDrag = true
 
-  // Reset the flag after a short delay to avoid blocking future clicks
-  setTimeout(() => {
-    justCompletedRouteDrag = false
-  }, 100)
+    // Reset the flag after a short delay to avoid blocking future clicks
+    setTimeout(() => {
+      justCompletedRouteDrag = false
+    }, 100)
 
-  // Insert the new waypoint
-  waypoints.value.splice(insertIndex, 0, {
-    lat: newLatLng.lat,
-    lng: newLatLng.lng,
-    type: 'user'
-  })
+    // Insert the new waypoint
+    waypoints.value.splice(insertIndex, 0, {
+      lat: newLatLng.lat,
+      lng: newLatLng.lng,
+      type: 'user'
+    })
 
-  // Insert the new marker
-  const newMarker = createWaypointMarkerForInsertion(
-    insertIndex,
-    newLatLng.lat,
-    newLatLng.lng
-  )
-  waypointMarkers.splice(insertIndex, 0, newMarker)
+    // Insert the new marker
+    const newMarker = createWaypointMarkerForInsertion(
+      insertIndex,
+      newLatLng.lat,
+      newLatLng.lng
+    )
+    waypointMarkers.splice(insertIndex, 0, newMarker)
 
-  // Update all marker styles to reflect new positions and numbers
-  updateWaypointMarkerStyles()
+    // Update all marker styles to reflect new positions and numbers
+    updateWaypointMarkerStyles()
 
-  // The segment that was clicked needs to be split into two segments
-  // We need to regenerate the segment before and after the new waypoint
-  const segmentIndex = insertIndex - 1
+    // The segment that was clicked needs to be split into two segments
+    // We need to regenerate the segment before and after the new waypoint
+    const segmentIndex = insertIndex - 1
 
-  // Clear the old segment data at this position
-  if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
-    // Remove the old segment
-    routeSegments.value.splice(segmentIndex, 1)
-    routePoints.value.splice(segmentIndex, 1)
+    // Check if the segment exists before proceeding
+    if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+      // Remove the old segment
+      routeSegments.value.splice(segmentIndex, 1)
+      routePoints.value.splice(segmentIndex, 1)
 
-    // Generate two new segments
-    // Segment 1: from waypoint[insertIndex-1] to waypoint[insertIndex]
-    const startWp1 = waypoints.value[segmentIndex]
-    const endWp1 = waypoints.value[insertIndex]
-    await generateOSRMSegment(startWp1, endWp1, segmentIndex)
+      // Generate two new segments by INSERTING them in place
+      // The old segment was removed, so we need to INSERT two segments at segmentIndex
+      // This will push all subsequent segments down by 1
 
-    // Segment 2: from waypoint[insertIndex] to waypoint[insertIndex+1]
-    if (insertIndex < waypoints.value.length - 1) {
-      const startWp2 = waypoints.value[insertIndex]
-      const endWp2 = waypoints.value[insertIndex + 1]
-      await generateOSRMSegment(startWp2, endWp2, insertIndex)
+      // Segment 1: from waypoint[segmentIndex] to waypoint[insertIndex]
+      const startWp1 = waypoints.value[segmentIndex]
+      const endWp1 = waypoints.value[insertIndex]
+
+      // INSERT placeholder for first segment (shifts remaining segments down)
+      routeSegments.value.splice(segmentIndex, 0, { type: 'osrm' })
+      routePoints.value.splice(segmentIndex, 0, [])
+
+      await generateOSRMSegment(startWp1, endWp1, segmentIndex)
+
+      // Segment 2: from waypoint[insertIndex] to waypoint[insertIndex+1]
+      if (insertIndex < waypoints.value.length - 1) {
+        const startWp2 = waypoints.value[insertIndex]
+        const endWp2 = waypoints.value[insertIndex + 1]
+
+        // INSERT placeholder at insertIndex to shift existing segments down
+        routeSegments.value.splice(insertIndex, 0, { type: 'osrm' })
+        routePoints.value.splice(insertIndex, 0, [])
+
+        // Now generate the segment data (will overwrite the placeholder we just inserted)
+        await generateOSRMSegment(startWp2, endWp2, insertIndex)
+      }
+
+      // Recalculate cumulative distances for all segments after the insertion
+      recalculateCumulativeDistances()
+
+      // Rerender the route
+      renderRoute()
     }
+  } catch (error) {
+    console.error('!!! ERROR in handleRouteDragEnd !!!', error)
+    console.error(
+      'Error stack:',
+      error instanceof Error ? error.stack : 'No stack trace'
+    )
 
-    // Rerender the route
-    renderRoute()
+    // Clean up on error
+    if (tempDragMarker) {
+      map!.removeLayer(tempDragMarker)
+      tempDragMarker = null
+    }
+    map!.off('mousemove', handleRouteDragMove)
+    map!.off('mouseup', handleRouteDragEnd)
+    map!.dragging.enable()
+    isDraggingRoute.value = false
+    draggedWaypointIndex.value = null
+    dragStartPosition = null
   }
 }
 
@@ -1362,6 +1432,9 @@ function createWaypointMarkerForInsertion(
   }).addTo(map!)
 
   // Add drag event handlers
+  // Store the actual waypoint index at the time of marker creation
+  const waypointIndex = index
+
   marker.on('dragstart', () => {
     map!.getContainer().style.cursor = 'grabbing'
   })
@@ -1371,10 +1444,17 @@ function createWaypointMarkerForInsertion(
     updateMapCursor()
 
     const newLatLng = event.target.getLatLng()
-    waypoints.value[index].lat = newLatLng.lat
-    waypoints.value[index].lng = newLatLng.lng
 
-    await regenerateAdjacentSegments(index)
+    // Find the current index of this waypoint in case array was modified
+    // For now, use the stored index (we'll need to improve this later)
+    if (waypoints.value[waypointIndex]) {
+      waypoints.value[waypointIndex].lat = newLatLng.lat
+      waypoints.value[waypointIndex].lng = newLatLng.lng
+
+      await regenerateAdjacentSegments(waypointIndex)
+    } else {
+      console.error('Waypoint not found at index', waypointIndex)
+    }
   })
 
   return marker
