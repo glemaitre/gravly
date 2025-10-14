@@ -399,6 +399,9 @@ const routeGenerationProgress = ref({
   message: ''
 })
 
+// Map panning state
+const isPanning = ref(false)
+
 // ============================================================================
 // COMPUTED PROPERTIES
 // ============================================================================
@@ -1223,34 +1226,41 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     if (popupElement) {
       const cardElement = popupElement.querySelector('.segment-popup-card')
       if (cardElement) {
-        let justSelected = false
-
         // Keep popup open when hovering over card
         cardElement.addEventListener('mouseenter', () => {
           if (closeTimeout) {
             clearTimeout(closeTimeout)
             closeTimeout = null
           }
-          justSelected = false // Reset flag when re-entering
         })
 
         // Close popup when leaving card
         cardElement.addEventListener('mouseleave', () => {
-          // Use shorter delay if segment was just selected
-          const delay = justSelected ? 50 : 200
           closeTimeout = setTimeout(() => {
             if (map && popup) {
               map.closePopup(popup)
             }
             closeTimeout = null
-          }, delay)
+          }, 200)
         })
 
-        // Click on card to select segment
+        // Click on card to select segment - close popup immediately after selection
         cardElement.addEventListener('click', (e: Event) => {
           e.stopPropagation()
           selectSegment(segment)
-          justSelected = true // Mark that segment was just selected
+
+          // Clear any pending timeout
+          if (closeTimeout) {
+            clearTimeout(closeTimeout)
+            closeTimeout = null
+          }
+
+          // Close popup immediately after selection
+          setTimeout(() => {
+            if (map && popup) {
+              map.closePopup(popup)
+            }
+          }, 100) // Small delay to allow click to complete
         })
       }
     }
@@ -1529,6 +1539,25 @@ function initializeMap() {
   // Listen for zoom changes to update marker sizes
   map.on('zoomend', updateMarkerSizes)
 
+  // Listen for panning to update cursor
+  map.on('mousedown', () => {
+    isPanning.value = true
+    updateMapCursor()
+  })
+
+  map.on('mouseup', () => {
+    isPanning.value = false
+    updateMapCursor()
+  })
+
+  // Also handle when mouse leaves the map while panning
+  map.on('mouseout', () => {
+    if (isPanning.value) {
+      isPanning.value = false
+      updateMapCursor()
+    }
+  })
+
   // Set initial cursor based on current mode
   updateMapCursor()
 }
@@ -1552,6 +1581,12 @@ function handleMapBoundsChange() {
 function updateMapCursor() {
   if (!map) return
 
+  // If currently panning, use grabbing cursor
+  if (isPanning.value) {
+    map.getContainer().style.cursor = 'grabbing'
+    return
+  }
+
   if (routeMode.value === 'standard') {
     map.getContainer().style.cursor = 'crosshair'
   } else {
@@ -1567,12 +1602,12 @@ function getMarkerSizeForZoom(zoom: number): {
   fontSize: number
   border: number
 } {
-  // More aggressive scaling based on zoom level
-  // Zoom 8: very small (8px), Zoom 14: medium (20px), Zoom 18: large (32px)
-  // Formula: size increases by 2px per zoom level
-  const baseSize = Math.max(8, Math.min(32, (zoom - 6) * 2))
-  const baseFontSize = Math.max(6, Math.min(14, baseSize * 0.5))
-  const baseBorder = zoom < 12 ? 1 : 2
+  // Improved scaling for better visibility at all zoom levels
+  // Zoom 8: 14px, Zoom 10: 19px, Zoom 12: 24px, Zoom 14: 29px, Zoom 16: 34px, Zoom 18: 39px
+  // Formula: size increases by 2.5px per zoom level
+  const baseSize = Math.max(14, Math.min(40, 4 + (zoom - 6) * 2.5))
+  const baseFontSize = Math.max(8, Math.min(18, baseSize * 0.45))
+  const baseBorder = zoom < 12 ? 2 : 2
 
   return {
     size: Math.round(baseSize),
@@ -1589,13 +1624,16 @@ function getSegmentLandmarkSizeForZoom(zoom: number): {
 } {
   // Landmarks scale similarly but slightly smaller
   const baseSize = Math.max(8, Math.min(24, (zoom - 7) * 1.6))
-  const badgeSize = Math.max(8, Math.min(16, baseSize * 0.7))
+
+  // Badge size increases by 1px every 2 zoom levels
+  // Start at 12px at zoom 8, increase to 22px at zoom 18
+  const badgeSize = Math.max(12, Math.min(22, 12 + Math.floor((zoom - 8) / 2)))
 
   return {
     size: Math.round(baseSize),
     fontSize: Math.round(baseSize * 0.5),
-    badgeSize: Math.round(badgeSize),
-    badgeFontSize: Math.round(badgeSize * 0.6)
+    badgeSize: badgeSize,
+    badgeFontSize: Math.round(badgeSize * 0.55)
   }
 }
 
@@ -2168,6 +2206,9 @@ onUnmounted(() => {
     map.off('moveend', handleMapBoundsChange)
     map.off('zoomend', handleMapBoundsChange)
     map.off('zoomend', updateMarkerSizes)
+    map.off('mousedown')
+    map.off('mouseup')
+    map.off('mouseout')
     map.remove()
   }
 
