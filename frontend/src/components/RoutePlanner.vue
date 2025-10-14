@@ -591,14 +591,77 @@ function createWaypointMarker(index: number, lat: number, lng: number) {
 
   const marker = L.marker([lat, lng], {
     icon: waypointIcon,
-    draggable: false // Disable for now
+    draggable: true // Enable dragging
   }).addTo(map!)
+
+  // Add drag event handlers
+  marker.on('dragstart', () => {
+    // Change cursor to grabbing during drag
+    map!.getContainer().style.cursor = 'grabbing'
+  })
+
+  marker.on('dragend', async (event: any) => {
+    // Reset cursor
+    map!.getContainer().style.cursor = ''
+    updateMapCursor()
+
+    // Get new position
+    const newLatLng = event.target.getLatLng()
+
+    // Update waypoint position
+    waypoints.value[index].lat = newLatLng.lat
+    waypoints.value[index].lng = newLatLng.lng
+
+    // Regenerate affected route segments (previous and next)
+    await regenerateAdjacentSegments(index)
+  })
 
   // Store marker reference
   waypointMarkers[index] = marker
 
   // Update all markers to reflect correct start/end positions
   updateWaypointMarkerStyles()
+}
+
+async function regenerateAdjacentSegments(waypointIndex: number) {
+  // Regenerate the segment before this waypoint (if exists)
+  if (waypointIndex > 0) {
+    const startWp = waypoints.value[waypointIndex - 1]
+    const endWp = waypoints.value[waypointIndex]
+    const segmentIndex = waypointIndex - 1
+
+    // Check if this segment should be GPX or OSRM
+    const segmentInfo = findSegmentBetweenWaypoints(segmentIndex, waypointIndex)
+
+    if (segmentInfo) {
+      // GPX segment - regenerate with GPX data
+      await generateGPXSegment(segmentInfo, startWp, endWp, segmentIndex)
+    } else {
+      // OSRM segment - regenerate with routing
+      await generateOSRMSegment(startWp, endWp, segmentIndex)
+    }
+  }
+
+  // Regenerate the segment after this waypoint (if exists)
+  if (waypointIndex < waypoints.value.length - 1) {
+    const startWp = waypoints.value[waypointIndex]
+    const endWp = waypoints.value[waypointIndex + 1]
+    const segmentIndex = waypointIndex
+
+    // Check if this segment should be GPX or OSRM
+    const segmentInfo = findSegmentBetweenWaypoints(waypointIndex, waypointIndex + 1)
+
+    if (segmentInfo) {
+      // GPX segment - regenerate with GPX data
+      await generateGPXSegment(segmentInfo, startWp, endWp, segmentIndex)
+    } else {
+      // OSRM segment - regenerate with routing
+      await generateOSRMSegment(startWp, endWp, segmentIndex)
+    }
+  }
+
+  // Rerender the route to show updated path
+  renderRoute()
 }
 
 function updateWaypointMarkerStyles() {
