@@ -202,18 +202,28 @@
                 />
               </div>
               <div class="difficulty-range-ticks">
-                <span
+                <div
                   v-for="tick in [1, 2, 3, 4, 5]"
                   :key="tick"
-                  class="tick-mark"
-                  :class="{
-                    active:
-                      tick >= segmentFilters.difficultyMin &&
-                      tick <= segmentFilters.difficultyMax
-                  }"
+                  class="tick-mark-wrapper"
+                  @mouseenter="showDifficultyTooltip($event)"
+                  @mouseleave="hideDifficultyTooltip"
+                  @mousemove="updateDifficultyTooltipPosition($event)"
                 >
-                  {{ tick }}
-                </span>
+                  <span
+                    class="tick-mark"
+                    :class="{
+                      active:
+                        tick >= segmentFilters.difficultyMin &&
+                        tick <= segmentFilters.difficultyMax
+                    }"
+                  >
+                    {{ tick }}
+                  </span>
+                  <div class="difficulty-tooltip">
+                    {{ getDifficultyDescription(tick) }}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -441,7 +451,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { TrackResponse } from '../types'
 
@@ -592,6 +602,64 @@ function onDifficultyMaxChange(event: Event) {
   const value = Number((event.target as HTMLInputElement).value)
   emit('update:difficulty-max', value)
 }
+
+// Difficulty tooltip functionality
+const difficultyTooltipVisible = ref(false)
+
+function getDifficultyDescription(level: number): string {
+  // Map difficulty levels to their descriptions
+  switch (level) {
+    case 1:
+      return t('difficulty.descriptions.level1')
+    case 2:
+      return t('difficulty.descriptions.level2')
+    case 3:
+      return t('difficulty.descriptions.level3')
+    case 4:
+      return t('difficulty.descriptions.level4')
+    case 5:
+      return t('difficulty.descriptions.level5')
+    default:
+      return t('difficulty.descriptions.level5') // Default to level 5 for invalid levels
+  }
+}
+
+function showDifficultyTooltip(event: MouseEvent) {
+  difficultyTooltipVisible.value = true
+  updateDifficultyTooltipPosition(event)
+}
+
+function hideDifficultyTooltip() {
+  difficultyTooltipVisible.value = false
+}
+
+function updateDifficultyTooltipPosition(event: MouseEvent) {
+  if (!difficultyTooltipVisible.value) return
+
+  const target = event.currentTarget as HTMLElement
+  const tooltip = target.querySelector('.difficulty-tooltip') as HTMLElement
+  if (!tooltip) return
+
+  const rect = target.getBoundingClientRect()
+  const sidebarWidth = 300 // Sidebar width
+  const tooltipWidth = sidebarWidth * 0.8 // 80% of sidebar width
+
+  // Position tooltip within the sidebar bounds
+  let left = rect.left + rect.width / 2 - tooltipWidth / 2
+
+  // Ensure tooltip stays within sidebar bounds
+  const sidebarLeft = 0 // Sidebar starts at left edge
+  const sidebarRight = sidebarWidth
+
+  if (left < sidebarLeft + 10) {
+    left = sidebarLeft + 10
+  } else if (left + tooltipWidth > sidebarRight - 10) {
+    left = sidebarRight - tooltipWidth - 10
+  }
+
+  tooltip.style.left = `${left}px`
+  tooltip.style.top = `${rect.top - 120}px` // Fixed offset above the tick mark
+}
 </script>
 
 <style scoped>
@@ -610,6 +678,7 @@ function onDifficultyMaxChange(event: Event) {
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
   overflow-y: auto;
+  overflow: visible; /* Allow tooltips to be visible */
 }
 
 .sidebar-menu.sidebar-open {
@@ -1354,6 +1423,44 @@ function onDifficultyMaxChange(event: Event) {
   background: var(--brand-primary);
   color: white;
   font-weight: 600;
+}
+
+/* Difficulty Tooltip */
+.tick-mark-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  cursor: help;
+}
+
+.difficulty-tooltip {
+  position: fixed !important;
+  background: #1f2937;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  width: 240px; /* 80% of 300px sidebar width */
+  z-index: 99999 !important; /* Maximum z-index to ensure foreground display */
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  white-space: normal;
+  word-wrap: break-word;
+  text-align: center;
+  transform: translateZ(0); /* Force hardware acceleration */
+}
+
+.tick-mark-wrapper:hover .difficulty-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Keep tire filters on one row */

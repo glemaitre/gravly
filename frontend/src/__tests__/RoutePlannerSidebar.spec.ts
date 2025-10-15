@@ -43,6 +43,26 @@ const i18n = createI18n({
           semiSlick: 'Semi-Slick',
           knobs: 'Knobs'
         }
+      },
+      difficulty: {
+        easy: 'Easy',
+        hard: 'Hard',
+        level1: 'Very easy',
+        level2: 'Easy',
+        level3: 'Moderate',
+        level4: 'Hard',
+        level5: 'Very hard',
+        descriptions: {
+          level1: 'You could ride this segment with your eyes closed',
+          level2:
+            'It should be quite fine. Only a couple of irregularities on the path, but easy business.',
+          level3:
+            "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections.",
+          level4:
+            "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations.",
+          level5:
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+        }
       }
     }
   }
@@ -477,6 +497,405 @@ describe('RoutePlannerSidebar', () => {
 
       expect(wrapper.emitted('update:difficulty-max')).toBeTruthy()
       expect(wrapper.emitted('update:difficulty-max')?.[0]).toEqual([4])
+    })
+  })
+
+  describe('Difficulty Tooltip Functionality', () => {
+    describe('Tooltip Structure', () => {
+      it('renders tick mark wrappers for each difficulty level', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+        expect(tickMarkWrappers).toHaveLength(5)
+
+        tickMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('tick-mark-wrapper')
+          expect(wrapper.find('.tick-mark').exists()).toBe(true)
+          expect(wrapper.find('.difficulty-tooltip').exists()).toBe(true)
+        })
+      })
+
+      it('renders difficulty tooltips for each level', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Tooltip Content', () => {
+      it('displays correct descriptions for each difficulty level', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+
+        expect(tooltips[0].text()).toBe(
+          'You could ride this segment with your eyes closed'
+        )
+        expect(tooltips[1].text()).toBe(
+          'It should be quite fine. Only a couple of irregularities on the path, but easy business.'
+        )
+        expect(tooltips[2].text()).toBe(
+          "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections."
+        )
+        expect(tooltips[3].text()).toBe(
+          "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations."
+        )
+        expect(tooltips[4].text()).toBe(
+          'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+        )
+      })
+
+      it('has correct CSS classes on tooltips', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Tooltip Interactions', () => {
+      it('has mouse event handlers on tick mark wrappers', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+        tickMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('tick-mark-wrapper')
+        })
+      })
+
+      it('tooltips are initially hidden', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Tooltip Styling', () => {
+      it('applies correct CSS classes to tick mark wrappers', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+        tickMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('tick-mark-wrapper')
+        })
+      })
+
+      it('applies correct CSS classes to tooltips', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Internationalization', () => {
+      it('displays tooltips in English by default', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips[0].text()).toContain('You could ride this segment')
+        expect(tooltips[1].text()).toContain('It should be quite fine')
+      })
+
+      it('switches to French when locale changes', async () => {
+        const frenchI18n = createI18n({
+          legacy: false,
+          locale: 'fr',
+          fallbackLocale: 'fr',
+          messages: {
+            fr: {
+              routePlanner: {
+                routingMode: 'Mode de Routage',
+                standardMode: 'Mode Standard',
+                standardModeDescription:
+                  "Cliquez n'importe où sur la carte pour ajouter des waypoints",
+                startEndMode: 'Mode Début/Fin',
+                startEndModeDescription:
+                  "Définissez les points de début et de fin, puis générez l'itinéraire",
+                chooseNextWaypoint: 'Choisissez votre prochain waypoint',
+                guidedTodoList: "Planification d'Itinéraire Guidée",
+                guidedTodoInstructions:
+                  'Suivez les étapes ci-dessous pour planifier votre itinéraire',
+                filters: 'Filtres',
+                clearFilters: 'Effacer les Filtres',
+                difficulty: 'Difficulté',
+                surface: 'Surface',
+                tire: 'Pneu',
+                dry: 'Sec',
+                wet: 'Mouillé',
+                selectedSegments: 'Segments Sélectionnés',
+                noSegmentsSelectedMessage: 'Aucun segment sélectionné pour le moment',
+                removeSegment: 'Supprimer le Segment',
+                generateRoute: "Générer l'Itinéraire",
+                surfaceTypes: {
+                  bigStoneRoad: 'Route en Gros Cailloux',
+                  brokenPavedRoad: 'Route Goudronnée Cassée',
+                  dirtyRoad: 'Route Sale',
+                  fieldTrail: 'Sentier de Champ',
+                  forestTrail: 'Sentier de Forêt',
+                  smallStoneRoad: 'Route en Petits Cailloux'
+                },
+                tireTypes: {
+                  slick: 'Lisse',
+                  semiSlick: 'Semi-Lisse',
+                  knobs: 'Crampons'
+                }
+              },
+              difficulty: {
+                easy: 'Facile',
+                hard: 'Difficile',
+                level1: 'Très facile',
+                level2: 'Facile',
+                level3: 'Modéré',
+                level4: 'Difficile',
+                level5: 'Très difficile',
+                descriptions: {
+                  level1: 'Vous pourriez rouler sur ce segment les yeux fermés',
+                  level2:
+                    'Ça devrait être tout à fait correct. Seulement quelques irrégularités sur le chemin, mais facile à gérer.',
+                  level3:
+                    'Vous aurez besoin de quelques compétences en pilotage de vélo en raison du terrain irrégulier ou des sections en montée et descente.',
+                  level4:
+                    "Ce n'est plus évident. Vous devrez définitivement naviguer les changements d'élévation et rencontrerez des variations de terrain inattendues.",
+                  level5:
+                    'Soyez prêt à poser le pied, car le chemin est difficile en raison de la pente, du terrain, ou des deux.'
+                }
+              }
+            }
+          }
+        })
+
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [frenchI18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips[0].text()).toContain('Vous pourriez rouler sur ce segment')
+        expect(tooltips[1].text()).toContain('Ça devrait être tout à fait correct')
+      })
+    })
+
+    describe('Accessibility', () => {
+      it('provides informative tooltip content for screen readers', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.text().length).toBeGreaterThan(10) // Ensure meaningful content
+        })
+      })
+
+      it('maintains proper semantic structure', () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+        tickMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.find('.tick-mark').exists()).toBe(true)
+          expect(wrapper.find('.difficulty-tooltip').exists()).toBe(true)
+        })
+      })
+    })
+
+    describe('Performance', () => {
+      it('does not create extra tooltip elements on re-render', async () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        const initialTooltips = wrapper.findAll('.difficulty-tooltip').length
+        expect(initialTooltips).toBe(5)
+
+        // Trigger a re-render
+        await wrapper.setProps({
+          segmentFilters: {
+            ...defaultProps.segmentFilters,
+            difficultyMin: 2
+          }
+        })
+
+        const finalTooltips = wrapper.findAll('.difficulty-tooltip').length
+        expect(finalTooltips).toBe(5)
+      })
+
+      it('handles rapid prop changes without errors', async () => {
+        const wrapper = mount(RoutePlannerSidebar, {
+          props: {
+            ...defaultProps,
+            routeMode: 'startEnd',
+            startWaypoint: { lat: 46.860104, lng: 3.978509 },
+            endWaypoint: { lat: 46.861104, lng: 3.979509 },
+            filtersExpanded: true
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+
+        // Rapidly change props
+        for (let i = 1; i <= 5; i++) {
+          await wrapper.setProps({
+            segmentFilters: {
+              ...defaultProps.segmentFilters,
+              difficultyMin: i,
+              difficultyMax: i
+            }
+          })
+        }
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+      })
     })
   })
 
