@@ -63,13 +63,22 @@
               <div
                 v-for="i in 5"
                 :key="i"
-                class="difficulty-mark"
-                :class="{ active: modelTrailConditions.difficulty_level >= i }"
+                class="difficulty-mark-wrapper"
+                @mouseenter="showDifficultyTooltip($event)"
+                @mouseleave="hideDifficultyTooltip"
+                @mousemove="updateDifficultyTooltipPosition($event)"
                 @click="setDifficultyLevel(i)"
-                :title="t(`difficulty.level${i}`)"
               >
-                <span class="difficulty-number">{{ i }}</span>
-                <span class="difficulty-text">{{ t(`difficulty.level${i}`) }}</span>
+                <div
+                  class="difficulty-mark"
+                  :class="{ active: modelTrailConditions.difficulty_level >= i }"
+                >
+                  <span class="difficulty-number">{{ i }}</span>
+                  <span class="difficulty-text">{{ t(`difficulty.level${i}`) }}</span>
+                </div>
+                <div class="difficulty-tooltip">
+                  {{ getDifficultyDescription(i) }}
+                </div>
               </div>
             </div>
           </div>
@@ -471,6 +480,67 @@ function updateDifficultyLevel(event: Event) {
 function setDifficultyLevel(level: number) {
   const newConditions = { ...modelTrailConditions.value, difficulty_level: level }
   emit('update:trailConditions', newConditions)
+}
+
+// Difficulty tooltip functionality
+const difficultyTooltipVisible = ref(false)
+
+function getDifficultyDescription(level: number): string {
+  // Map difficulty levels to their descriptions
+  switch (level) {
+    case 1:
+      return t('difficulty.descriptions.level1')
+    case 2:
+      return t('difficulty.descriptions.level2')
+    case 3:
+      return t('difficulty.descriptions.level3')
+    case 4:
+      return t('difficulty.descriptions.level4')
+    case 5:
+      return t('difficulty.descriptions.level5')
+    default:
+      return t('difficulty.descriptions.level5') // Default to level 5 for invalid levels
+  }
+}
+
+function showDifficultyTooltip(event: MouseEvent) {
+  difficultyTooltipVisible.value = true
+  updateDifficultyTooltipPosition(event)
+}
+
+function hideDifficultyTooltip() {
+  difficultyTooltipVisible.value = false
+}
+
+function updateDifficultyTooltipPosition(event: MouseEvent) {
+  if (!difficultyTooltipVisible.value) return
+
+  const target = event.currentTarget as HTMLElement
+  const tooltip = target.querySelector('.difficulty-tooltip') as HTMLElement
+  if (!tooltip) return
+
+  const rect = target.getBoundingClientRect()
+  const tooltipRect = tooltip.getBoundingClientRect()
+  const viewportWidth = window.innerWidth
+
+  // Position tooltip above the difficulty mark
+  let left = rect.left + rect.width / 2 - tooltipRect.width / 2
+  let top = rect.top - tooltipRect.height - 8
+
+  // Ensure tooltip stays within viewport bounds
+  if (left < 10) {
+    left = 10
+  } else if (left + tooltipRect.width > viewportWidth - 10) {
+    left = viewportWidth - tooltipRect.width - 10
+  }
+
+  // If tooltip would go above viewport, position it below
+  if (top < 10) {
+    top = rect.bottom + 8
+  }
+
+  tooltip.style.left = `${left}px`
+  tooltip.style.top = `${top}px`
 }
 
 function isSurfaceTypeSelected(surfaceType: string): boolean {
@@ -953,7 +1023,7 @@ function updateImageCaption(index: number, event: Event) {
   user-select: none;
 }
 
-.difficulty-mark:hover {
+.difficulty-mark-wrapper:hover .difficulty-mark {
   background: #f3f4f6;
   border-color: #d1d5db;
   transform: translateY(-1px);
@@ -965,7 +1035,7 @@ function updateImageCaption(index: number, event: Event) {
   border-color: var(--brand-300);
 }
 
-.difficulty-mark.active:hover {
+.difficulty-mark-wrapper:hover .difficulty-mark.active {
   background: var(--brand-100);
   border-color: var(--brand-400);
 }
@@ -1020,24 +1090,67 @@ function updateImageCaption(index: number, event: Event) {
     font-weight: 700;
   }
 
-  .difficulty-mark:hover .difficulty-text {
-    display: block;
-    position: absolute;
-    bottom: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #1f2937;
-    color: white;
-    padding: 0.2rem 0.4rem;
-    border-radius: 3px;
-    font-size: 0.65rem;
-    white-space: nowrap;
-    z-index: 1000;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  .difficulty-mark-wrapper {
+    position: relative;
+  }
+}
+
+/* Difficulty Tooltip Styles */
+.difficulty-mark-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  min-width: 60px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.difficulty-tooltip {
+  position: fixed !important;
+  background: #1f2937;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  width: 280px;
+  z-index: 99999 !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  white-space: normal;
+  word-wrap: break-word;
+  text-align: center;
+  transform: translateZ(0);
+}
+
+.difficulty-mark-wrapper:hover .difficulty-tooltip {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Mobile tooltip adjustments */
+@media (max-width: 649px) {
+  .difficulty-mark-wrapper {
+    min-width: 0;
+    padding: 0.25rem 0.125rem;
+    margin: 0;
+    flex: 1;
+    max-width: calc(20% - 0.1rem);
   }
 
-  .difficulty-mark {
-    position: relative;
+  .difficulty-tooltip {
+    width: 240px;
+    font-size: 0.8rem;
+    padding: 0.6rem 0.8rem;
   }
 }
 

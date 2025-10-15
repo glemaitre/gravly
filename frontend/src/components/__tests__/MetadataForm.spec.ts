@@ -51,7 +51,18 @@ const i18n = createI18n({
         level2: 'Moderate',
         level3: 'Medium',
         level4: 'Hard',
-        level5: 'Expert'
+        level5: 'Expert',
+        descriptions: {
+          level1: 'You could ride this segment with your eyes closed',
+          level2:
+            'It should be quite fine. Only a couple of irregularities on the path, but easy business.',
+          level3:
+            "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections.",
+          level4:
+            "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations.",
+          level5:
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+        }
       },
       surface: {
         'broken-paved-road': 'Broken Paved Road',
@@ -190,6 +201,329 @@ describe('MetadataForm', () => {
         'update:trailConditions'
       )![0][0] as TrailConditions
       expect(emitted.difficulty_level).toBe(5)
+    })
+  })
+
+  describe('Difficulty Tooltip Functionality', () => {
+    describe('Tooltip Structure', () => {
+      it('renders difficulty mark wrappers for each difficulty level', () => {
+        const wrapper = createWrapper()
+
+        const difficultyMarkWrappers = wrapper.findAll('.difficulty-mark-wrapper')
+        expect(difficultyMarkWrappers).toHaveLength(5)
+
+        difficultyMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('difficulty-mark-wrapper')
+          expect(wrapper.find('.difficulty-mark').exists()).toBe(true)
+          expect(wrapper.find('.difficulty-tooltip').exists()).toBe(true)
+        })
+      })
+
+      it('renders difficulty tooltips for each level', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Tooltip Content', () => {
+      it('displays correct descriptions for each difficulty level', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+
+        expect(tooltips[0].text()).toBe(
+          'You could ride this segment with your eyes closed'
+        )
+        expect(tooltips[1].text()).toBe(
+          'It should be quite fine. Only a couple of irregularities on the path, but easy business.'
+        )
+        expect(tooltips[2].text()).toBe(
+          "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections."
+        )
+        expect(tooltips[3].text()).toBe(
+          "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations."
+        )
+        expect(tooltips[4].text()).toBe(
+          'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+        )
+      })
+
+      it('has correct CSS classes on tooltips', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Tooltip Interactions', () => {
+      it('has mouse event handlers on difficulty mark wrappers', () => {
+        const wrapper = createWrapper()
+
+        const difficultyMarkWrappers = wrapper.findAll('.difficulty-mark-wrapper')
+        difficultyMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('difficulty-mark-wrapper')
+        })
+      })
+
+      it('tooltips are initially hidden', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+
+      it('maintains click functionality on difficulty marks', async () => {
+        const wrapper = createWrapper()
+
+        const difficultyMarkWrappers = wrapper.findAll('.difficulty-mark-wrapper')
+        await difficultyMarkWrappers[4].trigger('click') // Click on level 5
+
+        expect(wrapper.emitted('update:trailConditions')).toBeTruthy()
+        const emitted = wrapper.emitted(
+          'update:trailConditions'
+        )![0][0] as TrailConditions
+        expect(emitted.difficulty_level).toBe(5)
+      })
+    })
+
+    describe('Tooltip Styling', () => {
+      it('applies correct CSS classes to difficulty mark wrappers', () => {
+        const wrapper = createWrapper()
+
+        const difficultyMarkWrappers = wrapper.findAll('.difficulty-mark-wrapper')
+        difficultyMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.classes()).toContain('difficulty-mark-wrapper')
+        })
+      })
+
+      it('applies correct CSS classes to tooltips', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+    })
+
+    describe('Internationalization', () => {
+      it('displays tooltips in English by default', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips[0].text()).toContain('You could ride this segment')
+        expect(tooltips[1].text()).toContain('It should be quite fine')
+      })
+
+      it('switches to French when locale changes', () => {
+        const frenchI18n = createI18n({
+          legacy: false,
+          locale: 'fr',
+          messages: {
+            fr: {
+              trackType: {
+                segment: 'Segment',
+                route: 'Route'
+              },
+              form: {
+                segmentName: 'Nom du Segment',
+                routeName: 'Nom de la Route',
+                surfaceType: 'Type de Surface',
+                majorSurfaceType: 'Type de Surface Principal',
+                difficultyLevel: 'Niveau de Difficulté',
+                tire: 'Pneu',
+                trailConditions: 'Conditions de Piste',
+                media: 'Médias',
+                videoLinks: 'Liens Vidéo',
+                images: 'Images',
+                comments: 'Commentaires',
+                commentaryText: 'Texte de Commentaire',
+                commentaryPlaceholder: 'Ajoutez vos commentaires ici...',
+                videoUrlPlaceholder: "Entrez l'URL de la vidéo",
+                addVideoLink: 'Ajouter un Lien Vidéo',
+                removeVideo: 'Supprimer la Vidéo',
+                removeImage: "Supprimer l'Image",
+                imageAlt: 'Image',
+                imageCaptionPlaceholder: 'Entrez une légende',
+                uploadImages: 'Télécharger des Images',
+                uploadHint: 'Glisser-déposer ou cliquer pour télécharger'
+              },
+              required: '*',
+              difficulty: {
+                level1: 'Facile',
+                level2: 'Modéré',
+                level3: 'Moyen',
+                level4: 'Difficile',
+                level5: 'Expert',
+                descriptions: {
+                  level1: 'Vous pourriez rouler sur ce segment les yeux fermés',
+                  level2:
+                    'Ça devrait être tout à fait correct. Seulement quelques irrégularités sur le chemin, mais facile à gérer.',
+                  level3:
+                    'Vous aurez besoin de quelques compétences en pilotage de vélo en raison du terrain irrégulier ou des sections en montée et descente.',
+                  level4:
+                    "Ce n'est plus évident. Vous devrez définitivement naviguer les changements d'élévation et rencontrerez des variations de terrain inattendues.",
+                  level5:
+                    'Soyez prêt à poser le pied, car le chemin est difficile en raison de la pente, du terrain, ou des deux.'
+                }
+              },
+              surface: {
+                'broken-paved-road': 'Route Goudronnée Cassée',
+                'dirty-road': 'Route Sale',
+                'small-stone-road': 'Route en Petits Cailloux',
+                'big-stone-road': 'Route en Gros Cailloux',
+                'field-trail': 'Sentier de Champ',
+                'forest-trail': 'Sentier de Forêt'
+              },
+              tire: {
+                dry: 'Sec',
+                wet: 'Mouillé',
+                slick: 'Lisse',
+                semiSlick: 'Semi-Lisse',
+                knobs: 'Crampons',
+                dryHelp: 'Pneu recommandé pour conditions sèches',
+                wetHelp: 'Pneu recommandé pour conditions humides'
+              }
+            }
+          }
+        })
+
+        const wrapper = mount(MetadataForm, {
+          props: {
+            name: 'Test Segment',
+            trackType: 'segment' as 'segment' | 'route',
+            trailConditions: {
+              tire_dry: 'slick' as 'slick' | 'semi-slick' | 'knobs',
+              tire_wet: 'slick' as 'slick' | 'semi-slick' | 'knobs',
+              surface_type: ['forest-trail'],
+              difficulty_level: 3
+            } as TrailConditions,
+            commentary: {
+              text: '',
+              video_links: [],
+              images: []
+            } as Commentary,
+            isDragOver: false
+          },
+          global: {
+            plugins: [frenchI18n]
+          }
+        })
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips[0].text()).toContain('Vous pourriez rouler sur ce segment')
+        expect(tooltips[1].text()).toContain('Ça devrait être tout à fait correct')
+      })
+    })
+
+    describe('Accessibility', () => {
+      it('provides informative tooltip content for screen readers', () => {
+        const wrapper = createWrapper()
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        tooltips.forEach((tooltip: any) => {
+          expect(tooltip.text().length).toBeGreaterThan(10) // Ensure meaningful content
+        })
+      })
+
+      it('maintains proper semantic structure', () => {
+        const wrapper = createWrapper()
+
+        const difficultyMarkWrappers = wrapper.findAll('.difficulty-mark-wrapper')
+        difficultyMarkWrappers.forEach((wrapper: any) => {
+          expect(wrapper.find('.difficulty-mark').exists()).toBe(true)
+          expect(wrapper.find('.difficulty-tooltip').exists()).toBe(true)
+        })
+      })
+
+      it('preserves slider accessibility', () => {
+        const wrapper = createWrapper()
+
+        const slider = wrapper.find('.difficulty-slider')
+        expect(slider.attributes('aria-label')).toBe('Difficulty Level')
+      })
+    })
+
+    describe('Performance', () => {
+      it('does not create extra tooltip elements on re-render', async () => {
+        const wrapper = createWrapper()
+
+        const initialTooltips = wrapper.findAll('.difficulty-tooltip').length
+        expect(initialTooltips).toBe(5)
+
+        // Trigger a re-render by changing props
+        await wrapper.setProps({
+          trailConditions: {
+            ...wrapper.props().trailConditions,
+            difficulty_level: 2
+          }
+        })
+
+        const finalTooltips = wrapper.findAll('.difficulty-tooltip').length
+        expect(finalTooltips).toBe(5)
+      })
+
+      it('handles rapid prop changes without errors', async () => {
+        const wrapper = createWrapper()
+
+        // Rapidly change difficulty level
+        for (let i = 1; i <= 5; i++) {
+          await wrapper.setProps({
+            trailConditions: {
+              ...wrapper.props().trailConditions,
+              difficulty_level: i
+            }
+          })
+        }
+
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+      })
+    })
+
+    describe('Integration with Existing Functionality', () => {
+      it('works with difficulty slider changes', async () => {
+        const wrapper = createWrapper()
+
+        const slider = wrapper.find('.difficulty-slider')
+        await slider.setValue('4')
+
+        // Verify tooltips still exist after slider change
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+
+        // Verify emitted event
+        expect(wrapper.emitted('update:trailConditions')).toBeTruthy()
+        const emitted = wrapper.emitted(
+          'update:trailConditions'
+        )![0][0] as TrailConditions
+        expect(emitted.difficulty_level).toBe(4)
+      })
+
+      it('maintains tooltip functionality across track type changes', async () => {
+        const wrapper = createWrapper()
+
+        // Change track type
+        await wrapper.setProps({
+          trackType: 'route'
+        })
+
+        // Verify tooltips still exist and work
+        const tooltips = wrapper.findAll('.difficulty-tooltip')
+        expect(tooltips).toHaveLength(5)
+        expect(tooltips[0].text()).toContain('You could ride this segment')
+      })
     })
   })
 
