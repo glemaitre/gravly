@@ -180,7 +180,18 @@ export default {
     level2: 'Facile',
     level3: 'Modéré',
     level4: 'Difficile',
-    level5: 'Très difficile'
+    level5: 'Très difficile',
+    descriptions: {
+      level1: 'Vous pourriez rouler sur ce segment les yeux fermés',
+      level2:
+        'Ça devrait être tout à fait correct. Seulement quelques irrégularités sur le chemin, mais facile à gérer.',
+      level3:
+        'Vous aurez besoin de quelques compétences en pilotage de vélo en raison du terrain irrégulier ou des sections en montée et descente.',
+      level4:
+        "Ce n'est plus évident. Vous devrez définitivement naviguer les changements d'élévation et rencontrerez des variations de terrain inattendues.",
+      level5:
+        'Soyez prêt à poser le pied, car le chemin est difficile en raison de la pente, du terrain, ou des deux.'
+    }
   },
 
   // Segment detail page

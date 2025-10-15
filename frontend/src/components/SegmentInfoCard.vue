@@ -23,6 +23,17 @@
                 <span v-if="difficultyLevel > 5" class="difficulty-over">{{
                   t('segmentDetail.over5')
                 }}</span>
+                <div
+                  class="difficulty-tooltip-container"
+                  @mouseenter="showDifficultyTooltip"
+                  @mouseleave="hideDifficultyTooltip"
+                  @mousemove="updateDifficultyTooltipPosition"
+                >
+                  <i class="fa-solid fa-circle-info difficulty-info-icon"></i>
+                  <div class="difficulty-tooltip" ref="difficultyTooltip">
+                    {{ difficultyDescription }}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -318,6 +329,15 @@ const formattedElevationLoss = computed(() =>
   formatElevation(props.gpxData.total_stats.total_elevation_loss)
 )
 
+// Difficulty description
+const difficultyDescription = computed(() => {
+  const level = difficultyLevel.value
+  if (level >= 1 && level <= 5) {
+    return t(`difficulty.descriptions.level${level}`)
+  }
+  return t('difficulty.descriptions.level5') // Default to level 5 for levels above 5
+})
+
 // Overlay positioning functions
 function showOverlay(event: MouseEvent): void {
   const target = event.currentTarget as HTMLElement
@@ -362,6 +382,53 @@ function updateOverlayPosition(event: MouseEvent): void {
 
     overlay.style.left = `${finalX}px`
     overlay.style.top = `${finalY}px`
+  }
+}
+
+// Difficulty tooltip functions
+function showDifficultyTooltip(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const tooltip = target?.querySelector('.difficulty-tooltip') as HTMLElement
+  if (tooltip) {
+    updateDifficultyTooltipPosition(event)
+    tooltip.style.opacity = '1'
+    tooltip.style.visibility = 'visible'
+  }
+}
+
+function hideDifficultyTooltip(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const tooltip = target?.querySelector('.difficulty-tooltip') as HTMLElement
+  if (tooltip) {
+    tooltip.style.opacity = '0'
+    tooltip.style.visibility = 'hidden'
+  }
+}
+
+function updateDifficultyTooltipPosition(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const tooltip = target?.querySelector('.difficulty-tooltip') as HTMLElement
+  if (tooltip) {
+    const rect = target.getBoundingClientRect()
+    const x = event.clientX
+    const y = rect.top - 10 // Position above the icon
+
+    // Ensure tooltip stays within viewport bounds
+    const tooltipWidth = 300 // Estimated width for tooltip
+    const tooltipHeight = 100 // Estimated height for tooltip
+    const viewportWidth = window.innerWidth
+
+    let finalX = x - tooltipWidth / 2
+    let finalY = y - tooltipHeight
+
+    // Adjust if tooltip would go off screen
+    if (finalX < 10) finalX = 10
+    if (finalX + tooltipWidth > viewportWidth - 10)
+      finalX = viewportWidth - tooltipWidth - 10
+    if (finalY < 10) finalY = rect.bottom + 10 // Show below if no room above
+
+    tooltip.style.left = `${finalX}px`
+    tooltip.style.top = `${finalY}px`
   }
 }
 </script>
@@ -749,5 +816,51 @@ function updateOverlayPosition(event: MouseEvent): void {
     width: 100px;
     height: 100px;
   }
+}
+
+/* Difficulty tooltip styles */
+.difficulty-tooltip-container {
+  position: relative;
+  display: inline-block;
+  cursor: help;
+  margin-left: 0.5rem;
+}
+
+.difficulty-info-icon {
+  color: var(--brand-primary);
+  font-size: 0.875rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.difficulty-tooltip-container:hover .difficulty-info-icon {
+  opacity: 1;
+}
+
+.difficulty-tooltip {
+  position: fixed;
+  background: #1f2937;
+  color: white;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  max-width: 300px;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.difficulty-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #1f2937;
 }
 </style>

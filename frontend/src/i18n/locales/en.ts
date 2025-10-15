@@ -179,7 +179,18 @@ export default {
     level2: 'Easy',
     level3: 'Moderate',
     level4: 'Hard',
-    level5: 'Very hard'
+    level5: 'Very hard',
+    descriptions: {
+      level1: 'You could ride this segment with your eyes closed',
+      level2:
+        'It should be quite fine. Only a couple of irregularities on the path, but easy business.',
+      level3:
+        "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections.",
+      level4:
+        "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations.",
+      level5:
+        'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+    }
   },
 
   // Segment detail page

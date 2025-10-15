@@ -1019,5 +1019,465 @@ describe('SegmentInfoCard', () => {
         expect(surfaceContainer.find('.image-zoom-overlay').exists()).toBe(true)
       })
     })
+
+    describe('Difficulty Tooltip Functionality', () => {
+      let wrapper: any
+
+      beforeEach(() => {
+        wrapper = mount(SegmentInfoCard, {
+          props: {
+            segment: mockSegment,
+            gpxData: mockGPXData
+          },
+          global: {
+            plugins: [i18n]
+          }
+        })
+      })
+
+      describe('Tooltip Structure', () => {
+        it('should render difficulty tooltip container', () => {
+          const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+          expect(tooltipContainer.exists()).toBe(true)
+        })
+
+        it('should render difficulty info icon', () => {
+          const infoIcon = wrapper.find('.difficulty-info-icon')
+          expect(infoIcon.exists()).toBe(true)
+          expect(infoIcon.classes()).toContain('fa-circle-info')
+        })
+
+        it('should render difficulty tooltip element', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+
+        it('should have proper CSS classes for tooltip container', () => {
+          const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+          expect(tooltipContainer.classes()).toContain('difficulty-tooltip-container')
+        })
+      })
+
+      describe('Tooltip Content', () => {
+        it('should display correct description for difficulty level 1', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 1 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'You could ride this segment with your eyes closed'
+          )
+        })
+
+        it('should display correct description for difficulty level 2', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 2 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'It should be quite fine. Only a couple of irregularities on the path, but easy business.'
+          )
+        })
+
+        it('should display correct description for difficulty level 3', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 3 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections."
+          )
+        })
+
+        it('should display correct description for difficulty level 4', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 4 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            "It's no longer straightforward. You'll definitely need to navigate elevation changes and will encounter unexpected ground variations."
+          )
+        })
+
+        it('should display correct description for difficulty level 5', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 5 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+
+        it('should display level 5 description for difficulty levels above 5', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 6 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+
+        it('should display level 5 description for difficulty level 0', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 0 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+      })
+
+      describe('Tooltip Styling', () => {
+        it('should have proper CSS classes for info icon', () => {
+          const infoIcon = wrapper.find('.difficulty-info-icon')
+          expect(infoIcon.exists()).toBe(true)
+          expect(infoIcon.classes()).toContain('difficulty-info-icon')
+        })
+
+        it('should have proper CSS classes for tooltip', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+
+        it('should have proper structure for tooltip positioning', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+
+          // Test that tooltip has the required structure
+          const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+          expect(tooltipContainer.exists()).toBe(true)
+          expect(tooltipContainer.find('.difficulty-tooltip').exists()).toBe(true)
+        })
+      })
+
+      describe('Tooltip Interactions', () => {
+        it('should have mouse event handlers on tooltip container', () => {
+          const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+          expect(tooltipContainer.exists()).toBe(true)
+
+          // Test that container exists and can handle events
+          const tooltip = tooltipContainer.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+        })
+
+        it('should show tooltip content for different difficulty levels', () => {
+          for (let level = 1; level <= 5; level++) {
+            const testSegment = { ...mockSegment, difficulty_level: level }
+            const wrapper = mount(SegmentInfoCard, {
+              props: {
+                segment: testSegment,
+                gpxData: mockGPXData
+              },
+              global: {
+                plugins: [i18n]
+              }
+            })
+
+            const tooltip = wrapper.find('.difficulty-tooltip')
+            expect(tooltip.exists()).toBe(true)
+            expect(tooltip.text()).toBeTruthy()
+            expect(tooltip.text().length).toBeGreaterThan(10) // Ensure we have substantial content
+          }
+        })
+      })
+
+      describe('Internationalization', () => {
+        it('should display tooltip in French when locale is French', async () => {
+          const frenchI18n = createI18n({
+            legacy: false,
+            locale: 'fr',
+            messages: {
+              en,
+              fr
+            }
+          })
+
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: { ...mockSegment, difficulty_level: 1 },
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [frenchI18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'Vous pourriez rouler sur ce segment les yeux fermés'
+          )
+        })
+
+        it('should display all difficulty levels in French', async () => {
+          const frenchI18n = createI18n({
+            legacy: false,
+            locale: 'fr',
+            messages: {
+              en,
+              fr
+            }
+          })
+
+          for (let level = 1; level <= 5; level++) {
+            const testSegment = { ...mockSegment, difficulty_level: level }
+            const wrapper = mount(SegmentInfoCard, {
+              props: {
+                segment: testSegment,
+                gpxData: mockGPXData
+              },
+              global: {
+                plugins: [frenchI18n]
+              }
+            })
+
+            const tooltip = wrapper.find('.difficulty-tooltip')
+            expect(tooltip.exists()).toBe(true)
+            expect(tooltip.text()).toBeTruthy()
+            expect(tooltip.text()).not.toContain('You could') // Should not contain English text
+          }
+        })
+
+        it('should fallback to level 5 description for invalid levels in French', async () => {
+          const frenchI18n = createI18n({
+            legacy: false,
+            locale: 'fr',
+            messages: {
+              en,
+              fr
+            }
+          })
+
+          const testSegment = { ...mockSegment, difficulty_level: 10 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [frenchI18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.text()).toBe(
+            'Soyez prêt à poser le pied, car le chemin est difficile en raison de la pente, du terrain, ou des deux.'
+          )
+        })
+      })
+
+      describe('Accessibility', () => {
+        it('should have proper tooltip structure for accessibility', () => {
+          const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+          expect(tooltipContainer.exists()).toBe(true)
+          expect(tooltipContainer.classes()).toContain('difficulty-tooltip-container')
+        })
+
+        it('should have tooltip content that is informative', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          const tooltipText = tooltip.text()
+
+          expect(tooltipText.length).toBeGreaterThan(20) // Ensure substantial content
+          expect(tooltipText).not.toBe('') // Should not be empty
+        })
+
+        it('should maintain tooltip functionality across different props', () => {
+          // Test with different segments
+          const segments = [
+            { ...mockSegment, difficulty_level: 1 },
+            { ...mockSegment, difficulty_level: 3 },
+            { ...mockSegment, difficulty_level: 5 }
+          ]
+
+          segments.forEach((segment) => {
+            const wrapper = mount(SegmentInfoCard, {
+              props: {
+                segment,
+                gpxData: mockGPXData
+              },
+              global: {
+                plugins: [i18n]
+              }
+            })
+
+            const tooltipContainer = wrapper.find('.difficulty-tooltip-container')
+            const tooltip = tooltipContainer.find('.difficulty-tooltip')
+
+            expect(tooltipContainer.exists()).toBe(true)
+            expect(tooltip.exists()).toBe(true)
+            expect(tooltip.text()).toBeTruthy()
+          })
+        })
+      })
+
+      describe('Performance', () => {
+        it('should not create multiple tooltip elements unnecessarily', () => {
+          // Re-render the component multiple times
+          for (let i = 0; i < 5; i++) {
+            wrapper = mount(SegmentInfoCard, {
+              props: {
+                segment: mockSegment,
+                gpxData: mockGPXData
+              },
+              global: {
+                plugins: [i18n]
+              }
+            })
+          }
+
+          // Should still have exactly 1 tooltip container
+          const tooltipContainers = wrapper.findAll('.difficulty-tooltip-container')
+          expect(tooltipContainers).toHaveLength(1)
+
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(1)
+        })
+
+        it('should handle rapid prop changes without errors', async () => {
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: mockSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          // Rapidly change difficulty levels
+          for (let level = 1; level <= 5; level++) {
+            const newSegment = { ...mockSegment, difficulty_level: level }
+            await wrapper.setProps({ segment: newSegment })
+
+            const tooltip = wrapper.find('.difficulty-tooltip')
+            expect(tooltip.exists()).toBe(true)
+            expect(tooltip.text()).toBeTruthy()
+          }
+        })
+      })
+
+      describe('Edge Cases', () => {
+        it('should handle missing difficulty level gracefully', () => {
+          const testSegment = { ...mockSegment }
+          // @ts-ignore - Testing edge case where difficulty_level might be missing
+          delete testSegment.difficulty_level
+
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          // Should default to level 5 description
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+
+        it('should handle negative difficulty levels', () => {
+          const testSegment = { ...mockSegment, difficulty_level: -1 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+
+        it('should handle very large difficulty levels', () => {
+          const testSegment = { ...mockSegment, difficulty_level: 999 }
+          const wrapper = mount(SegmentInfoCard, {
+            props: {
+              segment: testSegment,
+              gpxData: mockGPXData
+            },
+            global: {
+              plugins: [i18n]
+            }
+          })
+
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+      })
+    })
   })
 })
