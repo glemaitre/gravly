@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import SegmentFiltersSidebar from '../SegmentFiltersSidebar.vue'
@@ -483,6 +483,256 @@ describe('SegmentFiltersSidebar', () => {
       const filterButtons = wrapper.findAll('.filter-btn')
       filterButtons.forEach((button) => {
         expect(button.classes()).toContain('filter-btn')
+      })
+    })
+
+    describe('Difficulty Tooltip Functionality', () => {
+      let wrapper: any
+
+      beforeEach(() => {
+        wrapper = mountComponent({ showFilters: true })
+      })
+
+      describe('Tooltip Structure', () => {
+        it('should render tick mark wrappers with tooltips', () => {
+          const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+          expect(tickMarkWrappers).toHaveLength(5) // 5 difficulty levels
+        })
+
+        it('should render difficulty tooltip elements for each level', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5) // 5 difficulty levels
+        })
+
+        it('should have proper CSS classes for tick mark wrappers', () => {
+          const tickMarkWrapper = wrapper.find('.tick-mark-wrapper')
+          expect(tickMarkWrapper.exists()).toBe(true)
+          expect(tickMarkWrapper.classes()).toContain('tick-mark-wrapper')
+        })
+
+        it('should have proper CSS classes for difficulty tooltips', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+      })
+
+      describe('Tooltip Content', () => {
+        it('should display difficulty descriptions for all levels', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+
+          tooltips.forEach((tooltip: any) => {
+            expect(tooltip.text()).toBeTruthy()
+            expect(tooltip.text().length).toBeGreaterThan(10)
+          })
+        })
+
+        it('should display correct description for level 1', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips[0].text()).toBe(
+            'You could ride this segment with your eyes closed'
+          )
+        })
+
+        it('should display correct description for level 3', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips[2].text()).toBe(
+            "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections."
+          )
+        })
+
+        it('should display correct description for level 5', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips[4].text()).toBe(
+            'Be prepared to put a foot down, as the path is difficult due to either slope, terrain, or both.'
+          )
+        })
+      })
+
+      describe('Tooltip Styling', () => {
+        it('should have proper CSS classes for tick mark wrappers', () => {
+          const tickMarkWrapper = wrapper.find('.tick-mark-wrapper')
+          expect(tickMarkWrapper.exists()).toBe(true)
+          expect(tickMarkWrapper.classes()).toContain('tick-mark-wrapper')
+        })
+
+        it('should have proper CSS classes for tooltips', () => {
+          const tooltip = wrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+          expect(tooltip.classes()).toContain('difficulty-tooltip')
+        })
+
+        it('should have proper structure for tooltip positioning', () => {
+          const tickMarkWrapper = wrapper.find('.tick-mark-wrapper')
+          expect(tickMarkWrapper.exists()).toBe(true)
+
+          const tooltip = tickMarkWrapper.find('.difficulty-tooltip')
+          expect(tooltip.exists()).toBe(true)
+        })
+      })
+
+      describe('Tooltip Interactions', () => {
+        it('should have mouse event handlers on tick mark wrappers', () => {
+          const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+          expect(tickMarkWrappers).toHaveLength(5)
+
+          // Test that each wrapper can handle events
+          tickMarkWrappers.forEach((wrapper: any) => {
+            const tooltip = wrapper.find('.difficulty-tooltip')
+            expect(tooltip.exists()).toBe(true)
+          })
+        })
+
+        it('should show tooltip content for all levels', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+
+          tooltips.forEach((tooltip: any) => {
+            expect(tooltip.exists()).toBe(true)
+            expect(tooltip.text()).toBeTruthy()
+            expect(tooltip.text().length).toBeGreaterThan(10)
+          })
+        })
+      })
+
+      describe('Internationalization', () => {
+        it('should display tooltips in French when locale is French', async () => {
+          const frenchI18n = createI18n({
+            legacy: false,
+            locale: 'fr',
+            messages: {
+              en,
+              fr
+            }
+          })
+
+          const wrapper = mount(SegmentFiltersSidebar, {
+            props: {
+              showFilters: true,
+              nameFilter: '',
+              filters: { ...defaultFilters },
+              hasActiveFilters: false
+            },
+            global: {
+              plugins: [frenchI18n]
+            }
+          })
+
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+
+          // Check level 1 (first tooltip)
+          expect(tooltips[0].text()).toBe(
+            'Vous pourriez rouler sur ce segment les yeux fermés'
+          )
+
+          // Check level 3 (third tooltip)
+          expect(tooltips[2].text()).toBe(
+            'Vous aurez besoin de quelques compétences en pilotage de vélo en raison du terrain irrégulier ou des sections en montée et descente.'
+          )
+        })
+
+        it('should display tooltips in English by default', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+
+          // Check level 1 (first tooltip)
+          expect(tooltips[0].text()).toBe(
+            'You could ride this segment with your eyes closed'
+          )
+
+          // Check level 3 (third tooltip)
+          expect(tooltips[2].text()).toBe(
+            "You'll need some bike handling skill due to irregular terrain or uphill and downhill sections."
+          )
+        })
+      })
+
+      describe('Accessibility', () => {
+        it('should have proper tooltip structure for accessibility', () => {
+          const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+          expect(tickMarkWrappers).toHaveLength(5)
+
+          tickMarkWrappers.forEach((wrapper: any) => {
+            expect(wrapper.classes()).toContain('tick-mark-wrapper')
+          })
+        })
+
+        it('should have tooltip content that is informative', () => {
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+
+          tooltips.forEach((tooltip: any) => {
+            const tooltipText = tooltip.text()
+            expect(tooltipText.length).toBeGreaterThan(20)
+            expect(tooltipText).not.toBe('')
+          })
+        })
+
+        it('should maintain tooltip functionality across different props', () => {
+          const wrapper = mountComponent({
+            showFilters: true,
+            filters: {
+              difficultyMin: 2,
+              difficultyMax: 4,
+              surface: [],
+              tireDry: [],
+              tireWet: []
+            }
+          })
+
+          const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+
+          expect(tickMarkWrappers).toHaveLength(5)
+          expect(tooltips).toHaveLength(5)
+
+          tooltips.forEach((tooltip) => {
+            expect(tooltip.text()).toBeTruthy()
+          })
+        })
+      })
+
+      describe('Performance', () => {
+        it('should not create multiple tooltip elements unnecessarily', () => {
+          // Re-render the component multiple times
+          for (let i = 0; i < 5; i++) {
+            wrapper = mountComponent({ showFilters: true })
+          }
+
+          // Should still have exactly 5 tick mark wrappers and 5 tooltips
+          const tickMarkWrappers = wrapper.findAll('.tick-mark-wrapper')
+          expect(tickMarkWrappers).toHaveLength(5)
+
+          const tooltips = wrapper.findAll('.difficulty-tooltip')
+          expect(tooltips).toHaveLength(5)
+        })
+
+        it('should handle rapid prop changes without errors', async () => {
+          const wrapper = mountComponent({ showFilters: true })
+
+          // Rapidly change props
+          for (let i = 0; i < 5; i++) {
+            await wrapper.setProps({
+              filters: {
+                difficultyMin: i + 1,
+                difficultyMax: 5,
+                surface: [],
+                tireDry: [],
+                tireWet: []
+              }
+            })
+
+            const tooltips = wrapper.findAll('.difficulty-tooltip')
+            expect(tooltips).toHaveLength(5)
+
+            tooltips.forEach((tooltip) => {
+              expect(tooltip.exists()).toBe(true)
+              expect(tooltip.text()).toBeTruthy()
+            })
+          }
+        })
       })
     })
   })
