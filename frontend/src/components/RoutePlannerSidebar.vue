@@ -83,6 +83,7 @@
       <!-- Guided Mode Todo List -->
       <div v-if="routeMode === 'startEnd'" class="guided-todo-list">
         <h4 class="todo-title">
+          <i class="fa-solid fa-list-check"></i>
           {{ t('routePlanner.guidedTodoList') }}
         </h4>
         <p class="todo-instructions">
@@ -148,6 +149,7 @@
         <div class="filters-header">
           <button class="filters-toggle-btn" @click="emit('toggle-filters')">
             <h4 class="filters-title">
+              <i class="fa-solid fa-filter"></i>
               {{ t('routePlanner.filters') }}
             </h4>
             <i
@@ -351,6 +353,7 @@
         class="selected-segments-section"
       >
         <h4 class="selected-segments-title">
+          <i class="fa-solid fa-route"></i>
           {{ t('routePlanner.selectedSegments') }}
         </h4>
 
@@ -899,6 +902,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .todo-instructions {
@@ -1176,6 +1183,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   font-weight: 600;
   text-align: center;
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .filters-chevron {
@@ -1643,6 +1654,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   font-weight: 600;
   text-align: center;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .no-segments-message {
