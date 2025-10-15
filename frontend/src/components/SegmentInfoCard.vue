@@ -44,11 +44,25 @@
                 <i class="fa-solid fa-chevron-left"></i>
               </button>
               <div class="surface-info-vertical">
-                <img
-                  :src="surfaceImage"
-                  :alt="surfaceTypeLabel"
-                  class="surface-image"
-                />
+                <div
+                  class="image-container"
+                  @mouseenter="showOverlay"
+                  @mouseleave="hideOverlay"
+                  @mousemove="updateOverlayPosition"
+                >
+                  <img
+                    :src="surfaceImage"
+                    :alt="surfaceTypeLabel"
+                    class="surface-image"
+                  />
+                  <div class="image-zoom-overlay" ref="surfaceOverlay">
+                    <img
+                      :src="surfaceImage"
+                      :alt="surfaceTypeLabel"
+                      class="surface-image-zoom"
+                    />
+                  </div>
+                </div>
                 <span class="surface-text">{{ surfaceTypeLabel }}</span>
                 <span v-if="segment.surface_type.length > 1" class="surface-indicator">
                   {{ currentSurfaceIndex + 1 }}/{{ segment.surface_type.length }}
@@ -80,7 +94,21 @@
                     <span class="tire-label">{{ t('segmentDetail.dry') }}</span>
                   </div>
                   <div class="tire-option-vertical">
-                    <img :src="tireDryImage" :alt="tireDryLabel" class="tire-image" />
+                    <div
+                      class="image-container"
+                      @mouseenter="showOverlay"
+                      @mouseleave="hideOverlay"
+                      @mousemove="updateOverlayPosition"
+                    >
+                      <img :src="tireDryImage" :alt="tireDryLabel" class="tire-image" />
+                      <div class="image-zoom-overlay" ref="tireDryOverlay">
+                        <img
+                          :src="tireDryImage"
+                          :alt="tireDryLabel"
+                          class="tire-image-zoom"
+                        />
+                      </div>
+                    </div>
                     <span class="tire-text">{{ tireDryLabel }}</span>
                   </div>
                 </div>
@@ -90,7 +118,21 @@
                     <span class="tire-label">{{ t('segmentDetail.wet') }}</span>
                   </div>
                   <div class="tire-option-vertical">
-                    <img :src="tireWetImage" :alt="tireWetLabel" class="tire-image" />
+                    <div
+                      class="image-container"
+                      @mouseenter="showOverlay"
+                      @mouseleave="hideOverlay"
+                      @mousemove="updateOverlayPosition"
+                    >
+                      <img :src="tireWetImage" :alt="tireWetLabel" class="tire-image" />
+                      <div class="image-zoom-overlay" ref="tireWetOverlay">
+                        <img
+                          :src="tireWetImage"
+                          :alt="tireWetLabel"
+                          class="tire-image-zoom"
+                        />
+                      </div>
+                    </div>
                     <span class="tire-text">{{ tireWetLabel }}</span>
                   </div>
                 </div>
@@ -275,6 +317,53 @@ const formattedElevationGain = computed(() =>
 const formattedElevationLoss = computed(() =>
   formatElevation(props.gpxData.total_stats.total_elevation_loss)
 )
+
+// Overlay positioning functions
+function showOverlay(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const overlay = target?.querySelector('.image-zoom-overlay') as HTMLElement
+  if (overlay) {
+    updateOverlayPosition(event)
+    overlay.style.opacity = '1'
+    overlay.style.visibility = 'visible'
+  }
+}
+
+function hideOverlay(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const overlay = target?.querySelector('.image-zoom-overlay') as HTMLElement
+  if (overlay) {
+    overlay.style.opacity = '0'
+    overlay.style.visibility = 'hidden'
+  }
+}
+
+function updateOverlayPosition(event: MouseEvent): void {
+  const target = event.currentTarget as HTMLElement
+  const overlay = target?.querySelector('.image-zoom-overlay') as HTMLElement
+  if (overlay) {
+    const rect = target.getBoundingClientRect()
+    const x = event.clientX
+    const y = rect.top - 10 // Position above the image
+
+    // Ensure overlay stays within viewport bounds
+    const overlayWidth = 216 // 200px image + 8px padding * 2
+    const overlayHeight = 216
+    const viewportWidth = window.innerWidth
+
+    let finalX = x - overlayWidth / 2
+    let finalY = y - overlayHeight
+
+    // Adjust if overlay would go off screen
+    if (finalX < 10) finalX = 10
+    if (finalX + overlayWidth > viewportWidth - 10)
+      finalX = viewportWidth - overlayWidth - 10
+    if (finalY < 10) finalY = rect.bottom + 10 // Show below if no room above
+
+    overlay.style.left = `${finalX}px`
+    overlay.style.top = `${finalY}px`
+  }
+}
 </script>
 
 <style scoped>
@@ -283,7 +372,7 @@ const formattedElevationLoss = computed(() =>
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
+  overflow: visible;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -602,6 +691,43 @@ const formattedElevationLoss = computed(() =>
   text-align: center;
 }
 
+/* Image hover zoom effects */
+.image-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.image-zoom-overlay {
+  position: fixed;
+  background: white;
+  border: 2px solid var(--brand-primary);
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  padding: 8px;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.surface-image-zoom {
+  width: 200px;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.tire-image-zoom {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
 /* Responsive layout adjustments */
 @media (max-width: 480px) {
   .info-row {
@@ -612,6 +738,16 @@ const formattedElevationLoss = computed(() =>
   .tire-recommendations-compact {
     flex-direction: column;
     gap: 0.75rem;
+  }
+
+  .surface-image-zoom {
+    width: 150px;
+    height: 150px;
+  }
+
+  .tire-image-zoom {
+    width: 100px;
+    height: 100px;
   }
 }
 </style>
