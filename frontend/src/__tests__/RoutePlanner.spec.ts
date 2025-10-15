@@ -48,6 +48,7 @@ vi.mock('leaflet', () => ({
       on: vi.fn(),
       setLatLng: vi.fn(),
       getLatLng: vi.fn(() => ({ lat: 46.86, lng: 3.98 })),
+      setIcon: vi.fn(),
       getElement: vi.fn(() => ({
         classList: {
           add: vi.fn(),
@@ -1658,6 +1659,208 @@ describe('RoutePlanner - Refactored Implementation', () => {
     it('should return null when routeSegments is empty', () => {
       wrapper.vm.routeSegments = []
       expect(wrapper.vm.routeFeatures).toBeNull()
+    })
+  })
+
+  // ============================================================================
+  // UNDO/REDO FUNCTIONALITY TESTS
+  // ============================================================================
+  describe('Undo/Redo Functionality', () => {
+    describe('History Management', () => {
+      it('should initialize with empty history', () => {
+        expect(wrapper.vm.history).toEqual([])
+        expect(wrapper.vm.historyIndex).toBe(-1)
+        expect(wrapper.vm.canUndo).toBe(false)
+        expect(wrapper.vm.canRedo).toBe(false)
+      })
+
+      it('should add changes to history', () => {
+        const testData = { waypoint: { lat: 0, lng: 0, type: 'user' }, insertIndex: 0 }
+        wrapper.vm.addChange('waypoint-insert', testData)
+
+        expect(wrapper.vm.history).toHaveLength(1)
+        expect(wrapper.vm.history[0].type).toBe('waypoint-insert')
+        expect(wrapper.vm.history[0].data).toEqual(testData)
+        expect(wrapper.vm.historyIndex).toBe(0)
+        expect(wrapper.vm.canUndo).toBe(true)
+        expect(wrapper.vm.canRedo).toBe(false)
+      })
+
+      it('should drop future history when adding new changes', () => {
+        // Add first change
+        wrapper.vm.addChange('waypoint-insert', {
+          waypoint: { lat: 0, lng: 0, type: 'user' },
+          insertIndex: 0
+        })
+        wrapper.vm.addChange('waypoint-insert', {
+          waypoint: { lat: 1, lng: 1, type: 'user' },
+          insertIndex: 1
+        })
+
+        // Go back one step
+        wrapper.vm.historyIndex = 0
+
+        // Add new change - should drop future history
+        wrapper.vm.addChange('waypoint-insert', {
+          waypoint: { lat: 2, lng: 2, type: 'user' },
+          insertIndex: 1
+        })
+
+        expect(wrapper.vm.history).toHaveLength(2)
+        expect(wrapper.vm.historyIndex).toBe(1)
+        expect(wrapper.vm.canRedo).toBe(false)
+      })
+
+      it('should limit history size', () => {
+        // Add more changes than maxHistorySize (default 50)
+        for (let i = 0; i < 55; i++) {
+          wrapper.vm.addChange('waypoint-insert', {
+            waypoint: { lat: i, lng: i, type: 'user' },
+            insertIndex: i
+          })
+        }
+
+        expect(wrapper.vm.history).toHaveLength(50)
+        expect(wrapper.vm.historyIndex).toBe(49)
+      })
+    })
+
+    describe('Undo/Redo Operations', () => {
+      it('should handle waypoint-insert undo', () => {
+        // Set up initial state
+        wrapper.vm.waypoints = [
+          { lat: 0, lng: 0, type: 'user' },
+          { lat: 0.5, lng: 0.5, type: 'user' },
+          { lat: 1, lng: 1, type: 'user' }
+        ]
+        wrapper.vm.routeSegments = [{ type: 'osrm' }, { type: 'osrm' }]
+        wrapper.vm.routePoints = [
+          [{ lat: 0, lng: 0, distance: 0 }],
+          [{ lat: 1, lng: 1, distance: 1 }]
+        ]
+
+        const change = {
+          type: 'waypoint-insert',
+          data: {
+            waypoint: { lat: 0.5, lng: 0.5, type: 'user' },
+            insertIndex: 1,
+            segmentChanges: {
+              segmentIndex: 0,
+              originalSegment: { type: 'osrm' },
+              originalRoutePoints: [{ lat: 0, lng: 0, distance: 0 }]
+            }
+          }
+        }
+
+        wrapper.vm.executeUndoChange(change)
+
+        expect(wrapper.vm.waypoints).toHaveLength(2)
+        expect(wrapper.vm.waypoints[0]).toEqual({ lat: 0, lng: 0, type: 'user' })
+        expect(wrapper.vm.waypoints[1]).toEqual({ lat: 1, lng: 1, type: 'user' })
+      })
+
+      it('should handle waypoint-move undo', () => {
+        // Set up initial state
+        wrapper.vm.waypoints = [{ lat: 1, lng: 1, type: 'user' }]
+
+        const change = {
+          type: 'waypoint-move',
+          data: {
+            waypointIndex: 0,
+            originalLat: 0,
+            originalLng: 0,
+            newLat: 1,
+            newLng: 1
+          }
+        }
+
+        wrapper.vm.executeUndoChange(change)
+
+        expect(wrapper.vm.waypoints[0]).toEqual({ lat: 0, lng: 0, type: 'user' })
+      })
+
+      it('should handle clear-map undo', () => {
+        // Set up cleared state
+        wrapper.vm.waypoints = []
+        wrapper.vm.routeSegments = []
+        wrapper.vm.routePoints = []
+
+        const change = {
+          type: 'clear-map',
+          data: {
+            waypoints: [{ lat: 0, lng: 0, type: 'user' }],
+            routeSegments: [{ type: 'osrm' }],
+            routePoints: [[{ lat: 0, lng: 0, distance: 0 }]]
+          }
+        }
+
+        wrapper.vm.executeUndoChange(change)
+
+        expect(wrapper.vm.waypoints).toHaveLength(1)
+        expect(wrapper.vm.routeSegments).toHaveLength(1)
+        expect(wrapper.vm.routePoints).toHaveLength(1)
+      })
+
+      it('should handle toggle-mode undo', () => {
+        // Set up current state
+        wrapper.vm.routeMode = 'guided'
+
+        const change = {
+          type: 'toggle-mode',
+          data: {
+            previousMode: 'standard',
+            newMode: 'guided'
+          }
+        }
+
+        wrapper.vm.executeUndoChange(change)
+
+        expect(wrapper.vm.routeMode).toBe('standard')
+      })
+    })
+
+    describe('Edge Cases', () => {
+      it('should handle undo when history is empty', () => {
+        // Clear any existing history
+        wrapper.vm.history = []
+        wrapper.vm.historyIndex = -1
+
+        expect(() => wrapper.vm.undo()).not.toThrow()
+        expect(wrapper.vm.historyIndex).toBe(-1)
+      })
+
+      it('should handle redo when at end of history', async () => {
+        // Clear any existing history first
+        wrapper.vm.history = []
+        wrapper.vm.historyIndex = -1
+
+        wrapper.vm.addChange('waypoint-insert', {
+          waypoint: { lat: 0, lng: 0, type: 'user' },
+          insertIndex: 0
+        })
+
+        expect(() => wrapper.vm.redo()).not.toThrow()
+        expect(wrapper.vm.historyIndex).toBe(0)
+      })
+
+      it('should handle waypoint-move without segment data gracefully', () => {
+        const change = {
+          type: 'waypoint-move',
+          data: {
+            waypointIndex: 0,
+            originalLat: 0,
+            originalLng: 0,
+            newLat: 1,
+            newLng: 1
+            // No segment data
+          }
+        }
+
+        wrapper.vm.waypoints = [{ lat: 1, lng: 1, type: 'user' }]
+
+        expect(() => wrapper.vm.executeUndoChange(change)).not.toThrow()
+        expect(wrapper.vm.waypoints[0]).toEqual({ lat: 0, lng: 0, type: 'user' })
+      })
     })
   })
 })

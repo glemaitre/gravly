@@ -76,7 +76,7 @@
           </button>
           <button
             class="control-btn"
-            @click="clearMap"
+            @click="() => clearMap()"
             :title="t('routePlanner.clearMap')"
           >
             <i class="fa-solid fa-trash"></i>
@@ -523,8 +523,37 @@ const canSaveRoute = computed(() => {
   return waypoints.value.length >= 2 && authState.value.isAuthenticated
 })
 
-const canUndo = ref(false)
-const canRedo = ref(false)
+// Git-like change tracking system
+interface Change {
+  type:
+    | 'waypoint-insert'
+    | 'waypoint-remove'
+    | 'waypoint-move'
+    | 'segment-replace'
+    | 'segment-remove'
+    | 'segment-insert'
+    | 'clear-map'
+    | 'toggle-mode'
+  data: any
+  timestamp: number
+}
+
+// Track changes to specific data structures (for future use)
+// interface DataChange {
+//   target: 'waypoints' | 'routeSegments' | 'routePoints'
+//   operation: 'insert' | 'remove' | 'replace' | 'clear'
+//   index?: number
+//   oldValue?: any
+//   newValue?: any
+//   count?: number // for bulk operations
+// }
+
+const history: Change[] = []
+const historyIndex = ref(-1)
+const maxHistorySize = 50
+
+const canUndo = computed(() => historyIndex.value >= 0)
+const canRedo = computed(() => historyIndex.value < history.length - 1)
 
 // ============================================================================
 // MAP STATE
@@ -571,8 +600,9 @@ function calculateDistance(
 // WAYPOINT MANAGEMENT
 // ============================================================================
 
-function addWaypoint(lat: number, lng: number, type: Waypoint['type'] = 'user') {
-  waypoints.value.push({ lat, lng, type })
+async function addWaypoint(lat: number, lng: number, type: Waypoint['type'] = 'user') {
+  const waypoint = { lat, lng, type }
+  waypoints.value.push(waypoint)
 
   // Create numbered circle marker
   const index = waypoints.value.length - 1
@@ -580,7 +610,22 @@ function addWaypoint(lat: number, lng: number, type: Waypoint['type'] = 'user') 
 
   // If we have 2+ waypoints, generate route
   if (waypoints.value.length >= 2) {
-    generateRoute()
+    await generateRoute()
+
+    // Capture the generated segments for history
+    const generatedSegments = JSON.parse(JSON.stringify(routeSegments.value))
+    const generatedRoutePoints = JSON.parse(JSON.stringify(routePoints.value))
+
+    // Save change to history with generated segments
+    addChange('waypoint-insert', {
+      waypoint,
+      insertIndex: waypoints.value.length - 1,
+      generatedSegments,
+      generatedRoutePoints
+    })
+  } else {
+    // Save change to history without segments (first waypoint)
+    addChange('waypoint-insert', { waypoint, insertIndex: waypoints.value.length - 1 })
   }
 }
 
@@ -624,12 +669,65 @@ function createWaypointMarker(index: number, lat: number, lng: number) {
     // Get new position
     const newLatLng = event.target.getLatLng()
 
+    // Save original position for history
+    const originalLat = waypoints.value[index].lat
+    const originalLng = waypoints.value[index].lng
+
+    // Capture original segments before modification
+    const originalSegments = []
+    const originalRoutePoints = []
+
+    // Capture segment before (if exists)
+    if (index > 0) {
+      originalSegments.push(JSON.parse(JSON.stringify(routeSegments.value[index - 1])))
+      originalRoutePoints.push(JSON.parse(JSON.stringify(routePoints.value[index - 1])))
+    }
+
+    // Capture segment after (if exists)
+    if (index < waypoints.value.length - 1) {
+      originalSegments.push(JSON.parse(JSON.stringify(routeSegments.value[index])))
+      originalRoutePoints.push(JSON.parse(JSON.stringify(routePoints.value[index])))
+    }
+
     // Update waypoint position
     waypoints.value[index].lat = newLatLng.lat
     waypoints.value[index].lng = newLatLng.lng
 
     // Regenerate affected route segments (previous and next)
     await regenerateAdjacentSegments(index)
+
+    // Capture regenerated segments after modification
+    const regeneratedSegments = []
+    const regeneratedRoutePoints = []
+
+    // Capture segment before (if exists)
+    if (index > 0) {
+      regeneratedSegments.push(
+        JSON.parse(JSON.stringify(routeSegments.value[index - 1]))
+      )
+      regeneratedRoutePoints.push(
+        JSON.parse(JSON.stringify(routePoints.value[index - 1]))
+      )
+    }
+
+    // Capture segment after (if exists)
+    if (index < waypoints.value.length - 1) {
+      regeneratedSegments.push(JSON.parse(JSON.stringify(routeSegments.value[index])))
+      regeneratedRoutePoints.push(JSON.parse(JSON.stringify(routePoints.value[index])))
+    }
+
+    // Save change to history with segment data
+    addChange('waypoint-move', {
+      waypointIndex: index,
+      originalLat,
+      originalLng,
+      newLat: newLatLng.lat,
+      newLng: newLatLng.lng,
+      originalSegments,
+      originalRoutePoints,
+      regeneratedSegments,
+      regeneratedRoutePoints
+    })
   })
 
   // Store marker reference
@@ -740,7 +838,9 @@ function updateWaypointMarkerStyles() {
   })
 }
 
-function removeWaypoint(index: number) {
+function removeWaypoint(index: number, saveToHistory: boolean = true) {
+  const waypoint = waypoints.value[index]
+
   waypoints.value.splice(index, 1)
 
   // Remove marker
@@ -751,6 +851,11 @@ function removeWaypoint(index: number) {
 
   // Update all remaining markers to reflect new indices
   updateWaypointMarkerStyles()
+
+  // Save change to history (unless this is an undo/redo operation)
+  if (saveToHistory) {
+    addChange('waypoint-remove', { waypoint, index })
+  }
 
   // Regenerate route
   if (waypoints.value.length >= 2) {
@@ -1135,6 +1240,18 @@ function renderRoute() {
   }
 }
 
+function renderAllRouteSegments() {
+  // Clear all existing segment layers
+  clearAllSegments()
+
+  // Re-render all GPX segments that are part of the current route
+  routeSegments.value.forEach((segment) => {
+    if (segment.type === 'gpx' && segment.gpxData) {
+      renderSegmentOnMap(segment.gpxData)
+    }
+  })
+}
+
 function clearRoute() {
   if (routeLine) {
     map!.removeLayer(routeLine)
@@ -1327,12 +1444,28 @@ async function handleRouteDragEnd(event: any) {
       justCompletedRouteDrag = false
     }, 100)
 
-    // Insert the new waypoint
-    waypoints.value.splice(insertIndex, 0, {
+    // Create the new waypoint
+    const newWaypoint = {
       lat: newLatLng.lat,
       lng: newLatLng.lng,
-      type: 'user'
-    })
+      type: 'user' as const
+    }
+
+    // Capture segment changes before modification
+    const segmentIndex = insertIndex - 1
+    let segmentChanges = null
+
+    if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+      // Save the original segment that will be split
+      segmentChanges = {
+        segmentIndex,
+        originalSegment: JSON.parse(JSON.stringify(routeSegments.value[segmentIndex])),
+        originalRoutePoints: JSON.parse(JSON.stringify(routePoints.value[segmentIndex]))
+      }
+    }
+
+    // Insert the new waypoint
+    waypoints.value.splice(insertIndex, 0, newWaypoint)
 
     // Insert the new marker
     const newMarker = createWaypointMarkerForInsertion(
@@ -1347,27 +1480,27 @@ async function handleRouteDragEnd(event: any) {
 
     // The segment that was clicked needs to be split into two segments
     // We need to regenerate the segment before and after the new waypoint
-    const segmentIndex = insertIndex - 1
+    const targetSegmentIndex = insertIndex - 1
 
     // Check if the segment exists before proceeding
-    if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+    if (targetSegmentIndex >= 0 && targetSegmentIndex < routeSegments.value.length) {
       // Remove the old segment
-      routeSegments.value.splice(segmentIndex, 1)
-      routePoints.value.splice(segmentIndex, 1)
+      routeSegments.value.splice(targetSegmentIndex, 1)
+      routePoints.value.splice(targetSegmentIndex, 1)
 
       // Generate two new segments by INSERTING them in place
-      // The old segment was removed, so we need to INSERT two segments at segmentIndex
+      // The old segment was removed, so we need to INSERT two segments at targetSegmentIndex
       // This will push all subsequent segments down by 1
 
-      // Segment 1: from waypoint[segmentIndex] to waypoint[insertIndex]
-      const startWp1 = waypoints.value[segmentIndex]
+      // Segment 1: from waypoint[targetSegmentIndex] to waypoint[insertIndex]
+      const startWp1 = waypoints.value[targetSegmentIndex]
       const endWp1 = waypoints.value[insertIndex]
 
       // INSERT placeholder for first segment (shifts remaining segments down)
-      routeSegments.value.splice(segmentIndex, 0, { type: 'osrm' })
-      routePoints.value.splice(segmentIndex, 0, [])
+      routeSegments.value.splice(targetSegmentIndex, 0, { type: 'osrm' })
+      routePoints.value.splice(targetSegmentIndex, 0, [])
 
-      await generateOSRMSegment(startWp1, endWp1, segmentIndex)
+      await generateOSRMSegment(startWp1, endWp1, targetSegmentIndex)
 
       // Segment 2: from waypoint[insertIndex] to waypoint[insertIndex+1]
       if (insertIndex < waypoints.value.length - 1) {
@@ -1384,6 +1517,31 @@ async function handleRouteDragEnd(event: any) {
 
       // Recalculate cumulative distances for all segments after the insertion
       recalculateCumulativeDistances()
+
+      // Capture the generated segments for history
+      const generatedSegments = [
+        JSON.parse(JSON.stringify(routeSegments.value[targetSegmentIndex])),
+        insertIndex < waypoints.value.length - 1
+          ? JSON.parse(JSON.stringify(routeSegments.value[insertIndex]))
+          : null
+      ].filter(Boolean)
+
+      const generatedRoutePoints = [
+        JSON.parse(JSON.stringify(routePoints.value[targetSegmentIndex])),
+        insertIndex < waypoints.value.length - 1
+          ? JSON.parse(JSON.stringify(routePoints.value[insertIndex]))
+          : null
+      ].filter(Boolean)
+
+      // Save change to history with segment information
+
+      addChange('waypoint-insert', {
+        waypoint: newWaypoint,
+        insertIndex,
+        segmentChanges,
+        generatedSegments,
+        generatedRoutePoints
+      })
 
       // Rerender the route
       renderRoute()
@@ -1456,10 +1614,76 @@ function createWaypointMarkerForInsertion(
     // Find the current index of this waypoint in case array was modified
     // For now, use the stored index (we'll need to improve this later)
     if (waypoints.value[waypointIndex]) {
+      // Save original position for history
+      const originalLat = waypoints.value[waypointIndex].lat
+      const originalLng = waypoints.value[waypointIndex].lng
+
+      // Capture original segments before modification
+      const originalSegments = []
+      const originalRoutePoints = []
+
+      // Capture segment before (if exists)
+      if (waypointIndex > 0) {
+        originalSegments.push(
+          JSON.parse(JSON.stringify(routeSegments.value[waypointIndex - 1]))
+        )
+        originalRoutePoints.push(
+          JSON.parse(JSON.stringify(routePoints.value[waypointIndex - 1]))
+        )
+      }
+
+      // Capture segment after (if exists)
+      if (waypointIndex < waypoints.value.length - 1) {
+        originalSegments.push(
+          JSON.parse(JSON.stringify(routeSegments.value[waypointIndex]))
+        )
+        originalRoutePoints.push(
+          JSON.parse(JSON.stringify(routePoints.value[waypointIndex]))
+        )
+      }
+
       waypoints.value[waypointIndex].lat = newLatLng.lat
       waypoints.value[waypointIndex].lng = newLatLng.lng
 
+      // Regenerate affected route segments (previous and next)
       await regenerateAdjacentSegments(waypointIndex)
+
+      // Capture regenerated segments after modification
+      const regeneratedSegments = []
+      const regeneratedRoutePoints = []
+
+      // Capture segment before (if exists)
+      if (waypointIndex > 0) {
+        regeneratedSegments.push(
+          JSON.parse(JSON.stringify(routeSegments.value[waypointIndex - 1]))
+        )
+        regeneratedRoutePoints.push(
+          JSON.parse(JSON.stringify(routePoints.value[waypointIndex - 1]))
+        )
+      }
+
+      // Capture segment after (if exists)
+      if (waypointIndex < waypoints.value.length - 1) {
+        regeneratedSegments.push(
+          JSON.parse(JSON.stringify(routeSegments.value[waypointIndex]))
+        )
+        regeneratedRoutePoints.push(
+          JSON.parse(JSON.stringify(routePoints.value[waypointIndex]))
+        )
+      }
+
+      // Save change to history with segment data
+      addChange('waypoint-move', {
+        waypointIndex,
+        originalLat,
+        originalLng,
+        newLat: newLatLng.lat,
+        newLng: newLatLng.lng,
+        originalSegments,
+        originalRoutePoints,
+        regeneratedSegments,
+        regeneratedRoutePoints
+      })
     } else {
       console.error('Waypoint not found at index', waypointIndex)
     }
@@ -1998,7 +2222,13 @@ function clearAllSegments() {
 // ============================================================================
 
 function onToggleMode() {
-  routeMode.value = routeMode.value === 'standard' ? 'startEnd' : 'standard'
+  const previousMode = routeMode.value
+  const newMode = routeMode.value === 'standard' ? 'startEnd' : 'standard'
+
+  // Save change to history
+  addChange('toggle-mode', { previousMode, newMode })
+
+  routeMode.value = newMode
 
   // Clear everything when switching modes
   clearAllWaypoints()
@@ -2029,7 +2259,7 @@ function initializeMap() {
   }).addTo(map)
 
   // Click to add waypoints based on mode
-  map.on('click', (e: any) => {
+  map.on('click', async (e: any) => {
     // Skip click if we just completed a route drag operation
     if (justCompletedRouteDrag) {
       justCompletedRouteDrag = false
@@ -2037,7 +2267,7 @@ function initializeMap() {
     }
 
     if (routeMode.value === 'standard') {
-      addWaypoint(e.latlng.lat, e.latlng.lng)
+      await addWaypoint(e.latlng.lat, e.latlng.lng)
     } else if (routeMode.value === 'startEnd') {
       // In guided mode, only allow setting start/end waypoints if they're not both set
       if (!startWaypoint.value || !endWaypoint.value) {
@@ -2340,7 +2570,16 @@ function dismissInfoBanner() {
   localStorage.setItem('routePlanner_infoBannerDismissed', 'true')
 }
 
-function clearMap() {
+function clearMap(saveToHistory: boolean = true) {
+  // Save current state before clearing (unless this is an undo/redo operation)
+  if (saveToHistory) {
+    addChange('clear-map', {
+      waypoints: JSON.parse(JSON.stringify(waypoints.value)),
+      routeSegments: JSON.parse(JSON.stringify(routeSegments.value)),
+      routePoints: JSON.parse(JSON.stringify(routePoints.value))
+    })
+  }
+
   clearAllWaypoints()
   clearAllSegments()
   selectedSegments.value = []
@@ -2350,12 +2589,298 @@ function clearMap() {
   elevationError.value = t('routePlanner.noRouteMessage')
 }
 
-function undo() {
-  // TODO: Implement undo
+// ============================================================================
+// UNDO/REDO FUNCTIONALITY
+// ============================================================================
+
+function addChange(type: Change['type'], data: any) {
+  // Remove any future history if we're not at the end
+  if (historyIndex.value < history.length - 1) {
+    history.splice(historyIndex.value + 1)
+  }
+
+  // Add new change
+  const change: Change = {
+    type,
+    data: JSON.parse(JSON.stringify(data)),
+    timestamp: Date.now()
+  }
+
+  history.push(change)
+  historyIndex.value = history.length - 1
+
+  // Limit history size
+  if (history.length > maxHistorySize) {
+    history.shift()
+    historyIndex.value = history.length - 1
+  }
 }
 
-function redo() {
-  // TODO: Implement redo
+function undo() {
+  if (canUndo.value) {
+    const change = history[historyIndex.value]
+    executeUndoChange(change)
+    historyIndex.value--
+  }
+}
+
+async function redo() {
+  if (canRedo.value) {
+    historyIndex.value++
+    const change = history[historyIndex.value]
+    await executeRedoChange(change)
+  }
+}
+
+function executeUndoChange(change: Change) {
+  switch (change.type) {
+    case 'waypoint-insert': {
+      const { insertIndex, segmentChanges, generatedSegments, generatedRoutePoints } =
+        change.data
+
+      // Remove the waypoint
+      waypoints.value.splice(insertIndex, 1)
+      if (waypointMarkers[insertIndex]) {
+        map!.removeLayer(waypointMarkers[insertIndex])
+        waypointMarkers.splice(insertIndex, 1)
+      }
+      updateWaypointMarkerStyles()
+
+      // Handle different types of waypoint insertion
+      if (segmentChanges) {
+        // Route drag insertion - restore the original segment that was split
+        const { segmentIndex, originalSegment, originalRoutePoints } = segmentChanges
+        routeSegments.value.splice(segmentIndex, 2, originalSegment)
+        routePoints.value.splice(segmentIndex, 2, originalRoutePoints)
+
+        // Recalculate cumulative distances and render route
+        recalculateCumulativeDistances()
+        renderRoute()
+        renderAllRouteSegments()
+      } else if (generatedSegments && generatedRoutePoints) {
+        // Regular waypoint addition - restore the segments without the last waypoint
+        // Remove the last segment that was generated for this waypoint
+        routeSegments.value = generatedSegments.slice(0, -1)
+        routePoints.value = generatedRoutePoints.slice(0, -1)
+
+        // Recalculate cumulative distances and render route
+        recalculateCumulativeDistances()
+        renderRoute()
+        renderAllRouteSegments()
+      } else {
+        // No segment data - regenerate route
+        if (waypoints.value.length >= 2) {
+          generateRoute()
+        } else {
+          clearRoute()
+        }
+      }
+      break
+    }
+
+    case 'waypoint-remove': {
+      const { waypoint, index } = change.data
+      waypoints.value.splice(index, 0, waypoint)
+      createWaypointMarker(index, waypoint.lat, waypoint.lng)
+      updateWaypointMarkerStyles()
+      if (waypoints.value.length >= 2) {
+        generateRoute()
+      }
+      break
+    }
+
+    case 'waypoint-move': {
+      const {
+        waypointIndex,
+        originalLat,
+        originalLng,
+        originalSegments,
+        originalRoutePoints
+      } = change.data
+      waypoints.value[waypointIndex] = {
+        ...waypoints.value[waypointIndex],
+        lat: originalLat,
+        lng: originalLng
+      }
+
+      if (waypointMarkers[waypointIndex]) {
+        waypointMarkers[waypointIndex].setLatLng([originalLat, originalLng])
+      }
+
+      // Restore original segments
+      if (originalSegments && originalRoutePoints) {
+        let segmentIndex = waypointIndex - 1
+        for (let i = 0; i < originalSegments.length; i++) {
+          if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+            routeSegments.value[segmentIndex] = originalSegments[i]
+            routePoints.value[segmentIndex] = originalRoutePoints[i]
+          }
+          segmentIndex++
+        }
+
+        // Recalculate cumulative distances
+        recalculateCumulativeDistances()
+
+        // Render the route
+        renderRoute()
+        renderAllRouteSegments()
+      } else if (waypoints.value.length >= 2) {
+        generateRoute()
+      }
+      break
+    }
+
+    case 'clear-map': {
+      const {
+        waypoints: savedWaypoints,
+        routeSegments: savedSegments,
+        routePoints: savedRoutePoints
+      } = change.data
+      waypoints.value = savedWaypoints
+      routeSegments.value = savedSegments
+      routePoints.value = savedRoutePoints
+
+      waypoints.value.forEach((wp, index) => {
+        createWaypointMarker(index, wp.lat, wp.lng)
+      })
+
+      if (waypoints.value.length >= 2) {
+        generateRoute()
+      }
+      break
+    }
+
+    case 'toggle-mode': {
+      const { previousMode } = change.data
+      routeMode.value = previousMode
+      clearAllWaypoints()
+      clearAllSegments()
+      selectedSegments.value = []
+      clearStartEndWaypoints()
+      updateMapCursor()
+      break
+    }
+  }
+}
+
+async function executeRedoChange(change: Change) {
+  switch (change.type) {
+    case 'waypoint-insert': {
+      const {
+        insertIndex,
+        waypoint,
+        segmentChanges,
+        generatedSegments,
+        generatedRoutePoints
+      } = change.data
+
+      // Re-insert the waypoint
+      waypoints.value.splice(insertIndex, 0, waypoint)
+
+      // Create and insert the marker at the correct position
+      const newMarker = createWaypointMarkerForInsertion(
+        insertIndex,
+        waypoint.lat,
+        waypoint.lng
+      )
+      waypointMarkers.splice(insertIndex, 0, newMarker)
+
+      // Update all marker styles to reflect new positions and numbers
+      updateWaypointMarkerStyles()
+
+      // Apply segment changes
+      if (segmentChanges && generatedSegments && generatedRoutePoints) {
+        // Route drag insertion - split the segment
+        const { segmentIndex } = segmentChanges
+
+        // Remove the original segment and insert the stored segments
+        routeSegments.value.splice(segmentIndex, 1, ...generatedSegments)
+        routePoints.value.splice(segmentIndex, 1, ...generatedRoutePoints)
+
+        // Recalculate cumulative distances
+        recalculateCumulativeDistances()
+
+        // Render the route
+        renderRoute()
+        renderAllRouteSegments()
+      } else if (generatedSegments && generatedRoutePoints) {
+        // Regular waypoint addition - restore all segments
+        routeSegments.value = generatedSegments
+        routePoints.value = generatedRoutePoints
+
+        // Recalculate cumulative distances
+        recalculateCumulativeDistances()
+
+        // Render the route
+        renderRoute()
+        renderAllRouteSegments()
+      }
+      break
+    }
+
+    case 'waypoint-remove': {
+      const { index: removeIndex } = change.data
+      removeWaypoint(removeIndex, false) // false = don't save to history
+      break
+    }
+
+    case 'waypoint-move': {
+      const {
+        waypointIndex,
+        newLat,
+        newLng,
+        regeneratedSegments,
+        regeneratedRoutePoints
+      } = change.data
+      waypoints.value[waypointIndex] = {
+        ...waypoints.value[waypointIndex],
+        lat: newLat,
+        lng: newLng
+      }
+
+      if (waypointMarkers[waypointIndex]) {
+        waypointMarkers[waypointIndex].setLatLng([newLat, newLng])
+      }
+
+      // Restore regenerated segments
+      if (regeneratedSegments && regeneratedRoutePoints) {
+        let segmentIndex = waypointIndex - 1
+        for (let i = 0; i < regeneratedSegments.length; i++) {
+          if (segmentIndex >= 0 && segmentIndex < routeSegments.value.length) {
+            routeSegments.value[segmentIndex] = regeneratedSegments[i]
+            routePoints.value[segmentIndex] = regeneratedRoutePoints[i]
+          }
+          segmentIndex++
+        }
+
+        // Recalculate cumulative distances
+        recalculateCumulativeDistances()
+
+        // Render the route
+        renderRoute()
+        renderAllRouteSegments()
+      } else if (waypoints.value.length >= 2) {
+        generateRoute()
+      }
+      break
+    }
+
+    case 'clear-map': {
+      clearMap(false) // false = don't save to history
+      break
+    }
+
+    case 'toggle-mode': {
+      const { newMode } = change.data
+      routeMode.value = newMode
+      clearAllWaypoints()
+      clearAllSegments()
+      selectedSegments.value = []
+      clearStartEndWaypoints()
+      updateMapCursor()
+      break
+    }
+  }
 }
 
 function handleDeleteWaypoint() {
