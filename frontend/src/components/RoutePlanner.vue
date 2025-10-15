@@ -597,6 +597,105 @@ function calculateDistance(
 }
 
 // ============================================================================
+// LOCAL STORAGE CACHING
+// ============================================================================
+
+const CACHE_KEY = 'routePlanner_state'
+
+interface CachedState {
+  waypoints: Waypoint[]
+  routeSegments: RouteSegment[]
+  routePoints: RoutePoint[][]
+  selectedSegments: TrackResponse[]
+  startWaypoint: { lat: number; lng: number } | null
+  endWaypoint: { lat: number; lng: number } | null
+  routeMode: 'standard' | 'startEnd'
+  segmentFilters: {
+    difficultyMin: number
+    difficultyMax: number
+    surface: string[]
+    tireDry: string[]
+    tireWet: string[]
+  }
+  showElevation: boolean
+  timestamp: number
+}
+
+function saveRouteStateToCache() {
+  try {
+    const state: CachedState = {
+      waypoints: JSON.parse(JSON.stringify(waypoints.value)),
+      routeSegments: JSON.parse(JSON.stringify(routeSegments.value)),
+      routePoints: JSON.parse(JSON.stringify(routePoints.value)),
+      selectedSegments: JSON.parse(JSON.stringify(selectedSegments.value)),
+      startWaypoint: startWaypoint.value
+        ? JSON.parse(JSON.stringify(startWaypoint.value))
+        : null,
+      endWaypoint: endWaypoint.value
+        ? JSON.parse(JSON.stringify(endWaypoint.value))
+        : null,
+      routeMode: routeMode.value,
+      segmentFilters: JSON.parse(JSON.stringify(segmentFilters.value)),
+      showElevation: showElevation.value,
+      timestamp: Date.now()
+    }
+
+    localStorage.setItem(CACHE_KEY, JSON.stringify(state))
+  } catch (error) {
+    console.warn('Failed to save route state to cache:', error)
+  }
+}
+
+function loadRouteStateFromCache(): boolean {
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (!cached) return false
+
+    const state: CachedState = JSON.parse(cached)
+
+    // Check if cache is not too old (24 hours)
+    const maxAge = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+    if (Date.now() - state.timestamp > maxAge) {
+      clearRouteStateCache()
+      return false
+    }
+
+    // Restore state
+    waypoints.value = state.waypoints || []
+    routeSegments.value = state.routeSegments || []
+    routePoints.value = state.routePoints || []
+    selectedSegments.value = state.selectedSegments || []
+    startWaypoint.value = state.startWaypoint
+    endWaypoint.value = state.endWaypoint
+    routeMode.value = state.routeMode || 'standard'
+    segmentFilters.value = state.segmentFilters || {
+      difficultyMin: 1,
+      difficultyMax: 5,
+      surface: [],
+      tireDry: [],
+      tireWet: []
+    }
+    showElevation.value = state.showElevation || false
+
+    return true
+  } catch (error) {
+    console.warn('Failed to load route state from cache:', error)
+    clearRouteStateCache()
+    return false
+  }
+}
+
+function clearRouteStateCache() {
+  try {
+    localStorage.removeItem(CACHE_KEY)
+  } catch (error) {
+    console.warn('Failed to clear route state cache:', error)
+  }
+}
+
+// Cache saving will be handled explicitly in key functions
+
+// ============================================================================
 // WAYPOINT MANAGEMENT
 // ============================================================================
 
@@ -627,6 +726,9 @@ async function addWaypoint(lat: number, lng: number, type: Waypoint['type'] = 'u
     // Save change to history without segments (first waypoint)
     addChange('waypoint-insert', { waypoint, insertIndex: waypoints.value.length - 1 })
   }
+
+  // Save to cache
+  saveRouteStateToCache()
 }
 
 function createWaypointMarker(index: number, lat: number, lng: number) {
@@ -863,6 +965,9 @@ function removeWaypoint(index: number, saveToHistory: boolean = true) {
   } else {
     clearRoute()
   }
+
+  // Save to cache
+  saveRouteStateToCache()
 }
 
 function clearAllWaypoints() {
@@ -1246,8 +1351,13 @@ function renderAllRouteSegments() {
 
   // Re-render all GPX segments that are part of the current route
   routeSegments.value.forEach((segment) => {
-    if (segment.type === 'gpx' && segment.gpxData) {
-      renderSegmentOnMap(segment.gpxData)
+    if (
+      segment.type === 'gpx' &&
+      segment.segmentId &&
+      gpxDataCache.has(segment.segmentId)
+    ) {
+      const gpxData = gpxDataCache.get(segment.segmentId)!
+      renderSegmentOnMap(gpxData)
     }
   })
 }
@@ -2230,6 +2340,9 @@ function onToggleMode() {
 
   routeMode.value = newMode
 
+  // Save to cache
+  saveRouteStateToCache()
+
   // Clear everything when switching modes
   clearAllWaypoints()
   clearAllSegments()
@@ -2585,6 +2698,11 @@ function clearMap(saveToHistory: boolean = true) {
   selectedSegments.value = []
   clearStartEndWaypoints()
 
+  // Clear the cache when user explicitly clears the map
+  if (saveToHistory) {
+    clearRouteStateCache()
+  }
+
   // Set elevation error message to guide user
   elevationError.value = t('routePlanner.noRouteMessage')
 }
@@ -2901,7 +3019,7 @@ function hideContextMenu() {
 
 function handleRouteSaved(routeId: number) {
   showSaveModal.value = false
-  clearMap()
+  clearMap() // This already clears the cache
   router.push(`/segment/${routeId}`)
 }
 
@@ -3176,6 +3294,9 @@ async function generateStartEndRoute() {
 
       routeGenerationProgress.value.current++
       routeGenerationProgress.value.message = 'Route complete!'
+
+      // Save to cache
+      saveRouteStateToCache()
     }
   } catch (error) {
     console.error('Error generating route:', error)
@@ -3286,8 +3407,32 @@ onMounted(async () => {
     showInfoBanner.value = false
   }
 
-  // Set initial elevation message
-  elevationError.value = t('routePlanner.noRouteMessage')
+  // Try to load cached route state
+  const cacheLoaded = loadRouteStateFromCache()
+
+  if (cacheLoaded) {
+    // Restore the map state with cached data
+    if (waypoints.value.length > 0) {
+      // Create waypoint markers for cached waypoints
+      waypoints.value.forEach((wp, index) => {
+        createWaypointMarker(index, wp.lat, wp.lng)
+      })
+
+      // Render the cached route if we have segments
+      if (routeSegments.value.length > 0) {
+        renderRoute()
+        renderAllRouteSegments()
+      }
+    }
+
+    // Load segments if we're in guided mode
+    if (routeMode.value === 'startEnd' && selectedSegments.value.length > 0) {
+      await loadSegmentsInBounds()
+    }
+  } else {
+    // Set initial elevation message only if no cache was loaded
+    elevationError.value = t('routePlanner.noRouteMessage')
+  }
 })
 
 onUnmounted(() => {

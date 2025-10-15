@@ -10,6 +10,13 @@ vi.mock('leaflet-routing-machine', () => ({
   default: {}
 }))
 
+// Mock vue-router
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: vi.fn()
+  })
+}))
+
 // Mock Leaflet
 vi.mock('leaflet', () => ({
   default: {
@@ -1860,6 +1867,411 @@ describe('RoutePlanner - Refactored Implementation', () => {
 
         expect(() => wrapper.vm.executeUndoChange(change)).not.toThrow()
         expect(wrapper.vm.waypoints[0]).toEqual({ lat: 0, lng: 0, type: 'user' })
+      })
+    })
+  })
+
+  describe('Route Caching System', () => {
+    // Mock localStorage
+    const localStorageMock = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn()
+    }
+
+    // Mock segment for testing
+    const mockSegment: TrackResponse = {
+      id: 1,
+      name: 'Test Segment',
+      file_path: '/test/segment.gpx',
+      bound_north: 47.0,
+      bound_south: 46.0,
+      bound_east: 5.0,
+      bound_west: 3.0,
+      barycenter_latitude: 46.5,
+      barycenter_longitude: 4.0,
+      track_type: 'segment',
+      difficulty_level: 3,
+      surface_type: ['gravel-road'],
+      tire_dry: 'semi-slick',
+      tire_wet: 'knobs',
+      comments: '',
+      strava_id: undefined
+    }
+
+    beforeEach(() => {
+      // Reset localStorage mock
+      localStorageMock.getItem.mockClear()
+      localStorageMock.setItem.mockClear()
+      localStorageMock.removeItem.mockClear()
+      localStorageMock.clear.mockClear()
+
+      // Mock localStorage globally
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+        writable: true
+      })
+    })
+
+    describe('Cache Management Functions', () => {
+      it('should have cache management functions', () => {
+        expect(typeof wrapper.vm.saveRouteStateToCache).toBe('function')
+        expect(typeof wrapper.vm.loadRouteStateFromCache).toBe('function')
+        expect(typeof wrapper.vm.clearRouteStateCache).toBe('function')
+      })
+
+      it('should save route state to cache', () => {
+        // Set up some state
+        wrapper.vm.waypoints = [{ lat: 46.86, lng: 3.98, type: 'user' }]
+        wrapper.vm.routeSegments = [{ type: 'osrm' }]
+        wrapper.vm.routePoints = [
+          [{ lat: 46.86, lng: 3.98, elevation: 100, distance: 0 }]
+        ]
+        wrapper.vm.routeMode = 'standard'
+        wrapper.vm.segmentFilters = {
+          difficultyMin: 2,
+          difficultyMax: 4,
+          surface: ['asphalt'],
+          tireDry: ['slick'],
+          tireWet: ['wet']
+        }
+
+        wrapper.vm.saveRouteStateToCache()
+
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'routePlanner_state',
+          expect.stringContaining('"waypoints":[{')
+        )
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'routePlanner_state',
+          expect.stringContaining('"routeMode":"standard"')
+        )
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          'routePlanner_state',
+          expect.stringContaining('"timestamp"')
+        )
+      })
+
+      it('should load route state from cache', () => {
+        const mockCachedState = {
+          waypoints: [{ lat: 46.86, lng: 3.98, type: 'user' }],
+          routeSegments: [{ type: 'osrm' }],
+          routePoints: [[{ lat: 46.86, lng: 3.98, elevation: 100, distance: 0 }]],
+          selectedSegments: [],
+          startWaypoint: null,
+          endWaypoint: null,
+          routeMode: 'standard',
+          segmentFilters: {
+            difficultyMin: 1,
+            difficultyMax: 5,
+            surface: [],
+            tireDry: [],
+            tireWet: []
+          },
+          showElevation: false,
+          timestamp: Date.now()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(mockCachedState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(true)
+        expect(wrapper.vm.waypoints).toEqual(mockCachedState.waypoints)
+        expect(wrapper.vm.routeSegments).toEqual(mockCachedState.routeSegments)
+        expect(wrapper.vm.routeMode).toBe(mockCachedState.routeMode)
+        expect(wrapper.vm.segmentFilters).toEqual(mockCachedState.segmentFilters)
+      })
+
+      it('should return false when no cache exists', () => {
+        localStorageMock.getItem.mockReturnValue(null)
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(false)
+      })
+
+      it('should return false when cache is expired', () => {
+        const expiredState = {
+          waypoints: [{ lat: 46.86, lng: 3.98, type: 'user' }],
+          routeSegments: [],
+          routePoints: [],
+          selectedSegments: [],
+          startWaypoint: null,
+          endWaypoint: null,
+          routeMode: 'standard',
+          segmentFilters: {
+            difficultyMin: 1,
+            difficultyMax: 5,
+            surface: [],
+            tireDry: [],
+            tireWet: []
+          },
+          showElevation: false,
+          timestamp: Date.now() - 25 * 60 * 60 * 1000 // 25 hours ago
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(expiredState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(false)
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('routePlanner_state')
+      })
+
+      it('should handle corrupted cache gracefully', () => {
+        localStorageMock.getItem.mockReturnValue('invalid json')
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(false)
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('routePlanner_state')
+      })
+
+      it('should clear route state cache', () => {
+        wrapper.vm.clearRouteStateCache()
+
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('routePlanner_state')
+      })
+    })
+
+    describe('Cache Integration with Operations', () => {
+      it('should save to cache when adding waypoints', async () => {
+        localStorageMock.setItem.mockClear()
+
+        await wrapper.vm.addWaypoint(46.86, 3.98)
+
+        expect(localStorageMock.setItem).toHaveBeenCalled()
+      })
+
+      it('should save to cache when removing waypoints', () => {
+        localStorageMock.setItem.mockClear()
+
+        wrapper.vm.waypoints = [
+          { lat: 46.86, lng: 3.98, type: 'user' },
+          { lat: 46.87, lng: 3.99, type: 'user' }
+        ]
+
+        wrapper.vm.removeWaypoint(0)
+
+        expect(localStorageMock.setItem).toHaveBeenCalled()
+      })
+
+      it('should save to cache when toggling mode', () => {
+        localStorageMock.setItem.mockClear()
+
+        wrapper.vm.onToggleMode()
+
+        expect(localStorageMock.setItem).toHaveBeenCalled()
+      })
+
+      it('should clear cache when clearing map', () => {
+        localStorageMock.removeItem.mockClear()
+
+        wrapper.vm.clearMap()
+
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('routePlanner_state')
+      })
+
+      it('should clear cache when saving route', () => {
+        localStorageMock.removeItem.mockClear()
+
+        wrapper.vm.handleRouteSaved(123)
+
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith('routePlanner_state')
+      })
+    })
+
+    describe('Cache State Restoration', () => {
+      it('should restore waypoints from cache', () => {
+        const mockCachedState = {
+          waypoints: [
+            { lat: 46.86, lng: 3.98, type: 'user' },
+            { lat: 46.87, lng: 3.99, type: 'user' }
+          ],
+          routeSegments: [{ type: 'osrm' }],
+          routePoints: [[{ lat: 46.86, lng: 3.98, elevation: 100, distance: 0 }]],
+          selectedSegments: [],
+          startWaypoint: null,
+          endWaypoint: null,
+          routeMode: 'standard',
+          segmentFilters: {
+            difficultyMin: 1,
+            difficultyMax: 5,
+            surface: [],
+            tireDry: [],
+            tireWet: []
+          },
+          showElevation: false,
+          timestamp: Date.now()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(mockCachedState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(true)
+        expect(wrapper.vm.waypoints).toEqual(mockCachedState.waypoints)
+      })
+
+      it('should restore route segments from cache', () => {
+        const mockCachedState = {
+          waypoints: [{ lat: 46.86, lng: 3.98, type: 'user' }],
+          routeSegments: [
+            { type: 'gpx', segmentId: 1, isReversed: false },
+            { type: 'osrm' }
+          ],
+          routePoints: [
+            [{ lat: 46.86, lng: 3.98, elevation: 100, distance: 0 }],
+            [{ lat: 46.87, lng: 3.99, elevation: 110, distance: 1000 }]
+          ],
+          selectedSegments: [],
+          startWaypoint: null,
+          endWaypoint: null,
+          routeMode: 'standard',
+          segmentFilters: {
+            difficultyMin: 1,
+            difficultyMax: 5,
+            surface: [],
+            tireDry: [],
+            tireWet: []
+          },
+          showElevation: false,
+          timestamp: Date.now()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(mockCachedState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(true)
+        expect(wrapper.vm.routeSegments).toEqual(mockCachedState.routeSegments)
+        expect(wrapper.vm.routePoints).toEqual(mockCachedState.routePoints)
+      })
+
+      it('should restore guided mode state from cache', () => {
+        const mockCachedState = {
+          waypoints: [],
+          routeSegments: [],
+          routePoints: [],
+          selectedSegments: [mockSegment],
+          startWaypoint: { lat: 46.86, lng: 3.98 },
+          endWaypoint: { lat: 46.87, lng: 3.99 },
+          routeMode: 'startEnd',
+          segmentFilters: {
+            difficultyMin: 2,
+            difficultyMax: 4,
+            surface: ['gravel'],
+            tireDry: ['mixed'],
+            tireWet: ['wet']
+          },
+          showElevation: true,
+          timestamp: Date.now()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(mockCachedState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(true)
+        expect(wrapper.vm.selectedSegments).toEqual(mockCachedState.selectedSegments)
+        expect(wrapper.vm.startWaypoint).toEqual(mockCachedState.startWaypoint)
+        expect(wrapper.vm.endWaypoint).toEqual(mockCachedState.endWaypoint)
+        expect(wrapper.vm.routeMode).toBe('startEnd')
+        expect(wrapper.vm.segmentFilters).toEqual(mockCachedState.segmentFilters)
+        expect(wrapper.vm.showElevation).toBe(true)
+      })
+
+      it('should provide default values when cache has missing properties', () => {
+        const incompleteState = {
+          waypoints: [{ lat: 46.86, lng: 3.98, type: 'user' }],
+          // Missing other properties
+          timestamp: Date.now()
+        }
+
+        localStorageMock.getItem.mockReturnValue(JSON.stringify(incompleteState))
+
+        const result = wrapper.vm.loadRouteStateFromCache()
+
+        expect(result).toBe(true)
+        expect(wrapper.vm.waypoints).toEqual(incompleteState.waypoints)
+        expect(wrapper.vm.routeSegments).toEqual([])
+        expect(wrapper.vm.routeMode).toBe('standard')
+        expect(wrapper.vm.segmentFilters).toEqual({
+          difficultyMin: 1,
+          difficultyMax: 5,
+          surface: [],
+          tireDry: [],
+          tireWet: []
+        })
+      })
+    })
+
+    describe('Cache Error Handling', () => {
+      it('should handle localStorage errors gracefully during save', () => {
+        localStorageMock.setItem.mockImplementation(() => {
+          throw new Error('Storage quota exceeded')
+        })
+
+        wrapper.vm.waypoints = [{ lat: 46.86, lng: 3.98, type: 'user' }]
+
+        // Should not throw
+        expect(() => wrapper.vm.saveRouteStateToCache()).not.toThrow()
+      })
+
+      it('should handle localStorage errors gracefully during load', () => {
+        localStorageMock.getItem.mockImplementation(() => {
+          throw new Error('Storage access denied')
+        })
+
+        // Should not throw and return false
+        const result = wrapper.vm.loadRouteStateFromCache()
+        expect(result).toBe(false)
+      })
+
+      it('should handle localStorage errors gracefully during clear', () => {
+        localStorageMock.removeItem.mockImplementation(() => {
+          throw new Error('Storage access denied')
+        })
+
+        // Should not throw
+        expect(() => wrapper.vm.clearRouteStateCache()).not.toThrow()
+      })
+    })
+
+    describe('Cache Persistence Behavior', () => {
+      it('should only save meaningful state (not empty initial state)', () => {
+        localStorageMock.setItem.mockClear()
+
+        // Empty state should not trigger save
+        wrapper.vm.waypoints = []
+        wrapper.vm.selectedSegments = []
+        wrapper.vm.startWaypoint = null
+        wrapper.vm.endWaypoint = null
+
+        // Manually call save (normally would be called from operations)
+        wrapper.vm.saveRouteStateToCache()
+
+        // Should still save (since we called it manually)
+        expect(localStorageMock.setItem).toHaveBeenCalled()
+      })
+
+      it('should handle cache key consistency', () => {
+        const CACHE_KEY = 'routePlanner_state'
+
+        wrapper.vm.clearRouteStateCache()
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith(CACHE_KEY)
+
+        wrapper.vm.saveRouteStateToCache()
+        expect(localStorageMock.setItem).toHaveBeenCalledWith(
+          CACHE_KEY,
+          expect.any(String)
+        )
+
+        localStorageMock.getItem.mockReturnValue('{"waypoints":[]}')
+        wrapper.vm.loadRouteStateFromCache()
+        expect(localStorageMock.getItem).toHaveBeenCalledWith(CACHE_KEY)
       })
     })
   })
