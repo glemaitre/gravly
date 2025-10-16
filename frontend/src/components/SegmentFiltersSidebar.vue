@@ -429,7 +429,7 @@ onUnmounted(() => {
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
   overflow-y: auto;
-  overflow: visible; /* Allow tooltips to be visible */
+  overflow-x: hidden; /* Prevent horizontal scroll but allow tooltips to be visible */
 }
 
 .filters-sidebar.open {
@@ -441,6 +441,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 .filters-header {
