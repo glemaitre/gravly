@@ -554,7 +554,7 @@ function getSurfaceImage(surfaceType: string): string {
   height: 24px;
   display: flex;
   align-items: center;
-  margin: 0 1.1rem;
+  margin: 0 1.6rem;
 }
 
 .slider-track-background {
@@ -896,6 +896,10 @@ function getSurfaceImage(surfaceType: string): string {
 
   .filters-sidebar-content {
     padding: 1rem;
+  }
+
+  .difficulty-sliders {
+    margin: 0 2rem;
   }
 }
 
