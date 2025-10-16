@@ -1318,6 +1318,11 @@ onUnmounted(() => {
     display: none;
   }
 
+  .dropdown-menu {
+    left: auto;
+    right: 0;
+  }
+
   .back-button {
     padding: 0.75rem;
     min-width: auto;
