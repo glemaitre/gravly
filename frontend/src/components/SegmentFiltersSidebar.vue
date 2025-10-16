@@ -119,8 +119,11 @@
                 :alt="surfaceType.label"
                 class="surface-filter-image"
               />
+              <span v-if="isMobileOrTablet" class="mobile-label">{{
+                surfaceType.label
+              }}</span>
             </button>
-            <div class="custom-tooltip">
+            <div v-if="!isMobileOrTablet" class="custom-tooltip">
               <img
                 :src="getSurfaceImage(surfaceType.value)"
                 :alt="surfaceType.label"
@@ -162,8 +165,11 @@
                   :alt="tireType.label"
                   class="tire-filter-image"
                 />
+                <span v-if="isMobileOrTablet" class="mobile-label">{{
+                  tireType.label
+                }}</span>
               </button>
-              <div class="custom-tooltip">
+              <div v-if="!isMobileOrTablet" class="custom-tooltip">
                 <img
                   :src="getTireImage(tireType.value)"
                   :alt="tireType.label"
@@ -198,8 +204,11 @@
                   :alt="tireType.label"
                   class="tire-filter-image"
                 />
+                <span v-if="isMobileOrTablet" class="mobile-label">{{
+                  tireType.label
+                }}</span>
               </button>
-              <div class="custom-tooltip">
+              <div v-if="!isMobileOrTablet" class="custom-tooltip">
                 <img
                   :src="getTireImage(tireType.value)"
                   :alt="tireType.label"
@@ -227,7 +236,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 // Import tire images
@@ -270,6 +279,9 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+// Mobile/tablet detection
+const isMobileOrTablet = ref(false)
 
 // Difficulty tooltip functionality
 const difficultyTooltipVisible = ref(false)
@@ -385,6 +397,20 @@ function getTireImage(tireType: string): string {
 function getSurfaceImage(surfaceType: string): string {
   return surfaceImages[surfaceType as keyof typeof surfaceImages] || brokenPavedRoadUrl
 }
+
+// Mobile/tablet detection functions
+function checkIsMobileOrTablet() {
+  isMobileOrTablet.value = window.innerWidth <= 768 || 'ontouchstart' in window
+}
+
+onMounted(() => {
+  checkIsMobileOrTablet()
+  window.addEventListener('resize', checkIsMobileOrTablet)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkIsMobileOrTablet)
+})
 </script>
 
 <style scoped>
@@ -746,6 +772,11 @@ function getSurfaceImage(surfaceType: string): string {
   flex-shrink: 0;
 }
 
+/* Surface filter buttons with consistent height */
+.filter-btn-wrapper:has(.surface-filter-image) .filter-btn-with-image {
+  height: 100%;
+}
+
 /* Tire Condition Groups */
 .tire-condition-group {
   display: flex;
@@ -860,6 +891,23 @@ function getSurfaceImage(surfaceType: string): string {
   color: #374151;
   text-align: center;
   max-width: 150px;
+}
+
+/* Mobile labels */
+.mobile-label {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+  word-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Clear Filters Button */
