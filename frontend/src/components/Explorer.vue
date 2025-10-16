@@ -25,7 +25,7 @@
               <div id="landing-map" class="map"></div>
               <!-- Fixed Center Marker -->
               <div class="fixed-center-marker" title="Search Center">📍</div>
-              <!-- Max Results Control - Bottom Left Corner -->
+              <!-- Max Results Control - Top Left Corner -->
               <div class="map-controls">
                 <div class="limit-control">
                   <label for="limit-select" class="limit-label">
@@ -1279,15 +1279,15 @@ onUnmounted(() => {
   width: 100%; /* Full width */
 }
 
-/* Map Controls - Bottom Left Corner */
+/* Map Controls - Top Left Corner */
 .map-controls {
   position: absolute;
-  bottom: 10px;
+  top: 10px;
   left: 10px;
   z-index: 1000;
   background: rgba(255, 255, 255, 0.95);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 0.25rem 0.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   backdrop-filter: blur(10px);
 }
