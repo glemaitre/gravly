@@ -665,8 +665,8 @@ onUnmounted(() => {
 /* Responsive controls for narrow devices */
 @media (max-width: 819px) {
   .controls {
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
 }
 
@@ -684,6 +684,13 @@ onUnmounted(() => {
   width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+/* Responsive slider group for mobile */
+@media (max-width: 819px) {
+  .slider-group {
+    padding: 0.5rem;
+  }
 }
 
 .slider-header {
@@ -735,8 +742,8 @@ onUnmounted(() => {
 /* Responsive metrics grid for narrow devices */
 @media (max-width: 819px) {
   .metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
   }
 }
 
