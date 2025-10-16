@@ -1405,6 +1405,8 @@ onUnmounted(() => {
   grid-template-rows: 400px 300px;
   gap: 1rem;
   flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   grid-template-areas:
     'map info'
     'elevation elevation';
@@ -1484,6 +1486,7 @@ onUnmounted(() => {
 
 .chart-section {
   grid-area: elevation;
+  min-height: 250px;
 }
 
 .info-section {
@@ -1505,8 +1508,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto;
     grid-template-areas:
       'map'
-      'info'
-      'elevation';
+      'elevation'
+      'info';
     gap: 1.5rem; /* Increase gap for better spacing when stacked */
   }
 
@@ -1514,8 +1517,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'comments';
   }
 
@@ -1523,8 +1526,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'images';
   }
 
@@ -1532,8 +1535,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'comments'
       'images';
   }
@@ -1542,8 +1545,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'videos';
   }
 
@@ -1551,8 +1554,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'comments'
       'videos';
   }
@@ -1561,8 +1564,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'images'
       'videos';
   }
@@ -1571,8 +1574,8 @@ onUnmounted(() => {
     grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
     grid-template-areas:
       'map'
-      'info'
       'elevation'
+      'info'
       'comments'
       'images'
       'videos';
@@ -1669,6 +1672,8 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-header {
@@ -1697,6 +1702,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .map {
@@ -1711,6 +1718,8 @@ onUnmounted(() => {
 /* Comments Section Styles */
 .comments-content {
   padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .comment-text {
@@ -1734,7 +1743,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1rem 3.5rem 1rem 3.5rem;
+  padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .images-gallery {
@@ -1779,11 +1790,11 @@ onUnmounted(() => {
 }
 
 .carousel-btn-left {
-  left: 0.5rem;
+  left: 0.25rem;
 }
 
 .carousel-btn-right {
-  right: 0.5rem;
+  right: 0.25rem;
 }
 
 .gallery-item {
@@ -1964,6 +1975,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 1rem;
   padding: 1rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .videos-gallery {
@@ -1979,8 +1992,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   border-radius: 8px;
-  flex-shrink: 0;
-  width: 320px; /* Larger width for 3 videos on large screens */
+  flex: 1;
+  min-width: 0; /* Allow flex items to shrink below their content size */
+  max-width: 400px; /* Maximum width to prevent items from becoming too large */
   overflow: hidden;
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -2087,7 +2101,7 @@ onUnmounted(() => {
   }
 
   .video-item {
-    width: 300px; /* Larger width for 2 videos on medium screens */
+    max-width: 300px; /* Maximum width for 2 videos on medium screens */
   }
 
   .modal-nav-btn {
@@ -2262,7 +2276,7 @@ onUnmounted(() => {
   }
 
   .video-item {
-    width: 280px; /* Full width for 1 video on small screens */
+    max-width: 280px; /* Maximum width for 1 video on small screens */
   }
 
   .modal-nav-btn {

@@ -8,8 +8,9 @@
     </div>
     <div class="card-content">
       <div class="info-grid">
-        <!-- Top Row: Difficulty, Surface, Tires -->
-        <div class="info-row">
+        <!-- Desktop: Single Row with Difficulty, Surface, Tires -->
+        <!-- Mobile: Two Rows - First: Difficulty+Surface, Second: Tires -->
+        <div class="info-row-desktop">
           <!-- Difficulty -->
           <div class="info-item-compact">
             <div class="info-label">
@@ -93,6 +94,152 @@
 
           <!-- Tire Recommendations -->
           <div class="info-item-compact">
+            <div class="info-label">
+              <i class="fa-solid fa-circle"></i>
+              {{ t('segmentDetail.tireRecommendations') }}
+            </div>
+            <div class="info-value">
+              <div class="tire-recommendations-compact">
+                <div class="tire-recommendation-compact">
+                  <div class="tire-header">
+                    <i class="fa-solid fa-sun"></i>
+                    <span class="tire-label">{{ t('segmentDetail.dry') }}</span>
+                  </div>
+                  <div class="tire-option-vertical">
+                    <div
+                      class="image-container"
+                      @mouseenter="showOverlay"
+                      @mouseleave="hideOverlay"
+                      @mousemove="updateOverlayPosition"
+                    >
+                      <img :src="tireDryImage" :alt="tireDryLabel" class="tire-image" />
+                      <div class="image-zoom-overlay" ref="tireDryOverlay">
+                        <img
+                          :src="tireDryImage"
+                          :alt="tireDryLabel"
+                          class="tire-image-zoom"
+                        />
+                      </div>
+                    </div>
+                    <span class="tire-text">{{ tireDryLabel }}</span>
+                  </div>
+                </div>
+                <div class="tire-recommendation-compact">
+                  <div class="tire-header">
+                    <i class="fa-solid fa-cloud-rain"></i>
+                    <span class="tire-label">{{ t('segmentDetail.wet') }}</span>
+                  </div>
+                  <div class="tire-option-vertical">
+                    <div
+                      class="image-container"
+                      @mouseenter="showOverlay"
+                      @mouseleave="hideOverlay"
+                      @mousemove="updateOverlayPosition"
+                    >
+                      <img :src="tireWetImage" :alt="tireWetLabel" class="tire-image" />
+                      <div class="image-zoom-overlay" ref="tireWetOverlay">
+                        <img
+                          :src="tireWetImage"
+                          :alt="tireWetLabel"
+                          class="tire-image-zoom"
+                        />
+                      </div>
+                    </div>
+                    <span class="tire-text">{{ tireWetLabel }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile: First Row - Difficulty and Surface -->
+        <div class="info-row-mobile info-row-mobile-first">
+          <!-- Difficulty -->
+          <div class="info-item-compact">
+            <div class="info-label">
+              <i class="fa-solid fa-signal"></i>
+              {{ t('segmentDetail.difficulty') }}
+            </div>
+            <div class="info-value">
+              <div class="difficulty-display">
+                <span class="difficulty-level">{{ difficultyLevel }}</span>
+                <span class="difficulty-word">{{ difficultyWord }}</span>
+                <span v-if="difficultyLevel > 5" class="difficulty-over">{{
+                  t('segmentDetail.over5')
+                }}</span>
+                <div
+                  class="difficulty-tooltip-container"
+                  @mouseenter="showDifficultyTooltip"
+                  @mouseleave="hideDifficultyTooltip"
+                  @mousemove="updateDifficultyTooltipPosition"
+                >
+                  <i class="fa-solid fa-circle-info difficulty-info-icon"></i>
+                  <div class="difficulty-tooltip" ref="difficultyTooltip">
+                    {{ difficultyDescription }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Surface Type -->
+          <div class="info-item-compact">
+            <div class="info-label">
+              <i class="fa-solid fa-road"></i>
+              {{ t('segmentDetail.surface') }}
+            </div>
+            <div class="info-value surface-nav-container">
+              <button
+                v-if="segment.surface_type.length > 1"
+                class="surface-nav-btn"
+                @click.stop="previousSurface"
+                :disabled="currentSurfaceIndex === 0"
+                title="Previous surface type"
+              >
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <div class="surface-info-vertical">
+                <div
+                  class="image-container"
+                  @mouseenter="showOverlay"
+                  @mouseleave="hideOverlay"
+                  @mousemove="updateOverlayPosition"
+                >
+                  <img
+                    :src="surfaceImage"
+                    :alt="surfaceTypeLabel"
+                    class="surface-image"
+                  />
+                  <div class="image-zoom-overlay" ref="surfaceOverlay">
+                    <img
+                      :src="surfaceImage"
+                      :alt="surfaceTypeLabel"
+                      class="surface-image-zoom"
+                    />
+                  </div>
+                </div>
+                <span class="surface-text">{{ surfaceTypeLabel }}</span>
+                <span v-if="segment.surface_type.length > 1" class="surface-indicator">
+                  {{ currentSurfaceIndex + 1 }}/{{ segment.surface_type.length }}
+                </span>
+              </div>
+              <button
+                v-if="segment.surface_type.length > 1"
+                class="surface-nav-btn"
+                @click.stop="nextSurface"
+                :disabled="currentSurfaceIndex === segment.surface_type.length - 1"
+                title="Next surface type"
+              >
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile: Second Row - Tire Recommendations -->
+        <div class="info-row-mobile info-row-mobile-second">
+          <div class="info-item-compact tire-recommendations-mobile">
             <div class="info-label">
               <i class="fa-solid fa-circle"></i>
               {{ t('segmentDetail.tireRecommendations') }}
@@ -488,10 +635,31 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   flex: 1; /* Take remaining space in info-grid */
 }
 
-.info-row {
+.info-row-desktop {
   display: flex;
   gap: 0.5rem;
   flex: 0 0 auto; /* Don't grow or shrink, maintain natural size */
+}
+
+/* Mobile-specific rows */
+.info-row-mobile {
+  display: none; /* Hidden by default, shown on mobile */
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.info-row-mobile-first {
+  display: none;
+}
+
+.info-row-mobile-second {
+  display: none;
+}
+
+/* Ensure stats stay on the same row on mobile */
+.stats-grid {
+  flex-direction: row;
+  gap: 0.25rem;
 }
 
 .info-item-compact:nth-child(1) {
@@ -797,14 +965,36 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 /* Responsive layout adjustments */
 @media (max-width: 480px) {
-  .info-row {
-    flex-direction: column;
+  /* Hide desktop layout on mobile */
+  .info-row-desktop {
+    display: none;
+  }
+
+  /* Show mobile layout */
+  .info-row-mobile {
+    display: flex;
+  }
+
+  .info-row-mobile-first {
+    display: flex;
     gap: 0.75rem;
   }
 
-  .tire-recommendations-compact {
-    flex-direction: column;
+  .info-row-mobile-second {
+    display: flex;
     gap: 0.75rem;
+  }
+
+  /* Mobile tire recommendations should stay horizontal */
+  .tire-recommendations-compact {
+    flex-direction: row; /* Keep horizontal on mobile */
+    gap: 0.75rem;
+  }
+
+  /* Mobile tire recommendations container should span full width */
+  .tire-recommendations-mobile {
+    flex: 1;
+    width: 100%;
   }
 
   .surface-image-zoom {

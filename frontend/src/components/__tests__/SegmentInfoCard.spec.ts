@@ -107,7 +107,7 @@ describe('SegmentInfoCard', () => {
       })
 
       const compactItems = wrapper.findAll('.info-item-compact')
-      expect(compactItems).toHaveLength(3)
+      expect(compactItems).toHaveLength(6) // 3 for desktop + 3 for mobile layout
     })
 
     it('should render the stats grid', () => {
@@ -287,7 +287,7 @@ describe('SegmentInfoCard', () => {
       })
 
       const tireRecommendations = wrapper.findAll('.tire-recommendation-compact')
-      expect(tireRecommendations).toHaveLength(2)
+      expect(tireRecommendations).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
       const dryTire = tireRecommendations[0]
       expect(dryTire.find('.fa-sun').exists()).toBe(true)
@@ -711,7 +711,7 @@ describe('SegmentInfoCard', () => {
 
       it('should render image containers for tire images', () => {
         const tireContainers = wrapper.findAll('.tire-option-vertical .image-container')
-        expect(tireContainers).toHaveLength(2)
+        expect(tireContainers).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
         tireContainers.forEach((container: any) => {
           expect(container.find('.tire-image').exists()).toBe(true)
@@ -722,7 +722,7 @@ describe('SegmentInfoCard', () => {
 
       it('should have proper CSS classes for overlays', () => {
         const overlays = wrapper.findAll('.image-zoom-overlay')
-        expect(overlays).toHaveLength(3) // 1 surface + 2 tire overlays
+        expect(overlays).toHaveLength(6) // 1 surface + 2 tire overlays for desktop + 1 surface + 2 tire overlays for mobile
 
         overlays.forEach((overlay: any) => {
           expect(overlay.classes()).toContain('image-zoom-overlay')
@@ -736,7 +736,7 @@ describe('SegmentInfoCard', () => {
         expect(surfaceContainer.exists()).toBe(true)
 
         const tireContainers = wrapper.findAll('.tire-option-vertical .image-container')
-        expect(tireContainers).toHaveLength(2)
+        expect(tireContainers).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
         // Test that event handlers can be triggered
         const surfaceOverlay = surfaceContainer.find('.image-zoom-overlay')
@@ -748,7 +748,7 @@ describe('SegmentInfoCard', () => {
         expect(surfaceContainer.exists()).toBe(true)
 
         const tireContainers = wrapper.findAll('.tire-option-vertical .image-container')
-        expect(tireContainers).toHaveLength(2)
+        expect(tireContainers).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
         // Test that containers exist and can handle events
         tireContainers.forEach((container: any) => {
@@ -761,7 +761,7 @@ describe('SegmentInfoCard', () => {
         expect(surfaceContainer.exists()).toBe(true)
 
         const tireContainers = wrapper.findAll('.tire-option-vertical .image-container')
-        expect(tireContainers).toHaveLength(2)
+        expect(tireContainers).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
         // Test that all containers have the required structure
         expect(surfaceContainer.find('.surface-image').exists()).toBe(true)
@@ -772,7 +772,7 @@ describe('SegmentInfoCard', () => {
     describe('Overlay Initial State', () => {
       it('should have overlays hidden by default', () => {
         const overlays = wrapper.findAll('.image-zoom-overlay')
-        expect(overlays).toHaveLength(3) // 1 surface + 2 tire overlays
+        expect(overlays).toHaveLength(6) // 1 surface + 2 tire overlays for desktop + 1 surface + 2 tire overlays for mobile
 
         // Test that overlays exist and have the correct class
         overlays.forEach((overlay: any) => {
@@ -783,7 +783,7 @@ describe('SegmentInfoCard', () => {
 
       it('should have proper CSS structure for overlays', () => {
         const overlays = wrapper.findAll('.image-zoom-overlay')
-        expect(overlays).toHaveLength(3)
+        expect(overlays).toHaveLength(6) // 1 surface + 2 tire overlays for desktop + 1 surface + 2 tire overlays for mobile
 
         overlays.forEach((overlay: any) => {
           expect(overlay.exists()).toBe(true)
@@ -823,7 +823,7 @@ describe('SegmentInfoCard', () => {
         const tireZoomImages = wrapper.findAll('.tire-image-zoom')
 
         expect(surfaceZoomImage.exists()).toBe(true)
-        expect(tireZoomImages).toHaveLength(2)
+        expect(tireZoomImages).toHaveLength(4) // 2 for desktop + 2 for mobile layout
 
         tireZoomImages.forEach((image: any) => {
           expect(image.classes()).toContain('tire-image-zoom')
@@ -832,7 +832,7 @@ describe('SegmentInfoCard', () => {
 
       it('should have image-container class with proper structure', () => {
         const containers = wrapper.findAll('.image-container')
-        expect(containers).toHaveLength(3) // 1 surface + 2 tire containers
+        expect(containers).toHaveLength(6) // 1 surface + 2 tire containers for desktop + 1 surface + 2 tire containers for mobile
 
         containers.forEach((container: any) => {
           expect(container.classes()).toContain('image-container')
@@ -916,7 +916,7 @@ describe('SegmentInfoCard', () => {
         })
 
         const overlays = wrapper.findAll('.image-zoom-overlay')
-        expect(overlays).toHaveLength(3)
+        expect(overlays).toHaveLength(6) // 1 surface + 2 tire overlays for desktop + 1 surface + 2 tire overlays for mobile
 
         // Test that overlays still exist and have correct structure
         overlays.forEach((overlay: any) => {
@@ -998,7 +998,7 @@ describe('SegmentInfoCard', () => {
 
         // Should still have exactly 3 overlays (1 surface + 2 tire)
         const overlays = wrapper.findAll('.image-zoom-overlay')
-        expect(overlays).toHaveLength(3)
+        expect(overlays).toHaveLength(6) // 1 surface + 2 tire overlays for desktop + 1 surface + 2 tire overlays for mobile
       })
 
       it('should handle rapid mouse movements without errors', () => {
@@ -1387,10 +1387,10 @@ describe('SegmentInfoCard', () => {
 
           // Should still have exactly 1 tooltip container
           const tooltipContainers = wrapper.findAll('.difficulty-tooltip-container')
-          expect(tooltipContainers).toHaveLength(1)
+          expect(tooltipContainers).toHaveLength(2) // 1 for desktop + 1 for mobile layout
 
           const tooltips = wrapper.findAll('.difficulty-tooltip')
-          expect(tooltips).toHaveLength(1)
+          expect(tooltips).toHaveLength(2) // 1 for desktop + 1 for mobile layout
         })
 
         it('should handle rapid prop changes without errors', async () => {
