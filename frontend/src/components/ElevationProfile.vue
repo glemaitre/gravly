@@ -760,4 +760,20 @@ defineExpose({
     opacity: 1;
   }
 }
+
+/* Mobile styles */
+@media (max-width: 768px) {
+  .elevation-toggle-content i:first-child {
+    font-size: 0.9rem;
+  }
+
+  .toggle-stat i {
+    font-size: 0.5rem;
+  }
+
+  .elevation-toggle-text {
+    margin-left: 0;
+    font-size: 0.9rem;
+  }
+}
 </style>
