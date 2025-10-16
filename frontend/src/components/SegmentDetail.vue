@@ -1482,19 +1482,27 @@ onUnmounted(() => {
 
 .map-section {
   grid-area: map;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chart-section {
   grid-area: elevation;
   min-height: 250px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .info-section {
   grid-area: info;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .comments-section {
   grid-area: comments;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Responsive layout adjustments */
@@ -1505,7 +1513,7 @@ onUnmounted(() => {
 
   .content-grid {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(300px, auto) auto auto;
+    grid-template-rows: auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1514,7 +1522,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-comments {
-    grid-template-rows: minmax(300px, auto) auto auto auto;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1523,7 +1531,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-images {
-    grid-template-rows: minmax(300px, auto) auto auto auto;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1532,7 +1540,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-comments.with-images {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1542,7 +1550,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1551,7 +1559,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-comments.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1561,7 +1569,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-images.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1571,7 +1579,7 @@ onUnmounted(() => {
   }
 
   .content-grid.with-comments.with-images.with-videos {
-    grid-template-rows: minmax(300px, auto) auto auto auto auto auto;
+    grid-template-rows: auto auto auto auto auto auto;
     grid-template-areas:
       'map'
       'elevation'
@@ -1736,6 +1744,8 @@ onUnmounted(() => {
 /* Images Gallery Styles */
 .images-section {
   grid-area: images;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .images-carousel {
@@ -1745,7 +1755,9 @@ onUnmounted(() => {
   gap: 1rem;
   padding: 1rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .images-gallery {
@@ -1754,6 +1766,9 @@ onUnmounted(() => {
   gap: 1rem;
   flex: 1;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .carousel-btn {
@@ -1967,6 +1982,8 @@ onUnmounted(() => {
 /* Videos Gallery Styles */
 .videos-section {
   grid-area: videos;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .videos-carousel {
@@ -1976,7 +1993,9 @@ onUnmounted(() => {
   gap: 1rem;
   padding: 1rem;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .videos-gallery {
@@ -1986,6 +2005,9 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   padding: 0 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .video-item {
