@@ -91,84 +91,89 @@ describe('App', () => {
     expect(logo.attributes('alt')).toBe('Gravly')
   })
 
-  it('shows language dropdown with correct options', () => {
+  it('shows language dropdown with correct options in footer', () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const languageDropdown = wrapper.find('.language-dropdown')
+    const languageDropdown = wrapper
+      .findComponent({ name: 'FooterBar' })
+      .find('.language-dropdown')
     expect(languageDropdown.exists()).toBe(true)
 
     const trigger = languageDropdown.find('.language-dropdown-trigger')
     expect(trigger.exists()).toBe(true)
     expect(trigger.text()).toContain('🇺🇸')
-    expect(trigger.text()).toContain('English')
   })
 
-  it('toggles language dropdown when clicked', async () => {
+  it('toggles language dropdown when clicked in footer', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
-    expect(wrapper.find('.language-dropdown-menu').classes()).not.toContain('open')
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const trigger = footerBar.find('.language-dropdown-trigger')
+    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
 
     await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).toContain('open')
+    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
 
     await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).not.toContain('open')
+    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
   })
 
-  it('closes dropdown when clicking outside', async () => {
+  it('closes dropdown when clicking outside in footer', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const trigger = footerBar.find('.language-dropdown-trigger')
     await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).toContain('open')
+    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
 
     // Test that the dropdown can be toggled
     await trigger.trigger('click')
-    expect(wrapper.find('.language-dropdown-menu').classes()).not.toContain('open')
+    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
   })
 
-  it('changes language when option is selected', async () => {
+  it('changes language when option is selected in footer', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const trigger = footerBar.find('.language-dropdown-trigger')
     await trigger.trigger('click')
 
     // Test that the dropdown opens and shows options
-    expect(wrapper.find('.language-dropdown-menu').classes()).toContain('open')
-    expect(wrapper.findAll('.language-option').length).toBeGreaterThan(0)
+    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
+    expect(footerBar.findAll('.language-option').length).toBeGreaterThan(0)
   })
 
-  it('ensures dropdown menu is visible when open class is applied (non-regression test)', async () => {
+  it('ensures dropdown menu is visible when open class is applied in footer (non-regression test)', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const dropdownMenu = wrapper.find('.language-dropdown-menu')
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const dropdownMenu = footerBar.find('.language-dropdown-menu')
 
     // Initially should not have open class
     expect(dropdownMenu.classes()).not.toContain('open')
 
     // Click to open dropdown
-    const trigger = wrapper.find('.language-dropdown-trigger')
+    const trigger = footerBar.find('.language-dropdown-trigger')
     await trigger.trigger('click')
 
     // Should have open class
@@ -176,7 +181,7 @@ describe('App', () => {
 
     // Verify the element has the correct CSS classes for visibility
     // This ensures the CSS selector bug doesn't happen again
-    expect(dropdownMenu.classes()).toContain('navbar-menu')
+    expect(dropdownMenu.classes()).toContain('language-dropdown-menu')
     expect(dropdownMenu.classes()).toContain('open')
 
     // Verify the dropdown menu element exists and is in the DOM
@@ -184,17 +189,18 @@ describe('App', () => {
     expect(dropdownMenu.element).toBeDefined()
   })
 
-  it('saves language preference to localStorage', async () => {
+  it('saves language preference to localStorage from footer', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const trigger = footerBar.find('.language-dropdown-trigger')
     await trigger.trigger('click')
 
-    const frenchOption = wrapper
+    const frenchOption = footerBar
       .findAll('.language-option')
       .find((option) => option.text().includes('🇫🇷'))
 
@@ -240,11 +246,11 @@ describe('App', () => {
     const navbar = wrapper.findComponent({ name: 'Navbar' })
     expect(navbar.exists()).toBe(true)
 
-    // The navbar component should default to English when localStorage is null
-    const languageTrigger = wrapper.find('.language-dropdown-trigger')
+    // The footer component should default to English when localStorage is null
+    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
+    const languageTrigger = footerBar.find('.language-dropdown-trigger')
     expect(languageTrigger.exists()).toBe(true)
     expect(languageTrigger.text()).toContain('🇺🇸')
-    expect(languageTrigger.text()).toContain('English')
   })
 
   it('prevents event propagation on dropdown toggle', async () => {

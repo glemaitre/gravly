@@ -54,46 +54,6 @@
         </div>
       </div>
     </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div class="footer-content">
-        <div class="footer-links">
-          <a
-            href="https://github.com/glemaitre/gravly/issues"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="footer-link"
-          >
-            <i class="fa-solid fa-bug"></i>
-            <span>{{ $t('footer.reportIssue') }}</span>
-          </a>
-          <a
-            href="https://github.com/glemaitre/gravly"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="footer-link"
-          >
-            <i class="fa-brands fa-github"></i>
-            <span>{{ $t('footer.githubRepo') }}</span>
-          </a>
-          <a
-            href="https://github.com/glemaitre/gravly/blob/main/README.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="footer-link"
-          >
-            <i class="fa-solid fa-book"></i>
-            <span>{{ $t('footer.documentation') }}</span>
-          </a>
-        </div>
-        <div class="footer-info">
-          <span class="footer-text"
-            >{{ $t('footer.license') }} • {{ $t('footer.version') }}</span
-          >
-        </div>
-      </div>
-    </footer>
   </div>
 </template>
 
@@ -344,73 +304,6 @@ import logoUrl from '../assets/images/logo.svg'
   .btn {
     width: 100%;
     justify-content: center;
-  }
-}
-
-/* Footer */
-.footer {
-  background: #2c3e50;
-  color: white;
-  padding: 2rem 1rem;
-  margin-top: auto;
-}
-
-.footer-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.footer-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
-}
-
-.footer-link {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: white;
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.footer-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-1px);
-}
-
-.footer-link i {
-  font-size: 1.1rem;
-}
-
-.footer-info {
-  text-align: center;
-}
-
-.footer-text {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
-}
-
-/* Footer responsive design */
-@media (max-width: 768px) {
-  .footer-links {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .footer-link {
-    font-size: 0.9rem;
   }
 }
 </style>

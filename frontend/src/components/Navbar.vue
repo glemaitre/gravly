@@ -88,69 +88,20 @@
             </div>
           </div>
         </div>
-
-        <div class="language-dropdown" ref="languageDropdown">
-          <button
-            class="language-dropdown-trigger navbar-trigger"
-            @click="toggleLanguageDropdown"
-            :class="{ active: languageDropdownOpen }"
-          >
-            <span class="language-flag">{{
-              languageOptions[currentLanguage].flag
-            }}</span>
-            <span class="language-name">{{
-              languageOptions[currentLanguage].name
-            }}</span>
-            <span class="dropdown-arrow">
-              <i
-                class="fa-solid fa-chevron-down"
-                :class="{ rotated: languageDropdownOpen }"
-              ></i>
-            </span>
-          </button>
-          <div
-            class="language-dropdown-menu navbar-menu"
-            :class="{ open: languageDropdownOpen }"
-          >
-            <button
-              v-for="(option, lang) in languageOptions"
-              :key="lang"
-              class="language-option"
-              :class="{ active: currentLanguage === lang }"
-              @click="
-                (e) => {
-                  e.stopPropagation()
-                  changeLanguage(lang as MessageLanguages)
-                }
-              "
-            >
-              <span class="language-flag">{{ option.flag }}</span>
-              <span class="language-name">{{ option.name }}</span>
-              <span v-if="currentLanguage === lang" class="checkmark">
-                <i class="fa-solid fa-check"></i>
-              </span>
-            </button>
-          </div>
-        </div>
       </nav>
     </div>
   </header>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { setLanguage, type MessageLanguages } from '../i18n'
 import { useStravaApi } from '../composables/useStravaApi'
 import { useAuthorization } from '../composables/useAuthorization'
 import logoUrl from '../assets/images/logo.svg'
 import stravaConnectBtn from '../assets/images/btn_strava_connect.png'
 
-// i18n setup
-const { locale } = useI18n()
 const router = useRouter()
-const currentLanguage = ref<MessageLanguages>('en')
 
 // Strava authentication
 const {
@@ -171,48 +122,11 @@ const isEditorAuthorized = computed(
   () => isAuthenticated.value && isAuthorizedForEditor.value
 )
 
-// Watch for locale changes to update currentLanguage
-watch(
-  locale,
-  (newLocale) => {
-    currentLanguage.value = newLocale as MessageLanguages
-  },
-  { immediate: true }
-)
-
-// Watch for authentication state changes (for debugging if needed)
-// watch(
-//   authState,
-//   (newAuthState) => {
-//     console.debug('Navbar authState changed:', newAuthState)
-//   },
-//   { deep: true }
-// )
-
-// Language dropdown state
-const languageDropdownOpen = ref(false)
-
 // User dropdown state
 const userDropdownOpen = ref(false)
 
-// Language options with flags
-const languageOptions = {
-  en: { flag: '🇺🇸', name: 'English' },
-  fr: { flag: '🇫🇷', name: 'Français' }
-}
-
 // Close dropdown when clicking outside
-const languageDropdown = ref<HTMLElement | null>(null)
 const userDropdown = ref<HTMLElement | null>(null)
-
-function closeLanguageDropdown(event: MouseEvent) {
-  if (
-    languageDropdown.value &&
-    !languageDropdown.value.contains(event.target as Node)
-  ) {
-    languageDropdownOpen.value = false
-  }
-}
 
 function closeUserDropdown(event: MouseEvent) {
   if (userDropdown.value && !userDropdown.value.contains(event.target as Node)) {
@@ -221,28 +135,12 @@ function closeUserDropdown(event: MouseEvent) {
 }
 
 function closeDropdowns(event: MouseEvent) {
-  closeLanguageDropdown(event)
   closeUserDropdown(event)
-}
-
-// Toggle dropdown function that prevents event bubbling
-function toggleLanguageDropdown(event: Event) {
-  event.stopPropagation()
-  languageDropdownOpen.value = !languageDropdownOpen.value
-  userDropdownOpen.value = false // Close user dropdown when opening language
 }
 
 function toggleUserDropdown(event: Event) {
   event.stopPropagation()
   userDropdownOpen.value = !userDropdownOpen.value
-  languageDropdownOpen.value = false // Close language dropdown when opening user
-}
-
-// Language switching function
-function changeLanguage(lang: MessageLanguages) {
-  currentLanguage.value = lang
-  setLanguage(lang)
-  languageDropdownOpen.value = false // Close dropdown after selection
 }
 
 // Strava authentication functions
@@ -555,38 +453,6 @@ onUnmounted(() => {
   font-size: 0.875rem;
 }
 
-.language-dropdown {
-  position: relative;
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.navbar-nav .language-dropdown-trigger.navbar-trigger.active {
-  background: var(--brand-50);
-  border-color: var(--brand-300);
-  color: var(--brand-600);
-  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
-}
-
 .navbar-menu {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -598,93 +464,6 @@ onUnmounted(() => {
   transform: translateY(-8px);
   transition: all 0.2s ease;
   min-width: 140px;
-}
-
-.language-dropdown-menu.navbar-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: auto;
-  transform-origin: top left;
-  width: 100%;
-}
-
-.language-dropdown-menu.navbar-menu.open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.language-flag {
-  font-size: 1.1em;
-  line-height: 1;
-}
-
-.language-name {
-  flex: 1;
-  white-space: nowrap;
-}
-
-.dropdown-arrow {
-  font-size: 0.75em;
-  transition: transform 0.2s ease;
-  opacity: 0.7;
-}
-
-.dropdown-arrow .fa-chevron-down.rotated {
-  transform: rotate(180deg);
-}
-
-.language-option {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #111827;
-  font-size: 0.8rem;
-  text-align: left;
-  transition: background 0.2s ease;
-}
-
-.language-option:first-child {
-  border-top-left-radius: 7px;
-  border-top-right-radius: 7px;
-}
-
-.language-option:last-child {
-  border-bottom-left-radius: 7px;
-  border-bottom-right-radius: 7px;
-}
-
-.language-option:hover {
-  background: #f3f4f6;
-}
-
-.language-option.active {
-  background: var(--brand-50);
-  color: var(--brand-primary);
-  font-weight: 500;
-}
-
-.language-option.active:hover {
-  background: var(--brand-100);
-}
-
-.language-option .language-flag {
-  font-size: 1.1em;
-}
-
-.language-option .language-name {
-  flex: 1;
-}
-
-.checkmark {
-  font-size: 0.75em;
-  color: var(--brand-primary);
 }
 
 /* Responsive Design */
@@ -731,11 +510,6 @@ onUnmounted(() => {
     padding: 0.4rem 0.6rem;
   }
 
-  .navbar-nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-  }
-
   .navbar-btn {
     padding: 0.4rem 0.6rem;
     font-size: 0.85rem;
@@ -762,11 +536,6 @@ onUnmounted(() => {
 
   .navbar-brand {
     gap: 0.75rem;
-  }
-
-  .navbar-nav .language-dropdown-trigger.navbar-trigger {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.8rem;
   }
 
   .navbar-btn {
