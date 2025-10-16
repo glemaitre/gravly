@@ -102,6 +102,10 @@ const mockScaleControl = {
   addTo: vi.fn(() => mockScaleControl)
 }
 
+const mockZoomControl = {
+  addTo: vi.fn(() => mockZoomControl)
+}
+
 vi.mock('leaflet', () => ({
   default: {
     map: vi.fn(() => mockMapInstance),
@@ -115,7 +119,8 @@ vi.mock('leaflet', () => ({
       fitBounds: vi.fn()
     })),
     control: {
-      scale: vi.fn(() => mockScaleControl)
+      scale: vi.fn(() => mockScaleControl),
+      zoom: vi.fn(() => mockZoomControl)
     },
     // Add Leaflet classes for instanceof checks
     Rectangle: class MockRectangle {},
@@ -552,7 +557,7 @@ describe('Explorer', () => {
       expect(mockTileLayer.addTo).toHaveBeenCalledWith(mockMapInstance)
     })
 
-    it('should add scale control', async () => {
+    it('should add scale control and zoom control', async () => {
       wrapper = mountWithRouter(Explorer)
 
       await wrapper.vm.$nextTick()
@@ -560,7 +565,9 @@ describe('Explorer', () => {
 
       const L = await import('leaflet')
       expect(L.default.control.scale).toHaveBeenCalled()
+      expect(L.default.control.zoom).toHaveBeenCalled()
       expect(mockScaleControl.addTo).toHaveBeenCalledWith(mockMapInstance)
+      expect(mockZoomControl.addTo).toHaveBeenCalledWith(mockMapInstance)
     })
 
     it('should set initial map view', async () => {

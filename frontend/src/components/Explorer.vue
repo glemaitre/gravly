@@ -259,7 +259,7 @@ function initializeMap() {
 
   // Initialize map
   map = L.map(container, {
-    zoomControl: true,
+    zoomControl: false, // Disable default zoom control
     scrollWheelZoom: true,
     doubleClickZoom: true,
     boxZoom: true,
@@ -287,12 +287,19 @@ function initializeMap() {
     map.setView([46.942728, 4.033681], 14)
   }
 
-  // Add scale control
+  // Add scale control first (will appear at bottom)
   L.control
     .scale({
       position: 'bottomright',
       metric: true,
       imperial: false
+    })
+    .addTo(map)
+
+  // Add zoom control second (will appear above scale control)
+  L.control
+    .zoom({
+      position: 'bottomright'
     })
     .addTo(map)
 
@@ -1443,6 +1450,27 @@ onUnmounted(() => {
   width: 100%;
 }
 
+/* Zoom control styling - make it smaller and position above scale */
+:global(.leaflet-control-zoom) {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.4);
+  margin-bottom: 5px; /* Add space between zoom and scale controls */
+}
+
+:global(.leaflet-control-zoom a) {
+  width: 20px !important;
+  height: 20px !important;
+  line-height: 20px !important;
+  font-size: 14px !important;
+  font-weight: bold;
+}
+
+:global(.leaflet-control-zoom a:first-child) {
+  border-bottom: 1px solid #ccc;
+}
+
 /* Scale control styling */
 :global(.leaflet-control-scale) {
   background: rgba(255, 255, 255, 0.8);
@@ -1452,6 +1480,7 @@ onUnmounted(() => {
   font-size: 11px;
   line-height: 1.2;
   color: #333;
+  margin-top: 0; /* Ensure it's positioned right below zoom control */
 }
 
 /* Segment rectangle styling */
