@@ -1315,7 +1315,7 @@ onUnmounted(() => {
   }
 
   .export-button .dropdown-icon {
-    margin-left: 0;
+    display: none;
   }
 
   .back-button {
