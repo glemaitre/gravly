@@ -451,5 +451,15 @@ export default {
     saving: 'Saving...',
     delete: 'Delete',
     deleting: 'Deleting...'
+  },
+
+  // Footer
+  footer: {
+    support: 'Support',
+    reportIssue: 'Report an Issue',
+    githubRepo: 'GitHub Repository',
+    documentation: 'Documentation',
+    license: 'MIT License',
+    version: 'Version 1.0.0'
   }
 }

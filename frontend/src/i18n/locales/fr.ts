@@ -458,5 +458,15 @@ export default {
     saving: 'Sauvegarde...',
     delete: 'Supprimer',
     deleting: 'Suppression...'
+  },
+
+  // Footer
+  footer: {
+    support: 'Support',
+    reportIssue: 'Signaler un Problème',
+    githubRepo: 'Dépôt GitHub',
+    documentation: 'Documentation',
+    license: 'Licence MIT',
+    version: 'Version 1.0.0'
   }
 }
