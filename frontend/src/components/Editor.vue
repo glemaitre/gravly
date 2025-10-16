@@ -6,6 +6,37 @@
     >
       <div v-if="!isSidebarCollapsed" class="sidebar-scroll">
         <div class="card menu-card">
+          <!-- Toggle Button Section - Only visible on compact sidebar -->
+          <div v-if="isCompactSidebar" class="menu-section">
+            <ul class="menu-list">
+              <li
+                class="menu-item"
+                @click="toggleSidebarCollapse"
+                :title="
+                  isSidebarCollapsed
+                    ? t('menu.expandSidebar')
+                    : t('menu.collapseSidebar')
+                "
+                role="button"
+              >
+                <span class="icon" aria-hidden="true">
+                  <i
+                    :class="
+                      isSidebarCollapsed
+                        ? 'fa-solid fa-chevron-right'
+                        : 'fa-solid fa-chevron-left'
+                    "
+                  ></i>
+                </span>
+                <span v-if="!isCompactSidebar" class="text">{{
+                  isSidebarCollapsed
+                    ? t('menu.expandSidebar')
+                    : t('menu.collapseSidebar')
+                }}</span>
+              </li>
+            </ul>
+          </div>
+
           <div class="menu-section">
             <div v-if="!isCompactSidebar" class="menu-section-title">
               {{ t('menu.import') }}
@@ -220,23 +251,14 @@
         </div>
       </div>
 
-      <!-- Collapse/Expand Button - Only visible on compact sidebar -->
-      <div v-if="isCompactSidebar" class="sidebar-toggle">
+      <!-- Side Button to show collapsed sidebar -->
+      <div v-if="isSidebarCollapsed" class="sidebar-show-button">
         <button
           @click="toggleSidebarCollapse"
-          class="toggle-btn"
-          :class="{ collapsed: isSidebarCollapsed }"
-          :title="
-            isSidebarCollapsed ? t('menu.expandSidebar') : t('menu.collapseSidebar')
-          "
+          class="show-sidebar-btn"
+          :title="t('menu.expandSidebar')"
         >
-          <i
-            :class="
-              isSidebarCollapsed
-                ? 'fa-solid fa-chevron-right'
-                : 'fa-solid fa-chevron-left'
-            "
-          ></i>
+          <i class="fa-solid fa-chevron-right"></i>
         </button>
       </div>
     </div>
@@ -1716,38 +1738,38 @@ ${points.value
   font-size: 1.2rem;
 }
 
-/* Sidebar Toggle Button - Only visible on compact sidebar */
-.sidebar-toggle {
-  position: absolute;
-  bottom: 0.75rem;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
+/* Side Button to show collapsed sidebar */
+.sidebar-show-button {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  z-index: 1001;
 }
 
-.toggle-btn {
-  width: 32px;
-  height: 32px;
+.show-sidebar-btn {
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 6px;
+  border-radius: 0 8px 8px 0;
   background: var(--brand-500);
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-btn:hover {
+.show-sidebar-btn:hover {
   background: var(--brand-600);
-  transform: scale(1.05);
+  transform: translateX(2px);
 }
 
-.toggle-btn:active {
-  transform: scale(0.95);
+.show-sidebar-btn:active {
+  transform: translateX(2px) scale(0.95);
 }
 
 /* Collapsed sidebar styles */
@@ -1759,21 +1781,6 @@ ${points.value
   --sidebar-w: 40px;
   width: 40px;
   z-index: 1000;
-}
-
-.sidebar.collapsed .sidebar-toggle {
-  position: fixed;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  z-index: 1001;
-}
-
-.sidebar.collapsed .toggle-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 0 8px 8px 0;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Content adjustment for collapsed sidebar */
