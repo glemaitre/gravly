@@ -6,6 +6,7 @@
       class="vertical-filters-toggle"
       @click="toggleFilters"
       :class="{ active: showFilters }"
+      v-show="!(isMobile && showFilters)"
     >
       <span v-if="hasActiveFilters" class="filter-active-badge"></span>
       <i class="fa-solid fa-filter"></i>
@@ -155,6 +156,11 @@ let hoverRectangle: any = null
 
 // Resize handler for cleanup
 let resizeHandler: (() => void) | null = null
+
+// Mobile detection (match 640px breakpoint)
+const isMobile = ref<boolean>(false)
+let mediaQueryList: MediaQueryList | null = null
+let mediaQueryChangeHandler: any = null
 
 // Track currently drawn layers by segment ID to avoid redrawing
 const currentMapLayers = new Map<string, any>()
@@ -840,6 +846,17 @@ function cleanupMap() {
 }
 
 onMounted(() => {
+  // Keep isMobile in sync with viewport when matchMedia is available
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    mediaQueryList = window.matchMedia('(max-width: 640px)')
+    isMobile.value = mediaQueryList.matches
+    mediaQueryChangeHandler = (e: MediaQueryListEvent) => {
+      isMobile.value = e.matches
+    }
+    mediaQueryList.addEventListener('change', mediaQueryChangeHandler)
+  } else {
+    isMobile.value = false
+  }
   // Check if we need to redirect after Strava authentication
   const redirectDestination = localStorage.getItem('strava_redirect_after_auth')
   if (redirectDestination) {
@@ -1009,6 +1026,11 @@ onUnmounted(() => {
   cleanupMap()
   // Clean up resize event listeners
   stopResize()
+  if (mediaQueryList && mediaQueryChangeHandler) {
+    mediaQueryList.removeEventListener('change', mediaQueryChangeHandler)
+    mediaQueryChangeHandler = null
+    mediaQueryList = null
+  }
 })
 </script>
 
@@ -1026,7 +1048,7 @@ onUnmounted(() => {
 /* Vertical Filters Toggle Button */
 .vertical-filters-toggle {
   position: fixed;
-  top: calc(var(--navbar-height, 60px) + 20px);
+  top: calc(var(--navbar-height, 60px) + 100px);
   left: 0;
   z-index: 1002;
   display: flex;
@@ -1064,6 +1086,22 @@ onUnmounted(() => {
   text-orientation: mixed;
   letter-spacing: 0.05em;
   padding-bottom: 1rem;
+}
+
+/* Hide "Filters" text on mobile devices */
+@media (max-width: 768px) {
+  .vertical-text {
+    display: none;
+  }
+
+  .vertical-filters-toggle {
+    padding: 0.75rem 0.5rem;
+    gap: 0.75rem;
+  }
+
+  .vertical-filters-toggle i {
+    font-size: 1.1rem;
+  }
 }
 
 .chevron-indicator {
