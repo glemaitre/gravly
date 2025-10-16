@@ -3459,7 +3459,7 @@ onUnmounted(() => {
 .route-planner {
   position: relative;
   width: 100%;
-  height: calc(100vh - var(--navbar-height, 60px));
+  height: calc(100vh - var(--navbar-height, 60px) - var(--footer-height, 36px));
   overflow: hidden;
 }
 
