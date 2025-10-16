@@ -31,145 +31,31 @@
 
       <!-- Right Section -->
       <nav class="navbar-nav">
-        <!-- Strava Authentication -->
-        <div class="auth-section">
-          <button
-            v-if="!isAuthenticated"
-            class="strava-login-btn"
-            @click="handleStravaLogin"
-            :disabled="isLoading"
-          >
-            <img
-              :src="stravaConnectBtn"
-              alt="Connect with Strava"
-              class="strava-btn-image"
-            />
-          </button>
-
-          <div v-else class="strava-user-dropdown" ref="userDropdown">
-            <button
-              class="strava-user-btn navbar-btn"
-              @click="toggleUserDropdown"
-              :class="{ active: userDropdownOpen }"
-            >
-              <img
-                v-if="athlete?.profile_medium"
-                :src="athlete.profile_medium"
-                :alt="athlete.firstname"
-                class="user-avatar"
-              />
-              <i v-else class="fas fa-user-circle user-icon"></i>
-              <span class="user-name">{{ athlete?.firstname || 'User' }}</span>
-              <span class="dropdown-arrow">
-                <i
-                  class="fa-solid fa-chevron-down"
-                  :class="{ rotated: userDropdownOpen }"
-                ></i>
-              </span>
-            </button>
-
-            <div
-              class="user-dropdown-menu navbar-menu"
-              :class="{ open: userDropdownOpen }"
-            >
-              <div class="user-info">
-                <div class="user-name">
-                  {{ athlete?.firstname }} {{ athlete?.lastname }}
-                </div>
-                <div class="user-location" v-if="athlete?.city">
-                  {{ athlete.city }}, {{ athlete.country }}
-                </div>
-              </div>
-              <hr class="dropdown-divider" />
-              <button class="user-option logout-option" @click="handleLogout">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>{{ $t('navbar.logout') }}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        <!-- Menu with Strava Authentication, Language, and Support -->
+        <Menu />
       </nav>
     </div>
   </header>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 import { useStravaApi } from '../composables/useStravaApi'
 import { useAuthorization } from '../composables/useAuthorization'
+import Menu from './Menu.vue'
 import logoUrl from '../assets/images/logo.svg'
-import stravaConnectBtn from '../assets/images/btn_strava_connect.png'
 
-const router = useRouter()
-
-// Strava authentication
-const {
-  authState,
-  isLoading,
-  isAuthenticated: isAuthenticatedFn,
-  getAuthUrl,
-  clearAuth
-} = useStravaApi()
+// Strava authentication (needed for editor authorization)
+const { isAuthenticated: isAuthenticatedFn } = useStravaApi()
 
 // Editor authorization
 const { isAuthorizedForEditor } = useAuthorization()
 
 // Computed properties for authentication
 const isAuthenticated = computed(() => isAuthenticatedFn())
-const athlete = computed(() => authState.value.athlete)
 const isEditorAuthorized = computed(
   () => isAuthenticated.value && isAuthorizedForEditor.value
 )
-
-// User dropdown state
-const userDropdownOpen = ref(false)
-
-// Close dropdown when clicking outside
-const userDropdown = ref<HTMLElement | null>(null)
-
-function closeUserDropdown(event: MouseEvent) {
-  if (userDropdown.value && !userDropdown.value.contains(event.target as Node)) {
-    userDropdownOpen.value = false
-  }
-}
-
-function closeDropdowns(event: MouseEvent) {
-  closeUserDropdown(event)
-}
-
-function toggleUserDropdown(event: Event) {
-  event.stopPropagation()
-  userDropdownOpen.value = !userDropdownOpen.value
-}
-
-// Strava authentication functions
-async function handleStravaLogin() {
-  try {
-    // Store the current route so we can redirect back after authentication
-    const currentRoute = router.currentRoute.value.fullPath
-    const authUrl = await getAuthUrl(currentRoute)
-
-    window.location.href = authUrl
-  } catch (error) {
-    console.error('Failed to get Strava auth URL:', error)
-  }
-}
-
-function handleLogout() {
-  clearAuth()
-  userDropdownOpen.value = false
-  // Redirect to home page after logout
-  router.push('/')
-}
-
-onMounted(() => {
-  document.addEventListener('click', closeDropdowns)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closeDropdowns)
-})
 </script>
 
 <style scoped>
@@ -234,189 +120,7 @@ onUnmounted(() => {
   gap: 0.75rem;
 }
 
-/* Authentication Section */
-.auth-section {
-  display: flex;
-  align-items: center;
-}
-
-.navbar-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.navbar-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.navbar-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Strava Login Button */
-.strava-login-btn {
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-
-.strava-login-btn:hover {
-  opacity: 0.85;
-  transform: translateY(-1px);
-  background: transparent;
-  border: none;
-}
-
-.strava-login-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.strava-btn-image {
-  display: block;
-  height: 38px;
-  width: auto;
-}
-
-/* User Dropdown */
-.strava-user-dropdown {
-  position: relative;
-}
-
-.strava-user-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  cursor: pointer;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.strava-user-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-}
-
-.strava-user-btn.active {
-  background: var(--brand-50);
-  border-color: var(--brand-300);
-  color: var(--brand-600);
-  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
-}
-
-.user-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.user-icon {
-  font-size: 1.2em;
-  color: #6b7280;
-}
-
-.user-name {
-  font-weight: 500;
-}
-
-/* User Dropdown Menu */
-.user-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  left: auto;
-  transform-origin: top right;
-  width: 220px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-8px);
-  transition: all 0.2s ease;
-}
-
-.user-dropdown-menu.open {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
-.user-info {
-  padding: 0.75rem;
-}
-
-.user-info .user-name {
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 0.25rem;
-}
-
-.user-location {
-  font-size: 0.75rem;
-  color: #6b7280;
-}
-
-.dropdown-divider {
-  margin: 0;
-  border: none;
-  border-top: 1px solid #e5e7eb;
-}
-
-.user-option {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #374151;
-  font-size: 0.875rem;
-  text-align: left;
-  transition: background 0.2s ease;
-}
-
-.user-option:hover {
-  background: #f3f4f6;
-}
-
-.logout-option {
-  color: #dc2626;
-}
-
-.logout-option:hover {
-  background: #fef2f2;
-  color: #b91c1c;
-}
+/* Navigation Menu Styles - keeping only the nav menu styles */
 
 .nav-menu {
   display: flex;
@@ -510,18 +214,7 @@ onUnmounted(() => {
     padding: 0.4rem 0.6rem;
   }
 
-  .navbar-btn {
-    padding: 0.4rem 0.6rem;
-    font-size: 0.85rem;
-  }
-
-  .strava-btn-image {
-    height: 34px;
-  }
-
-  .strava-user-btn .user-name {
-    display: none;
-  }
+  /* Responsive adjustments for menu component */
 }
 
 @media (max-width: 576px) {
@@ -538,18 +231,7 @@ onUnmounted(() => {
     gap: 0.75rem;
   }
 
-  .navbar-btn {
-    padding: 0.3rem 0.5rem;
-    font-size: 0.8rem;
-  }
-
-  .strava-btn-image {
-    height: 30px;
-  }
-
-  .language-name {
-    display: none;
-  }
+  /* Responsive adjustments for menu component */
 }
 
 @media (max-width: 480px) {

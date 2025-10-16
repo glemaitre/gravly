@@ -254,6 +254,7 @@
                     :alt="surfaceType.label"
                     class="surface-filter-image"
                   />
+                  <span class="mobile-description">{{ surfaceType.label }}</span>
                 </button>
                 <div class="custom-tooltip">
                   <img
@@ -296,6 +297,7 @@
                       :alt="tireType.label"
                       class="tire-filter-image"
                     />
+                    <span class="mobile-description">{{ tireType.label }}</span>
                   </button>
                   <div class="custom-tooltip">
                     <img
@@ -331,6 +333,7 @@
                       :alt="tireType.label"
                       class="tire-filter-image"
                     />
+                    <span class="mobile-description">{{ tireType.label }}</span>
                   </button>
                   <div class="custom-tooltip">
                     <img
@@ -693,6 +696,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .sidebar-header {
@@ -1016,6 +1021,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 .generate-route-section {
   padding: 0.2rem;
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 .generate-route-btn {
@@ -1150,6 +1156,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 .filters-header {
@@ -1230,6 +1237,9 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   flex-direction: column;
   gap: 0.75rem;
   padding-top: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .filter-group {
@@ -1643,8 +1653,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   margin-bottom: 1rem;
   display: flex;
   flex-direction: column;
-  min-height: fit-content;
-  max-height: calc(100vh - var(--navbar-height) - 200px);
+  flex-shrink: 0;
 }
 
 .selected-segments-title {
@@ -1686,10 +1695,6 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  max-height: calc(100vh - var(--navbar-height) - 280px);
 }
 
 .selected-segment-item {
@@ -1804,6 +1809,72 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   font-size: 0.75rem;
 }
 
+/* Mobile descriptions - hidden on desktop, visible on mobile */
+.mobile-description {
+  display: none;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.2;
+  margin-top: 0.25rem;
+  white-space: normal;
+  word-wrap: break-word;
+  hyphens: auto;
+  min-height: 2.4rem;
+}
+
+/* Show mobile descriptions on mobile devices */
+@media (max-width: 768px) {
+  .mobile-description {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Hide tooltips on mobile since descriptions are visible */
+  .custom-tooltip {
+    display: none !important;
+  }
+
+  /* Adjust filter button layout for mobile */
+  .filter-btn-with-image {
+    gap: 0.4rem;
+    padding: 0.5rem 0.4rem;
+    min-height: 4.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ensure consistent button sizes on mobile */
+  .filter-btn-wrapper {
+    min-height: 4.5rem;
+    display: flex;
+  }
+
+  /* Surface filters - 2 per row on mobile */
+  .filter-group:has(.surface-filter-image) .filter-btn-wrapper {
+    flex: 0 1 calc(50% - 0.25rem);
+    min-width: calc(50% - 0.25rem);
+  }
+
+  /* Tire filters - 3 per row on mobile but with consistent sizing */
+  .filter-group:has(.tire-filter-image) .filter-btn-wrapper {
+    flex: 0 1 calc(33.333% - 0.34rem);
+    min-width: calc(33.333% - 0.34rem);
+  }
+
+  /* Ensure filter options container handles wrapping properly */
+  .filter-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+  }
+}
+
 /* Responsive adjustments for sidebar */
 @media (max-width: 768px) {
   .sidebar-menu {
@@ -1812,12 +1883,6 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
   .sidebar-content {
     padding: 1rem;
-  }
-
-  .mode-toggle {
-    flex-direction: column;
-    gap: 0.75rem;
-    text-align: center;
   }
 
   .toggle-label {

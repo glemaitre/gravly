@@ -4,13 +4,11 @@
     <main class="main-content">
       <router-view />
     </main>
-    <FooterBar />
   </div>
 </template>
 
 <script lang="ts" setup>
 import Navbar from './components/Navbar.vue'
-import FooterBar from './components/FooterBar.vue'
 </script>
 
 <style>
@@ -42,7 +40,6 @@ import FooterBar from './components/FooterBar.vue'
   --brand-primary-rgb: 255, 102, 0;
 
   --navbar-height: 60px;
-  --footer-height: 36px;
 }
 
 /* Global styles to prevent horizontal overflow */
@@ -84,7 +81,6 @@ body {
 .main-content {
   flex: 1;
   padding-top: var(--navbar-height);
-  padding-bottom: var(--footer-height);
-  min-height: calc(100vh - var(--navbar-height) - var(--footer-height));
+  min-height: calc(100vh - var(--navbar-height));
 }
 </style>

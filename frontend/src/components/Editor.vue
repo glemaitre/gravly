@@ -1451,7 +1451,7 @@ ${points.value
 <style scoped>
 .editor {
   display: flex;
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - var(--navbar-height, 60px));
   background: #f8fafc;
   overflow-x: hidden;
   position: relative;

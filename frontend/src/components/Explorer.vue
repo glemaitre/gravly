@@ -1036,7 +1036,7 @@ onUnmounted(() => {
 
 <style scoped>
 .landing-page {
-  height: calc(100vh - var(--navbar-height, 60px) - var(--footer-height, 36px));
+  height: calc(100vh - var(--navbar-height, 60px));
   background: #f8fafc;
   padding: 0;
   display: flex;

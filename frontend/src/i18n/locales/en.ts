@@ -12,7 +12,10 @@ export default {
     deleteFromDb: 'Delete from DB',
     infoFeed: 'Information feed',
     collapseSidebar: 'Collapse sidebar',
-    expandSidebar: 'Expand sidebar'
+    expandSidebar: 'Expand sidebar',
+    title: 'Menu',
+    language: 'Language',
+    support: 'Support'
   },
 
   // Chart and controls

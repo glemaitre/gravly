@@ -12,7 +12,10 @@ export default {
     deleteFromDb: 'Supprimer de la BD',
     infoFeed: "Flux d'informations",
     collapseSidebar: 'Réduire la barre latérale',
-    expandSidebar: 'Développer la barre latérale'
+    expandSidebar: 'Développer la barre latérale',
+    title: 'Menu',
+    language: 'Langue',
+    support: 'Support'
   },
 
   // Chart and controls

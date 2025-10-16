@@ -91,116 +91,119 @@ describe('App', () => {
     expect(logo.attributes('alt')).toBe('Gravly')
   })
 
-  it('shows language dropdown with correct options in footer', () => {
+  it('shows language dropdown with correct options in menu', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const languageDropdown = wrapper
-      .findComponent({ name: 'FooterBar' })
-      .find('.language-dropdown')
-    expect(languageDropdown.exists()).toBe(true)
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    expect(menu.exists()).toBe(true)
 
-    const trigger = languageDropdown.find('.language-dropdown-trigger')
-    expect(trigger.exists()).toBe(true)
-    expect(trigger.text()).toContain('🇺🇸')
+    const menuTrigger = menu.find('.menu-trigger')
+    expect(menuTrigger.exists()).toBe(true)
+
+    await menuTrigger.trigger('click')
+
+    const languageOptions = menu.find('.language-options')
+    expect(languageOptions.exists()).toBe(true)
+    expect(languageOptions.findAll('.language-option').length).toBeGreaterThan(0)
   })
 
-  it('toggles language dropdown when clicked in footer', async () => {
+  it('toggles menu when clicked', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const trigger = footerBar.find('.language-dropdown-trigger')
-    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menuTrigger = menu.find('.menu-trigger')
+    expect(menu.find('.menu-dropdown-content').classes()).not.toContain('open')
 
-    await trigger.trigger('click')
-    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
+    await menuTrigger.trigger('click')
+    expect(menu.find('.menu-dropdown-content').classes()).toContain('open')
 
-    await trigger.trigger('click')
-    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
+    await menuTrigger.trigger('click')
+    expect(menu.find('.menu-dropdown-content').classes()).not.toContain('open')
   })
 
-  it('closes dropdown when clicking outside in footer', async () => {
+  it('closes menu when clicking outside', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const trigger = footerBar.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
-    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menuTrigger = menu.find('.menu-trigger')
+    await menuTrigger.trigger('click')
+    expect(menu.find('.menu-dropdown-content').classes()).toContain('open')
 
-    // Test that the dropdown can be toggled
-    await trigger.trigger('click')
-    expect(footerBar.find('.language-dropdown-menu').classes()).not.toContain('open')
+    // Test that the menu can be toggled
+    await menuTrigger.trigger('click')
+    expect(menu.find('.menu-dropdown-content').classes()).not.toContain('open')
   })
 
-  it('changes language when option is selected in footer', async () => {
+  it('shows language options when menu is opened', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const trigger = footerBar.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menuTrigger = menu.find('.menu-trigger')
+    await menuTrigger.trigger('click')
 
-    // Test that the dropdown opens and shows options
-    expect(footerBar.find('.language-dropdown-menu').classes()).toContain('open')
-    expect(footerBar.findAll('.language-option').length).toBeGreaterThan(0)
+    // Test that the menu opens and shows language options
+    expect(menu.find('.menu-dropdown-content').classes()).toContain('open')
+    expect(menu.findAll('.language-option').length).toBeGreaterThan(0)
   })
 
-  it('ensures dropdown menu is visible when open class is applied in footer (non-regression test)', async () => {
+  it('ensures menu is visible when open class is applied (non-regression test)', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const dropdownMenu = footerBar.find('.language-dropdown-menu')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const dropdownContent = menu.find('.menu-dropdown-content')
 
     // Initially should not have open class
-    expect(dropdownMenu.classes()).not.toContain('open')
+    expect(dropdownContent.classes()).not.toContain('open')
 
-    // Click to open dropdown
-    const trigger = footerBar.find('.language-dropdown-trigger')
+    // Click to open menu
+    const trigger = menu.find('.menu-trigger')
     await trigger.trigger('click')
 
     // Should have open class
-    expect(dropdownMenu.classes()).toContain('open')
+    expect(dropdownContent.classes()).toContain('open')
 
     // Verify the element has the correct CSS classes for visibility
     // This ensures the CSS selector bug doesn't happen again
-    expect(dropdownMenu.classes()).toContain('language-dropdown-menu')
-    expect(dropdownMenu.classes()).toContain('open')
+    expect(dropdownContent.classes()).toContain('menu-dropdown-content')
+    expect(dropdownContent.classes()).toContain('open')
 
-    // Verify the dropdown menu element exists and is in the DOM
-    expect(dropdownMenu.exists()).toBe(true)
-    expect(dropdownMenu.element).toBeDefined()
+    // Verify the menu content element exists and is in the DOM
+    expect(dropdownContent.exists()).toBe(true)
+    expect(dropdownContent.element).toBeDefined()
   })
 
-  it('saves language preference to localStorage from footer', async () => {
+  it('saves language preference to localStorage from menu', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const trigger = footerBar.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menuTrigger = menu.find('.menu-trigger')
+    await menuTrigger.trigger('click')
 
-    const frenchOption = footerBar
+    const frenchOption = menu
       .findAll('.language-option')
       .find((option) => option.text().includes('🇫🇷'))
 
@@ -246,21 +249,20 @@ describe('App', () => {
     const navbar = wrapper.findComponent({ name: 'Navbar' })
     expect(navbar.exists()).toBe(true)
 
-    // The footer component should default to English when localStorage is null
-    const footerBar = wrapper.findComponent({ name: 'FooterBar' })
-    const languageTrigger = footerBar.find('.language-dropdown-trigger')
-    expect(languageTrigger.exists()).toBe(true)
-    expect(languageTrigger.text()).toContain('🇺🇸')
+    // The menu component should exist and handle missing localStorage
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    expect(menu.exists()).toBe(true)
   })
 
-  it('prevents event propagation on dropdown toggle', async () => {
+  it('prevents event propagation on menu toggle', async () => {
     const wrapper = mount(App, {
       global: {
         plugins: [router, i18n]
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const trigger = menu.find('.menu-trigger')
     const stopPropagationSpy = vi.fn()
 
     // Mock the event object
@@ -279,10 +281,11 @@ describe('App', () => {
       }
     })
 
-    const trigger = wrapper.find('.language-dropdown-trigger')
-    await trigger.trigger('click')
+    const menu = wrapper.findComponent({ name: 'Menu' })
+    const menuTrigger = menu.find('.menu-trigger')
+    await menuTrigger.trigger('click')
 
-    const englishOption = wrapper
+    const englishOption = menu
       .findAll('.language-option')
       .find((option) => option.text().includes('🇺🇸'))
 
