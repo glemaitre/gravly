@@ -899,6 +899,7 @@ function updateImageCaption(index: number, event: Event) {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
@@ -906,6 +907,7 @@ function updateImageCaption(index: number, event: Event) {
   cursor: pointer;
   background: #fff;
   transition: all 0.2s;
+  text-align: center;
 }
 
 .surface-option input {
@@ -926,6 +928,8 @@ function updateImageCaption(index: number, event: Event) {
   color: #374151;
   text-align: center;
   font-weight: 500;
+  width: 100%;
+  display: block;
 }
 
 .surface-option.selected {
@@ -1074,11 +1078,12 @@ function updateImageCaption(index: number, event: Event) {
   }
 
   .difficulty-mark {
-    min-width: 0;
+    min-width: 30px;
     padding: 0.25rem 0.125rem;
     margin: 0;
     flex: 1;
     max-width: calc(20% - 0.1rem);
+    width: 100%;
   }
 
   .difficulty-text {
@@ -1213,6 +1218,9 @@ function updateImageCaption(index: number, event: Event) {
 .tire-option .tire-caption {
   font-size: 12px;
   color: #374151;
+  text-align: center;
+  width: 100%;
+  display: block;
 }
 
 .tire-option.selected {
