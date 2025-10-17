@@ -196,7 +196,7 @@ function formatTireType(tireType: string): string {
 .segment-popup-card {
   border: 1px solid #e1e5e9;
   border-radius: 6px;
-  padding: 10px;
+  padding: 0.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -257,6 +257,7 @@ function formatTireType(tireType: string): string {
 
 .segment-card-content {
   margin-bottom: 8px;
+  padding: 0 10px;
 }
 
 .segment-stats {
@@ -312,7 +313,7 @@ function formatTireType(tireType: string): string {
 
 .segment-card-footer {
   border-top: 1px solid #f0f0f0;
-  padding-top: 8px;
+  padding: 8px 10px 10px 10px;
   position: relative;
 }
 
@@ -512,5 +513,18 @@ function formatTireType(tireType: string): string {
 
 .close-popup-btn i {
   font-size: 0.7rem;
+}
+
+/* Override Leaflet popup content margin - using deep selector */
+</style>
+
+<style>
+/* Global styles to override Leaflet popup content margin */
+.leaflet-popup-content {
+  margin: 0 !important;
+}
+
+.leaflet-popup .leaflet-popup-content {
+  margin: 0 !important;
 }
 </style>
