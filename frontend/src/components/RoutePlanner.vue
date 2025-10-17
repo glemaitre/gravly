@@ -2060,7 +2060,7 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     }, 300) // Increased delay to allow moving to popup
   })
 
-  // Click to select/deselect and show popup
+  // Click to show popup only (no selection)
   polyline.on('click', () => {
     // Close any currently open popup
     if (currentOpenPopup.value && currentOpenPopup.value !== popup) {
@@ -2070,9 +2070,6 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     // Show this popup
     popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
     currentOpenPopup.value = popup
-
-    // Select/deselect the segment
-    selectSegment(segment)
   })
 
   // Add popup open event to setup card interactions
@@ -2099,24 +2096,7 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
           }, 200)
         })
 
-        // Click on card to select segment - close popup immediately after selection
-        cardElement.addEventListener('click', (e: Event) => {
-          e.stopPropagation()
-          selectSegment(segment)
-
-          // Clear any pending timeout
-          if (closeTimeout) {
-            clearTimeout(closeTimeout)
-            closeTimeout = null
-          }
-
-          // Close popup immediately after selection
-          setTimeout(() => {
-            if (map && popup) {
-              map.closePopup(popup)
-            }
-          }, 100) // Small delay to allow click to complete
-        })
+        // Card click handler removed - segment selection now only happens via + button
       }
     }
   })
@@ -2160,6 +2140,15 @@ function createSegmentPopup(segment: TrackResponse): HTMLElement {
     gpxData: gpxData,
     onToggleSelection: (segment: TrackResponse) => {
       selectSegment(segment)
+
+      // Close popup after selection
+      const segmentId = segment.id.toString()
+      const layerData = segmentMapLayers.get(segmentId)
+      if (layerData?.popup && map) {
+        setTimeout(() => {
+          map.closePopup(layerData.popup)
+        }, 100) // Small delay to allow selection to complete
+      }
     }
   })
 

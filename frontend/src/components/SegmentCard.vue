@@ -9,6 +9,14 @@
       <h4 class="segment-name" :class="{ hovered: isHovered }">
         {{ segment.name }}
       </h4>
+      <button
+        type="button"
+        class="add-segment-btn"
+        @click.stop="emit('add-segment', segment)"
+        :title="'Add to selected segments'"
+      >
+        <i class="fa-solid fa-plus"></i>
+      </button>
     </div>
 
     <div class="segment-card-content">
@@ -129,6 +137,7 @@ const emit = defineEmits<{
   click: [segment: TrackResponse]
   mouseenter: [segment: TrackResponse]
   mouseleave: [segment: TrackResponse]
+  'add-segment': [segment: TrackResponse]
 }>()
 
 // State for surface type navigation
@@ -198,6 +207,10 @@ function formatTireType(tireType: string): string {
 
 .segment-card-header {
   margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .segment-name {
@@ -207,6 +220,8 @@ function formatTireType(tireType: string): string {
   color: #333;
   transition: color 0.2s ease;
   line-height: 1.3;
+  flex: 1;
+  min-width: 0;
 }
 
 .segment-name.hovered {
@@ -392,5 +407,31 @@ function formatTireType(tireType: string): string {
   border-radius: 4px;
   font-size: 0.7rem;
   font-weight: 500;
+}
+
+.add-segment-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.add-segment-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+.add-segment-btn i {
+  font-size: 0.7rem;
 }
 </style>

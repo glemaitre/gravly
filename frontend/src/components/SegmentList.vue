@@ -70,6 +70,7 @@
             @click="onSegmentClick"
             @mouseenter="onSegmentHover"
             @mouseleave="onSegmentLeave"
+            @add-segment="onAddSegment"
           />
 
           <!-- Show More Button -->
@@ -152,6 +153,7 @@ const emit = defineEmits<{
   trackTypeChange: [trackType: 'segment' | 'route']
   closeFilters: []
   'filters-changed': [hasActiveFilters: boolean]
+  addSegment: [segment: TrackResponse]
 }>()
 
 // Refs for segment stats
@@ -407,6 +409,10 @@ function generateFallbackStats(segment: TrackResponse) {
 
 function onSegmentClick(segment: TrackResponse) {
   emit('segmentClick', segment)
+}
+
+function onAddSegment(segment: TrackResponse) {
+  emit('addSegment', segment)
 }
 
 function onSegmentHover(segment: TrackResponse) {
