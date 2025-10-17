@@ -292,20 +292,20 @@ onMounted(() => {
 
 <style scoped>
 .segment-card {
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   position: relative;
 }
 
 .segment-card:hover,
 .segment-card.is-hovered {
-  box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
+  box-shadow: var(--shadow-md);
   transform: translateY(-1px);
-  border-color: #ff6b35;
+  border-color: var(--brand-primary);
 }
 
 .segment-card-header {
@@ -316,7 +316,7 @@ onMounted(() => {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -325,7 +325,7 @@ onMounted(() => {
 }
 
 .segment-card:hover .segment-name {
-  color: #ff6b35;
+  color: var(--brand-primary);
 }
 
 .segment-card-content {
@@ -342,9 +342,9 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: #f8fafc;
+  background: var(--bg-tertiary);
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--card-border);
   transition: background-color 0.2s ease;
   flex: 1;
 }
@@ -352,7 +352,7 @@ onMounted(() => {
 .stat-item i {
   width: 20px;
   height: 20px;
-  background: #f97316;
+  background: var(--brand-primary);
   color: white;
   border-radius: 4px;
   display: flex;
@@ -371,7 +371,7 @@ onMounted(() => {
 
 .stat-label {
   font-size: 0.6rem;
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -379,12 +379,12 @@ onMounted(() => {
 
 .stat-value {
   font-size: 0.75rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .segment-card-footer {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-muted);
   padding-top: 8px;
   position: relative;
 }
@@ -404,7 +404,7 @@ onMounted(() => {
 }
 
 .info-label {
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -418,17 +418,17 @@ onMounted(() => {
   justify-content: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .info-value i {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .info-value.difficulty {
-  color: #e67e22;
+  color: var(--brand-accent);
   font-weight: 600;
 }
 
@@ -453,12 +453,12 @@ onMounted(() => {
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .surface-indicator {
   font-size: 0.55rem;
-  color: #999;
+  color: var(--text-tertiary);
   font-weight: 400;
 }
 
@@ -482,7 +482,7 @@ onMounted(() => {
 }
 
 .surface-nav-btn:disabled {
-  color: #ccc;
+  color: var(--text-tertiary);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -515,11 +515,11 @@ onMounted(() => {
 }
 
 .tire-badge {
-  background-color: #f5f5f5;
+  background-color: var(--bg-tertiary);
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 0.6rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 </style>

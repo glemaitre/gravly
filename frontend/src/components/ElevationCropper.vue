@@ -421,6 +421,9 @@ function initializeChart() {
   const rootStyles = getComputedStyle(document.documentElement)
   const brandPrimary = rootStyles.getPropertyValue('--brand-primary').trim()
   const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
+  const textColor = rootStyles.getPropertyValue('--text-primary').trim()
+  const gridColor = rootStyles.getPropertyValue('--border-muted').trim()
+  const backgroundColor = rootStyles.getPropertyValue('--card-bg').trim()
 
   chart = new Chart(ctx, {
     type: 'line',
@@ -475,17 +478,38 @@ function initializeChart() {
           title: { display: false },
           min: getX(0),
           max: getX(props.points.length - 1),
-          ticks: { callback: (v: any) => formatXTick(Number(v)) }
+          ticks: {
+            callback: (v: any) => formatXTick(Number(v)),
+            color: textColor || '#374151'
+          },
+          grid: {
+            color: gridColor || '#e5e7eb'
+          }
         },
         y: {
           display: true,
-          title: { display: true, text: t('chart.elevation') },
-          min: Math.min(...props.smoothedElevations)
+          title: {
+            display: true,
+            text: t('chart.elevation'),
+            color: textColor || '#374151'
+          },
+          min: Math.min(...props.smoothedElevations),
+          ticks: {
+            color: textColor || '#374151'
+          },
+          grid: {
+            color: gridColor || '#e5e7eb'
+          }
         }
       },
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: backgroundColor || '#ffffff',
+          titleColor: textColor || '#374151',
+          bodyColor: textColor || '#374151',
+          borderColor: gridColor || '#e5e7eb',
+          borderWidth: 1,
           filter: function (tooltipItem) {
             return tooltipItem.datasetIndex === 0
           },
@@ -616,16 +640,20 @@ onUnmounted(() => {
   overflow: visible;
   margin-top: 1rem;
   margin-bottom: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .axis-toggle {
   display: inline-flex;
   gap: 0;
   margin: 0.25rem auto 0.25rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   border-radius: 999px;
   overflow: hidden;
-  background: #fff;
+  background: var(--bg-secondary);
   position: relative;
   left: 50%;
   transform: translateX(-50%);
@@ -642,16 +670,16 @@ onUnmounted(() => {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .axis-toggle .seg.left {
-  border-right: 1px solid #e5e7eb;
+  border-right: 1px solid var(--border-muted);
 }
 
 .axis-toggle .seg.active {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .controls {
@@ -677,9 +705,9 @@ onUnmounted(() => {
 }
 
 .slider-group {
-  background: #fafafa;
+  background: var(--bg-tertiary);
   padding: 0.75rem;
-  border: 1px solid #eee;
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -721,7 +749,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .metric .icon {
@@ -758,12 +786,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .gps-col .label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .gps-col .value {
@@ -849,8 +877,8 @@ onUnmounted(() => {
   bottom: -22px;
   left: 50%;
   transform: translateX(-50%);
-  background: #111827;
-  color: #ffffff;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   font-size: 11px;
   line-height: 1;
   padding: 2px 6px;

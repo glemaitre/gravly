@@ -442,7 +442,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: white;
+  background: var(--card-bg);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -452,8 +452,8 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--bg-primary);
 }
 
 .header h3,
@@ -464,7 +464,7 @@ defineExpose({
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .modal-title i {
@@ -483,16 +483,16 @@ defineExpose({
   width: 32px;
   height: 32px;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-primary);
+  color: var(--text-tertiary);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .close-btn:hover:not(:disabled) {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
 }
 
 .close-btn:disabled {
@@ -516,7 +516,7 @@ defineExpose({
   justify-content: center;
   gap: 0.5rem;
   padding: 2rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .empty-state {
@@ -525,7 +525,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -542,12 +542,12 @@ defineExpose({
 }
 
 .activity-card {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   margin-bottom: 0.5rem;
   cursor: pointer;
   transition: all 0.2s;
-  background: white;
+  background: var(--bg-tertiary);
 }
 
 .activity-card:hover {
@@ -558,7 +558,7 @@ defineExpose({
 
 .activity-card.selected {
   border-color: #ff6b35;
-  background: linear-gradient(135deg, #fff 0%, #fff8f5 100%);
+  background: linear-gradient(135deg, var(--card-bg) 0%, var(--brand-50) 100%);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
 }
 
@@ -577,7 +577,7 @@ defineExpose({
   margin: 0 0 0.5rem 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -594,7 +594,7 @@ defineExpose({
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .stat i {
@@ -606,7 +606,7 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 .activity-type-badge {
@@ -625,8 +625,8 @@ defineExpose({
   height: 80px;
   border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
-  background: #f8fafc;
+  border: 1px solid var(--border-muted);
+  background: var(--bg-secondary);
 }
 
 .mini-map {
@@ -641,8 +641,8 @@ defineExpose({
 
 .selected-activity-actions {
   padding: 1rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-top: 1px solid var(--border-muted);
+  background: var(--bg-secondary);
 }
 
 .no-gps-warning {
@@ -686,13 +686,13 @@ defineExpose({
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-muted);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #e5e7eb;
+  background: var(--bg-secondary);
 }
 
 .btn-sm {

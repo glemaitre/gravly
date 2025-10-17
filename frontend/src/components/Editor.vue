@@ -1562,7 +1562,7 @@ ${points.value
   margin: 0.1rem 0.35rem;
   border-radius: 8px;
   cursor: pointer;
-  color: #111827;
+  color: var(--text-primary);
   user-select: none;
 }
 .menu-item .icon {
@@ -1574,10 +1574,10 @@ ${points.value
   font-size: 0.8rem;
 }
 .menu-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
 }
 .menu-item:active {
-  background: #e5e7eb;
+  background: var(--bg-active);
 }
 .menu-item.disabled {
   opacity: 0.5;
@@ -1868,8 +1868,8 @@ ${points.value
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border: 1px solid var(--card-border);
   border-radius: 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   padding: 0.75rem;

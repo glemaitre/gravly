@@ -728,11 +728,14 @@ function updateImageCaption(index: number, event: Event) {
 
 <style scoped>
 .meta {
-  background: #ffffff;
+  background: var(--card-bg);
   width: 100%;
   margin-top: 1rem;
   margin-bottom: 1rem;
   display: block;
+  border: 1px solid var(--border-muted);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 /* Track Type Tabs */
@@ -742,9 +745,9 @@ function updateImageCaption(index: number, event: Event) {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding: 0.5rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
 }
 
 /* Responsive track-type-tabs for small devices */
@@ -764,7 +767,7 @@ function updateImageCaption(index: number, event: Event) {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -774,12 +777,12 @@ function updateImageCaption(index: number, event: Event) {
 }
 
 .tab-button:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
 }
 
 .tab-button.active {
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--brand-600);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--brand-200);
@@ -792,6 +795,8 @@ function updateImageCaption(index: number, event: Event) {
 .meta label {
   display: block;
   margin: 0.5rem 0 0.25rem;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .meta input,
@@ -801,12 +806,24 @@ function updateImageCaption(index: number, event: Event) {
   padding: 0.5rem;
   margin-bottom: 0.5rem;
   box-sizing: border-box;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--bg-primary);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.meta input:focus,
+.meta select:focus {
+  outline: none;
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
 }
 
 /* Trail Conditions Card Styles */
 .trail-conditions-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-muted);
   border-radius: 10px;
   padding: 1rem;
   margin-top: 1rem;
@@ -820,7 +837,7 @@ function updateImageCaption(index: number, event: Event) {
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .trail-conditions-header .icon {
@@ -832,7 +849,7 @@ function updateImageCaption(index: number, event: Event) {
 .trail-conditions-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .trail-subsection {
@@ -849,7 +866,7 @@ function updateImageCaption(index: number, event: Event) {
   gap: 0.5rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .subsection-header .icon {
@@ -861,7 +878,7 @@ function updateImageCaption(index: number, event: Event) {
 .subsection-title {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .tire-groups {
@@ -882,8 +899,8 @@ function updateImageCaption(index: number, event: Event) {
 }
 
 .tire-group {
-  background: #fbfcfe;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-muted);
   border-radius: 10px;
   padding: 0.5rem;
 }
@@ -901,11 +918,11 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   padding: 0.75rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--card-bg);
   transition: all 0.2s;
   text-align: center;
 }
@@ -925,7 +942,7 @@ function updateImageCaption(index: number, event: Event) {
 
 .surface-caption {
   font-size: 0.8rem;
-  color: #374151;
+  color: var(--text-secondary);
   text-align: center;
   font-weight: 500;
   width: 100%;
@@ -954,7 +971,7 @@ function updateImageCaption(index: number, event: Event) {
   width: 100%;
   height: 6px;
   border-radius: 3px;
-  background: #e5e7eb;
+  background: var(--border-muted);
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -991,8 +1008,8 @@ function updateImageCaption(index: number, event: Event) {
     to right,
     var(--brand-500) 0%,
     var(--brand-500) var(--slider-progress, 0%),
-    #e5e7eb var(--slider-progress, 0%),
-    #e5e7eb 100%
+    var(--border-muted) var(--slider-progress, 0%),
+    var(--border-muted) 100%
   );
 }
 
@@ -1001,8 +1018,8 @@ function updateImageCaption(index: number, event: Event) {
     to right,
     var(--brand-500) 0%,
     var(--brand-500) var(--slider-progress, 0%),
-    #e5e7eb var(--slider-progress, 0%),
-    #e5e7eb 100%
+    var(--border-muted) var(--slider-progress, 0%),
+    var(--border-muted) 100%
   );
 }
 
@@ -1018,8 +1035,8 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   transition: all 0.2s;
   min-width: 60px;
@@ -1028,8 +1045,8 @@ function updateImageCaption(index: number, event: Event) {
 }
 
 .difficulty-mark-wrapper:hover .difficulty-mark {
-  background: #f3f4f6;
-  border-color: #d1d5db;
+  background: var(--bg-primary);
+  border-color: var(--border-muted);
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -1047,13 +1064,13 @@ function updateImageCaption(index: number, event: Event) {
 .difficulty-number {
   font-size: 1rem;
   font-weight: 700;
-  color: #374151;
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .difficulty-text {
   font-size: 0.7rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-weight: 500;
   line-height: 1;
   text-align: center;
@@ -1117,8 +1134,8 @@ function updateImageCaption(index: number, event: Event) {
 
 .difficulty-tooltip {
   position: fixed !important;
-  background: #1f2937;
-  color: white;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   padding: 0.75rem 1rem;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -1163,14 +1180,14 @@ function updateImageCaption(index: number, event: Event) {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  color: #374151;
+  color: var(--text-secondary);
   margin: 0 0 0.5rem 0;
 }
 
 .tire-group-help {
   margin: 0 0 0.5rem 0;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .tire-group-header .icon {
@@ -1195,11 +1212,11 @@ function updateImageCaption(index: number, event: Event) {
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
   padding: 0.5rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--card-bg);
 }
 
 .tire-option input {
@@ -1217,7 +1234,7 @@ function updateImageCaption(index: number, event: Event) {
 
 .tire-option .tire-caption {
   font-size: 12px;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   width: 100%;
   display: block;
@@ -1226,11 +1243,11 @@ function updateImageCaption(index: number, event: Event) {
 .tire-option.selected {
   border-color: var(--brand-500, #ff6600);
   box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
-  background: var(--brand-50);
+  background: var(--brand-500);
 }
 
 .req {
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .tire-group:nth-child(2) .tire-group-header .icon {
@@ -1240,13 +1257,13 @@ function updateImageCaption(index: number, event: Event) {
 .tire-group:nth-child(2) .tire-option.selected {
   border-color: var(--blue-500);
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
-  background: var(--blue-50);
+  background: var(--blue-500);
 }
 
 /* Commentary Section Styles */
 .commentary-section {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-muted);
   border-radius: 10px;
   padding: 1rem;
   margin-top: 1rem;
@@ -1260,7 +1277,7 @@ function updateImageCaption(index: number, event: Event) {
   gap: 0.5rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .commentary-header .icon {
@@ -1272,7 +1289,7 @@ function updateImageCaption(index: number, event: Event) {
 .commentary-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .commentary-field {
@@ -1287,13 +1304,13 @@ function updateImageCaption(index: number, event: Event) {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .commentary-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-muted);
   border-radius: 6px;
   font-family: inherit;
   font-size: 0.875rem;
@@ -1301,6 +1318,8 @@ function updateImageCaption(index: number, event: Event) {
   resize: vertical;
   min-height: 100px;
   box-sizing: border-box;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
 }
 
 .commentary-textarea:focus {
@@ -1311,8 +1330,8 @@ function updateImageCaption(index: number, event: Event) {
 
 /* Media Section Styles */
 .media-section {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-muted);
   border-radius: 10px;
   padding: 1rem;
   margin-top: 1rem;
@@ -1326,7 +1345,7 @@ function updateImageCaption(index: number, event: Event) {
   gap: 0.5rem;
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .media-header .icon {
@@ -1338,7 +1357,7 @@ function updateImageCaption(index: number, event: Event) {
 .media-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .media-field {
@@ -1353,7 +1372,7 @@ function updateImageCaption(index: number, event: Event) {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 /* Video Links Styles */
@@ -1368,8 +1387,8 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-muted);
   border-radius: 8px;
 }
 
@@ -1385,7 +1404,7 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .video-platform i {
@@ -1400,10 +1419,12 @@ function updateImageCaption(index: number, event: Event) {
 .video-url-input {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-muted);
   border-radius: 4px;
   font-size: 0.875rem;
   box-sizing: border-box;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .video-url-input:focus {
@@ -1432,9 +1453,9 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem;
-  border: 2px dashed #d1d5db;
+  border: 2px dashed var(--brand-300);
   background: transparent;
-  color: #6b7280;
+  color: var(--text-tertiary);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1445,6 +1466,12 @@ function updateImageCaption(index: number, event: Event) {
   border-color: var(--brand-500);
   color: var(--brand-500);
   background: var(--brand-50);
+}
+
+.add-video-btn:hover .upload-icon,
+.add-video-btn:hover .upload-text,
+.add-video-btn:hover .upload-hint {
+  color: var(--brand-500);
 }
 
 /* Image Upload Styles */
@@ -1475,7 +1502,7 @@ function updateImageCaption(index: number, event: Event) {
   aspect-ratio: 16/9;
   border-radius: 8px;
   overflow: hidden;
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 .image-preview img {
@@ -1519,10 +1546,12 @@ function updateImageCaption(index: number, event: Event) {
 .image-caption-input {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-muted);
   border-radius: 4px;
   font-size: 0.875rem;
   box-sizing: border-box;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .image-caption-input:focus {
@@ -1536,9 +1565,9 @@ function updateImageCaption(index: number, event: Event) {
   align-items: center;
   justify-content: center;
   min-height: 120px;
-  border: 2px dashed #d1d5db;
+  border: 2px dashed var(--brand-300);
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--bg-secondary);
   cursor: pointer;
   transition: all 0.2s;
   grid-column: 1 / -1;
@@ -1554,6 +1583,15 @@ function updateImageCaption(index: number, event: Event) {
   background: var(--brand-50);
 }
 
+.image-upload-area:hover .upload-icon,
+.image-upload-area:hover .upload-text,
+.image-upload-area:hover .upload-hint,
+.image-upload-area.drag-over .upload-icon,
+.image-upload-area.drag-over .upload-text,
+.image-upload-area.drag-over .upload-hint {
+  color: var(--brand-500);
+}
+
 .upload-content {
   display: flex;
   flex-direction: column;
@@ -1567,12 +1605,12 @@ function updateImageCaption(index: number, event: Event) {
 
 .upload-icon {
   font-size: 2rem;
-  color: #9ca3af;
+  color: var(--text-tertiary);
 }
 
 .upload-text {
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
@@ -1580,15 +1618,15 @@ function updateImageCaption(index: number, event: Event) {
 
 .upload-hint {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   word-wrap: break-word;
   overflow-wrap: break-word;
   hyphens: auto;
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-muted);
   border-radius: 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   padding: 0.75rem;
