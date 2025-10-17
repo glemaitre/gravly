@@ -37,7 +37,9 @@ async def seed_authorized_users():
 
     # Load configuration
     try:
-        db_config, storage_config, strava_config, map_config = load_environment_config()
+        db_config, storage_config, strava_config, map_config, server_config = (
+            load_environment_config()
+        )
         logger.info("Configuration loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load configuration: {e}")
