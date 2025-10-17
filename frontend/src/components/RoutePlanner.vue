@@ -383,6 +383,12 @@ const segmentFilters = ref({
 })
 const filtersExpanded = ref(false)
 
+// Segment selection tolerance configuration
+const segmentSelectionTolerance = ref(50) // pixels - adjustable for mobile compatibility
+
+// Detect if device is mobile for tolerance adjustment
+const isMobile = ref(false)
+
 // Drag and drop for segment reordering
 const draggedIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
@@ -2012,6 +2018,136 @@ async function loadSegmentGPXData(segment: TrackResponse) {
   }
 }
 
+// Mobile detection and tolerance adjustment
+function detectMobileDevice() {
+  const userAgent = navigator.userAgent.toLowerCase()
+  const isMobileDevice =
+    /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent)
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+
+  isMobile.value = isMobileDevice || isTouchDevice
+
+  // Adjust tolerance based on device type
+  if (isMobile.value) {
+    segmentSelectionTolerance.value = 80 // Larger tolerance for mobile/touch devices
+  } else {
+    segmentSelectionTolerance.value = 50 // Standard tolerance for desktop
+  }
+}
+
+/**
+ * Find the nearest segment within tolerance distance from a click point
+ * @param clickPoint - The clicked point on the map
+ * @param tolerancePixels - Maximum distance in pixels to consider (default: SEGMENT_SELECTION_TOLERANCE)
+ * @returns The nearest segment within tolerance, or null if none found
+ */
+function findNearestSegmentWithinTolerance(
+  clickPoint: any,
+  tolerancePixels: number = segmentSelectionTolerance.value
+): { segment: TrackResponse; distance: number } | null {
+  if (!map || segmentMapLayers.size === 0) {
+    return null
+  }
+
+  let nearestSegment: TrackResponse | null = null
+  let minDistance = Infinity
+
+  // Convert pixel tolerance to map distance
+  const toleranceMeters = map.distance(
+    clickPoint,
+    map.containerPointToLatLng(
+      map.latLngToContainerPoint(clickPoint).add([tolerancePixels, 0])
+    )
+  )
+
+  // Check each segment's polyline for proximity
+  for (const [segmentId, layerData] of segmentMapLayers) {
+    if (!layerData.polyline) continue
+
+    // Get the segment data
+    const segment = availableSegments.value.find(
+      (s: TrackResponse) => s.id.toString() === segmentId
+    )
+    if (!segment) continue
+
+    // Calculate distance from click point to polyline
+    const distance = calculateDistanceToPolyline(clickPoint, layerData.polyline)
+
+    if (distance <= toleranceMeters && distance < minDistance) {
+      minDistance = distance
+      nearestSegment = segment
+    }
+  }
+
+  return nearestSegment ? { segment: nearestSegment, distance: minDistance } : null
+}
+
+/**
+ * Calculate the distance from a point to a polyline
+ * @param point - The point to measure from
+ * @param polyline - The polyline to measure to
+ * @returns Distance in meters
+ */
+function calculateDistanceToPolyline(point: any, polyline: any): number {
+  const latLngs = polyline.getLatLngs() as any[]
+  let minDistance = Infinity
+
+  for (let i = 0; i < latLngs.length - 1; i++) {
+    const segmentStart = latLngs[i]
+    const segmentEnd = latLngs[i + 1]
+
+    // Calculate distance from point to line segment
+    const distance = pointToLineDistance(point, segmentStart, segmentEnd)
+    minDistance = Math.min(minDistance, distance)
+  }
+
+  return minDistance
+}
+
+/**
+ * Calculate the distance from a point to a line segment
+ * @param point - The point
+ * @param lineStart - Start of the line segment
+ * @param lineEnd - End of the line segment
+ * @returns Distance in meters
+ */
+function pointToLineDistance(point: any, lineStart: any, lineEnd: any): number {
+  // Convert to meters for calculation
+  const A = point.distanceTo(lineStart)
+  const C = lineStart.distanceTo(lineEnd)
+
+  // If the line segment has zero length
+  if (C === 0) {
+    return A
+  }
+
+  // Calculate the perpendicular distance using the formula for distance from point to line
+  // This uses the cross product method
+  const t = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.lat - lineStart.lat) * (lineEnd.lat - lineStart.lat) +
+        (point.lng - lineStart.lng) * (lineEnd.lng - lineStart.lng)) /
+        (C * C)
+    )
+  )
+
+  const projection = {
+    lat: lineStart.lat + t * (lineEnd.lat - lineStart.lat),
+    lng: lineStart.lng + t * (lineEnd.lng - lineStart.lng),
+    distanceTo: function (other: any) {
+      return (
+        Math.sqrt(
+          Math.pow(this.lat - other.lat, 2) + Math.pow(this.lng - other.lng, 2)
+        ) * 111000
+      ) // Rough conversion to meters
+    }
+  }
+
+  return point.distanceTo(projection)
+}
+
 function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
   if (!segment.gpx_xml_data || !map) {
     return
@@ -2418,8 +2554,26 @@ function initializeMap() {
       // In guided mode, only allow setting start/end waypoints if they're not both set
       if (!startWaypoint.value || !endWaypoint.value) {
         addStartEndWaypoint(e.latlng)
+      } else {
+        // If both start and end are set, check for nearby segments with tolerance
+        const nearestSegment = findNearestSegmentWithinTolerance(e.latlng)
+        if (nearestSegment) {
+          // Show popup for the nearest segment
+          const segmentId = nearestSegment.segment.id.toString()
+          const layerData = segmentMapLayers.get(segmentId)
+          if (layerData?.popup) {
+            // Close any currently open popup
+            if (currentOpenPopup.value && currentOpenPopup.value !== layerData.popup) {
+              map.closePopup(currentOpenPopup.value)
+            }
+
+            // Show this popup manually
+            layerData.popup.setLatLng(e.latlng).openOn(map)
+            currentOpenPopup.value = layerData.popup
+            currentOpenPopupSegmentId.value = nearestSegment.segment.id
+          }
+        }
       }
-      // If both start and end are set, clicks are ignored (for segment selection)
     }
   })
 
@@ -3433,6 +3587,9 @@ watch(
 onMounted(async () => {
   await loadAuthState()
   initializeMap()
+
+  // Detect mobile device and adjust tolerance
+  detectMobileDevice()
 
   // Check if banner was dismissed
   const dismissed = localStorage.getItem('routePlanner_infoBannerDismissed')

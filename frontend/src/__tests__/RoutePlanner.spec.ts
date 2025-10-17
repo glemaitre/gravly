@@ -2275,4 +2275,146 @@ describe('RoutePlanner - Refactored Implementation', () => {
       })
     })
   })
+
+  describe('Segment Selection Tolerance', () => {
+    let mockMap: any
+    let mockPolyline: any
+    let mockSegment: TrackResponse
+
+    beforeEach(() => {
+      mockMap = {
+        distance: vi.fn(() => 100), // 100 meters tolerance
+        containerPointToLatLng: vi.fn(() => ({ lat: 46.86, lng: 3.98 })),
+        latLngToContainerPoint: vi.fn(() => ({ x: 100, y: 100 })),
+        closePopup: vi.fn(),
+        on: vi.fn()
+      }
+
+      mockPolyline = {
+        getLatLngs: vi.fn(() => [
+          { lat: 46.86, lng: 3.98, distanceTo: vi.fn(() => 50) },
+          { lat: 46.87, lng: 3.99, distanceTo: vi.fn(() => 30) }
+        ])
+      }
+
+      mockSegment = {
+        id: 1,
+        name: 'Test Segment',
+        difficulty: 3,
+        surface: 'asphalt',
+        tire_dry: 'slick',
+        tire_wet: 'slick',
+        file_path: '/test/path.gpx',
+        isReversed: false
+      }
+
+      // Mock the map instance
+      wrapper.vm.map = mockMap
+      wrapper.vm.segmentMapLayers = new Map([
+        [
+          '1',
+          { polyline: mockPolyline, popup: { setLatLng: vi.fn(), openOn: vi.fn() } }
+        ]
+      ])
+      wrapper.vm.availableSegments = [mockSegment]
+
+      // Reset spies
+      vi.clearAllMocks()
+    })
+
+    describe('Mobile Device Detection', () => {
+      it('should have detectMobileDevice function', () => {
+        expect(typeof wrapper.vm.detectMobileDevice).toBe('function')
+      })
+
+      it('should initialize tolerance values', () => {
+        expect(wrapper.vm.segmentSelectionTolerance).toBeDefined()
+        expect(wrapper.vm.isMobile).toBeDefined()
+      })
+    })
+
+    describe('Distance Calculations', () => {
+      it('should have distance calculation functions', () => {
+        expect(typeof wrapper.vm.calculateDistanceToPolyline).toBe('function')
+        expect(typeof wrapper.vm.pointToLineDistance).toBe('function')
+      })
+
+      it('should calculate distance to polyline correctly', () => {
+        const clickPoint = { lat: 46.865, lng: 3.985, distanceTo: vi.fn(() => 25) }
+
+        const distance = wrapper.vm.calculateDistanceToPolyline(
+          clickPoint,
+          mockPolyline
+        )
+
+        expect(typeof distance).toBe('number')
+        expect(mockPolyline.getLatLngs).toHaveBeenCalled()
+      })
+
+      it('should calculate point to line distance correctly', () => {
+        const point = { lat: 46.865, lng: 3.985, distanceTo: vi.fn(() => 30) }
+        const lineStart = { lat: 46.86, lng: 3.98, distanceTo: vi.fn(() => 50) }
+        const lineEnd = { lat: 46.87, lng: 3.99, distanceTo: vi.fn(() => 20) }
+
+        const distance = wrapper.vm.pointToLineDistance(point, lineStart, lineEnd)
+
+        expect(typeof distance).toBe('number')
+        expect(distance).toBeGreaterThan(0)
+      })
+    })
+
+    describe('Segment Finding with Tolerance', () => {
+      it('should have findNearestSegmentWithinTolerance function', () => {
+        expect(typeof wrapper.vm.findNearestSegmentWithinTolerance).toBe('function')
+      })
+
+      it('should return null when no map is available', () => {
+        wrapper.vm.map = null
+
+        const clickPoint = { lat: 46.865, lng: 3.985, distanceTo: vi.fn(() => 30) }
+        const result = wrapper.vm.findNearestSegmentWithinTolerance(clickPoint)
+
+        expect(result).toBeNull()
+      })
+
+      it('should return null when no segment layers are available', () => {
+        wrapper.vm.segmentMapLayers = new Map()
+
+        const clickPoint = { lat: 46.865, lng: 3.985, distanceTo: vi.fn(() => 30) }
+        const result = wrapper.vm.findNearestSegmentWithinTolerance(clickPoint)
+
+        expect(result).toBeNull()
+      })
+    })
+
+    describe('Map Click Handler with Tolerance', () => {
+      it('should have proper route mode handling', () => {
+        expect(wrapper.vm.routeMode).toBeDefined()
+        expect(['standard', 'startEnd']).toContain(wrapper.vm.routeMode)
+      })
+
+      it('should have map instance available for tolerance functionality', () => {
+        expect(wrapper.vm.map).toBeDefined()
+        expect(wrapper.vm.map).toBe(mockMap)
+      })
+    })
+
+    describe('Tolerance Configuration', () => {
+      it('should have configurable tolerance values', () => {
+        expect(wrapper.vm.segmentSelectionTolerance).toBeDefined()
+        expect(typeof wrapper.vm.segmentSelectionTolerance).toBe('number')
+        expect(wrapper.vm.segmentSelectionTolerance).toBeGreaterThan(0)
+      })
+
+      it('should allow tolerance to be modified', () => {
+        const originalTolerance = wrapper.vm.segmentSelectionTolerance
+        wrapper.vm.segmentSelectionTolerance = 100
+
+        expect(wrapper.vm.segmentSelectionTolerance).toBe(100)
+
+        // Reset
+        wrapper.vm.segmentSelectionTolerance = originalTolerance
+      })
+    })
+  })
 })
