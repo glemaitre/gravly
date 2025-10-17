@@ -73,12 +73,14 @@
               :loading="loading"
               :show-filters="showFilters"
               :get-distance-from-center="getSegmentDistanceFromCenter"
+              :selected-segment-id="selectedSegmentId"
               @segment-click="onSegmentClick"
               @segment-hover="onSegmentHover"
               @segment-leave="onSegmentLeave"
               @track-type-change="onTrackTypeChange"
               @close-filters="toggleFilters"
               @filters-changed="onFiltersChanged"
+              @navigate-to-detail="onNavigateToDetail"
             />
           </div>
         </div>
@@ -153,6 +155,10 @@ const loadingGPXData = new Set<number>()
 
 // Hover rectangle for card hover effect
 let hoverRectangle: any = null
+
+// Selection state
+const selectedSegmentId = ref<number | null>(null)
+let selectedRectangle: any = null
 
 // Resize handler for cleanup
 let resizeHandler: (() => void) | null = null
@@ -828,9 +834,18 @@ function cleanupMap() {
       hoverRectangle = null
     }
 
+    // Clear selected rectangle before removing map
+    if (selectedRectangle) {
+      map.removeLayer(selectedRectangle)
+      selectedRectangle = null
+    }
+
     map.remove()
     map = null
   }
+
+  // Clear selection state
+  selectedSegmentId.value = null
 
   // Clear GPX data cache
   gpxDataCache.clear()
@@ -877,6 +892,62 @@ onMounted(() => {
 
 // Handle segment click from the segment list or map
 function onSegmentClick(segment: TrackResponse) {
+  if (!map) return
+
+  // If clicking the same segment, deselect it
+  if (selectedSegmentId.value === segment.id) {
+    deselectSegment()
+  } else {
+    // Select the new segment
+    selectSegment(segment)
+  }
+}
+
+// Select a segment
+function selectSegment(segment: TrackResponse) {
+  if (!map) return
+
+  // Deselect any previously selected segment
+  deselectSegment()
+
+  // Set the selected segment
+  selectedSegmentId.value = segment.id
+
+  // Create a persistent selected rectangle
+  const segmentBounds = L.latLngBounds(
+    [segment.bound_south, segment.bound_west],
+    [segment.bound_north, segment.bound_east]
+  )
+
+  selectedRectangle = L.rectangle(segmentBounds, {
+    color: '#ff6b35',
+    weight: 4,
+    fillOpacity: 0.2,
+    opacity: 0.8
+  }).addTo(map)
+
+  // Bring to front to ensure it's visible
+  if (selectedRectangle && selectedRectangle.bringToFront) {
+    selectedRectangle.bringToFront()
+  }
+}
+
+// Deselect the current segment
+function deselectSegment() {
+  if (!map) return
+
+  // Clear selection state
+  selectedSegmentId.value = null
+
+  // Remove the selected rectangle
+  if (selectedRectangle) {
+    map.removeLayer(selectedRectangle)
+    selectedRectangle = null
+  }
+}
+
+// Handle navigate to detail button click
+function onNavigateToDetail(segment: TrackResponse) {
   // Save current map state before navigating
   if (map) {
     const mapState = extractMapState(map)
@@ -893,6 +964,11 @@ function onSegmentClick(segment: TrackResponse) {
 function onSegmentHover(segment: TrackResponse) {
   if (!map) return
 
+  // Don't show hover rectangle if this segment is already selected
+  if (selectedSegmentId.value === segment.id) {
+    return
+  }
+
   // Remove any existing hover rectangle
   if (hoverRectangle) {
     map.removeLayer(hoverRectangle)
@@ -905,7 +981,7 @@ function onSegmentHover(segment: TrackResponse) {
     [segment.bound_north, segment.bound_east]
   )
 
-  // Draw a temporary hover rectangle
+  // Draw a temporary hover rectangle with dashed border
   hoverRectangle = L.rectangle(segmentBounds, {
     color: '#ff6b35',
     weight: 4,
@@ -915,7 +991,9 @@ function onSegmentHover(segment: TrackResponse) {
   }).addTo(map)
 
   // Bring to front to ensure it's visible
-  hoverRectangle.bringToFront()
+  if (hoverRectangle && hoverRectangle.bringToFront) {
+    hoverRectangle.bringToFront()
+  }
 }
 
 // Handle segment leave from the segment list

@@ -356,39 +356,6 @@ describe('SegmentCard', () => {
     })
   })
 
-  describe('Distance from Center', () => {
-    it('should display distance from center when provided', () => {
-      const segment = createMockSegment(1, 'Test Segment')
-      const wrapper = mount(SegmentCard, {
-        props: { segment, stats: createMockStats(), distanceFromCenter: 1500 }
-      })
-
-      const distanceElement = wrapper.find('.segment-distance')
-      expect(distanceElement.exists()).toBe(true)
-      expect(distanceElement.text()).toContain('to📍')
-    })
-
-    it('should not display distance from center when not provided', () => {
-      const segment = createMockSegment(1, 'Test Segment')
-      const wrapper = mount(SegmentCard, {
-        props: { segment, stats: createMockStats() }
-      })
-
-      const distanceElement = wrapper.find('.segment-distance')
-      expect(distanceElement.exists()).toBe(false)
-    })
-
-    it('should have proper title attribute', () => {
-      const segment = createMockSegment(1, 'Test Segment')
-      const wrapper = mount(SegmentCard, {
-        props: { segment, stats: createMockStats(), distanceFromCenter: 1500 }
-      })
-
-      const distanceElement = wrapper.find('.segment-distance')
-      expect(distanceElement.attributes('title')).toBe('Distance from map center')
-    })
-  })
-
   describe('Event Handling', () => {
     it('should emit click event when card is clicked', async () => {
       const segment = createMockSegment(1, 'Test Segment')
@@ -537,6 +504,211 @@ describe('SegmentCard', () => {
       })
 
       expect(wrapper.find('.segment-card').exists()).toBe(true)
+    })
+  })
+
+  describe('Context-based Button Display', () => {
+    it('displays add segment button for route-planner context', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'route-planner'
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const navigateButton = wrapper.find('.navigate-btn')
+
+      expect(addButton.exists()).toBe(true)
+      expect(navigateButton.exists()).toBe(false)
+      expect(addButton.find('i').classes()).toContain('fa-plus')
+    })
+
+    it('displays navigate button for explorer context', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'explorer'
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const navigateButton = wrapper.find('.navigate-btn')
+
+      expect(addButton.exists()).toBe(false)
+      expect(navigateButton.exists()).toBe(true)
+      expect(navigateButton.find('i').classes()).toContain('fa-up-right-from-square')
+    })
+
+    it('displays no button when no context is provided', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const navigateButton = wrapper.find('.navigate-btn')
+
+      expect(addButton.exists()).toBe(false)
+      expect(navigateButton.exists()).toBe(false)
+    })
+
+    it('displays no button for unknown context', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'unknown' as any
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const navigateButton = wrapper.find('.navigate-btn')
+
+      expect(addButton.exists()).toBe(false)
+      expect(navigateButton.exists()).toBe(false)
+    })
+  })
+
+  describe('Event Emissions', () => {
+    it('emits add-segment event when add button is clicked in route-planner context', async () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'route-planner'
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      await addButton.trigger('click')
+
+      expect(wrapper.emitted('add-segment')).toBeTruthy()
+      expect(wrapper.emitted('add-segment')?.[0]).toEqual([segment])
+    })
+
+    it('emits navigate-to-detail event when navigate button is clicked in explorer context', async () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'explorer'
+        }
+      })
+
+      const navigateButton = wrapper.find('.navigate-btn')
+      await navigateButton.trigger('click')
+
+      expect(wrapper.emitted('navigate-to-detail')).toBeTruthy()
+      expect(wrapper.emitted('navigate-to-detail')?.[0]).toEqual([segment])
+    })
+
+    it('prevents event propagation on button clicks', async () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'route-planner'
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      await addButton.trigger('click')
+
+      // The click event should not bubble up to the card
+      expect(wrapper.emitted('click')).toBeFalsy()
+    })
+  })
+
+  describe('Regression Prevention', () => {
+    it('does not display segment-distance element', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          distanceFromCenter: 1000
+        }
+      })
+
+      const distanceElement = wrapper.find('.segment-distance')
+      expect(distanceElement.exists()).toBe(false)
+    })
+
+    it('maintains original click behavior on card', async () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'explorer'
+        }
+      })
+
+      const card = wrapper.find('.segment-card')
+      await card.trigger('click')
+
+      expect(wrapper.emitted('click')).toBeTruthy()
+      expect(wrapper.emitted('click')?.[0]).toEqual([segment])
+    })
+
+    it('maintains hover behavior', async () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          context: 'explorer'
+        }
+      })
+
+      const card = wrapper.find('.segment-card')
+      await card.trigger('mouseenter')
+      await card.trigger('mouseleave')
+
+      expect(wrapper.emitted('mouseenter')).toBeTruthy()
+      expect(wrapper.emitted('mouseleave')).toBeTruthy()
+    })
+  })
+
+  describe('Selection State', () => {
+    it('applies selected class when isSelected is true', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          isSelected: true
+        }
+      })
+
+      const card = wrapper.find('.segment-card')
+      expect(card.classes()).toContain('selected')
+    })
+
+    it('does not apply selected class when isSelected is false', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment,
+          isSelected: false
+        }
+      })
+
+      const card = wrapper.find('.segment-card')
+      expect(card.classes()).not.toContain('selected')
+    })
+
+    it('does not apply selected class when isSelected is undefined', () => {
+      const segment = createMockSegment(1, 'Test Segment')
+      const wrapper = mount(SegmentCard, {
+        props: {
+          segment
+        }
+      })
+
+      const card = wrapper.find('.segment-card')
+      expect(card.classes()).not.toContain('selected')
     })
   })
 })

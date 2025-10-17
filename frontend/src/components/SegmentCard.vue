@@ -1,6 +1,7 @@
 <template>
   <div
     class="segment-card"
+    :class="{ selected: isSelected }"
     @click="emit('click', segment)"
     @mouseenter="emit('mouseenter', segment)"
     @mouseleave="emit('mouseleave', segment)"
@@ -9,13 +10,25 @@
       <h4 class="segment-name" :class="{ hovered: isHovered }">
         {{ segment.name }}
       </h4>
+      <!-- Add segment button for route planner context -->
       <button
+        v-if="context === 'route-planner'"
         type="button"
         class="add-segment-btn"
         @click.stop="emit('add-segment', segment)"
         :title="'Add to selected segments'"
       >
         <i class="fa-solid fa-plus"></i>
+      </button>
+      <!-- Navigate to detail button for explorer context -->
+      <button
+        v-else-if="context === 'explorer'"
+        type="button"
+        class="navigate-btn"
+        @click.stop="emit('navigate-to-detail', segment)"
+        :title="'View segment details'"
+      >
+        <i class="fa-solid fa-up-right-from-square"></i>
       </button>
     </div>
 
@@ -100,22 +113,12 @@
         </div>
       </div>
     </div>
-
-    <!-- Distance from center indicator -->
-    <div
-      v-if="distanceFromCenter !== undefined"
-      class="segment-distance"
-      title="Distance from map center"
-    >
-      {{ formatDistanceFromCenter(distanceFromCenter) }} to📍
-    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
 import type { TrackResponse } from '../types'
-import { formatDistance as formatDistanceFromCenter } from '../utils/distance'
 
 // Types
 interface SegmentStats {
@@ -129,7 +132,9 @@ const props = defineProps<{
   segment: TrackResponse
   stats?: SegmentStats | null
   isHovered?: boolean
+  isSelected?: boolean
   distanceFromCenter?: number
+  context?: 'explorer' | 'route-planner' // New prop to control button behavior
 }>()
 
 // Emits
@@ -138,6 +143,7 @@ const emit = defineEmits<{
   mouseenter: [segment: TrackResponse]
   mouseleave: [segment: TrackResponse]
   'add-segment': [segment: TrackResponse]
+  'navigate-to-detail': [segment: TrackResponse]
 }>()
 
 // State for surface type navigation
@@ -203,6 +209,12 @@ function formatTireType(tireType: string): string {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
   border-color: rgba(var(--brand-primary-rgb), 0.3);
+}
+
+.segment-card.selected {
+  border-color: var(--brand-primary);
+  box-shadow: 0 4px 12px rgba(var(--brand-primary-rgb), 0.3);
+  background: rgba(var(--brand-primary-rgb), 0.05);
 }
 
 .segment-card-header {
@@ -397,18 +409,6 @@ function formatTireType(tireType: string): string {
   font-weight: 500;
 }
 
-.segment-distance {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(var(--brand-primary-rgb), 0.1);
-  color: var(--brand-primary);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-}
-
 .add-segment-btn {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
@@ -432,6 +432,32 @@ function formatTireType(tireType: string): string {
 }
 
 .add-segment-btn i {
+  font-size: 0.7rem;
+}
+
+.navigate-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.navigate-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+.navigate-btn i {
   font-size: 0.7rem;
 }
 </style>

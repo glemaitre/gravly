@@ -1010,6 +1010,151 @@ describe('Explorer', () => {
     })
   })
 
+  describe('Segment Selection Behavior', () => {
+    const mockSegment1 = {
+      id: 1,
+      name: 'Test Segment 1',
+      track_type: 'segment',
+      file_path: 'test1.gpx',
+      bound_north: 45.8,
+      bound_south: 45.7,
+      bound_east: 4.9,
+      bound_west: 4.8,
+      difficulty_level: 3,
+      surface_type: ['forest-trail'],
+      tire_dry: 'semi-slick',
+      tire_wet: 'knobs',
+      comments: 'Test 1'
+    }
+
+    const mockSegment2 = {
+      id: 2,
+      name: 'Test Segment 2',
+      track_type: 'segment',
+      file_path: 'test2.gpx',
+      bound_north: 45.9,
+      bound_south: 45.8,
+      bound_east: 5.0,
+      bound_west: 4.9,
+      difficulty_level: 4,
+      surface_type: ['road'],
+      tire_dry: 'slick',
+      tire_wet: 'semi-slick',
+      comments: 'Test 2'
+    }
+
+    beforeEach(() => {
+      wrapper = mountWithRouter(Explorer)
+      // Mock the map instance
+      wrapper.vm.map = mockMapInstance
+    })
+
+    it('should select a segment when clicked', async () => {
+      // Initially no segment should be selected
+      expect(wrapper.vm.selectedSegmentId).toBeNull()
+
+      // Click on a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+
+      // Verify the segment is selected
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+    })
+
+    it('should deselect a segment when clicked again', async () => {
+      // First select a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+
+      // Click the same segment again
+      wrapper.vm.onSegmentClick(mockSegment1)
+
+      // Verify the segment is deselected
+      expect(wrapper.vm.selectedSegmentId).toBeNull()
+    })
+
+    it('should deselect previous segment when selecting a new one', async () => {
+      // Select first segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+
+      // Select second segment
+      wrapper.vm.onSegmentClick(mockSegment2)
+
+      // Verify only the second segment is selected
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment2.id)
+    })
+
+    it('should create selected rectangle when segment is selected', async () => {
+      // Select a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+
+      // Verify the segment is selected
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+      expect(wrapper.vm.selectedRectangle).toBeDefined()
+    })
+
+    it('should remove selected rectangle when segment is deselected', async () => {
+      // Select a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+      expect(wrapper.vm.selectedRectangle).toBeDefined()
+
+      // Deselect the segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+
+      // Verify selection is cleared
+      expect(wrapper.vm.selectedSegmentId).toBeNull()
+      expect(wrapper.vm.selectedRectangle).toBeNull()
+    })
+
+    it('should not show hover rectangle when segment is selected', async () => {
+      // Select a segment first
+      wrapper.vm.onSegmentClick(mockSegment1)
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+
+      // Try to hover over the selected segment
+      wrapper.vm.onSegmentHover(mockSegment1)
+
+      // Verify hover rectangle was not created (should be null since segment is selected)
+      expect(wrapper.vm.hoverRectangle).toBeNull()
+    })
+
+    it('should show hover rectangle when segment is not selected', async () => {
+      // Hover over a non-selected segment
+      wrapper.vm.onSegmentHover(mockSegment1)
+
+      // Verify hover rectangle was created
+      expect(wrapper.vm.hoverRectangle).toBeDefined()
+    })
+
+    it('should clear selection state on cleanup', async () => {
+      // Select a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+      expect(wrapper.vm.selectedSegmentId).toBe(mockSegment1.id)
+
+      // Call cleanup
+      wrapper.vm.cleanupMap()
+
+      // Verify selection state is cleared
+      expect(wrapper.vm.selectedSegmentId).toBeNull()
+    })
+
+    it('should pass selectedSegmentId to SegmentList', async () => {
+      // Select a segment
+      wrapper.vm.onSegmentClick(mockSegment1)
+
+      // Wait for reactivity to update
+      await wrapper.vm.$nextTick()
+
+      // Get the SegmentList component
+      const segmentList = wrapper.findComponent({ name: 'SegmentList' })
+      expect(segmentList.exists()).toBe(true)
+
+      // Verify selectedSegmentId is passed
+      expect(segmentList.props('selectedSegmentId')).toBe(mockSegment1.id)
+    })
+  })
+
   describe('Map Bounds and Search Functionality', () => {
     it('should initialize with default map bounds', () => {
       wrapper = mountWithRouter(Explorer)

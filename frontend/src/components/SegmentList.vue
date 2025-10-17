@@ -66,11 +66,14 @@
             :segment="segment"
             :stats="segmentStats.get(segment.id)"
             :is-hovered="hoveredSegmentId === segment.id"
+            :is-selected="selectedSegmentId === segment.id"
             :distance-from-center="getDistanceFromCenter?.(segment)"
+            context="explorer"
             @click="onSegmentClick"
             @mouseenter="onSegmentHover"
             @mouseleave="onSegmentLeave"
             @add-segment="onAddSegment"
+            @navigate-to-detail="onNavigateToDetail"
           />
 
           <!-- Show More Button -->
@@ -140,6 +143,7 @@ interface Props {
   showFilters?: boolean
   // eslint-disable-next-line no-unused-vars
   getDistanceFromCenter?: (segment: TrackResponse) => number
+  selectedSegmentId?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -154,6 +158,7 @@ const emit = defineEmits<{
   closeFilters: []
   'filters-changed': [hasActiveFilters: boolean]
   addSegment: [segment: TrackResponse]
+  navigateToDetail: [segment: TrackResponse] // New emit for navigation
 }>()
 
 // Refs for segment stats
@@ -413,6 +418,10 @@ function onSegmentClick(segment: TrackResponse) {
 
 function onAddSegment(segment: TrackResponse) {
   emit('addSegment', segment)
+}
+
+function onNavigateToDetail(segment: TrackResponse) {
+  emit('navigateToDetail', segment)
 }
 
 function onSegmentHover(segment: TrackResponse) {
