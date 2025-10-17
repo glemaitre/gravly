@@ -1594,18 +1594,7 @@ def test_search_segments_endpoint_success(client):
 
     # Should have data lines and a [DONE] marker
     data_lines = [line for line in lines if line.startswith("data: ")]
-    assert len(data_lines) >= 2  # At least one segment count + [DONE]
-
-    # Find the count line (it comes after track data)
-    count_line = None
-    for line in data_lines:
-        if line.startswith("data: ") and line[6:].isdigit():
-            count_line = line
-            break
-
-    assert count_line is not None, "Should have a count line"
-    segment_count = int(count_line[6:])  # Remove 'data: '
-    assert segment_count >= 0  # Should find 0 or more segments
+    assert len(data_lines) >= 1  # At least [DONE] marker
 
     # Last line should be [DONE]
     assert data_lines[-1] == "data: [DONE]"
@@ -1626,16 +1615,10 @@ def test_search_segments_endpoint_no_results(client):
     content = response.text
     lines = content.strip().split("\n")
 
-    # Should have only count and [DONE]
+    # Should have only [DONE]
     data_lines = [line for line in lines if line.startswith("data: ")]
-    assert len(data_lines) == 2
-
-    # First line should be 0 segments
-    count_line = data_lines[0]
-    assert count_line == "data: 0"
-
-    # Last line should be [DONE]
-    assert data_lines[-1] == "data: [DONE]"
+    assert len(data_lines) == 1
+    assert data_lines[0] == "data: [DONE]"
 
 
 def test_search_segments_endpoint_missing_parameters(client):
@@ -1708,32 +1691,18 @@ def test_search_segments_endpoint_streaming_format(client):
     # Find data lines
     data_lines = [line for line in lines if line.startswith("data: ")]
 
-    # Should have at least: count + [DONE]
-    assert len(data_lines) >= 2
-
-    # Find the count line (it comes after track data)
-    count_line = None
-    for line in data_lines:
-        if line.startswith("data: ") and line[6:].isdigit():
-            count_line = line
-            break
-
-    assert count_line is not None, "Should have a count line"
-    segment_count = int(count_line[6:])  # Remove 'data: '
+    # Should have at least: [DONE]
+    assert len(data_lines) >= 1
 
     # Last line should be [DONE]
     assert data_lines[-1] == "data: [DONE]"
 
     # If there are segments, check that segment data is valid JSON
-    if segment_count > 0:
-        # Filter out count line and [DONE] from segment data
+    if len(data_lines) > 1:  # More than just [DONE]
+        # Filter out [DONE] from segment data
         segment_data_lines = []
         for line in data_lines:
-            if (
-                line.startswith("data: ")
-                and not line[6:].isdigit()
-                and line != "data: [DONE]"
-            ):
+            if line.startswith("data: ") and line != "data: [DONE]":
                 segment_data_lines.append(line)
 
         for line in segment_data_lines:
@@ -1780,33 +1749,18 @@ def test_search_segments_endpoint_gpx_load_error(client, dependencies_module):
     # Find data lines
     data_lines = [line for line in lines if line.startswith("data: ")]
 
-    # Should have: count + segments + [DONE]
-    assert len(data_lines) >= 2
-
-    # Find the count line (it comes after track data)
-    count_line = None
-    for line in data_lines:
-        if line.startswith("data: ") and line[6:].isdigit():
-            count_line = line
-            break
-
-    assert count_line is not None, "Should have a count line"
-    segment_count = int(count_line[6:])  # Remove 'data: '
-    assert segment_count >= 0
+    # Should have: segments + [DONE]
+    assert len(data_lines) >= 1
 
     # Last line should be [DONE]
     assert data_lines[-1] == "data: [DONE]"
 
     # Verify that segments don't contain GPX data (optimization)
-    if segment_count > 0:
-        # Filter out count line and [DONE] from segment data
+    if len(data_lines) > 1:  # More than just [DONE]
+        # Filter out [DONE] from segment data
         segment_data_lines = []
         for line in data_lines:
-            if (
-                line.startswith("data: ")
-                and not line[6:].isdigit()
-                and line != "data: [DONE]"
-            ):
+            if line.startswith("data: ") and line != "data: [DONE]":
                 segment_data_lines.append(line)
 
         for line in segment_data_lines:
@@ -2786,20 +2740,16 @@ def test_search_segments_with_non_finite_bounds(client):
             if line.startswith("data: ") and not line.startswith("data: [DONE]")
         ]
 
-        # Should have at least the count line
-        assert len(data_lines) >= 1
-
-        # Parse the segment data (skip the count line)
+        # Parse the segment data
         segment_data_lines = []
-        for line in data_lines[1:]:  # Skip first line which is count
-            if line != "data: [DONE]":
-                try:
-                    import json
+        for line in data_lines:
+            try:
+                import json
 
-                    segment_data = json.loads(line[6:])  # Remove 'data: ' prefix
-                    segment_data_lines.append(segment_data)
-                except json.JSONDecodeError:
-                    continue
+                segment_data = json.loads(line[6:])  # Remove 'data: ' prefix
+                segment_data_lines.append(segment_data)
+            except json.JSONDecodeError:
+                continue
 
         # Should only have the valid track (invalid one should be skipped)
         assert len(segment_data_lines) == 1
@@ -8660,20 +8610,12 @@ def test_search_routes_without_auth_returns_authorized_users_routes(client):
     content = response.text
     lines = content.strip().split("\n")
 
-    # Should have count and [DONE] at minimum
+    # Should have [DONE] at minimum
     data_lines = [line for line in lines if line.startswith("data: ")]
-    assert len(data_lines) >= 2
+    assert len(data_lines) >= 1
 
     # Last line should be [DONE]
     assert data_lines[-1] == "data: [DONE]"
-
-    # First line should be the count
-    # (could be 0 if no authorized users have routes in this area)
-    count_line = data_lines[0]
-    assert count_line.startswith("data: ")
-    count = int(count_line.replace("data: ", ""))
-    # Could be 0 if no routes from authorized users in this area
-    assert count >= 0
 
 
 def test_search_routes_with_auth_returns_results(client):
@@ -8800,16 +8742,9 @@ def test_search_routes_no_authorized_users_in_area_returns_empty(client):
     content = response.text
     lines = content.strip().split("\n")
 
-    # Should have count and [DONE]
+    # Should have [DONE]
     data_lines = [line for line in lines if line.startswith("data: ")]
-    assert len(data_lines) >= 2
-
-    # First line should be the count (likely 0 in middle of ocean)
-    count_line = data_lines[0]
-    assert count_line.startswith("data: ")
-    count = int(count_line.replace("data: ", ""))
-    # Should be 0 or very low in this remote area
-    assert count >= 0
+    assert len(data_lines) >= 1
 
     # Last line should be [DONE]
     assert data_lines[-1] == "data: [DONE]"

@@ -452,8 +452,6 @@ def create_segments_router(
                     tracks_with_distance = result.all()
                     tracks = [track for track, _ in tracks_with_distance]
 
-                    yield f"data: {len(tracks)}\n\n"
-
                     for track in tracks:
                         # Validate bounds to ensure they are finite before returning
                         bounds = {

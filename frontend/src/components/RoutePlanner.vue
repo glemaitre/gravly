@@ -1901,6 +1901,7 @@ async function loadSegmentsInBounds() {
 
           try {
             const segment: TrackResponse = JSON.parse(jsonData)
+            console.log('segment', segment)
 
             // Validate segment has required properties
             if (!segment.id) {
