@@ -406,6 +406,7 @@ const isPanning = ref(false)
 const isDraggingRoute = ref(false)
 const draggedWaypointIndex = ref<number | null>(null)
 const currentOpenPopup = ref<any>(null)
+const currentOpenPopupSegmentId = ref<number | null>(null)
 let tempDragMarker: any = null
 let justCompletedRouteDrag = false
 let dragStartPosition: { lat: number; lng: number } | null = null
@@ -1846,6 +1847,30 @@ function segmentPassesFilters(segment: TrackResponse): boolean {
   return true
 }
 
+function restoreOpenPopup() {
+  // Check if there was a popup open before redrawing
+  if (currentOpenPopupSegmentId.value && map) {
+    const segmentId = currentOpenPopupSegmentId.value
+    const segment = availableSegments.value.find((s) => s.id === segmentId)
+
+    if (segment) {
+      // Find the corresponding layer data
+      const segmentIdStr = segmentId.toString()
+      const layerData = segmentMapLayers.get(segmentIdStr)
+
+      if (layerData?.polyline) {
+        // Open the popup for this segment
+        layerData.polyline.openPopup()
+        currentOpenPopup.value = layerData.popup
+      }
+    } else {
+      // Segment no longer exists, clear tracking variables
+      currentOpenPopup.value = null
+      currentOpenPopupSegmentId.value = null
+    }
+  }
+}
+
 async function loadSegmentsInBounds() {
   if (!map || routeMode.value !== 'startEnd' || isSearchingSegments.value) {
     return
@@ -1927,6 +1952,12 @@ async function loadSegmentsInBounds() {
     console.error('Error loading segments:', error)
   } finally {
     isSearchingSegments.value = false
+
+    // Restore popup if it was open before redrawing
+    // Add a small delay to ensure segments are fully rendered
+    setTimeout(() => {
+      restoreOpenPopup()
+    }, 100)
   }
 }
 
@@ -2020,30 +2051,23 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
   const popupContent = createSegmentPopup(segment)
   const popup = L.popup({
     maxWidth: 340,
-    className: 'segment-hover-popup',
+    className: 'segment-persistent-popup',
     closeButton: false,
     autoClose: false,
     closeOnClick: false
   }).setContent(popupContent)
 
-  // Store close timeout for this segment
-  let closeTimeout: any = null
+  // Bind popup to polyline
+  polyline.bindPopup(popup)
 
-  // Add hover effects and popup trigger
+  // No close timeout needed for persistent popup
+
+  // Add hover effects (no popup on hover)
   polyline.on('mouseover', () => {
-    // Clear any pending close timeout
-    if (closeTimeout) {
-      clearTimeout(closeTimeout)
-      closeTimeout = null
-    }
-
     polyline.setStyle({
       weight: isSelected ? 5 : 4,
       opacity: 1
     })
-    // Show popup on hover
-    popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
-    currentOpenPopup.value = popup
   })
 
   polyline.on('mouseout', () => {
@@ -2051,25 +2075,22 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
       weight: isSelected ? 4 : 3,
       opacity: 0.8
     })
-    // Close popup after delay (allows mouse to move to popup)
-    closeTimeout = setTimeout(() => {
-      if (map && popup) {
-        map.closePopup(popup)
-      }
-      closeTimeout = null
-    }, 300) // Increased delay to allow moving to popup
   })
 
   // Click to show popup only (no selection)
-  polyline.on('click', () => {
+  polyline.on('click', (e: any) => {
+    // Stop event propagation to prevent map click handler from running
+    e.originalEvent.stopPropagation()
+
     // Close any currently open popup
     if (currentOpenPopup.value && currentOpenPopup.value !== popup) {
       map.closePopup(currentOpenPopup.value)
     }
 
-    // Show this popup
-    popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
+    // Show this popup manually instead of using bound popup
+    popup.setLatLng(e.latlng).openOn(map)
     currentOpenPopup.value = popup
+    currentOpenPopupSegmentId.value = segment.id
   })
 
   // Add popup open event to setup card interactions
@@ -2078,25 +2099,8 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     if (popupElement) {
       const cardElement = popupElement.querySelector('.segment-popup-card')
       if (cardElement) {
-        // Keep popup open when hovering over card
-        cardElement.addEventListener('mouseenter', () => {
-          if (closeTimeout) {
-            clearTimeout(closeTimeout)
-            closeTimeout = null
-          }
-        })
-
-        // Close popup when leaving card
-        cardElement.addEventListener('mouseleave', () => {
-          closeTimeout = setTimeout(() => {
-            if (map && popup) {
-              map.closePopup(popup)
-            }
-            closeTimeout = null
-          }, 200)
-        })
-
-        // Card click handler removed - segment selection now only happens via + button
+        // No auto-close behavior for persistent popup
+        // Close button will handle dismissal
       }
     }
   })
@@ -2108,7 +2112,7 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     popup: popup,
     startMarker: null,
     endMarker: null,
-    closeTimeout: closeTimeout
+    closeTimeout: null
   })
 
   // If segment is already selected, add landmarks
@@ -2149,6 +2153,20 @@ function createSegmentPopup(segment: TrackResponse): HTMLElement {
           map.closePopup(layerData.popup)
         }, 100) // Small delay to allow selection to complete
       }
+      // Clear tracking variables
+      currentOpenPopup.value = null
+      currentOpenPopupSegmentId.value = null
+    },
+    onClose: () => {
+      // Close popup when close button is clicked
+      const segmentId = segment.id.toString()
+      const layerData = segmentMapLayers.get(segmentId)
+      if (layerData?.popup && map) {
+        map.closePopup(layerData.popup)
+      }
+      // Clear tracking variables
+      currentOpenPopup.value = null
+      currentOpenPopupSegmentId.value = null
     }
   })
 
@@ -2329,6 +2347,10 @@ function clearAllSegments() {
   availableSegments.value = []
   // Don't clear selectedSegments or gpxDataCache - keep selections when reloading
   loadingGPXData.clear()
+
+  // Don't clear popup tracking variables here - they will be restored after segments are redrawn
+  // currentOpenPopup.value = null
+  // currentOpenPopupSegmentId.value = null
 }
 
 // ============================================================================
@@ -2387,6 +2409,7 @@ function initializeMap() {
     if (currentOpenPopup.value) {
       map.closePopup(currentOpenPopup.value)
       currentOpenPopup.value = null
+      currentOpenPopupSegmentId.value = null
     }
 
     if (routeMode.value === 'standard') {

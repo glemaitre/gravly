@@ -4,16 +4,21 @@
       <h4 class="segment-name" :title="segment.name">
         {{ segment.name }}
       </h4>
-      <button
-        class="add-segment-btn"
-        @click.stop="toggleSegmentSelection"
-        :title="
-          isSelected ? 'Remove from selected segments' : 'Add to selected segments'
-        "
-        :class="{ selected: isSelected }"
-      >
-        <i class="fa-solid" :class="isSelected ? 'fa-check' : 'fa-plus'"></i>
-      </button>
+      <div class="header-buttons">
+        <button
+          class="add-segment-btn"
+          @click.stop="toggleSegmentSelection"
+          :title="
+            isSelected ? 'Remove from selected segments' : 'Add to selected segments'
+          "
+          :class="{ selected: isSelected }"
+        >
+          <i class="fa-solid" :class="isSelected ? 'fa-check' : 'fa-plus'"></i>
+        </button>
+        <button class="close-popup-btn" @click.stop="emit('close')" title="Close popup">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
     </div>
 
     <div class="segment-card-content">
@@ -114,6 +119,7 @@ const props = defineProps<{
 // Emits
 const emit = defineEmits<{
   toggleSelection: [segment: TrackResponse]
+  close: []
 }>()
 
 // State for surface type navigation
@@ -223,6 +229,12 @@ function formatTireType(tireType: string): string {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .segment-name {
@@ -473,6 +485,32 @@ function formatTireType(tireType: string): string {
 }
 
 .add-segment-btn i {
+  font-size: 0.7rem;
+}
+
+.close-popup-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.close-popup-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+.close-popup-btn i {
   font-size: 0.7rem;
 }
 </style>
