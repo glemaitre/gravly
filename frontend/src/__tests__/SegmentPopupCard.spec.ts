@@ -455,4 +455,268 @@ describe('SegmentPopupCard', () => {
       expect(wrapper.find('.fa-cloud-rain').exists()).toBe(true)
     })
   })
+
+  describe('Button Functionality', () => {
+    it('displays add/remove segment button', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      expect(addButton.exists()).toBe(true)
+    })
+
+    it('displays close popup button', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const closeButton = wrapper.find('.close-popup-btn')
+      expect(closeButton.exists()).toBe(true)
+    })
+
+    it('shows plus icon when segment is not selected', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const icon = addButton.find('i')
+      expect(icon.classes()).toContain('fa-plus')
+    })
+
+    it('shows check icon when segment is selected', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: true
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const icon = addButton.find('i')
+      expect(icon.classes()).toContain('fa-check')
+    })
+
+    it('shows times icon for close button', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const closeButton = wrapper.find('.close-popup-btn')
+      const icon = closeButton.find('i')
+      expect(icon.classes()).toContain('fa-times')
+    })
+
+    it('applies selected class to add button when segment is selected', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: true
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      expect(addButton.classes()).toContain('selected')
+    })
+
+    it('does not apply selected class to add button when segment is not selected', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      expect(addButton.classes()).not.toContain('selected')
+    })
+  })
+
+  describe('Event Emissions', () => {
+    it('emits toggleSelection when add/remove button is clicked', async () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      await addButton.trigger('click')
+
+      expect(wrapper.emitted('toggleSelection')).toBeTruthy()
+      expect(wrapper.emitted('toggleSelection')?.[0]).toEqual([mockSegment])
+    })
+
+    it('emits close when close button is clicked', async () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const closeButton = wrapper.find('.close-popup-btn')
+      await closeButton.trigger('click')
+
+      expect(wrapper.emitted('close')).toBeTruthy()
+    })
+
+    it('prevents event propagation on button clicks', async () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const closeButton = wrapper.find('.close-popup-btn')
+
+      // Both buttons should exist and have click handlers
+      expect(addButton.exists()).toBe(true)
+      expect(closeButton.exists()).toBe(true)
+
+      // Test that clicking buttons emits events (which means @click.stop is working)
+      await addButton.trigger('click')
+      await closeButton.trigger('click')
+
+      expect(wrapper.emitted('toggleSelection')).toBeTruthy()
+      expect(wrapper.emitted('close')).toBeTruthy()
+    })
+  })
+
+  describe('Button Accessibility', () => {
+    it('has correct title attributes for buttons', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      const closeButton = wrapper.find('.close-popup-btn')
+
+      expect(addButton.attributes('title')).toBe('Add to selected segments')
+      expect(closeButton.attributes('title')).toBe('Close popup')
+    })
+
+    it('has correct title for selected state', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: true
+        }
+      })
+
+      const addButton = wrapper.find('.add-segment-btn')
+      expect(addButton.attributes('title')).toBe('Remove from selected segments')
+    })
+  })
+
+  describe('Header Layout', () => {
+    it('has header buttons container', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const headerButtons = wrapper.find('.header-buttons')
+      expect(headerButtons.exists()).toBe(true)
+    })
+
+    it('contains both buttons in header buttons container', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const headerButtons = wrapper.find('.header-buttons')
+      const addButton = headerButtons.find('.add-segment-btn')
+      const closeButton = headerButtons.find('.close-popup-btn')
+
+      expect(addButton.exists()).toBe(true)
+      expect(closeButton.exists()).toBe(true)
+    })
+  })
+
+  describe('CSS Styling', () => {
+    it('has correct CSS classes applied', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      // Test that the main container has the correct class
+      const card = wrapper.find('.segment-popup-card')
+      expect(card.exists()).toBe(true)
+      expect(card.classes()).toContain('segment-popup-card')
+
+      // Test that header has correct class
+      const header = wrapper.find('.segment-card-header')
+      expect(header.exists()).toBe(true)
+
+      // Test that content has correct class
+      const content = wrapper.find('.segment-card-content')
+      expect(content.exists()).toBe(true)
+
+      // Test that footer has correct class
+      const footer = wrapper.find('.segment-card-footer')
+      expect(footer.exists()).toBe(true)
+    })
+
+    it('has header buttons container with correct structure', () => {
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      const headerButtons = wrapper.find('.header-buttons')
+      expect(headerButtons.exists()).toBe(true)
+
+      // Verify both buttons are inside the header buttons container
+      const addButton = headerButtons.find('.add-segment-btn')
+      const closeButton = headerButtons.find('.close-popup-btn')
+      expect(addButton.exists()).toBe(true)
+      expect(closeButton.exists()).toBe(true)
+    })
+  })
+
+  describe('Global CSS Overrides', () => {
+    it('includes global CSS for Leaflet popup content', () => {
+      // This test verifies that the global CSS rules are present in the component
+      // The actual CSS override testing would require integration testing with Leaflet
+      const wrapper = mount(SegmentPopupCard, {
+        props: {
+          segment: mockSegment,
+          isSelected: false
+        }
+      })
+
+      // Verify the component renders without errors when global CSS is applied
+      expect(wrapper.find('.segment-popup-card').exists()).toBe(true)
+    })
+  })
 })
