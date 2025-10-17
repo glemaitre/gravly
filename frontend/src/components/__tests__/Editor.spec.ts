@@ -182,10 +182,8 @@ describe('Editor', () => {
   it('shows empty state when no file is loaded', () => {
     const wrapper = mountEditor()
 
-    expect(wrapper.find('.empty').exists()).toBe(true)
-    expect(wrapper.find('.empty').text()).toContain(
-      'Use "Import from ..." → "GPX file" to begin'
-    )
+    expect(wrapper.find('.empty-item').exists()).toBe(true)
+    expect(wrapper.find('.empty-item').text()).toContain('No recent activity')
   })
 
   it('displays save button as disabled when no file is loaded', () => {

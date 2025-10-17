@@ -104,7 +104,6 @@ export default {
   message: {
     loadGpxFirst: "Charger un fichier GPX d'abord",
     insufficientPoints: 'Le fichier GPX a des points insuffisants',
-    useFileLoad: 'Utiliser "Importer depuis ..." → "Fichier GPX" pour commencer',
     segmentCreated: 'Segment créé avec succès',
     createError: 'Erreur lors de la création du segment',
     updateError: 'Erreur lors de la mise à jour du segment',

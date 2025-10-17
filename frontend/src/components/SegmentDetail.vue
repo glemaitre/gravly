@@ -1136,7 +1136,7 @@ onUnmounted(() => {
 <style scoped>
 .segment-detail {
   height: calc(100vh - var(--navbar-height, 60px));
-  background: var(--bg-primary);
+  background: var(--bg-secondary);
   padding: 0;
   display: flex;
   flex-direction: column;

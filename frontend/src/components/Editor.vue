@@ -290,10 +290,6 @@
               @submit="onSaveAsNew"
             />
           </div>
-
-          <div v-if="!loaded" class="empty">
-            <p>{{ t('message.useFileLoad') }}</p>
-          </div>
         </div>
       </div>
     </div>
