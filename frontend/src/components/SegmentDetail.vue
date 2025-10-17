@@ -1136,7 +1136,7 @@ onUnmounted(() => {
 <style scoped>
 .segment-detail {
   height: calc(100vh - var(--navbar-height, 60px));
-  background: #f8fafc;
+  background: var(--bg-primary);
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -1210,12 +1210,10 @@ onUnmounted(() => {
   position: absolute;
   top: calc(100% + 0.5rem);
   left: 0;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-lg);
   min-width: 200px;
   z-index: 1000;
   overflow: hidden;
@@ -1229,7 +1227,7 @@ onUnmounted(() => {
   padding: 0.75rem 1rem;
   background: transparent;
   border: none;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   text-align: left;
@@ -1238,12 +1236,12 @@ onUnmounted(() => {
 }
 
 .dropdown-item:hover {
-  background: #f9fafb;
+  background: var(--bg-hover);
   color: var(--brand-primary);
 }
 
 .dropdown-item i {
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 1rem;
 }
 
@@ -1259,28 +1257,28 @@ onUnmounted(() => {
 
 .dropdown-item:disabled:hover {
   background: transparent;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .dropdown-item:disabled:hover i {
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .dropdown-item-danger {
-  color: #dc2626;
+  color: var(--status-error);
 }
 
 .dropdown-item-danger:hover {
-  background: #fef2f2;
-  color: #dc2626;
+  background: rgba(var(--status-error-rgb), 0.1);
+  color: var(--status-error);
 }
 
 .dropdown-item-danger i {
-  color: #dc2626;
+  color: var(--status-error);
 }
 
 .dropdown-item-danger:hover i {
-  color: #dc2626;
+  color: var(--status-error);
 }
 
 .back-button {
@@ -1288,10 +1286,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  color: #374151;
+  color: var(--text-primary);
   text-decoration: none;
   font-weight: 500;
   transition: all 0.2s;
@@ -1299,8 +1297,8 @@ onUnmounted(() => {
 }
 
 .back-button:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
 }
 
 /* Hide text on small screens, show only icon */
@@ -1347,7 +1345,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .loading-container,
@@ -1364,9 +1362,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 1rem;
   padding: 2rem;
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .loading-spinner i {
@@ -1376,7 +1374,7 @@ onUnmounted(() => {
 
 .error-message i {
   font-size: 1.5rem;
-  color: #ef4444;
+  color: var(--status-error);
 }
 
 .detail-content {
@@ -1672,10 +1670,10 @@ onUnmounted(() => {
 }
 
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   overflow: hidden;
   height: 100%;
   display: flex;
@@ -1686,8 +1684,8 @@ onUnmounted(() => {
 
 .card-header {
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--bg-secondary);
 }
 
 .card-header h3 {
@@ -1697,7 +1695,7 @@ onUnmounted(() => {
   gap: 0.75rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .card-header i {
@@ -1733,11 +1731,11 @@ onUnmounted(() => {
 .comment-text {
   font-size: 1rem;
   line-height: 1.6;
-  color: #374151;
-  background: #f8fafc;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
   padding: 1rem;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   white-space: pre-wrap; /* Preserve line breaks and format text */
 }
 
@@ -1775,8 +1773,8 @@ onUnmounted(() => {
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid #d1d5db;
+  background: var(--card-bg);
+  border: 1px solid var(--border-secondary);
   border-radius: 50%;
   width: 2.5rem;
   height: 2.5rem;
@@ -1786,17 +1784,17 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .carousel-btn:hover {
-  background: #ffffff;
+  background: var(--bg-hover);
   border-color: var(--brand-primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .carousel-btn i {
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
 }
 
@@ -2018,13 +2016,13 @@ onUnmounted(() => {
   min-width: 0; /* Allow flex items to shrink below their content size */
   max-width: 400px; /* Maximum width to prevent items from becoming too large */
   overflow: hidden;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   transition: box-shadow 0.2s ease;
 }
 
 .video-item:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .video-embed {
@@ -2054,8 +2052,8 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f9fafb;
-  color: #6b7280;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
   text-align: center;
   padding: 1rem;
 }
@@ -2165,7 +2163,7 @@ onUnmounted(() => {
 .pagination {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-muted);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -2184,10 +2182,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
+  background: var(--card-bg);
+  border: 1px solid var(--border-secondary);
   border-radius: 6px;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -2195,14 +2193,14 @@ onUnmounted(() => {
 }
 
 .pagination-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
 }
 
 .pagination-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .pagination-btn i {
@@ -2220,10 +2218,10 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ffffff;
-  border: 1px solid #d1d5db;
+  background: var(--card-bg);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -2231,8 +2229,8 @@ onUnmounted(() => {
 }
 
 .pagination-page:hover {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
 }
 
 .pagination-page.active {
@@ -2367,11 +2365,9 @@ onUnmounted(() => {
 }
 
 .confirm-modal {
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-xl);
   max-width: 500px;
   width: 100%;
   overflow: hidden;
@@ -2382,20 +2378,20 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--card-border);
 }
 
 .confirm-modal-header h3 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .confirm-modal-close {
   background: transparent;
   border: none;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 1.25rem;
   cursor: pointer;
   padding: 0.25rem;
@@ -2406,7 +2402,7 @@ onUnmounted(() => {
 }
 
 .confirm-modal-close:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .confirm-modal-body {
@@ -2415,7 +2411,7 @@ onUnmounted(() => {
 
 .confirm-modal-body p {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   line-height: 1.6;
 }
 
@@ -2425,8 +2421,8 @@ onUnmounted(() => {
   justify-content: flex-end;
   gap: 0.75rem;
   padding: 1.5rem;
-  border-top: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-top: 1px solid var(--card-border);
+  background: var(--bg-secondary);
 }
 
 .btn-cancel,
@@ -2444,25 +2440,25 @@ onUnmounted(() => {
 }
 
 .btn-cancel {
-  background: #ffffff;
-  color: #374151;
-  border-color: #d1d5db;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-secondary);
 }
 
 .btn-cancel:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
 }
 
 .btn-delete {
-  background: #dc2626;
+  background: var(--status-error);
   color: #ffffff;
-  border-color: #dc2626;
+  border-color: var(--status-error);
 }
 
 .btn-delete:hover:not(:disabled) {
-  background: #b91c1c;
-  border-color: #b91c1c;
+  background: var(--button-danger-hover);
+  border-color: var(--button-danger-hover);
 }
 
 .btn-cancel:disabled,

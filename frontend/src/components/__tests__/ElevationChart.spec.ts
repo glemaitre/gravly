@@ -203,11 +203,14 @@ describe('ElevationChart', () => {
               expect.objectContaining({
                 label: 'Elevation',
                 borderColor: '#ff6600',
-                backgroundColor: 'rgba(255, 102, 0, 0.1)',
+                backgroundColor: 'rgba(255, 102, 0, 0.15)',
                 fill: true,
                 tension: 0.1,
                 pointRadius: 0,
                 pointHoverRadius: 6,
+                pointHoverBackgroundColor: '#ff6600',
+                pointHoverBorderColor: '',
+                pointHoverBorderWidth: 2,
                 parsing: false
               })
             ])
@@ -468,12 +471,17 @@ describe('ElevationChart', () => {
         display: true,
         title: {
           display: true,
-          text: 'Distance (km)'
+          text: 'Distance (km)',
+          color: '#111827'
         },
         min: 0,
         max: expect.any(Number),
         ticks: {
-          callback: expect.any(Function)
+          callback: expect.any(Function),
+          color: '#374151'
+        },
+        grid: {
+          color: 'transparent'
         }
       })
 
@@ -482,7 +490,14 @@ describe('ElevationChart', () => {
         display: true,
         title: {
           display: true,
-          text: 'Elevation (m)'
+          text: 'Elevation (m)',
+          color: '#111827'
+        },
+        ticks: {
+          color: '#374151'
+        },
+        grid: {
+          color: 'transparent'
         },
         min: expect.any(Number)
       })

@@ -352,7 +352,7 @@ async function confirmSaveRoute() {
 .route-save-section {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-muted);
 }
 
 .save-route-btn {
@@ -362,7 +362,7 @@ async function confirmSaveRoute() {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
-  background: var(--brand-500, #ff6600);
+  background: var(--brand-primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -373,18 +373,18 @@ async function confirmSaveRoute() {
 }
 
 .save-route-btn:hover:not(.disabled) {
-  background: var(--brand-600, #e65c00);
+  background: var(--brand-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 102, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .save-route-btn:active:not(.disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(255, 102, 0, 0.3);
+  box-shadow: var(--shadow-sm);
 }
 
 .save-route-btn.disabled {
-  background: #9ca3af;
+  background: var(--text-muted);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -410,9 +410,9 @@ async function confirmSaveRoute() {
 }
 
 .modal-content {
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-xl);
   max-width: 600px;
   width: 100%;
   max-height: 80vh;
@@ -426,8 +426,8 @@ async function confirmSaveRoute() {
   justify-content: space-between;
   align-items: center;
   padding: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
+  border-bottom: 1px solid var(--card-border);
+  background: var(--bg-secondary);
 }
 
 .header h3,
@@ -438,11 +438,11 @@ async function confirmSaveRoute() {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .modal-title i {
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
 }
 
 .modal-close {
@@ -452,19 +452,20 @@ async function confirmSaveRoute() {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .modal-close:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .modal-body {
+  background: var(--bg-tertiary);
   padding: 1.5rem;
   flex: 1;
   overflow-y: auto;
@@ -483,25 +484,27 @@ async function confirmSaveRoute() {
   margin-bottom: 0.5rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .form-input,
 .form-textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 6px;
   font-size: 0.875rem;
   transition: border-color 0.2s ease;
   box-sizing: border-box;
+  background: var(--bg-secondary);
+  color: var(--input-text);
 }
 
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: var(--brand-500, #ff6600);
-  box-shadow: 0 0 0 3px rgba(255, 102, 0, 0.1);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 .form-textarea {
@@ -510,10 +513,11 @@ async function confirmSaveRoute() {
 }
 
 .modal-footer {
+  background: var(--bg-tertiary);
   display: flex;
   gap: 0.75rem;
   padding: 0.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--card-border);
   justify-content: flex-end;
 }
 
@@ -528,16 +532,16 @@ async function confirmSaveRoute() {
   align-items: center;
   gap: 0.5rem;
   border: none;
-  background: var(--brand-500, #ff6600);
+  background: var(--brand-primary);
   color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-600, #e65c00);
+  background: var(--brand-primary-hover);
 }
 
 .btn-primary:disabled {
-  background: #9ca3af;
+  background: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -556,19 +560,19 @@ async function confirmSaveRoute() {
   font-weight: 500;
   z-index: 1001;
   max-width: 400px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .save-success-message {
-  background: #f0fdf4;
-  color: #15803d;
-  border: 1px solid #bbf7d0;
+  background: var(--status-success-bg);
+  color: var(--status-success);
+  border: 1px solid var(--status-success-border);
 }
 
 .save-error-message {
-  background: #fef2f2;
-  color: #dc2626;
-  border: 1px solid #fecaca;
+  background: var(--status-error-bg);
+  color: var(--status-error);
+  border: 1px solid var(--status-error-border);
 }
 
 @media (max-width: 640px) {

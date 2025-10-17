@@ -582,10 +582,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   overflow: visible;
   height: 100%;
   display: flex;
@@ -594,8 +594,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 .card-header {
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--bg-secondary);
 }
 
 .card-header h3 {
@@ -605,7 +605,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   gap: 0.75rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .card-header i {
@@ -613,6 +613,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 }
 
 .card-content {
+  background: var(--bg-tertiary);
   padding: 1.5rem;
   flex: 1;
   display: flex;
@@ -679,9 +680,9 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
 }
 
 .info-item-compact .info-value {
@@ -694,7 +695,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 .info-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
   display: flex;
   align-items: center;
@@ -709,7 +710,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 .info-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .difficulty-display {
@@ -732,14 +733,14 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 .difficulty-word {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
 }
 
 .difficulty-over {
   font-size: 0.75rem;
   font-weight: 400;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -763,7 +764,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 .surface-indicator {
   font-size: 0.7rem;
-  color: #999;
+  color: var(--text-muted);
   font-weight: 400;
   margin-top: 0.25rem;
 }
@@ -788,7 +789,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 }
 
 .surface-nav-btn:disabled {
-  color: #ccc;
+  color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -802,13 +803,13 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   height: 3rem;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
 }
 
 .surface-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -828,9 +829,9 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   flex-direction: column;
   gap: 0.5rem;
   padding: 1rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   width: 100%;
 }
 
@@ -854,7 +855,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 .tire-header .tire-label {
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   min-width: auto;
 }
@@ -871,13 +872,13 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   height: 2rem;
   object-fit: cover;
   border-radius: 4px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-secondary);
 }
 
 .tire-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -897,16 +898,16 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   justify-content: center;
   flex: 1;
   padding: 0.5rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-muted);
   min-height: 60px;
 }
 
 .stat-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
   display: flex;
   align-items: center;
@@ -922,7 +923,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 .stat-value {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -935,10 +936,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 .image-zoom-overlay {
   position: fixed;
-  background: white;
+  background: var(--card-bg);
   border: 2px solid var(--brand-primary);
   border-radius: 8px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   padding: 8px;
   z-index: 9999;
   opacity: 0;
@@ -1029,8 +1030,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
 
 .difficulty-tooltip {
   position: fixed;
-  background: #1f2937;
-  color: white;
+  background: var(--card-bg);
+  color: var(--text-primary);
   padding: 0.75rem 1rem;
   border-radius: 6px;
   font-size: 0.875rem;
@@ -1041,7 +1042,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   visibility: hidden;
   transition: all 0.3s ease;
   pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--card-border);
 }
 
 .difficulty-tooltip::after {
@@ -1051,6 +1053,6 @@ function updateDifficultyTooltipPosition(event: MouseEvent): void {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: #1f2937;
+  border-top-color: var(--card-bg);
 }
 </style>

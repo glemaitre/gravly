@@ -81,6 +81,11 @@ function calculateDistance(
   return R * c
 }
 
+// Helper function to get CSS variable value
+function getCssVariableValue(variable: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
+}
+
 // Initialize the elevation chart
 async function initializeElevationChart() {
   if (!props.gpxData || !elevationChartRef.value) {
@@ -153,10 +158,18 @@ async function initializeElevationChart() {
     y: smoothedElevations[i]
   }))
 
-  // Get CSS variable values from computed styles
-  const rootStyles = getComputedStyle(document.documentElement)
-  const brandPrimary = rootStyles.getPropertyValue('--brand-primary').trim()
-  const brandPrimaryRgb = rootStyles.getPropertyValue('--brand-primary-rgb').trim()
+  // Get theme-aware colors
+  const brandPrimary = getCssVariableValue('--brand-primary')
+  const brandPrimaryRgb = getCssVariableValue('--brand-primary-rgb')
+  const cardBg = getCssVariableValue('--card-bg')
+  const bgTertiary = getCssVariableValue('--bg-tertiary')
+
+  // Check if we're in dark theme to determine grid visibility and text colors
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark'
+
+  // Use appropriate colors for axis labels based on theme
+  const axisTitleColor = isDarkTheme ? '#f8fafc' : '#111827' // text-primary equivalent
+  const axisTickColor = isDarkTheme ? '#e2e8f0' : '#374151' // text-secondary equivalent
 
   elevationChart.value = new Chart(elevationChartRef.value, {
     type: 'line',
@@ -166,11 +179,14 @@ async function initializeElevationChart() {
           label: 'Elevation',
           data: chartData,
           borderColor: brandPrimary || '#ff6600',
-          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.1)`,
+          backgroundColor: `rgba(${brandPrimaryRgb || '255, 102, 0'}, 0.15)`,
           fill: true,
           tension: 0.1,
           pointRadius: 0,
           pointHoverRadius: 6,
+          pointHoverBackgroundColor: brandPrimary,
+          pointHoverBorderColor: cardBg,
+          pointHoverBorderWidth: 2,
           parsing: false
         }
       ]
@@ -204,21 +220,33 @@ async function initializeElevationChart() {
           display: true,
           title: {
             display: true,
-            text: 'Distance (km)'
+            text: 'Distance (km)',
+            color: axisTitleColor
           },
-          min: 0,
-          max: cumulativeKm[cumulativeKm.length - 1],
           ticks: {
+            color: axisTickColor,
             callback: function (value: any) {
               return `${Number(value).toFixed(1)} km`
             }
-          }
+          },
+          grid: {
+            color: isDarkTheme ? bgTertiary : 'transparent'
+          },
+          min: 0,
+          max: cumulativeKm[cumulativeKm.length - 1]
         },
         y: {
           display: true,
           title: {
             display: true,
-            text: 'Elevation (m)'
+            text: 'Elevation (m)',
+            color: axisTitleColor
+          },
+          ticks: {
+            color: axisTickColor
+          },
+          grid: {
+            color: isDarkTheme ? bgTertiary : 'transparent'
           },
           min: Math.min(...smoothedElevations)
         }
@@ -251,6 +279,19 @@ watch(
   { deep: true }
 )
 
+// Watch for theme changes by monitoring the document's data-theme attribute
+watch(
+  () => document.documentElement.getAttribute('data-theme'),
+  () => {
+    if (props.gpxData && elevationChartRef.value) {
+      // Small delay to ensure CSS variables are updated, then recreate the chart
+      setTimeout(() => {
+        initializeElevationChart()
+      }, 50)
+    }
+  }
+)
+
 // Lifecycle
 onMounted(async () => {
   await nextTick()
@@ -272,10 +313,10 @@ onUnmounted(() => {
 
 <style scoped>
 .card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   overflow: hidden;
   height: 100%;
   display: flex;
@@ -284,8 +325,8 @@ onUnmounted(() => {
 
 .card-header {
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #f1f5f9;
-  background: #fafbfc;
+  border-bottom: 1px solid var(--border-muted);
+  background: var(--bg-secondary);
 }
 
 .card-header h3 {
@@ -295,7 +336,7 @@ onUnmounted(() => {
   gap: 0.75rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .card-header i {
@@ -303,6 +344,7 @@ onUnmounted(() => {
 }
 
 .card-content {
+  background: var(--bg-tertiary);
   padding: 1.5rem;
   flex: 1;
   display: flex;

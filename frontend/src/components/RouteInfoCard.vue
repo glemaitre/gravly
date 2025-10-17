@@ -551,8 +551,8 @@ const formattedElevationLoss = computed(() =>
 
 <style scoped>
 .route-info-card {
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 1rem;
 }
@@ -597,9 +597,9 @@ const formattedElevationLoss = computed(() =>
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem;
-  background: #ffffff;
+  background: var(--bg-tertiary);
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--card-border);
 }
 
 .info-item-compact .info-value {
@@ -612,7 +612,7 @@ const formattedElevationLoss = computed(() =>
 .info-label {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-secondary);
   text-align: center;
   display: flex;
   align-items: center;
@@ -621,13 +621,13 @@ const formattedElevationLoss = computed(() =>
 }
 
 .info-label i {
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
 }
 
 /* Style for stat row icons (Distance, Elevation Gain, Elevation Loss) */
 .info-row:nth-child(2) .info-label i {
   color: white;
-  background-color: var(--brand-500, #ff6600);
+  background-color: var(--brand-primary);
   padding: 0.5rem;
   border-radius: 20%;
   width: 1.5rem;
@@ -640,12 +640,12 @@ const formattedElevationLoss = computed(() =>
 .info-value {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .no-data {
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-weight: 400;
   text-align: center;
 }
@@ -660,13 +660,13 @@ const formattedElevationLoss = computed(() =>
 .difficulty-level {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
 }
 
 .difficulty-word {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -689,7 +689,7 @@ const formattedElevationLoss = computed(() =>
 
 .surface-indicator {
   font-size: 0.7rem;
-  color: #999;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
@@ -698,7 +698,7 @@ const formattedElevationLoss = computed(() =>
   border: none;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,12 +708,12 @@ const formattedElevationLoss = computed(() =>
 }
 
 .surface-nav-btn:hover:not(:disabled) {
-  background-color: rgba(255, 102, 0, 0.1);
+  background-color: var(--brand-primary-alpha);
   transform: scale(1.1);
 }
 
 .surface-nav-btn:disabled {
-  color: #ccc;
+  color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -723,13 +723,13 @@ const formattedElevationLoss = computed(() =>
   height: 3rem;
   object-fit: cover;
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--card-border);
 }
 
 .surface-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   width: 100%;
   overflow: hidden;
@@ -750,9 +750,9 @@ const formattedElevationLoss = computed(() =>
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem 0.25rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--card-border);
 }
 
 .tire-header {
@@ -765,7 +765,7 @@ const formattedElevationLoss = computed(() =>
 
 .tire-header i {
   font-size: 0.75rem;
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
   flex-shrink: 0;
 }
 
@@ -775,7 +775,7 @@ const formattedElevationLoss = computed(() =>
 
 .tire-header .tire-label {
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.7rem;
 }
 
@@ -791,14 +791,14 @@ const formattedElevationLoss = computed(() =>
   height: 1.75rem;
   object-fit: cover;
   border-radius: 4px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--card-border);
   flex-shrink: 0;
 }
 
 .tire-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   line-height: 1.2;
   word-break: break-word;
@@ -808,7 +808,7 @@ const formattedElevationLoss = computed(() =>
 .stat-value {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
 }
 
@@ -819,13 +819,13 @@ const formattedElevationLoss = computed(() =>
 }
 
 .info-item-compact.editable:hover {
-  background: #f9fafb;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .info-item-compact.editing {
-  background: #f9fafb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .edit-icon {
@@ -853,22 +853,22 @@ const formattedElevationLoss = computed(() =>
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 2px solid #d1d5db;
-  background: white;
-  color: #6b7280;
+  border: 2px solid var(--card-border);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .difficulty-btn:hover {
-  border-color: var(--brand-500, #ff6600);
-  color: var(--brand-500, #ff6600);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .difficulty-btn.active {
-  background: var(--brand-500, #ff6600);
-  border-color: var(--brand-500, #ff6600);
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: white;
 }
 
@@ -894,11 +894,11 @@ const formattedElevationLoss = computed(() =>
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--card-border);
   border-radius: 6px;
   padding: 0.5rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--bg-tertiary);
   transition: all 0.2s;
 }
 
@@ -917,15 +917,15 @@ const formattedElevationLoss = computed(() =>
 
 .surface-option-compact .surface-caption {
   font-size: 0.7rem;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   font-weight: 500;
 }
 
 .surface-option-compact.selected {
-  border-color: var(--brand-500, #ff6600);
-  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
-  background: var(--brand-50, #ffe6d5);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-primary-alpha);
+  background: var(--brand-primary-alpha);
 }
 
 /* Tire Editor */
@@ -955,11 +955,11 @@ const formattedElevationLoss = computed(() =>
   gap: 0.5rem;
   font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
 }
 
 .tire-group-header i {
-  color: var(--brand-500, #ff6600);
+  color: var(--brand-primary);
 }
 
 .tire-group-header i.fa-cloud-rain {
@@ -977,11 +977,11 @@ const formattedElevationLoss = computed(() =>
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
-  border: 2px solid #e5e7eb;
+  border: 2px solid var(--card-border);
   border-radius: 6px;
   padding: 0.5rem;
   cursor: pointer;
-  background: #fff;
+  background: var(--bg-tertiary);
   transition: all 0.2s;
 }
 
@@ -1000,22 +1000,22 @@ const formattedElevationLoss = computed(() =>
 
 .tire-option-compact .tire-caption {
   font-size: 0.7rem;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   font-weight: 500;
 }
 
 .tire-option-compact.selected {
-  border-color: var(--brand-500, #ff6600);
-  box-shadow: 0 0 0 2px rgba(255, 102, 0, 0.15);
-  background: var(--brand-50, #ffe6d5);
+  border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px var(--brand-primary-alpha);
+  background: var(--brand-primary-alpha);
 }
 
 /* Close editor button */
 .close-editor-btn {
   align-self: center;
   padding: 0.5rem 1rem;
-  background: var(--brand-500, #ff6600);
+  background: var(--brand-primary);
   color: white;
   border: none;
   border-radius: 6px;
@@ -1029,7 +1029,7 @@ const formattedElevationLoss = computed(() =>
 }
 
 .close-editor-btn:hover {
-  background: var(--brand-600, #e65c00);
+  background: var(--brand-primary-hover);
 }
 
 /* Responsive layout adjustments */
