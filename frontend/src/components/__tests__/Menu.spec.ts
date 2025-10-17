@@ -5,10 +5,12 @@ import { ref } from 'vue'
 import Menu from '../Menu.vue'
 import { useStravaApi } from '../../composables/useStravaApi'
 import { useLanguageDropdown } from '../../composables/useLanguageDropdown'
+import { useThemeSettings } from '../../composables/useThemeSettings'
 
 // Mock the composables
 vi.mock('../../composables/useStravaApi')
 vi.mock('../../composables/useLanguageDropdown')
+vi.mock('../../composables/useThemeSettings')
 
 // Mock router
 const mockPush = vi.fn()
@@ -50,6 +52,21 @@ describe('Menu', () => {
     changeLanguage: vi.fn()
   }
 
+  const currentThemeRef = ref('system')
+  const mockThemeSettings = {
+    currentTheme: currentThemeRef,
+    themeOptions: {
+      light: { name: 'Light', icon: 'fa-solid fa-sun', description: 'Light theme' },
+      dark: { name: 'Dark', icon: 'fa-solid fa-moon', description: 'Dark theme' },
+      system: {
+        name: 'System',
+        icon: 'fa-solid fa-desktop',
+        description: 'Use system default'
+      }
+    },
+    changeTheme: vi.fn()
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -60,6 +77,7 @@ describe('Menu', () => {
 
     vi.mocked(useStravaApi).mockReturnValue(mockStravaApi as any)
     vi.mocked(useLanguageDropdown).mockReturnValue(mockLanguageDropdown as any)
+    vi.mocked(useThemeSettings).mockReturnValue(mockThemeSettings as any)
 
     // Setup i18n
     i18n = createI18n({
@@ -69,8 +87,15 @@ describe('Menu', () => {
         en: {
           menu: {
             title: 'Menu',
-            language: 'Language',
+            settings: 'Settings',
             support: 'Support'
+          },
+          settings: {
+            language: 'Language',
+            theme: 'Theme',
+            light: 'Light',
+            dark: 'Dark',
+            system: 'System'
           },
           navbar: {
             logout: 'Logout'
@@ -293,49 +318,148 @@ describe('Menu', () => {
     })
   })
 
-  describe('Language Selection', () => {
-    it('should display language section', () => {
-      const languageSection = wrapper.findAll('.menu-section')[1]
-      expect(languageSection.find('.menu-section-title').text()).toBe('Language')
+  describe('Settings Section', () => {
+    it('should display settings section title', () => {
+      const settingsSection = wrapper.findAll('.menu-section')[1]
+      expect(settingsSection.find('.menu-section-title').text()).toBe('Settings')
     })
 
-    it('should render all language options', () => {
-      const languageOptions = wrapper.findAll('.language-option')
-      expect(languageOptions).toHaveLength(2)
+    it('should display language and theme buttons', () => {
+      const languageButton = wrapper.find('.settings-button')
+      const themeButton = wrapper.findAll('.settings-button')[1]
 
-      expect(languageOptions[0].text()).toContain('English')
-      expect(languageOptions[0].text()).toContain('🇬🇧')
+      expect(languageButton.exists()).toBe(true)
+      expect(languageButton.text()).toContain('Language')
+      expect(languageButton.find('.fa-globe').exists()).toBe(true)
 
-      expect(languageOptions[1].text()).toContain('Français')
-      expect(languageOptions[1].text()).toContain('🇫🇷')
+      expect(themeButton.exists()).toBe(true)
+      expect(themeButton.text()).toContain('Theme')
+      expect(themeButton.find('.fa-palette').exists()).toBe(true)
     })
 
-    it('should mark current language as active', async () => {
-      // Open menu to see language options
-      await wrapper.find('.menu-trigger').trigger('click')
-      await wrapper.vm.$nextTick()
-
-      const languageOptions = wrapper.findAll('.language-option')
-      expect(languageOptions[0].classes()).toContain('active')
-      expect(languageOptions[0].find('.checkmark').exists()).toBe(true)
+    it('should have collapsed dropdowns by default', () => {
+      expect(wrapper.find('.settings-dropdown').exists()).toBe(false)
     })
 
-    it('should change language when option is clicked', async () => {
-      const languageOptions = wrapper.findAll('.language-option')
-      await languageOptions[1].trigger('click')
+    describe('Language Button', () => {
+      it('should expand language dropdown when clicked', async () => {
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
 
-      expect(mockLanguageDropdown.changeLanguage).toHaveBeenCalledWith('fr')
+        const languageDropdown = wrapper.find('.settings-dropdown')
+        expect(languageDropdown.exists()).toBe(true)
+
+        const chevron = languageButton.find('.settings-chevron')
+        expect(chevron.classes()).toContain('expanded')
+      })
+
+      it('should render all language options when expanded', async () => {
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
+
+        const languageOptions = wrapper.findAll('.language-option')
+        expect(languageOptions).toHaveLength(2)
+
+        expect(languageOptions[0].text()).toContain('English')
+        expect(languageOptions[0].text()).toContain('🇬🇧')
+
+        expect(languageOptions[1].text()).toContain('Français')
+        expect(languageOptions[1].text()).toContain('🇫🇷')
+      })
+
+      it('should mark current language as active', async () => {
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
+
+        const languageOptions = wrapper.findAll('.language-option')
+        expect(languageOptions[0].classes()).toContain('active')
+        expect(languageOptions[0].find('.checkmark').exists()).toBe(true)
+      })
+
+      it('should change language and close dropdown when option is clicked', async () => {
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
+
+        const languageOptions = wrapper.findAll('.language-option')
+        await languageOptions[1].trigger('click')
+
+        expect(mockLanguageDropdown.changeLanguage).toHaveBeenCalledWith('fr')
+        expect(wrapper.find('.settings-dropdown').exists()).toBe(false)
+      })
+
+      it('should close theme dropdown when language dropdown is opened', async () => {
+        // First open theme dropdown
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
+        expect(wrapper.findAll('.settings-dropdown')).toHaveLength(1)
+
+        // Then open language dropdown
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
+        expect(wrapper.findAll('.settings-dropdown')).toHaveLength(1) // Only one dropdown open
+      })
     })
 
-    it('should stop propagation on language click', async () => {
-      const languageOption = wrapper.find('.language-option')
+    describe('Theme Button', () => {
+      it('should expand theme dropdown when clicked', async () => {
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
 
-      // Simulate click with event
-      await languageOption.trigger('click')
+        const themeDropdown = wrapper.findAll('.settings-dropdown')[0]
+        expect(themeDropdown.exists()).toBe(true)
 
-      // The component uses e.stopPropagation() inline
-      // We verify the behavior by checking that changeLanguage was called
-      expect(mockLanguageDropdown.changeLanguage).toHaveBeenCalled()
+        const chevron = themeButton.find('.settings-chevron')
+        expect(chevron.classes()).toContain('expanded')
+      })
+
+      it('should render all theme options when expanded', async () => {
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
+
+        const themeOptions = wrapper.findAll('.theme-option')
+        expect(themeOptions).toHaveLength(3)
+
+        expect(themeOptions[0].text()).toContain('Light')
+        expect(themeOptions[0].find('.fa-sun').exists()).toBe(true)
+
+        expect(themeOptions[1].text()).toContain('Dark')
+        expect(themeOptions[1].find('.fa-moon').exists()).toBe(true)
+
+        expect(themeOptions[2].text()).toContain('System')
+        expect(themeOptions[2].find('.fa-desktop').exists()).toBe(true)
+      })
+
+      it('should mark current theme as active', async () => {
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
+
+        const themeOptions = wrapper.findAll('.theme-option')
+        expect(themeOptions[2].classes()).toContain('active') // System is default
+        expect(themeOptions[2].find('.checkmark').exists()).toBe(true)
+      })
+
+      it('should change theme and close dropdown when option is clicked', async () => {
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
+
+        const themeOptions = wrapper.findAll('.theme-option')
+        await themeOptions[0].trigger('click') // Click Light
+
+        expect(mockThemeSettings.changeTheme).toHaveBeenCalledWith('light')
+        expect(wrapper.findAll('.settings-dropdown')).toHaveLength(0)
+      })
+
+      it('should close language dropdown when theme dropdown is opened', async () => {
+        // First open language dropdown
+        const languageButton = wrapper.find('.settings-button')
+        await languageButton.trigger('click')
+        expect(wrapper.findAll('.settings-dropdown')).toHaveLength(1)
+
+        // Then open theme dropdown
+        const themeButton = wrapper.findAll('.settings-button')[1]
+        await themeButton.trigger('click')
+        expect(wrapper.findAll('.settings-dropdown')).toHaveLength(1) // Only one dropdown open
+      })
     })
   })
 

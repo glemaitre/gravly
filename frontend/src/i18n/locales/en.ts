@@ -14,7 +14,7 @@ export default {
     collapseSidebar: 'Collapse sidebar',
     expandSidebar: 'Expand sidebar',
     title: 'Menu',
-    language: 'Language',
+    settings: 'Settings',
     support: 'Support'
   },
 
@@ -146,6 +146,15 @@ export default {
     feature3Title: 'Save & Share Your Routes',
     feature3Description:
       'Store your planned routes and share them with the gravel community. Export to GPX format for your GPS device or cycling computer. Build a collection of rides you can trust.'
+  },
+
+  // Settings
+  settings: {
+    language: 'Language',
+    theme: 'Theme',
+    light: 'Light',
+    dark: 'Dark',
+    system: 'System'
   },
 
   // Language selector

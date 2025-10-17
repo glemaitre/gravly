@@ -14,7 +14,7 @@ export default {
     collapseSidebar: 'Réduire la barre latérale',
     expandSidebar: 'Développer la barre latérale',
     title: 'Menu',
-    language: 'Langue',
+    settings: 'Paramètres',
     support: 'Support'
   },
 
@@ -147,6 +147,15 @@ export default {
     feature3Title: 'Sauvegardez et Partagez',
     feature3Description:
       'Enregistrez vos parcours planifiés et partagez-les avec la communauté gravel. Exportez au format GPX pour votre GPS ou compteur vélo. Constituez une collection de sorties fiables.'
+  },
+
+  // Settings
+  settings: {
+    language: 'Langue',
+    theme: 'Thème',
+    light: 'Clair',
+    dark: 'Sombre',
+    system: 'Système'
   },
 
   // Language selector

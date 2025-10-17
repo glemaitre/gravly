@@ -106,9 +106,14 @@ describe('App', () => {
 
     await menuTrigger.trigger('click')
 
-    const languageOptions = menu.find('.language-options')
-    expect(languageOptions.exists()).toBe(true)
-    expect(languageOptions.findAll('.language-option').length).toBeGreaterThan(0)
+    // Click language button to show language options
+    const languageButton = menu.find('.settings-button')
+    expect(languageButton.exists()).toBe(true)
+    await languageButton.trigger('click')
+
+    const languageDropdown = menu.find('.settings-dropdown')
+    expect(languageDropdown.exists()).toBe(true)
+    expect(languageDropdown.findAll('.language-option').length).toBeGreaterThan(0)
   })
 
   it('toggles menu when clicked', async () => {
@@ -157,8 +162,13 @@ describe('App', () => {
     const menuTrigger = menu.find('.menu-trigger')
     await menuTrigger.trigger('click')
 
-    // Test that the menu opens and shows language options
+    // Test that the menu opens
     expect(menu.find('.menu-dropdown-content').classes()).toContain('open')
+
+    // Click language button to show language options
+    const languageButton = menu.find('.settings-button')
+    await languageButton.trigger('click')
+
     expect(menu.findAll('.language-option').length).toBeGreaterThan(0)
   })
 

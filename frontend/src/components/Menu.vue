@@ -53,10 +53,22 @@
       <!-- Divider -->
       <hr class="menu-divider" />
 
-      <!-- Language Selection Section -->
+      <!-- Settings Section -->
       <div class="menu-section">
-        <div class="menu-section-title">{{ $t('menu.language') }}</div>
-        <div class="language-options">
+        <div class="menu-section-title">{{ $t('menu.settings') }}</div>
+
+        <!-- Language Button -->
+        <button class="settings-button menu-item" @click="toggleLanguageDropdown">
+          <i class="fa-solid fa-globe"></i>
+          <span>{{ $t('settings.language') }}</span>
+          <i
+            class="fa-solid fa-chevron-down settings-chevron"
+            :class="{ expanded: languageDropdownOpen }"
+          ></i>
+        </button>
+
+        <!-- Language Dropdown -->
+        <div v-if="languageDropdownOpen" class="settings-dropdown">
           <button
             v-for="(option, lang) in languageOptions"
             :key="lang"
@@ -66,12 +78,46 @@
               (e) => {
                 e.stopPropagation()
                 changeLanguage(lang as MessageLanguages)
+                languageDropdownOpen = false
               }
             "
           >
             <span class="language-flag">{{ option.flag }}</span>
             <span class="language-name">{{ option.name }}</span>
             <span v-if="currentLanguage === lang" class="checkmark">
+              <i class="fa-solid fa-check"></i>
+            </span>
+          </button>
+        </div>
+
+        <!-- Theme Button -->
+        <button class="settings-button menu-item" @click="toggleThemeDropdown">
+          <i class="fa-solid fa-palette"></i>
+          <span>{{ $t('settings.theme') }}</span>
+          <i
+            class="fa-solid fa-chevron-down settings-chevron"
+            :class="{ expanded: themeDropdownOpen }"
+          ></i>
+        </button>
+
+        <!-- Theme Dropdown -->
+        <div v-if="themeDropdownOpen" class="settings-dropdown">
+          <button
+            v-for="(option, theme) in themeOptions"
+            :key="theme"
+            class="theme-option menu-item"
+            :class="{ active: currentTheme === theme }"
+            @click="
+              (e) => {
+                e.stopPropagation()
+                changeTheme(theme as any)
+                themeDropdownOpen = false
+              }
+            "
+          >
+            <i :class="option.icon" class="theme-icon"></i>
+            <span class="theme-name">{{ option.name }}</span>
+            <span v-if="currentTheme === theme" class="checkmark">
               <i class="fa-solid fa-check"></i>
             </span>
           </button>
@@ -124,6 +170,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStravaApi } from '../composables/useStravaApi'
 import { useLanguageDropdown } from '../composables/useLanguageDropdown'
+import { useThemeSettings } from '../composables/useThemeSettings'
 import type { MessageLanguages } from '../i18n'
 import stravaConnectBtn from '../assets/images/btn_strava_connect.png'
 
@@ -141,6 +188,9 @@ const {
 // Language dropdown functionality
 const { currentLanguage, languageOptions, changeLanguage } = useLanguageDropdown()
 
+// Theme settings functionality
+const { currentTheme, themeOptions, changeTheme } = useThemeSettings()
+
 // Computed properties
 const isAuthenticated = computed(() => isAuthenticatedFn())
 const athlete = computed(() => authState.value.athlete)
@@ -148,6 +198,8 @@ const athlete = computed(() => authState.value.athlete)
 // Menu state
 const menuOpen = ref(false)
 const menuDropdown = ref<HTMLElement | null>(null)
+const languageDropdownOpen = ref(false)
+const themeDropdownOpen = ref(false)
 
 function toggleMenu(event: Event) {
   event.stopPropagation()
@@ -158,6 +210,18 @@ function closeMenu(event: MouseEvent) {
   if (menuDropdown.value && !menuDropdown.value.contains(event.target as Node)) {
     menuOpen.value = false
   }
+}
+
+function toggleLanguageDropdown(event: Event) {
+  event.stopPropagation()
+  languageDropdownOpen.value = !languageDropdownOpen.value
+  themeDropdownOpen.value = false // Close theme dropdown when opening language
+}
+
+function toggleThemeDropdown(event: Event) {
+  event.stopPropagation()
+  themeDropdownOpen.value = !themeDropdownOpen.value
+  languageDropdownOpen.value = false // Close language dropdown when opening theme
 }
 
 // Strava authentication functions
@@ -366,18 +430,55 @@ onUnmounted(() => {
   color: #b91c1c;
 }
 
-/* Language Options */
-.language-options {
+/* Settings Buttons */
+.settings-button {
+  justify-content: space-between;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-bottom: 0.25rem;
+  text-align: left;
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
 }
 
-.language-option {
+.settings-button:hover {
+  background: #f3f4f6;
+}
+
+.settings-button span {
+  flex: 1;
+  text-align: left;
+}
+
+.settings-chevron {
+  transition: transform 0.2s ease;
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.settings-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* Settings Dropdown */
+.settings-dropdown {
+  margin-left: 1.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid #e5e7eb;
+}
+
+/* Language and Theme Options */
+.language-option,
+.theme-option {
   justify-content: flex-start;
+  margin-bottom: 0.25rem;
 }
 
-.language-option.active {
+.language-option.active,
+.theme-option.active {
   background: var(--brand-50);
   color: var(--brand-600);
 }
@@ -387,7 +488,15 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.language-name {
+.theme-icon {
+  font-size: 1em;
+  line-height: 1;
+  width: 1em;
+  text-align: center;
+}
+
+.language-name,
+.theme-name {
   flex: 1;
   white-space: nowrap;
 }
