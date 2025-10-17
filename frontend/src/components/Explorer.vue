@@ -1329,19 +1329,19 @@ onUnmounted(() => {
 .resize-handle-bar {
   width: 60px;
   height: 8px;
-  background: white;
+  background: var(--card-bg);
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-primary);
   font-size: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   position: relative;
 }
 
 .resize-handle:hover .resize-handle-bar {
-  background: #fff5f0;
+  background: var(--bg-hover);
   transform: scale(1.05);
 }
 
@@ -1358,18 +1358,18 @@ onUnmounted(() => {
 
 .resize-handle-bar::before {
   top: -6px;
-  border-bottom: 6px solid white;
+  border-bottom: 6px solid var(--card-bg);
 }
 
 .resize-handle-bar::after {
   bottom: -6px;
-  border-top: 6px solid white;
+  border-top: 6px solid var(--card-bg);
 }
 
 .resize-handle:hover .resize-handle-bar::before,
 .resize-handle:hover .resize-handle-bar::after {
-  border-bottom-color: #fff5f0;
-  border-top-color: #fff5f0;
+  border-bottom-color: var(--bg-hover);
+  border-top-color: var(--bg-hover);
 }
 
 /* Card styles matching Editor */

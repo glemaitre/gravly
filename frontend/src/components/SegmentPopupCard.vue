@@ -194,20 +194,20 @@ function formatTireType(tireType: string): string {
 
 <style>
 .segment-popup-card {
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 0.1rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   position: relative;
   font-family: inherit;
-  background: white;
+  background: var(--card-bg);
   width: 340px;
 }
 
 .segment-popup-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
   border-color: rgba(var(--brand-primary-rgb), 0.3);
 }
@@ -241,7 +241,7 @@ function formatTireType(tireType: string): string {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -270,9 +270,9 @@ function formatTireType(tireType: string): string {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-secondary);
   transition: background-color 0.2s ease;
   flex: 1;
 }
@@ -299,7 +299,7 @@ function formatTireType(tireType: string): string {
 
 .stat-label {
   font-size: 0.6rem;
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -307,12 +307,12 @@ function formatTireType(tireType: string): string {
 
 .stat-value {
   font-size: 0.75rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .segment-card-footer {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-muted);
   padding: 8px 10px 10px 10px;
   position: relative;
 }
@@ -332,7 +332,7 @@ function formatTireType(tireType: string): string {
 }
 
 .info-label {
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -346,18 +346,22 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .info-value i {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .info-value.difficulty {
-  color: #e67e22;
+  color: var(--brand-primary);
   font-weight: 600;
+}
+
+.info-value.difficulty i {
+  color: var(--text-tertiary);
 }
 
 /* Surface navigation styles */
@@ -381,12 +385,12 @@ function formatTireType(tireType: string): string {
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .surface-indicator {
   font-size: 0.55rem;
-  color: #999;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
@@ -410,7 +414,7 @@ function formatTireType(tireType: string): string {
 }
 
 .surface-nav-btn:disabled {
-  color: #ccc;
+  color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -443,17 +447,17 @@ function formatTireType(tireType: string): string {
 }
 
 .tire-badge {
-  background-color: #f5f5f5;
+  background-color: var(--bg-tertiary);
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 0.6rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .add-segment-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   width: 28px;
   height: 28px;
@@ -462,26 +466,26 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #666;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .add-segment-btn:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-  color: #374151;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
   transform: scale(1.05);
 }
 
 .add-segment-btn.selected {
-  background: #ff6b35;
-  border-color: #ff6b35;
+  background: var(--brand-primary);
+  border-color: var(--brand-primary);
   color: white;
 }
 
 .add-segment-btn.selected:hover {
-  background: #e55a0d;
-  border-color: #e55a0d;
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
   color: white;
 }
 
@@ -490,8 +494,8 @@ function formatTireType(tireType: string): string {
 }
 
 .close-popup-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   width: 28px;
   height: 28px;
@@ -500,14 +504,14 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #666;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .close-popup-btn:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-  color: #374151;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
   transform: scale(1.05);
 }
 

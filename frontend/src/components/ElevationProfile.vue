@@ -334,51 +334,6 @@ function createElevationChart() {
   updateChartData()
 }
 
-// Function to update chart colors when theme changes
-function updateChartColors() {
-  if (!elevationChart) return
-
-  // Get current theme-aware colors
-  const brandPrimary = getCssVariableValue('--brand-primary')
-  const brandPrimaryRgb = getCssVariableValue('--brand-primary-rgb')
-  const cardBg = getCssVariableValue('--card-bg')
-  const borderMuted = getCssVariableValue('--border-muted')
-
-  // Check if we're in dark theme to determine grid visibility and text colors
-  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark'
-
-  // Use appropriate colors for axis labels based on theme
-  const axisTitleColor = isDarkTheme ? '#f8fafc' : '#111827' // text-primary equivalent
-  const axisTickColor = isDarkTheme ? '#e2e8f0' : '#374151' // text-secondary equivalent
-
-  // Update chart colors
-  if (elevationChart.data.datasets[0]) {
-    elevationChart.data.datasets[0].borderColor = brandPrimary
-    elevationChart.data.datasets[0].backgroundColor = `rgba(${brandPrimaryRgb}, 0.15)`
-    elevationChart.data.datasets[0].pointHoverBackgroundColor = brandPrimary
-    elevationChart.data.datasets[0].pointHoverBorderColor = cardBg
-  }
-
-  // Update scale colors
-  if (elevationChart.options.scales?.x) {
-    elevationChart.options.scales.x.title.color = axisTitleColor
-    elevationChart.options.scales.x.ticks.color = axisTickColor
-    elevationChart.options.scales.x.grid.color = isDarkTheme
-      ? borderMuted
-      : 'transparent'
-  }
-
-  if (elevationChart.options.scales?.y) {
-    elevationChart.options.scales.y.title.color = axisTitleColor
-    elevationChart.options.scales.y.ticks.color = axisTickColor
-    elevationChart.options.scales.y.grid.color = isDarkTheme
-      ? borderMuted
-      : 'transparent'
-  }
-
-  elevationChart.update('none')
-}
-
 function updateChartData() {
   // If there's an error or no points, destroy the chart
   if (props.elevationError || !props.routePoints || props.routePoints.length === 0) {
@@ -463,10 +418,10 @@ watch(
 watch(
   () => document.documentElement.getAttribute('data-theme'),
   () => {
-    if (elevationChart && props.showElevation) {
-      // Small delay to ensure CSS variables are updated
+    if (props.showElevation) {
+      // Small delay to ensure CSS variables are updated, then recreate the chart
       setTimeout(() => {
-        updateChartColors()
+        createElevationChart()
       }, 50)
     }
   }
@@ -593,7 +548,7 @@ defineExpose({
 
 .elevation-toggle {
   height: 30px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   backdrop-filter: blur(4px);
   border-bottom: 1px solid var(--border-muted);
   cursor: pointer;

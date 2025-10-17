@@ -248,4 +248,114 @@ body {
   min-height: calc(100vh - var(--navbar-height));
   background-color: var(--bg-primary);
 }
+
+/* Leaflet Popup Dark Theme Support */
+.leaflet-popup-content-wrapper {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--card-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow-lg) !important;
+  transition: all 0.3s ease !important;
+}
+
+.leaflet-popup-content {
+  background: var(--card-bg) !important;
+  color: var(--text-primary) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  box-shadow: var(--shadow-lg) !important;
+  transition: all 0.3s ease !important;
+}
+
+.leaflet-popup-tip-container {
+  background: transparent !important;
+}
+
+.leaflet-popup-close-button {
+  background: var(--card-bg) !important;
+  color: var(--text-tertiary) !important;
+  border-radius: 4px !important;
+  transition: all 0.2s ease !important;
+  font-size: 18px !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  top: 8px !important;
+  right: 8px !important;
+}
+
+.leaflet-popup-close-button:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-secondary) !important;
+  transform: scale(1.1) !important;
+}
+
+/* Segment popup specific styling */
+.segment-popup-card {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Ensure popup content inherits theme colors */
+.leaflet-popup-content * {
+  color: inherit !important;
+}
+
+/* Override any hardcoded colors in popup content */
+.leaflet-popup-content .segment-name,
+.leaflet-popup-content .stat-label,
+.leaflet-popup-content .stat-value,
+.leaflet-popup-content .info-label,
+.leaflet-popup-content .info-value,
+.leaflet-popup-content .surface-text,
+.leaflet-popup-content .tire-badge {
+  color: var(--text-primary) !important;
+}
+
+/* Preserve semantic colors for weather icons */
+.leaflet-popup-content .fa-sun {
+  color: var(--brand-primary) !important; /* Orange for sun */
+}
+
+.leaflet-popup-content .fa-cloud-rain {
+  color: #3b82f6 !important; /* Blue for rain */
+}
+
+/* Ensure difficulty grade is orange */
+.leaflet-popup-content .info-value.difficulty,
+.leaflet-popup-content .difficulty {
+  color: var(--brand-primary) !important; /* Orange for difficulty */
+}
+
+.leaflet-popup-content .info-value.difficulty i,
+.leaflet-popup-content .difficulty i {
+  color: var(--text-tertiary) !important; /* Tertiary color for difficulty icon */
+}
+
+.leaflet-popup-content .stat-item,
+.leaflet-popup-content .add-segment-btn,
+.leaflet-popup-content .close-popup-btn {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-secondary) !important;
+  color: var(--text-tertiary) !important;
+}
+
+.leaflet-popup-content .add-segment-btn:hover,
+.leaflet-popup-content .close-popup-btn:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-primary) !important;
+  color: var(--text-secondary) !important;
+}
 </style>

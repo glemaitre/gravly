@@ -676,10 +676,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   left: 0;
   width: 300px;
   height: calc(100vh - var(--navbar-height));
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--bg-primary-rgb), 0.98);
   backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-lg);
   z-index: 2000;
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
@@ -709,7 +709,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .sidebar-title {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
 }
@@ -718,8 +718,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -730,38 +730,38 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 }
 
 .sidebar-close:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .sidebar-options {
   margin-bottom: 1rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  border-bottom: 1px solid var(--border-muted);
   flex-shrink: 0;
 }
 
 .free-mode-instructions {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(248, 250, 252, 0.8);
+  background: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid rgba(229, 231, 235, 0.3);
+  border: 1px solid var(--border-secondary);
   flex-shrink: 0;
 }
 
 .map-navigation-instructions {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
-  background: rgba(243, 244, 246, 0.8);
+  background: var(--bg-secondary);
   border-radius: 6px;
-  border: 1px solid rgba(229, 231, 235, 0.3);
+  border: 1px solid var(--border-secondary);
   flex-shrink: 0;
 }
 
 .instructions-title {
   margin: 0 0 0.75rem 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
@@ -780,7 +780,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 0.8rem;
   line-height: 1.4;
 }
@@ -795,7 +795,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .instruction-text {
   margin: 0;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   text-align: center;
   font-style: italic;
@@ -804,15 +804,15 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 .mode-toggle-container {
   margin-bottom: 0;
   padding: 1rem;
-  background: rgba(248, 250, 252, 0.8);
+  background: var(--card-bg);
   border-radius: 8px;
-  border: 1px solid rgba(229, 231, 235, 0.3);
+  border: 1px solid var(--card-border);
   transition: all 0.2s ease;
 }
 
 .mode-toggle-container:hover {
-  background: rgba(248, 250, 252, 1);
-  border-color: rgba(var(--brand-primary-rgb), 0.3);
+  background: var(--bg-hover);
+  border-color: var(--brand-primary);
 }
 
 .mode-toggle {
@@ -824,7 +824,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .toggle-label {
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -837,7 +837,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 .mode-info-icon {
   margin-left: 0.25rem;
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   cursor: help;
   transition: color 0.2s ease;
 }
@@ -867,7 +867,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #d1d5db;
+  background-color: var(--border-secondary);
   transition: 0.3s;
   border-radius: 24px;
 }
@@ -879,10 +879,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--card-bg);
   transition: 0.3s;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .toggle-switch input:checked + .toggle-slider {
@@ -903,7 +903,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .todo-title {
   margin: 0 0 0.5rem 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
@@ -915,7 +915,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .todo-instructions {
   margin: 0 0 1rem 0;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.75rem;
   text-align: center;
   font-style: italic;
@@ -931,27 +931,27 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: flex;
   flex-direction: column;
   padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--card-bg);
   border-radius: 6px;
-  border: 1px solid rgba(229, 231, 235, 0.5);
+  border: 1px solid var(--card-border);
   transition: all 0.3s ease;
 }
 
 .todo-item:hover {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: var(--bg-hover);
+  border-color: var(--status-info);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .todo-item.completed {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(var(--status-success-rgb), 0.1);
+  border-color: var(--status-success);
   cursor: help;
 }
 
 .todo-item.completed .todo-text {
-  color: #1d4ed8;
+  color: var(--status-success);
 }
 
 .todo-checkbox {
@@ -965,12 +965,12 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 }
 
 .todo-item:not(.completed) .todo-checkbox {
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .todo-item.completed .todo-checkbox {
-  color: #1d4ed8;
-  background: rgba(59, 130, 246, 0.2);
+  color: var(--status-success);
+  background: rgba(var(--status-success-rgb), 0.2);
 }
 
 .todo-checkbox i {
@@ -991,7 +991,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 }
 
 .todo-text {
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 500;
   transition: all 0.3s ease;
@@ -1000,7 +1000,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .todo-text strong {
   font-weight: 700;
-  color: #1f2937;
+  color: inherit;
 }
 
 .waiting-icon {
@@ -1134,7 +1134,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .progress-message {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-weight: 500;
   flex: 1;
 }
@@ -1180,12 +1180,12 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 }
 
 .filters-toggle-btn:hover {
-  background: rgba(0, 0, 0, 0.02);
+  background: var(--bg-hover);
 }
 
 .filters-title {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
@@ -1198,7 +1198,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .filters-chevron {
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   transition: transform 0.3s ease;
 }
 
@@ -1250,7 +1250,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .filter-group-title {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.8rem;
   font-weight: 600;
   display: flex;
@@ -1273,17 +1273,17 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
 }
 
 .tire-condition-group:hover {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(209, 213, 219, 0.9);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  box-shadow: var(--shadow-md);
 }
 
 .tire-condition-group:first-of-type {
@@ -1296,7 +1296,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   gap: 0.4rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin-bottom: 0.25rem;
 }
 
@@ -1491,10 +1491,10 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .filter-btn {
   padding: 0.35rem 0.65rem;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(209, 213, 219, 0.8);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -1504,21 +1504,21 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 }
 
 .filter-btn:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(var(--brand-primary-rgb), 0.4);
-  color: #c2410c;
+  background: var(--bg-hover);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .filter-btn.active {
   background: var(--brand-primary);
-  border-color: #ea580c;
+  border-color: var(--brand-primary);
   color: white;
   font-weight: 600;
 }
 
 .filter-btn.active:hover {
-  background: #ea580c;
-  border-color: #c2410c;
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
 }
 
 /* Filter button wrapper for tooltip positioning */
@@ -1574,11 +1574,11 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%) translateY(-8px);
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1609,7 +1609,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: white;
+  border-top-color: var(--card-bg);
 }
 
 .custom-tooltip::before {
@@ -1619,7 +1619,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: #e5e7eb;
+  border-top-color: var(--card-border);
   margin-top: 1px;
 }
 
@@ -1633,13 +1633,13 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .tooltip-image-tire {
   object-fit: contain;
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .tooltip-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   max-width: 150px;
 }
@@ -1658,7 +1658,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 
 .selected-segments-title {
   margin: 0 0 1rem 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   text-align: center;
@@ -1673,7 +1673,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   text-align: center;
   margin-bottom: 1rem;
@@ -1684,8 +1684,8 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 .spinning-wheel {
   width: 16px;
   height: 16px;
-  border: 2px solid #e5e7eb;
-  border-top: 2px solid #3b82f6;
+  border: 2px solid var(--border-secondary);
+  border-top: 2px solid var(--status-info);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   flex-shrink: 0;
@@ -1702,15 +1702,15 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   align-items: center;
   justify-content: space-between;
   padding: 0.3rem 0.7rem 0.3rem 0.75rem;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--card-bg);
   border-radius: 6px;
-  border: 1px solid rgba(229, 231, 235, 0.5);
+  border: 1px solid var(--card-border);
   transition: all 0.2s ease;
 }
 
 .selected-segment-item:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(var(--brand-primary-rgb), 0.3);
+  background: var(--bg-hover);
+  border-color: var(--brand-primary);
 }
 
 .selected-segment-item.dragging {
@@ -1740,7 +1740,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   width: 20px;
   height: 20px;
   margin-right: 0.5rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   cursor: grab;
   flex-shrink: 0;
 }
@@ -1756,7 +1756,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
 .selected-segment-item .segment-name {
   flex: 1;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   line-height: 1.2;
   margin-left: 0.25rem;
@@ -1814,7 +1814,7 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   display: none;
   font-size: 0.65rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
   line-height: 1.2;
   margin-top: 0.25rem;
