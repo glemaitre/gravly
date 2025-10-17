@@ -4,6 +4,16 @@
       <h4 class="segment-name" :title="segment.name">
         {{ segment.name }}
       </h4>
+      <button
+        class="add-segment-btn"
+        @click.stop="toggleSegmentSelection"
+        :title="
+          isSelected ? 'Remove from selected segments' : 'Add to selected segments'
+        "
+        :class="{ selected: isSelected }"
+      >
+        <i class="fa-solid" :class="isSelected ? 'fa-check' : 'fa-plus'"></i>
+      </button>
     </div>
 
     <div class="segment-card-content">
@@ -101,6 +111,11 @@ const props = defineProps<{
   gpxData?: GPXData | null
 }>()
 
+// Emits
+const emit = defineEmits<{
+  toggleSelection: [segment: TrackResponse]
+}>()
+
 // State for surface type navigation
 const currentSurfaceIndex = ref(0)
 
@@ -142,6 +157,10 @@ function nextSurface(): void {
   if (currentSurfaceIndex.value < props.segment.surface_type.length - 1) {
     currentSurfaceIndex.value++
   }
+}
+
+function toggleSegmentSelection(): void {
+  emit('toggleSelection', props.segment)
 }
 
 // Formatting helper functions
@@ -200,6 +219,10 @@ function formatTireType(tireType: string): string {
 
 .segment-card-header {
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .segment-name {
@@ -212,6 +235,8 @@ function formatTireType(tireType: string): string {
   gap: 6px;
   transition: color 0.2s ease;
   line-height: 1.2;
+  flex: 1;
+  min-width: 0;
 }
 
 .segment-popup-card.selected .segment-name {
@@ -411,5 +436,43 @@ function formatTireType(tireType: string): string {
   font-size: 0.6rem;
   color: #333;
   font-weight: 500;
+}
+
+.add-segment-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.add-segment-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #374151;
+  transform: scale(1.05);
+}
+
+.add-segment-btn.selected {
+  background: #ff6b35;
+  border-color: #ff6b35;
+  color: white;
+}
+
+.add-segment-btn.selected:hover {
+  background: #e55a0d;
+  border-color: #e55a0d;
+  color: white;
+}
+
+.add-segment-btn i {
+  font-size: 0.7rem;
 }
 </style>

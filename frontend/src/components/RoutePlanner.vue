@@ -405,6 +405,7 @@ const isPanning = ref(false)
 // Route dragging state for waypoint insertion
 const isDraggingRoute = ref(false)
 const draggedWaypointIndex = ref<number | null>(null)
+const currentOpenPopup = ref<any>(null)
 let tempDragMarker: any = null
 let justCompletedRouteDrag = false
 let dragStartPosition: { lat: number; lng: number } | null = null
@@ -2042,6 +2043,7 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     })
     // Show popup on hover
     popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
+    currentOpenPopup.value = popup
   })
 
   polyline.on('mouseout', () => {
@@ -2058,8 +2060,18 @@ function renderSegmentOnMap(segment: TrackWithGPXDataResponse) {
     }, 300) // Increased delay to allow moving to popup
   })
 
-  // Click to select/deselect
+  // Click to select/deselect and show popup
   polyline.on('click', () => {
+    // Close any currently open popup
+    if (currentOpenPopup.value && currentOpenPopup.value !== popup) {
+      map.closePopup(currentOpenPopup.value)
+    }
+
+    // Show this popup
+    popup.setLatLng(polyline.getBounds().getCenter()).openOn(map)
+    currentOpenPopup.value = popup
+
+    // Select/deselect the segment
     selectSegment(segment)
   })
 
@@ -2145,7 +2157,10 @@ function createSegmentPopup(segment: TrackResponse): HTMLElement {
   const app = createApp(SegmentPopupCard, {
     segment: segment,
     isSelected: isSelected,
-    gpxData: gpxData
+    gpxData: gpxData,
+    onToggleSelection: (segment: TrackResponse) => {
+      selectSegment(segment)
+    }
   })
 
   app.mount(container)
@@ -2377,6 +2392,12 @@ function initializeMap() {
     if (justCompletedRouteDrag) {
       justCompletedRouteDrag = false
       return
+    }
+
+    // Close any open popup when clicking on the map
+    if (currentOpenPopup.value) {
+      map.closePopup(currentOpenPopup.value)
+      currentOpenPopup.value = null
     }
 
     if (routeMode.value === 'standard') {
