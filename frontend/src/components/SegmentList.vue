@@ -466,7 +466,7 @@ onUnmounted(() => {
 
 .segment-list-header h3 {
   margin: 0;
-  color: #333;
+  color: var(--text-primary);
   font-size: 1.2rem;
   font-weight: 600;
 }
@@ -481,11 +481,11 @@ onUnmounted(() => {
 
 /* Filter Card */
 .filter-card {
-  background: white;
-  border: 1px solid #e1e5e9;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   margin-bottom: 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -498,9 +498,9 @@ onUnmounted(() => {
   grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
   padding: 0.25rem;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 8px 8px 0 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-secondary);
   border-bottom: none;
   position: sticky;
   top: 0;
@@ -515,9 +515,9 @@ onUnmounted(() => {
   overflow-y: auto; /* Enable scrolling within the container */
   padding: 0;
   border-radius: 0 0 8px 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-secondary);
   border-top: none;
-  background: white;
+  background: var(--card-bg);
   position: relative;
   min-height: 0; /* Ensure flex child can shrink */
   padding-bottom: 50px; /* Space for the show more button */
@@ -531,7 +531,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 20px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.1));
+  background: linear-gradient(transparent, rgba(var(--bg-primary-rgb), 0.1));
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -546,17 +546,17 @@ onUnmounted(() => {
 }
 
 .cards-container::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-tertiary);
   border-radius: 4px;
 }
 
 .cards-container::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--border-secondary);
   border-radius: 4px;
 }
 
 .cards-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--bg-hover);
 }
 
 .tab-button {
@@ -568,7 +568,7 @@ onUnmounted(() => {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -576,15 +576,15 @@ onUnmounted(() => {
 }
 
 .tab-button:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .tab-button.active {
-  background: #ffffff;
+  background: var(--card-bg);
   color: var(--brand-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #ffb366;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--brand-primary);
 }
 
 .tab-button i {
@@ -604,7 +604,7 @@ onUnmounted(() => {
 
 .segment-comments {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--text-muted);
   line-height: 1.4;
 }
 
@@ -615,8 +615,8 @@ onUnmounted(() => {
 .no-segments {
   text-align: center;
   padding: 40px 20px;
-  color: #666;
-  background: white;
+  color: var(--text-muted);
+  background: var(--card-bg);
 }
 
 .no-segments p {
@@ -630,7 +630,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: white;
+  background: var(--card-bg);
   position: relative;
   z-index: 10; /* Higher z-index to appear above filter-card */
   margin-top: 16px; /* Add some spacing from the cards above */
@@ -801,7 +801,7 @@ onUnmounted(() => {
   justify-content: center;
   margin-left: 4px;
   cursor: help;
-  color: #f59e0b;
+  color: var(--status-warning);
   transition: opacity 0.2s ease;
   position: relative;
   animation: pulse 2s ease-in-out infinite;

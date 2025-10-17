@@ -66,12 +66,13 @@ const isEditorAuthorized = computed(
   right: 0;
   width: 100%;
   z-index: 9999;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-md);
   min-height: var(--navbar-height);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .navbar-container {
@@ -135,7 +136,7 @@ const isEditorAuthorized = computed(
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   text-decoration: none;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   font-weight: 500;
   transition: all 0.2s ease;
@@ -143,7 +144,7 @@ const isEditorAuthorized = computed(
 }
 
 .nav-link:hover {
-  background: #f9fafb;
+  background: var(--bg-hover);
   color: var(--brand-primary);
 }
 

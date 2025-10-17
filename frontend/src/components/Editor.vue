@@ -1452,7 +1452,7 @@ ${points.value
 .editor {
   display: flex;
   min-height: calc(100vh - var(--navbar-height, 60px));
-  background: #f8fafc;
+  background: var(--bg-secondary);
   overflow-x: hidden;
   position: relative;
 }
@@ -1530,7 +1530,7 @@ ${points.value
   padding: 0.5rem 0;
   position: sticky;
   top: 0;
-  background: #ffffff;
+  background: var(--card-bg);
   z-index: 10;
 }
 .menu-section {
@@ -1539,14 +1539,14 @@ ${points.value
 .menu-section + .menu-section {
   margin-top: 0.25rem;
   padding-top: 0.25rem;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--border-muted);
 }
 .menu-section-title {
   margin: 0.25rem 0 0.25rem;
   padding: 0 0.75rem;
   font-size: 1rem;
   font-weight: 400;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: left;
 }
 .menu-list {

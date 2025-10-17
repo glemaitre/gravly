@@ -1115,7 +1115,7 @@ onUnmounted(() => {
 <style scoped>
 .landing-page {
   height: calc(100vh - var(--navbar-height, 60px));
-  background: #f8fafc;
+  background: var(--bg-secondary);
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -1255,7 +1255,7 @@ onUnmounted(() => {
 
 .hero-section {
   text-align: center;
-  color: #2d3748;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
   padding: 0.5rem 0;
   flex-shrink: 0;
@@ -1273,7 +1273,7 @@ onUnmounted(() => {
 
 .hero-subtitle {
   font-size: 1.1rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin: 0;
 }
 
@@ -1374,12 +1374,10 @@ onUnmounted(() => {
 
 /* Card styles matching Editor */
 .card {
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow:
-    0 1px 3px 0 rgba(0, 0, 0, 0.1),
-    0 1px 2px 0 rgba(0, 0, 0, 0.06);
-  border: 1px solid #e5e7eb;
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border);
   overflow: hidden;
 }
 
@@ -1401,10 +1399,10 @@ onUnmounted(() => {
   top: 10px;
   left: 10px;
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--bg-primary-rgb, 255, 255, 255), 0.95);
   border-radius: 8px;
   padding: 0.25rem 0.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   backdrop-filter: blur(10px);
 }
 
@@ -1420,17 +1418,17 @@ onUnmounted(() => {
   gap: 4px;
   font-size: 12px;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .limit-select {
   padding: 4px 8px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   font-size: 12px;
-  background: white;
-  color: #374151;
+  background: var(--input-bg);
+  color: var(--input-text);
   cursor: pointer;
   min-width: 60px;
 }
@@ -1447,16 +1445,16 @@ onUnmounted(() => {
   top: 10px; /* Position at top of map */
   right: 10px; /* Position at right side of map */
   z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--bg-primary-rgb), 0.95);
   border-radius: 8px;
   padding: 8px 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   backdrop-filter: blur(10px);
 }
 
 .loading-text {
   font-size: 12px;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 /* Custom marker styles */
@@ -1628,26 +1626,26 @@ onUnmounted(() => {
 
 :global(.segment-popup h3) {
   margin: 0 0 8px 0;
-  color: #2d3748;
+  color: var(--text-primary);
   font-size: 16px;
 }
 
 :global(.segment-popup p) {
   margin: 4px 0;
   font-size: 14px;
-  color: #4a5568;
+  color: var(--text-secondary);
 }
 
 /* Marker popup styling */
 :global(.marker-popup) {
   font-size: 14px;
-  color: #2d3748;
+  color: var(--text-primary);
   text-align: center;
   padding: 4px;
 }
 
 :global(.marker-popup strong) {
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 /* Fixed center marker styling */

@@ -2300,12 +2300,20 @@ describe('RoutePlanner - Refactored Implementation', () => {
       mockSegment = {
         id: 1,
         name: 'Test Segment',
-        difficulty: 3,
-        surface: 'asphalt',
+        difficulty_level: 3,
+        surface_type: ['asphalt'],
         tire_dry: 'slick',
         tire_wet: 'slick',
         file_path: '/test/path.gpx',
-        isReversed: false
+        isReversed: false,
+        bound_north: 0,
+        bound_south: 0,
+        bound_east: 0,
+        bound_west: 0,
+        barycenter_latitude: 0,
+        barycenter_longitude: 0,
+        track_type: 'segment',
+        comments: ''
       }
 
       // Mock the map instance

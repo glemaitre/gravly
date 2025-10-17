@@ -195,18 +195,18 @@ function formatTireType(tireType: string): string {
 
 <style scoped>
 .segment-card {
-  background: white;
-  border: 1px solid #e1e5e9;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   position: relative;
 }
 
 .segment-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
   border-color: rgba(var(--brand-primary-rgb), 0.3);
 }
@@ -229,7 +229,7 @@ function formatTireType(tireType: string): string {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   transition: color 0.2s ease;
   line-height: 1.3;
   flex: 1;
@@ -258,7 +258,7 @@ function formatTireType(tireType: string): string {
 
 .metric-label {
   font-size: 0.6rem;
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -266,12 +266,12 @@ function formatTireType(tireType: string): string {
 
 .metric-value {
   font-size: 0.75rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .segment-card-footer {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-muted);
   padding-top: 8px;
 }
 
@@ -290,7 +290,7 @@ function formatTireType(tireType: string): string {
 }
 
 .info-label {
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -304,13 +304,13 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .info-value i {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 .info-value.difficulty {
@@ -339,12 +339,12 @@ function formatTireType(tireType: string): string {
   font-weight: 500;
   text-align: center;
   line-height: 1.2;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .surface-indicator {
   font-size: 0.55rem;
-  color: #999;
+  color: var(--text-muted);
   font-weight: 400;
 }
 
@@ -368,7 +368,7 @@ function formatTireType(tireType: string): string {
 }
 
 .surface-nav-btn:disabled {
-  color: #ccc;
+  color: var(--text-muted);
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -401,17 +401,17 @@ function formatTireType(tireType: string): string {
 }
 
 .tire-badge {
-  background-color: #f5f5f5;
+  background-color: var(--bg-tertiary);
   padding: 1px 4px;
   border-radius: 2px;
   font-size: 0.6rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .add-segment-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   width: 28px;
   height: 28px;
@@ -420,14 +420,14 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #666;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .add-segment-btn:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-  color: #374151;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
   transform: scale(1.05);
 }
 
@@ -436,8 +436,8 @@ function formatTireType(tireType: string): string {
 }
 
 .navigate-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
   width: 28px;
   height: 28px;
@@ -446,14 +446,14 @@ function formatTireType(tireType: string): string {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #666;
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
 .navigate-btn:hover {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-  color: #374151;
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
+  color: var(--text-secondary);
   transform: scale(1.05);
 }
 

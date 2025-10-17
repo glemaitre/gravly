@@ -117,7 +117,7 @@ import logoUrl from '../assets/images/logo.svg'
   font-weight: 600;
   font-size: 1rem;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn i {
@@ -125,14 +125,15 @@ import logoUrl from '../assets/images/logo.svg'
 }
 
 .btn-primary {
-  background: white;
-  color: var(--brand-primary);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  border: 1px solid var(--button-primary-bg);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  background: #f9fafb;
+  box-shadow: var(--shadow-md);
+  background: var(--button-primary-hover);
 }
 
 .btn-secondary {
@@ -144,14 +145,14 @@ import logoUrl from '../assets/images/logo.svg'
 .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 /* Problem Section */
 .problem-section {
   padding: 4rem 2rem;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--bg-primary);
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .problem-container {
@@ -163,14 +164,14 @@ import logoUrl from '../assets/images/logo.svg'
 .problem-description {
   font-size: 1.125rem;
   line-height: 1.75;
-  color: #4b5563;
+  color: var(--text-secondary);
   margin: 1.5rem 0 0 0;
 }
 
 /* Features Section */
 .features {
   padding: 4rem 2rem;
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .features-container {
@@ -183,7 +184,7 @@ import logoUrl from '../assets/images/logo.svg'
   font-weight: 700;
   text-align: center;
   margin: 0 0 3rem 0;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .features-grid {
@@ -193,16 +194,17 @@ import logoUrl from '../assets/images/logo.svg'
 }
 
 .feature-card {
-  background: white;
+  background: var(--card-bg);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
+  border: 1px solid var(--card-border);
 }
 
 .feature-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
 }
 
 .feature-icon {
@@ -222,14 +224,14 @@ import logoUrl from '../assets/images/logo.svg'
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0 0 1rem 0;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .feature-description {
   font-size: 1rem;
   line-height: 1.6;
   margin: 0;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 /* Responsive Design */

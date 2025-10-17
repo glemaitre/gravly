@@ -72,6 +72,12 @@ router.beforeEach(async (to, from, next) => {
 // Initialize language before mounting
 initializeLanguage()
 
+// Initialize theme before mounting
+import { useThemeSettings } from './composables/useThemeSettings'
+const { initializeTheme, watchSystemTheme } = useThemeSettings()
+initializeTheme()
+watchSystemTheme()
+
 const app = createApp(App)
 app.use(router)
 app.use(i18n)

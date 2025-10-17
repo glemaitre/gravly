@@ -200,6 +200,11 @@ function stopResize() {
   document.removeEventListener('touchend', stopResize)
 }
 
+// Helper function to get CSS variable value
+function getCssVariableValue(variable: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(variable).trim()
+}
+
 // Chart management
 function createElevationChart() {
   // Don't create chart if there's an error or no data
@@ -217,6 +222,19 @@ function createElevationChart() {
     elevationChart.destroy()
   }
 
+  // Get theme-aware colors
+  const brandPrimary = getCssVariableValue('--brand-primary')
+  const brandPrimaryRgb = getCssVariableValue('--brand-primary-rgb')
+  const cardBg = getCssVariableValue('--card-bg')
+  const borderMuted = getCssVariableValue('--border-muted')
+
+  // Check if we're in dark theme to determine grid visibility and text colors
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark'
+
+  // Use appropriate colors for axis labels based on theme
+  const axisTitleColor = isDarkTheme ? '#f8fafc' : '#111827' // text-primary equivalent
+  const axisTickColor = isDarkTheme ? '#e2e8f0' : '#374151' // text-secondary equivalent
+
   // Create new chart
   elevationChart = new Chart(ctx, {
     type: 'line',
@@ -226,14 +244,14 @@ function createElevationChart() {
         {
           label: 'Elevation',
           data: [],
-          borderColor: '#ea580c', // Dark orange
-          backgroundColor: 'rgba(234, 88, 12, 0.15)', // Light dark orange fill
+          borderColor: brandPrimary, // Dynamic brand color
+          backgroundColor: `rgba(${brandPrimaryRgb}, 0.15)`, // Dynamic fill with original orange
           fill: true,
           tension: 0.4,
           pointRadius: 0,
           pointHoverRadius: 6, // Larger hover point
-          pointHoverBackgroundColor: '#ea580c',
-          pointHoverBorderColor: 'white',
+          pointHoverBackgroundColor: brandPrimary,
+          pointHoverBorderColor: cardBg,
           pointHoverBorderWidth: 2,
           borderWidth: 2.5
         }
@@ -265,9 +283,11 @@ function createElevationChart() {
           type: 'linear',
           title: {
             display: true,
-            text: 'Distance (km)'
+            text: 'Distance (km)',
+            color: axisTitleColor
           },
           ticks: {
+            color: axisTickColor,
             callback: (value) => {
               if (typeof value === 'number') {
                 return value.toFixed(1)
@@ -275,13 +295,23 @@ function createElevationChart() {
               return value
             }
           },
+          grid: {
+            color: isDarkTheme ? borderMuted : 'transparent'
+          },
           min: 0,
           max: props.routeDistance // Set max to total route distance in km
         },
         y: {
           title: {
             display: true,
-            text: 'Elevation (m)'
+            text: 'Elevation (m)',
+            color: axisTitleColor
+          },
+          ticks: {
+            color: axisTickColor
+          },
+          grid: {
+            color: isDarkTheme ? borderMuted : 'transparent'
           }
         }
       },
@@ -302,6 +332,51 @@ function createElevationChart() {
   }
 
   updateChartData()
+}
+
+// Function to update chart colors when theme changes
+function updateChartColors() {
+  if (!elevationChart) return
+
+  // Get current theme-aware colors
+  const brandPrimary = getCssVariableValue('--brand-primary')
+  const brandPrimaryRgb = getCssVariableValue('--brand-primary-rgb')
+  const cardBg = getCssVariableValue('--card-bg')
+  const borderMuted = getCssVariableValue('--border-muted')
+
+  // Check if we're in dark theme to determine grid visibility and text colors
+  const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark'
+
+  // Use appropriate colors for axis labels based on theme
+  const axisTitleColor = isDarkTheme ? '#f8fafc' : '#111827' // text-primary equivalent
+  const axisTickColor = isDarkTheme ? '#e2e8f0' : '#374151' // text-secondary equivalent
+
+  // Update chart colors
+  if (elevationChart.data.datasets[0]) {
+    elevationChart.data.datasets[0].borderColor = brandPrimary
+    elevationChart.data.datasets[0].backgroundColor = `rgba(${brandPrimaryRgb}, 0.15)`
+    elevationChart.data.datasets[0].pointHoverBackgroundColor = brandPrimary
+    elevationChart.data.datasets[0].pointHoverBorderColor = cardBg
+  }
+
+  // Update scale colors
+  if (elevationChart.options.scales?.x) {
+    elevationChart.options.scales.x.title.color = axisTitleColor
+    elevationChart.options.scales.x.ticks.color = axisTickColor
+    elevationChart.options.scales.x.grid.color = isDarkTheme
+      ? borderMuted
+      : 'transparent'
+  }
+
+  if (elevationChart.options.scales?.y) {
+    elevationChart.options.scales.y.title.color = axisTitleColor
+    elevationChart.options.scales.y.ticks.color = axisTickColor
+    elevationChart.options.scales.y.grid.color = isDarkTheme
+      ? borderMuted
+      : 'transparent'
+  }
+
+  elevationChart.update('none')
 }
 
 function updateChartData() {
@@ -380,6 +455,19 @@ watch(
       setTimeout(() => {
         elevationChart?.resize()
       }, 100)
+    }
+  }
+)
+
+// Watch for theme changes by monitoring the document's data-theme attribute
+watch(
+  () => document.documentElement.getAttribute('data-theme'),
+  () => {
+    if (elevationChart && props.showElevation) {
+      // Small delay to ensure CSS variables are updated
+      setTimeout(() => {
+        updateChartColors()
+      }, 50)
     }
   }
 )
@@ -476,10 +564,10 @@ defineExpose({
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(var(--bg-primary-rgb), 0.85);
   backdrop-filter: blur(8px);
-  border-top: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   transition: all 0.3s ease-in-out;
   transform: translateY(
@@ -496,7 +584,7 @@ defineExpose({
 
 .elevation-expanded {
   transform: translateY(0); /* Show full content when expanded */
-  background: rgba(255, 255, 255, 0.95); /* More opaque when expanded */
+  background: rgba(var(--bg-primary-rgb), 0.95); /* More opaque when expanded */
 }
 
 .elevation-section.sidebar-open {
@@ -505,9 +593,9 @@ defineExpose({
 
 .elevation-toggle {
   height: 30px;
-  background: rgba(248, 250, 252, 0.8);
+  background: var(--bg-secondary);
   backdrop-filter: blur(4px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  border-bottom: 1px solid var(--border-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -516,7 +604,7 @@ defineExpose({
 }
 
 .elevation-toggle:hover {
-  background: rgba(241, 245, 249, 0.9);
+  background: var(--bg-hover);
 }
 
 .elevation-toggle-content {
@@ -547,13 +635,13 @@ defineExpose({
   align-items: center;
   gap: 0.25rem;
   font-size: 0.75rem;
-  color: #374151;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .toggle-stat i {
   font-size: 0.7rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   opacity: 0.9;
 }
 
@@ -564,14 +652,14 @@ defineExpose({
 
 .elevation-toggle-text {
   font-weight: 600;
-  color: #374151;
+  color: var(--text-primary);
   flex: 1;
   text-align: left;
   margin-left: 0.5rem;
 }
 
 .elevation-toggle-content i:last-child {
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   transition: transform 0.2s ease;
 }
@@ -581,7 +669,7 @@ defineExpose({
 }
 
 .elevation-content {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--card-bg);
   backdrop-filter: blur(4px);
   overflow: hidden; /* Prevent content overflow */
   display: flex;
@@ -620,19 +708,19 @@ defineExpose({
 .elevation-resize-handle-bar {
   width: 40px;
   height: 4px;
-  background: white;
+  background: var(--card-bg);
   border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--text-primary);
   font-size: 10px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   position: relative;
 }
 
 .elevation-resize-handle:hover .elevation-resize-handle-bar {
-  background: #fff5f0;
+  background: var(--bg-hover);
   transform: scale(1.05);
 }
 
@@ -649,18 +737,18 @@ defineExpose({
 
 .elevation-resize-handle-bar::before {
   top: -4px;
-  border-bottom: 4px solid white;
+  border-bottom: 4px solid var(--card-bg);
 }
 
 .elevation-resize-handle-bar::after {
   bottom: -4px;
-  border-top: 4px solid white;
+  border-top: 4px solid var(--card-bg);
 }
 
 .elevation-resize-handle:hover .elevation-resize-handle-bar::before,
 .elevation-resize-handle:hover .elevation-resize-handle-bar::after {
-  border-bottom-color: #fff5f0;
-  border-top-color: #fff5f0;
+  border-bottom-color: var(--bg-hover);
+  border-top-color: var(--bg-hover);
 }
 
 .elevation-empty-state {
@@ -673,7 +761,7 @@ defineExpose({
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-size: 0.875rem;
   font-weight: 500;
   text-align: center;
@@ -682,7 +770,7 @@ defineExpose({
 
 .elevation-empty-state i {
   font-size: 2.5rem;
-  color: #d1d5db;
+  color: var(--text-tertiary);
   opacity: 0.6;
 }
 
@@ -695,9 +783,9 @@ defineExpose({
 }
 
 .chart-container {
-  background: white;
+  background: var(--card-bg);
   border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--card-border);
   overflow: hidden;
   flex: 1; /* Take remaining space in elevation-chart */
   position: relative;
@@ -715,10 +803,10 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 0.75rem 1rem;
-  background: #f8fafc;
-  border-top: 1px solid #e5e7eb;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-muted);
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .chart-distance {
@@ -741,8 +829,8 @@ defineExpose({
   height: 12px;
   border-radius: 50%;
   background: var(--brand-primary);
-  border: 2px solid white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--card-bg);
+  box-shadow: var(--shadow-md);
   animation: pulse 2s infinite;
 }
 

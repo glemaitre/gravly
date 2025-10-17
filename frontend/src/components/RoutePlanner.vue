@@ -3670,14 +3670,15 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  background: white;
+  background: var(--card-bg);
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
   display: flex;
   align-items: center;
   gap: 0.5rem;
   max-width: 90%;
+  border: 1px solid var(--card-border);
 }
 
 .info-banner-content {
@@ -3693,7 +3694,7 @@ onUnmounted(() => {
 
 .info-banner-message {
   font-size: 0.75rem;
-  color: #333;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 0.25rem;
@@ -3709,15 +3710,15 @@ onUnmounted(() => {
   background: none;
   border: none;
   cursor: pointer;
-  color: #666;
+  color: var(--text-tertiary);
   padding: 0.15rem;
   border-radius: 4px;
   transition: all 0.2s ease;
 }
 
 .info-banner-close:hover {
-  background-color: #f5f5f5;
-  color: #333;
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .map-controls {
@@ -3738,20 +3739,21 @@ onUnmounted(() => {
   height: 40px;
   border: none;
   border-radius: 6px;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  color: #374151;
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
 }
 
 .control-btn:hover:not(:disabled) {
-  background: #f3f4f6;
+  background: var(--bg-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-md);
 }
 
 .control-btn:disabled {
@@ -3776,10 +3778,10 @@ onUnmounted(() => {
 
 .waypoint-context-menu {
   position: fixed;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--card-bg);
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   z-index: 10000;
   min-width: 160px;
   overflow: hidden;
@@ -3792,11 +3794,11 @@ onUnmounted(() => {
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-size: 14px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .context-menu-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--bg-hover);
 }
 
 .context-menu-item i {
@@ -3856,20 +3858,20 @@ onUnmounted(() => {
 
 /* Segment popup card styles */
 :global(.segment-popup-card) {
-  border: 1px solid #e1e5e9;
+  border: 1px solid var(--card-border);
   border-radius: 6px;
   padding: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--card-shadow);
   position: relative;
   font-family: inherit;
-  background: white;
+  background: var(--card-bg);
   width: 340px;
 }
 
 :global(.segment-popup-card:hover) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
   border-color: rgba(255, 107, 53, 0.3);
 }
@@ -3893,7 +3895,7 @@ onUnmounted(() => {
   margin: 0;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -3919,9 +3921,9 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: #f8fafc;
+  background: var(--bg-tertiary);
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-muted);
   transition: background-color 0.2s ease;
   flex: 1;
 }
@@ -3948,7 +3950,7 @@ onUnmounted(() => {
 
 :global(.stat-label) {
   font-size: 0.6rem;
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -3956,12 +3958,12 @@ onUnmounted(() => {
 
 :global(.stat-value) {
   font-size: 0.75rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 :global(.segment-card-footer) {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-muted);
   padding-top: 8px;
   position: relative;
 }
@@ -3981,7 +3983,7 @@ onUnmounted(() => {
 }
 
 :global(.info-label) {
-  color: #666;
+  color: var(--text-tertiary);
   font-weight: 500;
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -3995,13 +3997,13 @@ onUnmounted(() => {
   justify-content: center;
   gap: 3px;
   font-size: 0.65rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 :global(.info-value i) {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 :global(.info-value.difficulty) {
@@ -4026,17 +4028,17 @@ onUnmounted(() => {
 
 :global(.tire-recommendation i) {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-tertiary);
 }
 
 :global(.tire-badge) {
   display: inline-block;
   padding: 1px 4px;
-  background: #e2e8f0;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   font-size: 0.6rem;
   font-weight: 500;
-  color: #475569;
+  color: var(--text-tertiary);
 }
 
 /* Segment landmark styles */

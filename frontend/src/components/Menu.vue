@@ -263,18 +263,18 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--bg-primary);
   cursor: pointer;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: 1rem;
   transition: all 0.2s ease;
 }
 
 .menu-trigger:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
 }
 
 .menu-trigger.active {
@@ -289,10 +289,10 @@ onUnmounted(() => {
   top: calc(100% + 8px);
   right: 0;
   width: 280px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-xl);
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
@@ -315,7 +315,7 @@ onUnmounted(() => {
 .menu-section-title {
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
@@ -331,7 +331,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: transparent;
   cursor: pointer;
-  color: #374151;
+  color: var(--text-secondary);
   font-size: 0.875rem;
   text-align: left;
   transition: background 0.2s ease;
@@ -339,7 +339,7 @@ onUnmounted(() => {
 }
 
 .menu-item:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
 }
 
 .menu-item:disabled {
@@ -350,7 +350,7 @@ onUnmounted(() => {
 .menu-divider {
   margin: 0;
   border: none;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--border-primary);
 }
 
 /* Strava Login Button in Menu */
@@ -366,7 +366,7 @@ onUnmounted(() => {
 }
 
 .strava-login-btn:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
   border: none;
 }
 
@@ -387,7 +387,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
-  background: #f9fafb;
+  background: var(--bg-tertiary);
   border-radius: 6px;
   margin-bottom: 0.5rem;
 }
@@ -401,7 +401,7 @@ onUnmounted(() => {
 
 .user-icon {
   font-size: 1.5em;
-  color: #6b7280;
+  color: var(--text-tertiary);
 }
 
 .user-details {
@@ -410,24 +410,24 @@ onUnmounted(() => {
 
 .user-details .user-name {
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
   font-size: 0.875rem;
 }
 
 .user-details .user-location {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin-top: 0.125rem;
 }
 
 .logout-btn {
-  color: #dc2626;
+  color: var(--status-error);
   justify-content: flex-start;
 }
 
 .logout-btn:hover {
-  background: #fef2f2;
-  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--button-danger-hover);
 }
 
 /* Settings Buttons */
@@ -444,7 +444,7 @@ onUnmounted(() => {
 }
 
 .settings-button:hover {
-  background: #f3f4f6;
+  background: var(--bg-hover);
 }
 
 .settings-button span {
@@ -454,7 +454,7 @@ onUnmounted(() => {
 
 .settings-chevron {
   transition: transform 0.2s ease;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-size: 0.75rem;
 }
 
@@ -467,7 +467,7 @@ onUnmounted(() => {
   margin-left: 1.5rem;
   margin-bottom: 0.5rem;
   padding-left: 1rem;
-  border-left: 2px solid #e5e7eb;
+  border-left: 2px solid var(--border-primary);
 }
 
 /* Language and Theme Options */
@@ -509,7 +509,7 @@ onUnmounted(() => {
 /* Support Links */
 .support-link {
   justify-content: flex-start;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .support-link:hover {

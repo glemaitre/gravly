@@ -421,10 +421,10 @@ onUnmounted(() => {
   left: 0;
   width: 300px;
   height: calc(100vh - var(--navbar-height));
-  background: rgba(255, 255, 255, 0.98);
+  background: rgba(var(--bg-primary-rgb), 0.98);
   backdrop-filter: blur(10px);
-  border-right: 1px solid rgba(229, 231, 235, 0.5);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  border-right: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-lg);
   z-index: 1000;
   transform: translateX(-100%);
   transition: transform 0.3s ease-in-out;
@@ -451,12 +451,12 @@ onUnmounted(() => {
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .filters-title {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 1.125rem;
   font-weight: 600;
   display: flex;
@@ -472,8 +472,8 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border: none;
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -484,8 +484,8 @@ onUnmounted(() => {
 }
 
 .filters-close:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 /* Filter Group Styles */
@@ -497,7 +497,7 @@ onUnmounted(() => {
 
 .filter-group-title {
   margin: 0;
-  color: #374151;
+  color: var(--text-primary);
   font-size: 0.875rem;
   font-weight: 600;
   display: flex;
@@ -523,8 +523,8 @@ onUnmounted(() => {
 
 .difficulty-tooltip {
   position: fixed !important;
-  background: #1f2937;
-  color: white;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
   padding: 0.75rem 1rem;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -536,7 +536,7 @@ onUnmounted(() => {
   visibility: hidden;
   pointer-events: none;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   white-space: normal;
   word-wrap: break-word;
   text-align: center;
@@ -552,21 +552,22 @@ onUnmounted(() => {
 .name-filter-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--input-text);
+  background: var(--input-bg);
   transition: all 0.2s ease;
 }
 
 .name-filter-input:focus {
   outline: none;
-  border-color: var(--brand-primary);
+  border-color: var(--input-border-focus);
   box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
 }
 
 .name-filter-input::placeholder {
-  color: #9ca3af;
+  color: var(--input-placeholder);
 }
 
 /* Difficulty Range Slider */
@@ -588,7 +589,7 @@ onUnmounted(() => {
 .slider-track-background {
   position: absolute;
   height: 6px;
-  background: #e5e7eb;
+  background: var(--bg-tertiary);
   border-radius: 3px;
   z-index: 1;
   left: -9px;
@@ -636,11 +637,11 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   background: var(--brand-primary);
-  border: 2px solid white;
+  border: 2px solid var(--card-bg);
   border-radius: 50%;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease;
   position: relative;
   z-index: 4;
@@ -651,11 +652,11 @@ onUnmounted(() => {
   width: 18px;
   height: 18px;
   background: var(--brand-primary);
-  border: 2px solid white;
+  border: 2px solid var(--card-bg);
   border-radius: 50%;
   cursor: pointer;
   pointer-events: all;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s ease;
   position: relative;
   z-index: 4;
@@ -681,7 +682,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-muted);
   font-weight: 500;
   padding: 0.25rem;
   margin: 0 0.2rem;
@@ -719,10 +720,10 @@ onUnmounted(() => {
 
 .filter-btn {
   padding: 0.35rem 0.65rem;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(209, 213, 219, 0.8);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
-  color: #4b5563;
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -732,21 +733,21 @@ onUnmounted(() => {
 }
 
 .filter-btn:hover {
-  background: rgba(255, 255, 255, 1);
-  border-color: rgba(var(--brand-primary-rgb), 0.4);
-  color: #c2410c;
+  background: var(--bg-hover);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
 }
 
 .filter-btn.active {
   background: var(--brand-primary);
-  border-color: #ea580c;
+  border-color: var(--brand-primary);
   color: white;
   font-weight: 600;
 }
 
 .filter-btn.active:hover {
-  background: #ea580c;
-  border-color: #c2410c;
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
 }
 
 .filter-btn-with-image {
@@ -785,17 +786,17 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(229, 231, 235, 0.8);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   transition: all 0.2s ease;
 }
 
 .tire-condition-group:hover {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(209, 213, 219, 0.9);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  background: var(--bg-hover);
+  border-color: var(--border-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .tire-condition-header {
@@ -804,7 +805,7 @@ onUnmounted(() => {
   gap: 0.4rem;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-tertiary);
   margin-bottom: 0.25rem;
 }
 
@@ -813,11 +814,11 @@ onUnmounted(() => {
 }
 
 .tire-condition-header .fa-sun {
-  color: #f59e0b;
+  color: var(--status-warning);
 }
 
 .tire-condition-header .fa-cloud-rain {
-  color: #3b82f6;
+  color: var(--status-info);
 }
 
 /* Custom Tooltip */
@@ -826,11 +827,11 @@ onUnmounted(() => {
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%) translateY(-8px);
-  background: white;
-  border: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-lg);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -860,7 +861,7 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: white;
+  border-top-color: var(--card-bg);
 }
 
 .custom-tooltip::before {
@@ -870,7 +871,7 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   border: 7px solid transparent;
-  border-top-color: #e5e7eb;
+  border-top-color: var(--card-border);
   margin-top: 1px;
 }
 
@@ -884,13 +885,13 @@ onUnmounted(() => {
 
 .tooltip-image-tire {
   object-fit: contain;
-  background: #f9fafb;
+  background: var(--bg-secondary);
 }
 
 .tooltip-text {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #374151;
+  color: var(--text-primary);
   text-align: center;
   max-width: 150px;
 }
@@ -899,7 +900,7 @@ onUnmounted(() => {
 .mobile-label {
   font-size: 0.7rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-tertiary);
   text-align: center;
   line-height: 1.2;
   margin-top: 0.25rem;
