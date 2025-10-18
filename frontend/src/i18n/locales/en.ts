@@ -121,6 +121,7 @@ export default {
     home: 'Home',
     explorer: 'Explorer',
     editor: 'Editor',
+    labs: 'Labs',
     routePlanner: 'Planner',
     login: 'Login with Strava',
     logout: 'Logout'
@@ -462,6 +463,29 @@ export default {
     saving: 'Saving...',
     delete: 'Delete',
     deleting: 'Deleting...'
+  },
+
+  // Labs page
+  labs: {
+    title: 'Labs',
+    subtitle: 'Experimental features and integrations for testing new functionality.',
+    wahoo: {
+      title: 'Wahoo Cloud API Integration',
+      description:
+        'Connect to Wahoo Cloud API to test live data integration and OAuth2 authentication flow.',
+      checkingStatus: 'Checking connection status...',
+      connected: 'Connected to Wahoo Cloud API',
+      notConnected: 'Not connected to Wahoo Cloud API',
+      connect: 'Connect to Wahoo',
+      disconnect: 'Disconnect from Wahoo',
+      testApi: 'Test API Connection',
+      testResults: 'API Test Results'
+    },
+    future: {
+      title: 'Future Experiments',
+      description:
+        'More experimental features will be added here as they are developed.'
+    }
   },
 
   // Footer

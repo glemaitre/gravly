@@ -189,6 +189,17 @@ def load_environment_config(
             f"Using default values (backend: 0.0.0.0:8000, frontend: localhost:3000)."
         )
 
+    # Load Wahoo configuration (optional - for Labs features)
+    wahoo_file = env_folder / "wahoo"
+    if wahoo_file.exists():
+        load_dotenv(wahoo_file, override=True)
+        logger.info(f"Loaded Wahoo environment variables from {wahoo_file}")
+    else:
+        logger.info(
+            f"Wahoo configuration file not found at {wahoo_file}. "
+            f"Wahoo integration features will be disabled."
+        )
+
     # Extract database configuration from environment variables
     # All database parameters are required - no defaults
     required_db_params = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]

@@ -1,0 +1,22 @@
+# Wahoo Cloud API Configuration
+# Copy this file to .env/wahoo and fill in your actual values
+
+# Wahoo Cloud API OAuth2 Configuration
+WAHOO_CLIENT_ID=your_client_id_here
+WAHOO_CLIENT_SECRET=your_client_secret_here
+
+# OAuth2 Callback URL (must match what's configured in Wahoo Developer Portal)
+WAHOO_REDIRECT_URI=https://gravel.cc:33443/wahoo-callback
+
+# Wahoo Cloud API Base URL
+WAHOO_API_BASE_URL=https://api.wahooligan.com
+
+# OAuth2 Authorization URL
+WAHOO_AUTH_URL=https://api.wahooligan.com/oauth/authorize
+
+# OAuth2 Token URL
+WAHOO_TOKEN_URL=https://api.wahooligan.com/oauth/token
+
+# Scopes for Wahoo API access (comma-separated)
+# Available scopes: read, write, read_workouts, write_workouts
+WAHOO_SCOPES=read,read_workouts
