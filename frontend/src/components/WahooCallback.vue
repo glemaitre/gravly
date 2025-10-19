@@ -53,12 +53,15 @@ onMounted(async () => {
     }
 
     // Call the backend API to handle the code
-    const response = await fetch(`/api/wahoo/callback?code=${encodeURIComponent(code)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
+    const response = await fetch(
+      `/api/wahoo/callback?code=${encodeURIComponent(code)}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    )
 
     if (!response.ok) {
       throw new Error(`Backend error: ${response.statusText}`)

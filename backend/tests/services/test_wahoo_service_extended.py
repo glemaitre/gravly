@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from backend.src.services.wahoo.service import WahooService
 from backend.src.services.wahoo.exceptions import WahooAccessUnauthorized
+from backend.src.services.wahoo.service import WahooService
 from backend.src.utils.config import WahooConfig
 
 
