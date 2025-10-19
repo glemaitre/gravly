@@ -18,7 +18,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/editor',
     component: Editor,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, requiresEditor: true }
   },
   {
     path: '/labs',
@@ -68,13 +68,13 @@ router.beforeEach(async (to, from, next) => {
         }
       }
     } else {
-      // Check if route requires editor access
+      // Check if route requires authorization (for protected features)
       if (to.meta.requiresEditor) {
         const { useAuthorization } = await import('./composables/useAuthorization')
-        const { isAuthorizedForEditor } = useAuthorization()
+        const { isAuthorized } = useAuthorization()
 
-        if (!isAuthorizedForEditor.value) {
-          console.info('Route requires editor access, redirecting to home')
+        if (!isAuthorized.value) {
+          console.info('Route requires authorization, redirecting to home')
           next('/')
           return
         }

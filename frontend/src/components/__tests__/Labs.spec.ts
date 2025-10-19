@@ -17,7 +17,7 @@ const i18n = createI18n({
 
 // Mock useAuthorization composable
 const mockUseAuthorization = {
-  isAuthorizedForEditor: { value: true }
+  isAuthorized: { value: true }
 }
 
 vi.mock('../../composables/useAuthorization', () => ({
@@ -173,7 +173,7 @@ describe('Labs', () => {
   })
 
   it('redirects to home if not authorized for editor', () => {
-    mockUseAuthorization.isAuthorizedForEditor.value = false
+    mockUseAuthorization.isAuthorized.value = false
     mockLocation.href = ''
 
     mount(Labs, {

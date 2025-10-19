@@ -63,11 +63,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useAuthorization } from '../composables/useAuthorization'
 
 // Authorization check
-const { isAuthorizedForEditor } = useAuthorization()
+const { isAuthorized, isLoadingAuthorization } = useAuthorization()
 
 // Wahoo authorization state
 const isLoadingWahooAuth = ref(false)
@@ -118,10 +118,23 @@ async function handleWahooAuthorization() {
 
 // Check authorization on mount
 onMounted(() => {
-  if (!isAuthorizedForEditor.value) {
-    // Redirect to home if not authorized
-    window.location.href = '/'
-  }
+  // Use a watcher to handle authorization changes
+  // This ensures we check authorization after it's been loaded
+  let unwatch: (() => void) | null = null
+
+  unwatch = watch(
+    [isAuthorized, isLoadingAuthorization],
+    ([authorized, loading]) => {
+      // Only redirect if authorization check is complete and user is not authorized
+      if (!loading && !authorized) {
+        window.location.href = '/'
+        if (unwatch) {
+          unwatch() // Stop watching after redirect
+        }
+      }
+    },
+    { immediate: true }
+  )
 })
 </script>
 

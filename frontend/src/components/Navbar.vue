@@ -57,13 +57,13 @@ import logoUrl from '../assets/images/logo.svg'
 // Strava authentication (needed for editor authorization)
 const { isAuthenticated: isAuthenticatedFn } = useStravaApi()
 
-// Editor authorization
-const { isAuthorizedForEditor } = useAuthorization()
+// User authorization
+const { isAuthorized } = useAuthorization()
 
 // Computed properties for authentication
 const isAuthenticated = computed(() => isAuthenticatedFn())
 const isEditorAuthorized = computed(
-  () => isAuthenticated.value && isAuthorizedForEditor.value
+  () => isAuthenticated.value && isAuthorized.value
 )
 </script>
 

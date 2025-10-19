@@ -64,24 +64,24 @@ describe('useAuthorization', () => {
   })
 
   it('should initialize with unauthorized state', () => {
-    const { isAuthorizedForEditor, isLoadingAuthorization, authorizationError } =
+    const { isAuthorized, isLoadingAuthorization, authorizationError } =
       useAuthorization()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(isLoadingAuthorization.value).toBe(false)
     expect(authorizationError.value).toBe(null)
   })
 
   it('should handle unauthenticated user', async () => {
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+    const { isAuthorized, authorizationError, checkAuthorizationStatus } =
       useAuthorization()
 
     // When not authenticated
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
 
     // Calling checkAuthorizationStatus when not authenticated should return early
     await checkAuthorizationStatus()
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(authorizationError.value).toBe(null)
   })
 
@@ -90,12 +90,12 @@ describe('useAuthorization', () => {
     mockStravaAuthState.isAuthenticated = true
     mockStravaAuthState.athlete = null
 
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+    const { isAuthorized, authorizationError, checkAuthorizationStatus } =
       useAuthorization()
 
     await checkAuthorizationStatus()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(authorizationError.value).toBe(null)
 
     // Should not have called fetch since it returns early
@@ -115,7 +115,7 @@ describe('useAuthorization', () => {
       })
     })
 
-    const { isAuthorizedForEditor, checkAuthorizationStatus } = useAuthorization()
+    const { isAuthorized, checkAuthorizationStatus } = useAuthorization()
 
     await checkAuthorizationStatus()
     expect(mockFetch).toHaveBeenCalledWith(
@@ -125,7 +125,7 @@ describe('useAuthorization', () => {
         headers: { 'Content-Type': 'application/json' }
       })
     )
-    expect(isAuthorizedForEditor.value).toBe(true)
+    expect(isAuthorized.value).toBe(true)
   })
 
   it('should handle API error when checking authorization', async () => {
@@ -135,12 +135,12 @@ describe('useAuthorization', () => {
 
     mockFetch.mockRejectedValue(new Error('Network error'))
 
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+    const { isAuthorized, authorizationError, checkAuthorizationStatus } =
       useAuthorization()
 
     await checkAuthorizationStatus()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(authorizationError.value).toBe('Network error')
   })
 
@@ -156,19 +156,19 @@ describe('useAuthorization', () => {
       json: async () => ({})
     })
 
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+    const { isAuthorized, authorizationError, checkAuthorizationStatus } =
       useAuthorization()
 
     await checkAuthorizationStatus()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(authorizationError.value).toBe(
       'Authorization check failed: Internal Server Error'
     )
   })
 
   it('should clear authorization cache', () => {
-    const { isAuthorizedForEditor, clearAuthorizationCache } = useAuthorization()
+    const { isAuthorized, clearAuthorizationCache } = useAuthorization()
 
     // Mock some cached result
     useStravaApi().authState.value.isAuthenticated = true
@@ -176,19 +176,19 @@ describe('useAuthorization', () => {
     clearAuthorizationCache()
 
     // This should clear cache and reset state
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
   })
 
   it('should handle missing athlete ID', async () => {
     mockStravaAuthState.isAuthenticated = true
     mockStravaAuthState.athlete = {} // No ID
 
-    const { isAuthorizedForEditor, authorizationError, checkAuthorizationStatus } =
+    const { isAuthorized, authorizationError, checkAuthorizationStatus } =
       useAuthorization()
 
     await checkAuthorizationStatus()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
     expect(authorizationError.value).toBe('No Strava ID found in athlete data')
   })
 
@@ -201,10 +201,10 @@ describe('useAuthorization', () => {
       json: async () => ({ authorized: false, user: null })
     })
 
-    const { isAuthorizedForEditor, checkAuthorizationStatus } = useAuthorization()
+    const { isAuthorized, checkAuthorizationStatus } = useAuthorization()
 
     await checkAuthorizationStatus()
 
-    expect(isAuthorizedForEditor.value).toBe(false)
+    expect(isAuthorized.value).toBe(false)
   })
 })

@@ -7,7 +7,7 @@ import { ref, watch } from 'vue'
 import { useStravaApi } from './useStravaApi'
 
 export interface AuthorizationState {
-  isAuthorizedForEditor: boolean
+  isAuthorized: boolean
   isLoadingAuthorization: boolean
   authorizationError: string | null
 }
@@ -16,16 +16,16 @@ export function useAuthorization() {
   const { authState } = useStravaApi()
   const isLoadingAuthorization = ref(false)
   const authorizationError = ref<string | null>(null)
-  const isAuthorizedForEditor = ref(false)
+  const isAuthorized = ref(false)
 
   /**
-   * Check if the current authenticated user is authorized to access editor
+   * Check if the current authenticated user is authorized to access protected features
    */
   async function checkAuthorizationStatus(): Promise<void> {
     // If not authenticated, user cannot be authorized
     if (!authState.value.isAuthenticated || !authState.value.athlete) {
       authorizationError.value = null
-      isAuthorizedForEditor.value = false
+      isAuthorized.value = false
       return
     }
 
@@ -33,7 +33,7 @@ export function useAuthorization() {
     const stravaId = authState.value.athlete.id
     if (!stravaId) {
       authorizationError.value = 'No Strava ID found in athlete data'
-      isAuthorizedForEditor.value = false
+      isAuthorized.value = false
       return
     }
 
@@ -56,10 +56,10 @@ export function useAuthorization() {
       }
 
       const data = await response.json()
-      isAuthorizedForEditor.value = data.authorized
+      isAuthorized.value = data.authorized
     } catch (err: any) {
       authorizationError.value = err.message || 'Failed to check authorization'
-      isAuthorizedForEditor.value = false
+      isAuthorized.value = false
     } finally {
       isLoadingAuthorization.value = false
     }
@@ -69,7 +69,7 @@ export function useAuthorization() {
    * Clear authorization status (useful for logout)
    */
   function clearAuthorizationCache() {
-    isAuthorizedForEditor.value = false
+    isAuthorized.value = false
     authorizationError.value = null
   }
 
@@ -93,7 +93,7 @@ export function useAuthorization() {
 
   return {
     checkAuthorizationStatus,
-    isAuthorizedForEditor,
+    isAuthorized,
     isLoadingAuthorization,
     authorizationError,
     clearAuthorizationCache

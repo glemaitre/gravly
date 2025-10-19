@@ -64,7 +64,7 @@ describe('Navbar', () => {
 
     // Setup mock authorization to always allow editor access
     mockUseAuthorization.mockReturnValue({
-      isAuthorizedForEditor: ref(true),
+      isAuthorized: ref(true),
       isLoadingAuthorization: ref(false),
       authorizationError: ref(null),
       checkAuthorizationStatus: vi.fn(),

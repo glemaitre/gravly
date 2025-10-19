@@ -47,6 +47,7 @@ def create_wahoo_router() -> APIRouter:
                 )
 
             logger.info(f"Received Wahoo authorization code: {code}")
+            print(f"Wahoo authorization code: {code}")
 
             return {
                 "message": "Wahoo authorization code received successfully",
