@@ -142,7 +142,7 @@ onMounted(() => {
 .labs-page {
   min-height: calc(100vh - var(--navbar-height));
   padding: 2rem 1rem;
-  background: var(--background-color);
+  background: var(--bg-secondary);
 }
 
 .labs-container {

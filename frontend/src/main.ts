@@ -1,4 +1,4 @@
-import { createApp } from 'vue'
+import { createApp, watch } from 'vue'
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import { i18n, initializeLanguage } from './i18n'
 import { useStravaApi } from './composables/useStravaApi'
@@ -71,10 +71,25 @@ router.beforeEach(async (to, from, next) => {
       // Check if route requires authorization (for protected features)
       if (to.meta.requiresEditor) {
         const { useAuthorization } = await import('./composables/useAuthorization')
-        const { isAuthorized } = useAuthorization()
+        const { isAuthorized, isLoadingAuthorization, checkAuthorizationStatus } = useAuthorization()
+
+        // If authorization is still loading, wait for it to complete
+        if (isLoadingAuthorization.value) {
+          // Wait for authorization to complete
+          await new Promise(resolve => {
+            const unwatch = watch([isAuthorized, isLoadingAuthorization], ([authorized, loading]) => {
+              if (!loading) {
+                unwatch()
+                resolve(void 0)
+              }
+            })
+          })
+        } else if (!isAuthorized.value) {
+          // If not loading and not authorized, try to check authorization status
+          await checkAuthorizationStatus()
+        }
 
         if (!isAuthorized.value) {
-          console.info('Route requires authorization, redirecting to home')
           next('/')
           return
         }
