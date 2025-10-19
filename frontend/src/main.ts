@@ -10,6 +10,7 @@ import SegmentDetail from './components/SegmentDetail.vue'
 import StravaCallback from './components/StravaCallback.vue'
 import WahooCallback from './components/WahooCallback.vue'
 import RoutePlanner from './components/RoutePlanner.vue'
+import Labs from './components/Labs.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Landing },
@@ -18,6 +19,11 @@ const routes: RouteRecordRaw[] = [
     path: '/editor',
     component: Editor,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/labs',
+    component: Labs,
+    meta: { requiresAuth: true, requiresEditor: true }
   },
   {
     path: '/route-planner',
@@ -41,13 +47,13 @@ router.beforeEach(async (to, from, next) => {
     const { isAuthenticated, attemptTokenRefresh, getAuthUrl } = useStravaApi()
 
     if (!isAuthenticated()) {
-      console.info('Editor route requires authentication, attempting token refresh...')
+      console.info('Route requires authentication, attempting token refresh...')
 
       // Try to refresh the token first
       const refreshSuccess = await attemptTokenRefresh()
 
       if (refreshSuccess && isAuthenticated()) {
-        console.info('Token refresh successful, continuing to editor')
+        console.info('Token refresh successful, continuing to route')
         next() // Continue with navigation
       } else {
         console.info('Token refresh failed, redirecting to Strava login')
@@ -62,7 +68,19 @@ router.beforeEach(async (to, from, next) => {
         }
       }
     } else {
-      // Already authenticated, continue with navigation
+      // Check if route requires editor access
+      if (to.meta.requiresEditor) {
+        const { useAuthorization } = await import('./composables/useAuthorization')
+        const { isAuthorizedForEditor } = useAuthorization()
+
+        if (!isAuthorizedForEditor.value) {
+          console.info('Route requires editor access, redirecting to home')
+          next('/')
+          return
+        }
+      }
+
+      // Already authenticated and authorized, continue with navigation
       next()
     }
   } else {

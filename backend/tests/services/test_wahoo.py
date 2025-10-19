@@ -20,6 +20,7 @@ def mock_wahoo_config(tmp_path):
         client_id="test_wahoo_client_id",
         client_secret="test_wahoo_client_secret",
         tokens_file_path=str(tokens_file),
+        callback_url="https://test.example.com/wahoo-callback",
     )
 
 
@@ -131,11 +132,11 @@ class TestWahooServiceAuthorization:
                 "https://api.wahooligan.com/oauth/authorize?test=url"
             )
 
-            result = wahoo_service.get_authorization_url("https://example.com/callback")
+            result = wahoo_service.get_authorization_url()
 
             mock_auth_url.assert_called_once_with(
                 client_id="test_wahoo_client_id",
-                redirect_uri="https://example.com/callback",
+                redirect_uri="https://test.example.com/wahoo-callback",
                 scope=["routes_write", "user_read"],
                 state="wahoo_auth",
             )
@@ -148,13 +149,11 @@ class TestWahooServiceAuthorization:
                 "https://api.wahooligan.com/oauth/authorize?test=url"
             )
 
-            wahoo_service.get_authorization_url(
-                "https://example.com/callback", "custom_state"
-            )
+            wahoo_service.get_authorization_url("custom_state")
 
             mock_auth_url.assert_called_once_with(
                 client_id="test_wahoo_client_id",
-                redirect_uri="https://example.com/callback",
+                redirect_uri="https://test.example.com/wahoo-callback",
                 scope=["routes_write", "user_read"],
                 state="custom_state",
             )

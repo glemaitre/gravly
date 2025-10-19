@@ -54,6 +54,7 @@ class WahooConfig(NamedTuple):
     client_id: str
     client_secret: str
     tokens_file_path: str
+    callback_url: str
 
 
 class MapConfig(NamedTuple):
@@ -308,6 +309,7 @@ def load_environment_config(
         "WAHOO_CLIENT_ID",
         "WAHOO_CLIENT_SECRET",
         "WAHOO_TOKENS_FILE_PATH",
+        "WAHOO_CALLBACK_URL",
     ]
     missing_wahoo_params = [
         param for param in required_wahoo_params if not os.getenv(param)
@@ -328,6 +330,7 @@ def load_environment_config(
         client_id=os.getenv("WAHOO_CLIENT_ID"),
         client_secret=os.getenv("WAHOO_CLIENT_SECRET"),
         tokens_file_path=wahoo_tokens_file_path,
+        callback_url=os.getenv("WAHOO_CALLBACK_URL"),
     )
 
     # Extract map configuration from environment variables
@@ -363,3 +366,45 @@ def load_environment_config(
         map_config,
         server_config,
     )
+
+
+# Global configuration instances
+_configs = None
+
+
+def _get_configs():
+    """Get or load configuration instances."""
+    global _configs
+    if _configs is None:
+        _configs = load_environment_config()
+    return _configs
+
+
+def get_database_config() -> DatabaseConfig:
+    """Get database configuration."""
+    return _get_configs()[0]
+
+
+def get_storage_config() -> StorageConfig:
+    """Get storage configuration."""
+    return _get_configs()[1]
+
+
+def get_strava_config() -> StravaConfig:
+    """Get Strava configuration."""
+    return _get_configs()[2]
+
+
+def get_wahoo_config() -> WahooConfig:
+    """Get Wahoo configuration."""
+    return _get_configs()[3]
+
+
+def get_map_config() -> MapConfig:
+    """Get map configuration."""
+    return _get_configs()[4]
+
+
+def get_server_config() -> ServerConfig:
+    """Get server configuration."""
+    return _get_configs()[5]

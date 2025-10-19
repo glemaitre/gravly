@@ -121,6 +121,7 @@ export default {
     home: 'Home',
     explorer: 'Explorer',
     editor: 'Editor',
+    labs: 'Labs',
     routePlanner: 'Planner',
     login: 'Login with Strava',
     logout: 'Logout'
@@ -480,5 +481,25 @@ export default {
     documentation: 'Documentation',
     license: 'MIT License',
     version: 'Version 1.0.0'
+  },
+
+  // Labs page
+  labs: {
+    title: 'Labs',
+    description: 'Experimental features and integrations for advanced users.',
+    wahooIntegration: {
+      title: 'Wahoo Integration',
+      description: 'Connect your Wahoo device to sync routes and activities.',
+      authorizeButton: 'Authorize with Wahoo',
+      authorizing: 'Authorizing...'
+    },
+    info: {
+      title: 'About Labs',
+      description:
+        'Labs features are experimental and may change or be removed in future updates.',
+      feature1: 'Access to beta integrations with third-party services',
+      feature2: 'Advanced features for power users',
+      feature3: 'Early access to new functionality'
+    }
   }
 }

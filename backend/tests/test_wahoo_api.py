@@ -118,3 +118,96 @@ class TestWahooCallback:
         assert data["message"] == "Wahoo authorization code received successfully"
         assert data["code"] == test_code
         assert data["status"] == "success"
+
+
+class TestWahooAuthorizationUrl:
+    """Test Wahoo authorization URL endpoint."""
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_authorization_url_success(self, mock_get_service, client):
+        """Test successful authorization URL generation."""
+        # Mock the WahooService instance
+        mock_wahoo_service = mock_get_service.return_value
+        expected_auth_url = "https://api.wahooligan.com/oauth/authorize?client_id=test&redirect_uri=test&response_type=code&scope=routes_write+user_read&state=wahoo_auth"
+        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+
+        response = client.get("/api/wahoo/authorization-url")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["authorization_url"] == expected_auth_url
+        assert data["status"] == "success"
+
+        # Verify that the service was called without parameters
+        mock_wahoo_service.get_authorization_url.assert_called_once_with()
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_authorization_url_service_error(self, mock_get_service, client):
+        """Test authorization URL generation when service raises an exception."""
+        # Mock the WahooService to raise an exception
+        mock_wahoo_service = mock_get_service.return_value
+        mock_wahoo_service.get_authorization_url.side_effect = Exception(
+            "Service error"
+        )
+
+        response = client.get("/api/wahoo/authorization-url")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to generate authorization URL" in data["detail"]
+        assert "Service error" in data["detail"]
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_authorization_url_service_initialization_error(
+        self, mock_get_service, client
+    ):
+        """Test authorization URL generation when service initialization fails."""
+        # Mock the service to raise an exception during initialization
+        mock_get_service.side_effect = Exception("Service initialization error")
+
+        response = client.get("/api/wahoo/authorization-url")
+
+        assert response.status_code == 500
+        data = response.json()
+        assert "Failed to generate authorization URL" in data["detail"]
+        assert "Service initialization error" in data["detail"]
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_authorization_url_logging(self, mock_get_service, client):
+        """Test that authorization URL generation logs correctly."""
+        # Mock the WahooService instance
+        mock_wahoo_service = mock_get_service.return_value
+        expected_auth_url = "https://api.wahooligan.com/oauth/authorize?test=123"
+        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+
+        with patch("src.api.wahoo.logger") as mock_logger:
+            response = client.get("/api/wahoo/authorization-url")
+
+        assert response.status_code == 200
+        # Verify that info logging was called
+        mock_logger.info.assert_called_once_with("Generated Wahoo authorization URL")
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_authorization_url_response_format(self, mock_get_service, client):
+        """Test that authorization URL endpoint returns the expected response format."""
+        # Mock the WahooService instance
+        mock_wahoo_service = mock_get_service.return_value
+        expected_auth_url = "https://api.wahooligan.com/oauth/authorize?test=123"
+        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+
+        response = client.get("/api/wahoo/authorization-url")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Check that all expected fields are present
+        assert "authorization_url" in data
+        assert "status" in data
+
+        # Check field types
+        assert isinstance(data["authorization_url"], str)
+        assert isinstance(data["status"], str)
+
+        # Check field values
+        assert data["authorization_url"] == expected_auth_url
+        assert data["status"] == "success"

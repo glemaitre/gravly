@@ -15,6 +15,7 @@ class TestWahooServiceSaveError:
             client_id="test_client_id",
             client_secret="test_client_secret",
             tokens_file_path="/tmp/test_tokens.json",
+            callback_url="https://test.example.com/wahoo-callback",
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
@@ -37,6 +38,7 @@ class TestWahooServiceSaveError:
             client_id="test_client_id",
             client_secret="test_client_secret",
             tokens_file_path="/tmp/test_tokens.json",
+            callback_url="https://test.example.com/wahoo-callback",
         )
 
         with patch("backend.src.services.wahoo.service.Client"):

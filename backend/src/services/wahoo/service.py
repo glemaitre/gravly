@@ -61,6 +61,7 @@ class WahooService:
         # Use client_id as string as required by wahoo client
         self.client_id = wahoo_config.client_id
         self.client_secret = wahoo_config.client_secret
+        self.callback_url = wahoo_config.callback_url
 
         self.client = Client()
         self.tokens_file = Path(wahoo_config.tokens_file_path)
@@ -133,16 +134,11 @@ class WahooService:
         except Exception as e:
             logger.error(f"Failed to save tokens: {e}")
 
-    def get_authorization_url(
-        self, redirect_uri: str, state: str = "wahoo_auth"
-    ) -> str:
+    def get_authorization_url(self, state: str = "wahoo_auth") -> str:
         """Generate Wahoo OAuth authorization URL.
 
         Parameters
         ----------
-        redirect_uri : str
-            The redirect URI for OAuth callback. This should match the URI
-            configured in your Wahoo application settings.
         state : str, default="wahoo_auth"
             Optional state parameter for tracking the request and preventing
             CSRF attacks.
@@ -157,11 +153,12 @@ class WahooService:
         -----
         This method generates the URL that users need to visit to authorize
         your application to access their Wahoo data. The URL includes the
-        necessary OAuth parameters and scopes.
+        necessary OAuth parameters and scopes. The redirect URI is taken from
+        the configuration.
         """
         auth_url = self.client.authorization_url(
             client_id=self.client_id,
-            redirect_uri=redirect_uri,
+            redirect_uri=self.callback_url,
             scope=["routes_write", "user_read"],
             state=state,
         )

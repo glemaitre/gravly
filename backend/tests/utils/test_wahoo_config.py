@@ -17,6 +17,7 @@ class TestWahooConfig:
             client_id="test_client_id",
             client_secret="test_client_secret",
             tokens_file_path="/path/to/tokens.json",
+            callback_url="https://test.example.com/wahoo-callback",
         )
 
         assert config.client_id == "test_client_id"
@@ -29,6 +30,7 @@ class TestWahooConfig:
             client_id="test_client_id",
             client_secret="test_client_secret",
             tokens_file_path="/path/to/tokens.json",
+            callback_url="https://test.example.com/wahoo-callback",
         )
 
         # NamedTuple should be immutable
@@ -65,7 +67,8 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         wahoo_file = env_folder / "wahoo"
         wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
 WAHOO_CLIENT_SECRET=test_wahoo_client_secret
-WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json
+WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback""")
 
         thunderforest_file = env_folder / "thunderforest"
         thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -85,6 +88,7 @@ WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
         assert wahoo_config.client_id == "test_wahoo_client_id"
         assert wahoo_config.client_secret == "test_wahoo_client_secret"
         assert wahoo_config.tokens_file_path == "/secure/path/to/wahoo_tokens.json"
+        assert wahoo_config.callback_url == "https://test.example.com/wahoo-callback"
 
     def test_load_wahoo_config_missing_file(self, tmp_path):
         """Test error when Wahoo configuration file is missing."""
