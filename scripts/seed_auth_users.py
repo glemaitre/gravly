@@ -37,7 +37,7 @@ async def seed_authorized_users():
 
     # Load configuration
     try:
-        db_config, storage_config, strava_config, map_config, server_config = (
+        db_config, storage_config, strava_config, wahoo_config, map_config, server_config = (
             load_environment_config()
         )
         logger.info("Configuration loaded successfully")
