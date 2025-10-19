@@ -62,9 +62,7 @@ const { isAuthorized } = useAuthorization()
 
 // Computed properties for authentication
 const isAuthenticated = computed(() => isAuthenticatedFn())
-const isEditorAuthorized = computed(
-  () => isAuthenticated.value && isAuthorized.value
-)
+const isEditorAuthorized = computed(() => isAuthenticated.value && isAuthorized.value)
 </script>
 
 <style scoped>
