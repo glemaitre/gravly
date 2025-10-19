@@ -295,6 +295,14 @@ export default {
     noGpsData: 'This activity does not have GPS data available for import'
   },
 
+  // Wahoo integration
+  wahoo: {
+    loginSuccess: 'Successfully logged in to Wahoo',
+    loginError: 'Failed to login to Wahoo',
+    completingLogin: 'Completing login...',
+    redirecting: 'Redirecting...'
+  },
+
   // Editor specific
   editor: {
     importSegment: 'Import Segment',

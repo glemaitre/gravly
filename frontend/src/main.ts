@@ -8,6 +8,7 @@ import Editor from './components/Editor.vue'
 import Explorer from './components/Explorer.vue'
 import SegmentDetail from './components/SegmentDetail.vue'
 import StravaCallback from './components/StravaCallback.vue'
+import WahooCallback from './components/WahooCallback.vue'
 import RoutePlanner from './components/RoutePlanner.vue'
 
 const routes: RouteRecordRaw[] = [
@@ -24,7 +25,8 @@ const routes: RouteRecordRaw[] = [
     // No authentication required - route planner works standalone
   },
   { path: '/segment/:id', component: SegmentDetail, props: true },
-  { path: '/strava-callback', component: StravaCallback }
+  { path: '/strava-callback', component: StravaCallback },
+  { path: '/wahoo-callback', component: WahooCallback }
 ]
 
 const router = createRouter({

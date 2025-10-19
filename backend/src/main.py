@@ -20,6 +20,7 @@ from .api.segments import create_segments_router
 from .api.strava import create_strava_router
 from .api.upload import create_upload_router
 from .api.utils import router as utils_router
+from .api.wahoo import create_wahoo_router
 from .models.base import Base
 from .utils.postgres import get_database_url
 from .utils.storage import get_storage_manager
@@ -153,6 +154,9 @@ app.include_router(
 app.include_router(
     create_routes_router(None)
 )  # Will be set in lifespan via dependencies module
+app.include_router(
+    create_wahoo_router()
+)  # Wahoo API router
 
 
 if __name__ == "__main__":
