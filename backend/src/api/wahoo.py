@@ -1,6 +1,7 @@
 """Wahoo API endpoints."""
 
 import logging
+
 from fastapi import APIRouter, HTTPException, Query
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,9 @@ def create_wahoo_router() -> APIRouter:
     """Create Wahoo router with dependencies."""
 
     @router.get("/callback")
-    async def wahoo_callback(code: str = Query(None, description="Authorization code from Wahoo")):
+    async def wahoo_callback(
+        code: str = Query(None, description="Authorization code from Wahoo"),
+    ):
         """Handle Wahoo OAuth callback and print the authorization code."""
         try:
             if not code:
@@ -20,14 +23,14 @@ def create_wahoo_router() -> APIRouter:
                 raise HTTPException(
                     status_code=400, detail="Authorization code is required"
                 )
-            
+
             logger.info(f"Received Wahoo authorization code: {code}")
             print(f"Wahoo authorization code: {code}")
-            
+
             return {
                 "message": "Wahoo authorization code received successfully",
                 "code": code,
-                "status": "success"
+                "status": "success",
             }
         except HTTPException:
             raise

@@ -1,13 +1,13 @@
 """Client for interacting with the Wahoo API."""
 
 import logging
-from datetime import datetime
 from typing import Literal
 
 from requests import Session
 
-from .protocol import ApiV1, AccessInfo, Scope
-from .limiter import RateLimiter, DefaultRateLimiter
+from .limiter import DefaultRateLimiter, RateLimiter
+from .protocol import AccessInfo, ApiV1, Scope
+
 
 class Client:
     """Main client class for interacting with the exposed Wahoo Cloud API methods.
@@ -59,8 +59,7 @@ class Client:
                 rate_limiter = DefaultRateLimiter()
         elif rate_limiter:
             raise ValueError(
-                "Cannot specify rate_limiter object when rate_limit_requests is"
-                " False"
+                "Cannot specify rate_limiter object when rate_limit_requests is False"
             )
 
         self.protocol = ApiV1(
@@ -135,7 +134,7 @@ class Client:
 
     def authorization_url(
         self,
-        client_id: int,
+        client_id: str,
         redirect_uri: str,
         approval_prompt: Literal["auto", "force"] = "auto",
         scope: list[Scope] | Scope | None = None,
@@ -148,8 +147,8 @@ class Client:
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id.
+        client_id : str
+            The developer client id.
         redirect_uri : str
             The URL that Strava will redirect to after successful (or failed)
             authorization.
@@ -183,7 +182,7 @@ class Client:
 
     def exchange_code_for_token(
         self,
-        client_id: int,
+        client_id: str,
         client_secret: str,
         code: str,
     ) -> AccessInfo:
@@ -193,8 +192,8 @@ class Client:
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id.
+        client_id : str
+            The developer client id.
         client_secret : str
             The developer client secret
         code : str
@@ -233,8 +232,8 @@ class Client:
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id.
+        client_id : str
+            The developer client id.
         client_secret : str
             The developer client secret
         refresh_token : str

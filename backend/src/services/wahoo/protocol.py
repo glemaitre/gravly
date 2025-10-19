@@ -6,7 +6,6 @@ https://github.com/stravalib/stravalib/blob/main/src/stravalib/protocol.py
 
 from __future__ import annotations
 
-import abc
 import functools
 import logging
 import os
@@ -56,7 +55,7 @@ class AccessInfo(TypedDict):
     will expire"""
 
 
-class ApiV1(metaclass=abc.ABCMeta):
+class ApiV1:
     """This class is responsible for performing the HTTP requests, rate
     limiting, and error handling."""
 
@@ -67,12 +66,10 @@ class ApiV1(metaclass=abc.ABCMeta):
         self,
         access_token: str | None = None,
         requests_session: requests.Session | None = None,
-        rate_limiter: (
-            Callable[[dict[str, str], RequestMethod], None] | None
-        ) = None,
+        rate_limiter: (Callable[[dict[str, str], RequestMethod], None] | None) = None,
         token_expires: int | None = None,
         refresh_token: str | None = None,
-        client_id: int | None = None,
+        client_id: str | None = None,
         client_secret: str | None = None,
     ):
         """Initialize this protocol client, optionally providing a (shared)
@@ -92,7 +89,7 @@ class ApiV1(metaclass=abc.ABCMeta):
             Epoch time in seconds when the token expires
         refresh_token: str
             Refresh token used to re-authenticate with Wahoo
-        client_id: int
+        client_id: str
             client id for the Wahoo APP pulled from the users envt
         client_secret: str
             client secret for the Wahoo app pulled from the users envt
@@ -103,16 +100,14 @@ class ApiV1(metaclass=abc.ABCMeta):
         self.access_token: str | None = access_token
         self.token_expires: int | None = token_expires
         self.refresh_token: str | None = refresh_token
-        self.client_id: int | None = None
+        self.client_id: str | None = None
         self.client_secret: str | None = None
         if requests_session:
             self.rsession: requests.Session = requests_session
         else:
             self.rsession = requests.Session()
 
-        self.rate_limiter = rate_limiter or (
-            lambda _request_params, _method: None
-        )
+        self.rate_limiter = rate_limiter or (lambda _request_params, _method: None)
         # Check for credentials when initializing
         self._check_credentials()
 
@@ -130,24 +125,21 @@ class ApiV1(metaclass=abc.ABCMeta):
             with both variables to support automatic token refresh.
         """
         # Default both to None; set if they are available in the correct format
-        client_id: int | None = None
+        client_id: str | None = None
         client_secret: str | None = None
 
         client_id_str = os.environ.get("WAHOO_CLIENT_ID")
         client_secret = os.environ.get("WAHOO_CLIENT_SECRET")
         silence_token_warning = os.environ.get("SILENCE_TOKEN_WARNINGS")
 
-        # Make sure client_id exists and can be cast to int
+        # Make sure client_id exists
         if client_id_str:
-            try:
-                # Make sure client_id is a valid int
-                client_id = int(client_id_str)
-            except ValueError:
-                logging.error("WAHOO_CLIENT_ID must be a valid integer.")
+            client_id = client_id_str
         elif silence_token_warning is None:
             logging.warning(
-                "Please make sure your WAHOO_CLIENT_ID is set in your environment."
-                "Add SILENCE_TOKEN_WARNINGS=true to your environment to disable this error."
+                "Please make sure your WAHOO_CLIENT_ID is set in your environment. "
+                "Add SILENCE_TOKEN_WARNINGS=true to your environment to disable "
+                "this error."
             )
 
         if (client_id and client_secret) or silence_token_warning:
@@ -156,9 +148,10 @@ class ApiV1(metaclass=abc.ABCMeta):
         else:
             logging.warning(
                 "WAHOO_CLIENT_ID and WAHOO_CLIENT_SECRET not found in your "
-                " environment. Please refresh your access_token manually."
-                " Or add WAHOO_CLIENT_ID and WAHOO_CLIENT_SECRET to your environment."
-                "Add SILENCE_TOKEN_WARNINGS=true to your environment to silence this warning."
+                "environment. Please refresh your access_token manually. "
+                "Or add WAHOO_CLIENT_ID and WAHOO_CLIENT_SECRET to your environment. "
+                "Add SILENCE_TOKEN_WARNINGS=true to your environment to silence "
+                "this warning."
             )
         return None
 
@@ -216,9 +209,7 @@ class ApiV1(metaclass=abc.ABCMeta):
         try:
             requester = methods[method.upper()]
         except KeyError:
-            raise ValueError(
-                f"Invalid/unsupported request method specified: {method}"
-            )
+            raise ValueError(f"Invalid/unsupported request method specified: {method}")
 
         raw = requester(url, params=params)  # type: ignore[operator]
         # Rate limits are taken from HTTP response headers
@@ -282,9 +273,7 @@ class ApiV1(metaclass=abc.ABCMeta):
         # This should never be false, BUT mypy wants a reminder that these values
         # are populated
         assert self.client_id is not None, "client_id is required but is None."
-        assert (
-            self.client_secret is not None
-        ), "client_secret is required but is None."
+        assert self.client_secret is not None, "client_secret is required but is None."
 
         self.refresh_access_token(
             client_id=self.client_id,
@@ -295,7 +284,7 @@ class ApiV1(metaclass=abc.ABCMeta):
 
     def authorization_url(
         self,
-        client_id: int,
+        client_id: str,
         redirect_uri: str,
         approval_prompt: Literal["auto", "force"] = "auto",
         scope: list[Scope] | Scope | None = None,
@@ -308,8 +297,8 @@ class ApiV1(metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id.
+        client_id : str
+            The developer client id.
         redirect_uri : str
             The URL that Wahoo will redirect to after successful (or
             failed) authorization.
@@ -354,7 +343,7 @@ class ApiV1(metaclass=abc.ABCMeta):
             "client_id": client_id,
             "redirect_uri": redirect_uri,
             "approval_prompt": approval_prompt,
-            "scope": ",".join(scope),
+            "scope": " ".join(scope),
             "response_type": "code",
         }
         if state is not None:
@@ -366,7 +355,7 @@ class ApiV1(metaclass=abc.ABCMeta):
 
     def exchange_code_for_token(
         self,
-        client_id: int,
+        client_id: str,
         client_secret: str,
         code: str,
     ) -> tuple[AccessInfo, dict[str, Any] | None]:
@@ -378,8 +367,8 @@ class ApiV1(metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id. 
+        client_id : str
+            The developer client id.
         client_secret : str
             The developer client secret
         code : str
@@ -413,7 +402,7 @@ class ApiV1(metaclass=abc.ABCMeta):
 
     def refresh_access_token(
         self,
-        client_id: int,
+        client_id: str,
         client_secret: str,
         refresh_token: str,
     ) -> AccessInfo:
@@ -422,8 +411,8 @@ class ApiV1(metaclass=abc.ABCMeta):
 
         Parameters
         ----------
-        client_id : int
-            The numeric developer client id.
+        client_id : str
+            The developer client id.
         client_secret : str
             The developer client secret
         refresh_token : str
@@ -485,9 +474,7 @@ class ApiV1(metaclass=abc.ABCMeta):
             )
         return url
 
-    def _handle_protocol_error(
-        self, response: requests.Response
-    ) -> requests.Response:
+    def _handle_protocol_error(self, response: requests.Response) -> requests.Response:
         """Parses the raw response from the server, raising a ValueError
         if the server returned an error.
 
@@ -550,9 +537,7 @@ class ApiV1(metaclass=abc.ABCMeta):
                 break
         return list(d.keys())
 
-    def get(
-        self, url: str, check_for_errors: bool = True, **kwargs: Any
-    ) -> Any:
+    def get(self, url: str, check_for_errors: bool = True, **kwargs: Any) -> Any:
         """Performs a generic GET request for specified params, returning the
         response.
 
@@ -572,9 +557,7 @@ class ApiV1(metaclass=abc.ABCMeta):
         referenced = self._extract_referenced_vars(url)
         url = url.format(**kwargs)
         params = {k: v for k, v in kwargs.items() if k not in referenced}
-        return self._request(
-            url, params=params, check_for_errors=check_for_errors
-        )
+        return self._request(url, params=params, check_for_errors=check_for_errors)
 
     def post(
         self,
@@ -611,9 +594,7 @@ class ApiV1(metaclass=abc.ABCMeta):
             check_for_errors=check_for_errors,
         )
 
-    def put(
-        self, url: str, check_for_errors: bool = True, **kwargs: Any
-    ) -> Any:
+    def put(self, url: str, check_for_errors: bool = True, **kwargs: Any) -> Any:
         """Performs a generic PUT request for specified params, returning the
         response.
 
@@ -636,9 +617,7 @@ class ApiV1(metaclass=abc.ABCMeta):
             url, params=params, method="PUT", check_for_errors=check_for_errors
         )
 
-    def delete(
-        self, url: str, check_for_errors: bool = True, **kwargs: Any
-    ) -> Any:
+    def delete(self, url: str, check_for_errors: bool = True, **kwargs: Any) -> Any:
         """Performs a generic DELETE request for specified params, returning
         the response.
 

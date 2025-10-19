@@ -105,7 +105,7 @@ class TestStravaEndpoints:
                 == "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
             )
             mock_get_auth_url.assert_called_once_with(
-                "http://localhost:3000/strava-callback", "strava_auth"
+                "https://gravly.cc:33443/strava-callback", "strava_auth"
             )
 
     def test_get_strava_auth_url_service_not_initialized(self, client):
@@ -135,7 +135,7 @@ class TestStravaEndpoints:
             data = response.json()
             assert "auth_url" in data
             mock_get_auth_url.assert_called_once_with(
-                "http://localhost:3000/strava-callback", "custom_state"
+                "https://gravly.cc:33443/strava-callback", "custom_state"
             )
 
     def test_get_strava_auth_url_error(self, client):

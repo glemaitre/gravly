@@ -48,6 +48,14 @@ class StravaConfig(NamedTuple):
     tokens_file_path: str
 
 
+class WahooConfig(NamedTuple):
+    """Wahoo API configuration parameters."""
+
+    client_id: str
+    client_secret: str
+    tokens_file_path: str
+
+
 class MapConfig(NamedTuple):
     """Map service configuration parameters."""
 
@@ -70,12 +78,14 @@ StorageConfig = S3StorageConfig | LocalStorageConfig
 
 def load_environment_config(
     project_root: Path | None = None,
-) -> tuple[DatabaseConfig, StorageConfig, StravaConfig, MapConfig, ServerConfig]:
+) -> tuple[
+    DatabaseConfig, StorageConfig, StravaConfig, WahooConfig, MapConfig, ServerConfig
+]:
     """Load environment variables from separate configuration files.
 
     This function loads environment variables from .env/storage, .env/database,
-    .env/strava, and .env/server files in the .env folder and provides helpful
-    error messages if no configuration is found.
+    .env/strava, .env/wahoo, and .env/server files in the .env folder and provides
+    helpful error messages if no configuration is found.
 
     Parameters
     ----------
@@ -273,6 +283,53 @@ def load_environment_config(
         tokens_file_path=tokens_file_path,
     )
 
+    # Load Wahoo configuration
+    wahoo_file = env_folder / "wahoo"
+    if wahoo_file.exists():
+        load_dotenv(wahoo_file, override=True)
+        logger.info(f"Loaded Wahoo environment variables from {wahoo_file}")
+    else:
+        # Check if example file exists
+        wahoo_example = env_folder / "wahoo.example"
+        if wahoo_example.exists():
+            raise FileNotFoundError(
+                f"Wahoo configuration file not found at {wahoo_file}. "
+                f"Please create a Wahoo configuration file based on "
+                f"{wahoo_example}. Copy the example file and rename it to 'wahoo'."
+            )
+        else:
+            raise FileNotFoundError(
+                f"Wahoo configuration file not found at {wahoo_file} "
+                f"and no example file available."
+            )
+
+    # Extract Wahoo configuration from environment variables
+    required_wahoo_params = [
+        "WAHOO_CLIENT_ID",
+        "WAHOO_CLIENT_SECRET",
+        "WAHOO_TOKENS_FILE_PATH",
+    ]
+    missing_wahoo_params = [
+        param for param in required_wahoo_params if not os.getenv(param)
+    ]
+
+    if missing_wahoo_params:
+        raise ValueError(
+            f"Missing required Wahoo configuration parameters: "
+            f"{', '.join(missing_wahoo_params)}. "
+            f"Please set these environment variables in your .env/wahoo file. "
+            f"WAHOO_TOKENS_FILE_PATH must be set to a secure location for "
+            f"storing tokens."
+        )
+
+    wahoo_tokens_file_path = os.getenv("WAHOO_TOKENS_FILE_PATH")
+
+    wahoo_config = WahooConfig(
+        client_id=os.getenv("WAHOO_CLIENT_ID"),
+        client_secret=os.getenv("WAHOO_CLIENT_SECRET"),
+        tokens_file_path=wahoo_tokens_file_path,
+    )
+
     # Extract map configuration from environment variables
     thunderforest_api_key = os.getenv("THUNDERFOREST_API_KEY")
     if not thunderforest_api_key:
@@ -298,4 +355,11 @@ def load_environment_config(
         backend_url=backend_url,
     )
 
-    return database_config, storage_config, strava_config, map_config, server_config
+    return (
+        database_config,
+        storage_config,
+        strava_config,
+        wahoo_config,
+        map_config,
+        server_config,
+    )

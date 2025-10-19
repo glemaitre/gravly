@@ -11,12 +11,14 @@ from tempfile import TemporaryDirectory
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .services.strava import StravaService
+from .services.wahoo.service import WahooService
 from .utils.config import (
     DatabaseConfig,
     MapConfig,
     ServerConfig,
     StorageConfig,
     StravaConfig,
+    WahooConfig,
     load_environment_config,
 )
 from .utils.storage import StorageManager
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
     _db_config,
     _storage_config,
     _strava_config,
+    _wahoo_config,
     _map_config,
     _server_config,
 ) = load_environment_config()
@@ -36,6 +39,7 @@ logger = logging.getLogger(__name__)
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
 strava: StravaService = StravaService(_strava_config)  # Initialize at module level
+wahoo: WahooService = WahooService(_wahoo_config)  # Initialize at module level
 engine = None
 SessionLocal = None
 
@@ -43,6 +47,7 @@ SessionLocal = None
 db_config: DatabaseConfig = _db_config
 storage_config: StorageConfig = _storage_config
 strava_config: StravaConfig = _strava_config
+wahoo_config: WahooConfig = _wahoo_config
 map_config: MapConfig = _map_config
 server_config: ServerConfig = _server_config
 
@@ -104,3 +109,21 @@ def get_strava_service() -> StravaService:
     if strava is None:
         raise RuntimeError("Strava service not initialized")
     return strava
+
+
+def get_wahoo_service() -> WahooService:
+    """Dependency for Wahoo service.
+
+    Returns
+    -------
+    WahooService
+        Wahoo service instance
+
+    Raises
+    ------
+    RuntimeError
+        If Wahoo service is not initialized
+    """
+    if wahoo is None:
+        raise RuntimeError("Wahoo service not initialized")
+    return wahoo

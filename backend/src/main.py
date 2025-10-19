@@ -154,9 +154,7 @@ app.include_router(
 app.include_router(
     create_routes_router(None)
 )  # Will be set in lifespan via dependencies module
-app.include_router(
-    create_wahoo_router()
-)  # Wahoo API router
+app.include_router(create_wahoo_router())  # Wahoo API router
 
 
 if __name__ == "__main__":

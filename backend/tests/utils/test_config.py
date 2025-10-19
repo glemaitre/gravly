@@ -10,6 +10,7 @@ from backend.src.utils.config import (
     MapConfig,
     S3StorageConfig,
     StravaConfig,
+    WahooConfig,
     load_environment_config,
 )
 
@@ -40,6 +41,12 @@ STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -48,6 +55,7 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         db_config,
         storage_config,
         strava_config,
+        wahoo_config,
         map_config,
         server_config,
     ) = load_environment_config(project_root=tmp_path)
@@ -103,6 +111,12 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -111,6 +125,7 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         db_config,
         storage_config,
         strava_config,
+        wahoo_config,
         map_config,
         server_config,
     ) = load_environment_config(project_root=tmp_path)
@@ -152,6 +167,12 @@ DB_PORT=5432""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -189,6 +210,12 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
@@ -240,6 +267,12 @@ DB_USER=postgres""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -276,6 +309,12 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
@@ -416,6 +455,12 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -455,6 +500,12 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -463,6 +514,7 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         db_config,
         storage_config,
         strava_config,
+        wahoo_config,
         map_config,
         server_config,
     ) = load_environment_config(project_root=subdir)
@@ -480,6 +532,7 @@ def test_default_project_root_behavior():
         db_config,
         storage_config,
         strava_config,
+        wahoo_config,
         map_config,
         server_config,
     ) = load_environment_config()
@@ -488,6 +541,7 @@ def test_default_project_root_behavior():
     assert isinstance(db_config, DatabaseConfig)
     assert isinstance(storage_config, (LocalStorageConfig, S3StorageConfig))
     assert isinstance(strava_config, StravaConfig)
+    assert isinstance(wahoo_config, WahooConfig)
     assert isinstance(map_config, MapConfig)
 
 
@@ -525,6 +579,12 @@ DB_PASSWORD=password""")
     # Create Strava file with missing parameters
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
@@ -595,6 +655,12 @@ STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
 STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
     thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -603,6 +669,7 @@ STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
         db_config,
         storage_config,
         strava_config,
+        wahoo_config,
         map_config,
         server_config,
     ) = load_environment_config(project_root=tmp_path)
@@ -648,6 +715,12 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file
     thunderforest_file = env_folder / "thunderforest"
@@ -806,6 +879,12 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
+
     # Create thunderforest.example file but NOT the thunderforest file
     thunderforest_example_file = env_folder / "thunderforest.example"
     thunderforest_example_file.write_text("""THUNDERFOREST_API_KEY=your_api_key_here""")
@@ -843,6 +922,12 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Do NOT create thunderforest file or thunderforest.example file
 
@@ -884,6 +969,12 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file without THUNDERFOREST_API_KEY
     thunderforest_file = env_folder / "thunderforest"
@@ -927,6 +1018,12 @@ DB_PASSWORD=password""")
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+    # Create Wahoo file
+    wahoo_file = env_folder / "wahoo"
+    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
+WAHOO_CLIENT_SECRET=test_wahoo_client_secret
+WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     # Create thunderforest file with empty THUNDERFOREST_API_KEY
     thunderforest_file = env_folder / "thunderforest"

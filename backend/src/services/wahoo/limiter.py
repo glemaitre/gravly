@@ -73,12 +73,8 @@ def get_rates_from_response_headers(
     headers = {key.casefold(): value for key, value in headers.items()}
 
     if "x-readratelimit-usage" in headers and method == "GET":
-        usage_rates = [
-            int(v) for v in headers["x-readratelimit-usage"].split(",")
-        ]
-        limit_rates = [
-            int(v) for v in headers["x-readratelimit-limit"].split(",")
-        ]
+        usage_rates = [int(v) for v in headers["x-readratelimit-usage"].split(",")]
+        limit_rates = [int(v) for v in headers["x-readratelimit-limit"].split(",")]
     elif "x-ratelimit-usage" in headers:
         usage_rates = [int(v) for v in headers["x-ratelimit-usage"].split(",")]
         limit_rates = [int(v) for v in headers["x-ratelimit-limit"].split(",")]
@@ -117,10 +113,7 @@ def get_seconds_until_next_quarter(
     return (
         899
         - (
-            now
-            - now.replace(
-                minute=(now.minute // 15) * 15, second=0, microsecond=0
-            )
+            now - now.replace(minute=(now.minute // 15) * 15, second=0, microsecond=0)
         ).seconds
     )
 
@@ -198,17 +191,11 @@ class SleepingRateLimitRule:
         if self.priority == "high":
             return 0
         elif self.priority == "medium":
-            return seconds_until_short_limit / (
-                rates.short_limit - rates.short_usage
-            )
+            return seconds_until_short_limit / (rates.short_limit - rates.short_usage)
         elif self.priority == "low":
-            return seconds_until_long_limit / (
-                rates.long_limit - rates.long_usage
-            )
+            return seconds_until_long_limit / (rates.long_limit - rates.long_usage)
 
-    def __call__(
-        self, response_headers: dict[str, str], method: RequestMethod
-    ) -> None:
+    def __call__(self, response_headers: dict[str, str], method: RequestMethod) -> None:
         """Determines wait time until a call can be made again"""
         rates = get_rates_from_response_headers(response_headers, method)
         self.log.debug(f"Throttling based on rates: {rates}")
@@ -273,9 +260,7 @@ class DefaultRateLimiter(RateLimiter):
         client = Client(access_token=token, rate_limiter=rate_limiter)
     """
 
-    def __init__(
-        self, priority: Literal["low", "medium", "high"] = "high"
-    ) -> None:
+    def __init__(self, priority: Literal["low", "medium", "high"] = "high") -> None:
         """
         Initializes the rate limiter based on the given priority.
 

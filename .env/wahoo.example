@@ -1,0 +1,21 @@
+# Wahoo API Configuration
+# Copy this file to 'wahoo' and fill in your actual values
+
+# Client ID from Wahoo Developer API
+WAHOO_CLIENT_ID=YOUR_CLIENT_ID_HERE
+
+# Client Secret from Wahoo Developer API
+WAHOO_CLIENT_SECRET=YOUR_CLIENT_SECRET_HERE
+
+# Path to store Wahoo authentication tokens
+# This should be a secure location accessible by your application
+WAHOO_TOKENS_FILE_PATH=/path/to/wahoo_tokens.json
+
+# Scopes (space-separated)
+# Available scopes: routes_write, user_read, user_write, power_zones_read, 
+# power_zones_write, workouts_read, workouts_write, plans_read, plans_write, 
+# routes_read, offline_data
+WAHOO_SCOPES=routes_write user_read
+
+# Callback URL (must match what's configured in Wahoo Developer API)
+WAHOO_CALLBACK_URL=https://gravly.cc:33443/wahoo-callback
