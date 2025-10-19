@@ -78,16 +78,19 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: #f9fafb;
+  background: var(--bg-secondary);
+  transition: background-color 0.3s ease;
 }
 
 .callback-content {
   text-align: center;
   max-width: 400px;
   padding: 2rem;
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--card-border);
+  transition: all 0.3s ease;
 }
 
 .loading i,
@@ -98,27 +101,27 @@ onMounted(async () => {
 }
 
 .loading i {
-  color: #3b82f6;
+  color: var(--status-info);
 }
 
 .success i {
-  color: #10b981;
+  color: var(--status-success);
 }
 
 .error i {
-  color: #ef4444;
+  color: var(--status-error);
 }
 
 h3 {
   margin: 0 0 1rem 0;
-  color: #1f2937;
+  color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 600;
 }
 
 p {
   margin: 0 0 1.5rem 0;
-  color: #6b7280;
+  color: var(--text-tertiary);
   line-height: 1.5;
 }
 
@@ -137,11 +140,11 @@ p {
 }
 
 .btn-primary {
-  background: #3b82f6;
-  color: white;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
 }
 
 .btn-primary:hover {
-  background: #2563eb;
+  background: var(--button-primary-hover);
 }
 </style>
