@@ -20,7 +20,7 @@ class TestWahooCallback:
         """Test successful Wahoo callback with authorization code."""
         test_code = "test_authorization_code_123"
 
-        with patch("builtins.print") as mock_print:
+        with patch("src.api.wahoo.logger") as mock_logger:
             response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
@@ -29,8 +29,10 @@ class TestWahooCallback:
         assert data["code"] == test_code
         assert data["status"] == "success"
 
-        # Verify that the code was printed
-        mock_print.assert_called_once_with(f"Wahoo authorization code: {test_code}")
+        # Verify that the code was logged
+        mock_logger.info.assert_called_once_with(
+            f"Received Wahoo authorization code: {test_code}"
+        )
 
     def test_wahoo_callback_missing_code(self, client):
         """Test Wahoo callback without authorization code."""
@@ -52,7 +54,7 @@ class TestWahooCallback:
         """Test Wahoo callback with special characters in code."""
         test_code = "test_code_with_special_chars_!@#$%^&*()"
 
-        with patch("builtins.print") as mock_print:
+        with patch("src.api.wahoo.logger") as mock_logger:
             response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
@@ -60,27 +62,28 @@ class TestWahooCallback:
         # The test client may URL decode the code, so we check that it contains
         # the expected parts
         assert "test_code_with_special_chars" in data["code"]
-        # The print call may also be URL decoded, so we check the call was made
-        mock_print.assert_called_once()
-        # Verify the call contains the expected text
-        call_args = mock_print.call_args[0][0]
-        assert "Wahoo authorization code:" in call_args
-        assert "test_code_with_special_chars" in call_args
+        # Verify that the code was logged (check that logging was called with the actual
+        # received code)
+        mock_logger.info.assert_called_once()
+        logged_message = mock_logger.info.call_args[0][0]
+        assert "Received Wahoo authorization code:" in logged_message
+        assert data["code"] in logged_message
 
     def test_wahoo_callback_long_code(self, client):
         """Test Wahoo callback with a very long authorization code."""
         test_code = "a" * 1000  # Very long code
 
-        with patch("builtins.print") as mock_print:
+        with patch("src.api.wahoo.logger") as mock_logger:
             response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == test_code
-        mock_print.assert_called_once_with(f"Wahoo authorization code: {test_code}")
+        mock_logger.info.assert_called_once_with(
+            f"Received Wahoo authorization code: {test_code}"
+        )
 
-    @patch("builtins.print")
-    def test_wahoo_callback_logging(self, mock_print, client):
+    def test_wahoo_callback_logging(self, client):
         """Test that Wahoo callback logs the received code."""
         test_code = "logging_test_code"
 
@@ -92,8 +95,6 @@ class TestWahooCallback:
         mock_logger.info.assert_called_once_with(
             f"Received Wahoo authorization code: {test_code}"
         )
-        # Verify that print was called
-        mock_print.assert_called_once_with(f"Wahoo authorization code: {test_code}")
 
     def test_wahoo_callback_response_format(self, client):
         """Test that Wahoo callback returns the expected response format."""
@@ -131,15 +132,14 @@ class TestWahooAuthorizationUrl:
         expected_auth_url = "https://api.wahooligan.com/oauth/authorize?client_id=test&redirect_uri=test&response_type=code&scope=routes_write+user_read&state=wahoo_auth"
         mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
 
-        response = client.get("/api/wahoo/authorization-url")
+        response = client.get("/api/wahoo/auth-url")
 
         assert response.status_code == 200
         data = response.json()
-        assert data["authorization_url"] == expected_auth_url
-        assert data["status"] == "success"
+        assert data["auth_url"] == expected_auth_url
 
-        # Verify that the service was called without parameters
-        mock_wahoo_service.get_authorization_url.assert_called_once_with()
+        # Verify that the service was called with default state
+        mock_wahoo_service.get_authorization_url.assert_called_once_with("wahoo_auth")
 
     @patch("src.api.wahoo.get_wahoo_service")
     def test_get_authorization_url_service_error(self, mock_get_service, client):
@@ -150,7 +150,7 @@ class TestWahooAuthorizationUrl:
             "Service error"
         )
 
-        response = client.get("/api/wahoo/authorization-url")
+        response = client.get("/api/wahoo/auth-url")
 
         assert response.status_code == 500
         data = response.json()
@@ -165,7 +165,7 @@ class TestWahooAuthorizationUrl:
         # Mock the service to raise an exception during initialization
         mock_get_service.side_effect = Exception("Service initialization error")
 
-        response = client.get("/api/wahoo/authorization-url")
+        response = client.get("/api/wahoo/auth-url")
 
         assert response.status_code == 500
         data = response.json()
@@ -181,7 +181,7 @@ class TestWahooAuthorizationUrl:
         mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
 
         with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get("/api/wahoo/authorization-url")
+            response = client.get("/api/wahoo/auth-url")
 
         assert response.status_code == 200
         # Verify that info logging was called
@@ -195,19 +195,16 @@ class TestWahooAuthorizationUrl:
         expected_auth_url = "https://api.wahooligan.com/oauth/authorize?test=123"
         mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
 
-        response = client.get("/api/wahoo/authorization-url")
+        response = client.get("/api/wahoo/auth-url")
 
         assert response.status_code == 200
         data = response.json()
 
         # Check that all expected fields are present
-        assert "authorization_url" in data
-        assert "status" in data
+        assert "auth_url" in data
 
         # Check field types
-        assert isinstance(data["authorization_url"], str)
-        assert isinstance(data["status"], str)
+        assert isinstance(data["auth_url"], str)
 
         # Check field values
-        assert data["authorization_url"] == expected_auth_url
-        assert data["status"] == "success"
+        assert data["auth_url"] == expected_auth_url

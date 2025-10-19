@@ -65,12 +65,15 @@
 <script lang="ts" setup>
 import { ref, onMounted, watch } from 'vue'
 import { useAuthorization } from '../composables/useAuthorization'
+import { useWahooApi } from '../composables/useWahooApi'
 
 // Authorization check
 const { isAuthorized, isLoadingAuthorization } = useAuthorization()
 
+// Wahoo API composable
+const { getAuthUrl, isLoading: isLoadingWahooAuth } = useWahooApi()
+
 // Wahoo authorization state
-const isLoadingWahooAuth = ref(false)
 const wahooAuthStatus = ref<{
   status: 'success' | 'error' | 'info'
   message: string
@@ -82,28 +85,12 @@ const wahooAuthStatus = ref<{
  */
 async function handleWahooAuthorization() {
   try {
-    isLoadingWahooAuth.value = true
     wahooAuthStatus.value = null
 
-    const response = await fetch('/api/wahoo/authorization-url', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+    const authUrl = await getAuthUrl()
 
-    if (!response.ok) {
-      throw new Error(`Failed to get authorization URL: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.status === 'success' && data.authorization_url) {
-      // Redirect to Wahoo authorization URL
-      window.location.href = data.authorization_url
-    } else {
-      throw new Error('Invalid response from server')
-    }
+    // Redirect to Wahoo authorization URL
+    window.location.href = authUrl
   } catch (error: any) {
     console.error('Wahoo authorization error:', error)
     wahooAuthStatus.value = {
@@ -111,8 +98,6 @@ async function handleWahooAuthorization() {
       message: error.message || 'Failed to initiate Wahoo authorization',
       icon: 'fa-solid fa-exclamation-triangle'
     }
-  } finally {
-    isLoadingWahooAuth.value = false
   }
 }
 
@@ -184,7 +169,7 @@ onMounted(() => {
 }
 
 .labs-section {
-  background: var(--card-background);
+  background: var(--bg-tertiary);
   border-radius: 12px;
   padding: 2rem;
   box-shadow: var(--card-shadow);

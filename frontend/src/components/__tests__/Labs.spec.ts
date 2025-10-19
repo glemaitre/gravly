@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
+import { ref } from 'vue'
 import Labs from '../Labs.vue'
 
 // Import real locale files
@@ -17,11 +18,25 @@ const i18n = createI18n({
 
 // Mock useAuthorization composable
 const mockUseAuthorization = {
-  isAuthorized: { value: true }
+  isAuthorized: { value: true },
+  isLoadingAuthorization: { value: false }
 }
 
 vi.mock('../../composables/useAuthorization', () => ({
   useAuthorization: () => mockUseAuthorization
+}))
+
+// Mock useWahooApi composable
+const mockGetAuthUrl = vi.fn()
+const mockIsLoading = ref(false)
+const mockError = ref<string | null>(null)
+
+vi.mock('../../composables/useWahooApi', () => ({
+  useWahooApi: () => ({
+    getAuthUrl: mockGetAuthUrl,
+    isLoading: mockIsLoading,
+    error: mockError
+  })
 }))
 
 // Mock fetch
@@ -41,6 +56,11 @@ describe('Labs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLocation.href = ''
+
+    // Reset mock composable state
+    mockGetAuthUrl.mockClear()
+    mockIsLoading.value = false
+    mockError.value = null
   })
 
   afterEach(() => {
@@ -84,14 +104,8 @@ describe('Labs', () => {
   })
 
   it('handles successful Wahoo authorization', async () => {
-    const mockResponse = {
-      ok: true,
-      json: vi.fn().mockResolvedValue({
-        status: 'success',
-        authorization_url: 'https://api.wahooligan.com/oauth/authorize?test=123'
-      })
-    }
-    mockFetch.mockResolvedValue(mockResponse)
+    const mockAuthUrl = 'https://api.wahooligan.com/oauth/authorize?test=123'
+    mockGetAuthUrl.mockResolvedValue(mockAuthUrl)
 
     const wrapper = mount(Labs, {
       global: {
@@ -102,24 +116,16 @@ describe('Labs', () => {
     const authButton = wrapper.find('.wahoo-auth-btn')
     await authButton.trigger('click')
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/wahoo/authorization-url', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
+    // Wait for the async operation to complete
+    await wrapper.vm.$nextTick()
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
-    expect(mockLocation.href).toBe(
-      'https://api.wahooligan.com/oauth/authorize?test=123'
-    )
+    expect(mockGetAuthUrl).toHaveBeenCalled()
+    expect(mockLocation.href).toBe(mockAuthUrl)
   })
 
   it('handles Wahoo authorization error', async () => {
-    const mockResponse = {
-      ok: false,
-      statusText: 'Internal Server Error'
-    }
-    mockFetch.mockResolvedValue(mockResponse)
+    mockGetAuthUrl.mockRejectedValue(new Error('Failed to get authorization URL'))
 
     const wrapper = mount(Labs, {
       global: {
@@ -130,6 +136,8 @@ describe('Labs', () => {
     const authButton = wrapper.find('.wahoo-auth-btn')
     await authButton.trigger('click')
 
+    // Simulate error state
+    mockError.value = 'Failed to get authorization URL'
     await wrapper.vm.$nextTick()
 
     const errorStatus = wrapper.find('.status-indicator.error')
@@ -139,24 +147,15 @@ describe('Labs', () => {
 
   it('shows loading state during authorization', async () => {
     // Mock a slow response to test loading state
-    const mockResponse = {
-      ok: true,
-      json: vi.fn().mockImplementation(
-        () =>
-          new Promise((resolve) =>
-            setTimeout(
-              () =>
-                resolve({
-                  status: 'success',
-                  authorization_url:
-                    'https://api.wahooligan.com/oauth/authorize?test=123'
-                }),
-              100
-            )
+    mockGetAuthUrl.mockImplementation(
+      () =>
+        new Promise((resolve) =>
+          setTimeout(
+            () => resolve('https://api.wahooligan.com/oauth/authorize?test=123'),
+            100
           )
-      )
-    }
-    mockFetch.mockResolvedValue(mockResponse)
+        )
+    )
 
     const wrapper = mount(Labs, {
       global: {
@@ -165,6 +164,10 @@ describe('Labs', () => {
     })
 
     const authButton = wrapper.find('.wahoo-auth-btn')
+
+    // Set loading state to true to simulate the loading state
+    mockIsLoading.value = true
+
     await authButton.trigger('click')
 
     // Check loading state immediately after click
@@ -203,7 +206,7 @@ describe('Labs', () => {
   })
 
   it('handles network error during authorization', async () => {
-    mockFetch.mockRejectedValue(new Error('Network error'))
+    mockGetAuthUrl.mockRejectedValue(new Error('Network error'))
 
     const wrapper = mount(Labs, {
       global: {
@@ -214,6 +217,8 @@ describe('Labs', () => {
     const authButton = wrapper.find('.wahoo-auth-btn')
     await authButton.trigger('click')
 
+    // Simulate error state
+    mockError.value = 'Network error'
     await wrapper.vm.$nextTick()
 
     const errorStatus = wrapper.find('.status-indicator.error')
@@ -222,14 +227,7 @@ describe('Labs', () => {
   })
 
   it('handles invalid response from server', async () => {
-    const mockResponse = {
-      ok: true,
-      json: vi.fn().mockResolvedValue({
-        status: 'error',
-        message: 'Invalid response'
-      })
-    }
-    mockFetch.mockResolvedValue(mockResponse)
+    mockGetAuthUrl.mockRejectedValue(new Error('Invalid response from server'))
 
     const wrapper = mount(Labs, {
       global: {
@@ -240,6 +238,8 @@ describe('Labs', () => {
     const authButton = wrapper.find('.wahoo-auth-btn')
     await authButton.trigger('click')
 
+    // Simulate error state
+    mockError.value = 'Invalid response from server'
     await wrapper.vm.$nextTick()
 
     const errorStatus = wrapper.find('.status-indicator.error')

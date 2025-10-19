@@ -25,14 +25,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useWahooApi } from '../composables/useWahooApi'
 
 const { t } = useI18n()
 const router = useRouter()
-const isLoading = ref(true)
-const error = ref<string | null>(null)
+const { exchangeCode, isLoading, error } = useWahooApi()
 
 const goToHome = () => {
   router.push('/')
@@ -43,6 +43,7 @@ onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
     const errorParam = urlParams.get('error')
+    const state = urlParams.get('state')
 
     if (errorParam) {
       throw new Error(`Wahoo authorization error: ${errorParam}`)
@@ -52,35 +53,21 @@ onMounted(async () => {
       throw new Error('No authorization code received from Wahoo')
     }
 
-    // Call the backend API to handle the code
-    const response = await fetch(
-      `/api/wahoo/callback?code=${encodeURIComponent(code)}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    )
+    await exchangeCode(code)
+    console.info('Wahoo authentication successful')
 
-    if (!response.ok) {
-      throw new Error(`Backend error: ${response.statusText}`)
+    // Always redirect to home page to trigger navbar reload
+    // Store the original destination in localStorage for later redirect
+    if (state && state !== 'wahoo_auth') {
+      localStorage.setItem('wahoo_redirect_after_auth', state)
     }
 
-    const result = await response.json()
-    console.info('Wahoo authentication successful:', result)
-
-    // Set loading to false to show success state
-    isLoading.value = false
-
-    // Redirect to home page after a short delay
+    console.info('Redirecting to home page to reload navbar')
     setTimeout(() => {
       window.location.href = '/' // Full page reload to refresh navbar
     }, 2000)
   } catch (err) {
     console.error('Wahoo callback error:', err)
-    error.value = err instanceof Error ? err.message : 'Unknown error occurred'
-    isLoading.value = false
   }
 })
 </script>

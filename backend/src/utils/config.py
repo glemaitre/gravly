@@ -9,7 +9,8 @@ from dotenv import load_dotenv
 
 # Configure detailed logging for configuration loading
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# Don't override the global logging level - use INFO level
+logger.setLevel(logging.INFO)
 
 
 class DatabaseConfig(NamedTuple):
