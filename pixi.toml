@@ -33,6 +33,7 @@ types-python-dateutil = "*"
 
 [pypi-dependencies]
 stravalib = "*"
+fit-tool = "*"
 
 [feature.dev.dependencies]
 ipykernel = "*"
