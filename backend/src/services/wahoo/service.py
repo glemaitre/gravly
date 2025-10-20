@@ -62,6 +62,7 @@ class WahooService:
         self.client_id = wahoo_config.client_id
         self.client_secret = wahoo_config.client_secret
         self.callback_url = wahoo_config.callback_url
+        self.scopes = wahoo_config.scopes
 
         self.client = Client()
         self.tokens_file = Path(wahoo_config.tokens_file_path)
@@ -159,7 +160,7 @@ class WahooService:
         auth_url = self.client.authorization_url(
             client_id=self.client_id,
             redirect_uri=self.callback_url,
-            scope=["routes_write", "user_read"],
+            scope=self.scopes,
             state=state,
         )
         logger.info(f"Generated Wahoo authorization URL with state: {state}")
@@ -188,14 +189,14 @@ class WahooService:
         Notes
         -----
         This method exchanges the authorization code for an access token and
-        refresh token. It also fetches the user information and saves
-        all tokens to the configured file for future use.
+        refresh token.
         """
         try:
             access_info = self.client.exchange_code_for_token(
                 client_id=self.client_id,
                 client_secret=self.client_secret,
                 code=code,
+                redirect_uri=self.callback_url,
             )
 
             # Convert AccessInfo to dictionary for saving and returning

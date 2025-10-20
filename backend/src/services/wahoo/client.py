@@ -32,14 +32,14 @@ class Client:
         Parameters
         ----------
         access_token : str
-            The token that provides access to a specific Strava account. If
+            The token that provides access to a specific Wahoo account. If
             empty, assume that this account is not yet authenticated.
         rate_limit_requests : bool
             Whether to apply a rate limiter to the requests. (default True)
         rate_limiter : callable
-            A :class:`stravalib.util.limiter.RateLimiter` object to use.
+            A :class:`.limiter.RateLimiter` object to use.
             If not specified (and rate_limit_requests is True), then
-            :class:`stravalib.util.limiter.DefaultRateLimiter` will be used.
+            :class:`limiter.DefaultRateLimiter` will be used.
         requests_session : requests.Session() object
             (Optional) pass request session object.
         token_expires : int
@@ -140,17 +140,17 @@ class Client:
         scope: list[Scope] | Scope | None = None,
         state: str | None = None,
     ) -> str:
-        """Get the URL needed to authorize your application to access a Strava
+        """Get the URL needed to authorize your application to access a Wahoo
         user's information.
 
-        See https://developers.strava.com/docs/authentication/
+        See https://cloud-api.wahooligan.com/#authentication
 
         Parameters
         ----------
         client_id : str
             The developer client id.
         redirect_uri : str
-            The URL that Strava will redirect to after successful (or failed)
+            The URL that Wahoo will redirect to after successful (or failed)
             authorization.
         approval_prompt : str, default='auto'
             Whether to prompt for approval even if approval already granted to
@@ -158,9 +158,9 @@ class Client:
             Choices are 'auto' or 'force'.
         scope : list[str], default = None
             The access scope required.  Omit to imply "read" and "activity:read"
-            Valid values are 'read', 'read_all', 'profile:read_all',
-            'profile:write', 'activity:read', 'activity:read_all',
-            'activity:write'.
+            Valid values are 'email', 'user_read', 'user_write', 'power_zones_read',
+            'power_zones_write', 'workouts_read', 'workouts_write', 'plans_read',
+            'plans_write', 'routes_read', 'routes_write', 'offline_data'.
         state : str, default=None
             An arbitrary variable that will be returned to your application in
             the redirect URI.
@@ -168,7 +168,7 @@ class Client:
         Returns
         -------
         str:
-            A string containing the url required to authorize with the Strava
+            A string containing the url required to authorize with the Wahoo
             API.
 
         """
@@ -185,9 +185,10 @@ class Client:
         client_id: str,
         client_secret: str,
         code: str,
+        redirect_uri: str,
     ) -> AccessInfo:
         """Exchange the temporary authorization code (returned with redirect
-        from Strava authorization URL) for a short-lived access token and a
+        from Wahoo authorization URL) for a short-lived access token and a
         refresh token (used to obtain the next access token later on).
 
         Parameters
@@ -198,10 +199,9 @@ class Client:
             The developer client secret
         code : str
             The temporary authorization code
-        return_athlete : bool (default = False)
-            Whether to return a SummaryAthlete object (or not)
-            This parameter is currently undocumented and could change
-            at any time.
+        redirect_uri : str
+            The URL that Wahoo will redirect to after successful (or
+            failed) authorization.
 
         Returns
         -------
@@ -212,17 +212,14 @@ class Client:
 
         Notes
         -----
-        Strava by default returns `SummaryAthlete` information during
-        this exchange. However this return is currently undocumented
-        and could change at any time.
+        Wahoo does not return any information during this exchange.
         """
-        access_info, athlete_data = self.protocol.exchange_code_for_token(
+        return self.protocol.exchange_code_for_token(
             client_id=client_id,
             client_secret=client_secret,
             code=code,
+            redirect_uri=redirect_uri,
         )
-
-        return access_info
 
     def refresh_access_token(
         self, client_id: int, client_secret: str, refresh_token: str

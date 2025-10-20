@@ -56,6 +56,7 @@ class WahooConfig(NamedTuple):
     client_secret: str
     tokens_file_path: str
     callback_url: str
+    scopes: list[str]
 
 
 class MapConfig(NamedTuple):
@@ -311,6 +312,7 @@ def load_environment_config(
         "WAHOO_CLIENT_SECRET",
         "WAHOO_TOKENS_FILE_PATH",
         "WAHOO_CALLBACK_URL",
+        "WAHOO_SCOPES",
     ]
     missing_wahoo_params = [
         param for param in required_wahoo_params if not os.getenv(param)
@@ -332,6 +334,7 @@ def load_environment_config(
         client_secret=os.getenv("WAHOO_CLIENT_SECRET"),
         tokens_file_path=wahoo_tokens_file_path,
         callback_url=os.getenv("WAHOO_CALLBACK_URL"),
+        scopes=os.getenv("WAHOO_SCOPES", "user_read routes_write").split(" "),
     )
 
     # Extract map configuration from environment variables

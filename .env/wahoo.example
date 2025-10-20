@@ -15,7 +15,7 @@ WAHOO_TOKENS_FILE_PATH=/path/to/wahoo_tokens.json
 # Available scopes: routes_write, user_read, user_write, power_zones_read, 
 # power_zones_write, workouts_read, workouts_write, plans_read, plans_write, 
 # routes_read, offline_data
-WAHOO_SCOPES=routes_write user_read
+WAHOO_SCOPES=routes_write routes_read user_read
 
 # Callback URL (must match what's configured in Wahoo Developer API)
 WAHOO_CALLBACK_URL=https://gravly.cc:33443/wahoo-callback

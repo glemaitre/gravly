@@ -45,6 +45,7 @@ def create_wahoo_router() -> APIRouter:
                 "expires_at": token_response["expires_at"],
             }
         except Exception as e:
+            print(e)
             logger.error(f"Error exchanging Wahoo code: {str(e)}")
             raise HTTPException(
                 status_code=400, detail=f"Failed to exchange code: {str(e)}"

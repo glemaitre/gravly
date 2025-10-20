@@ -213,7 +213,7 @@ class ApiV1:
 
         raw = requester(url, params=params)  # type: ignore[operator]
         # Rate limits are taken from HTTP response headers
-        # https://developers.strava.com/docs/rate-limits/
+        # https://cloud-api.wahooligan.com/#rate-limiting
         self.rate_limiter(raw.headers, method)
 
         if check_for_errors:
@@ -224,6 +224,9 @@ class ApiV1:
             resp = {}
         else:
             resp = raw.json()
+            if "created_at" in resp and "expires_in" in resp:
+                resp["expires_at"] = resp["created_at"] + resp["expires_in"]
+            print(resp)
 
         return resp
 
@@ -357,8 +360,9 @@ class ApiV1:
         self,
         client_id: str,
         client_secret: str,
+        redirect_uri: str,
         code: str,
-    ) -> tuple[AccessInfo, dict[str, Any] | None]:
+    ) -> AccessInfo:
         """Exchange the temporary authorization code (returned with redirect
         from Wahoo authorization URL) for a short-lived access token and a
         refresh token (used to obtain the next access token later on).
@@ -371,6 +375,9 @@ class ApiV1:
             The developer client id.
         client_secret : str
             The developer client secret
+        redirect_uri : str
+            The URL that Wahoo will redirect to after successful (or
+            failed) authorization.
         code : str
             The temporary authorization code
 
@@ -385,10 +392,11 @@ class ApiV1:
         response = self._request(
             f"https://{self.server}/oauth/token",
             params={
-                "client_id": client_id,
                 "client_secret": client_secret,
-                "code": code,
+                "redirect_uri": redirect_uri,
                 "grant_type": "authorization_code",
+                "code": code,
+                "client_id": client_id,
             },
             method="POST",
         )
