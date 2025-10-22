@@ -12,8 +12,8 @@ WAHOO_CLIENT_SECRET=YOUR_CLIENT_SECRET_HERE
 WAHOO_TOKENS_FILE_PATH=/path/to/wahoo_tokens.json
 
 # Scopes (space-separated)
-# Available scopes: routes_write, user_read, user_write, power_zones_read, 
-# power_zones_write, workouts_read, workouts_write, plans_read, plans_write, 
+# Available scopes: routes_write, user_read, user_write, power_zones_read,
+# power_zones_write, workouts_read, workouts_write, plans_read, plans_write,
 # routes_read, offline_data
 WAHOO_SCOPES=routes_write routes_read user_read
 
