@@ -136,18 +136,20 @@ class TestWahooClient:
         }
 
         with patch.object(client.protocol, "exchange_code_for_token") as mock_exchange:
-            mock_exchange.return_value = (mock_access_info, None)
+            mock_exchange.return_value = mock_access_info
 
             result = client.exchange_code_for_token(
                 client_id="test_client_id",
                 client_secret="test_client_secret",
                 code="test_code",
+                redirect_uri="https://test.example.com/callback",
             )
 
             mock_exchange.assert_called_once_with(
                 client_id="test_client_id",
                 client_secret="test_client_secret",
                 code="test_code",
+                redirect_uri="https://test.example.com/callback",
             )
             assert result == mock_access_info
 
@@ -299,12 +301,14 @@ class TestWahooProtocol:
                 "expires_at": 9999999999,
             }
 
+            # Mock the entire _request method to avoid making real HTTP calls
             with patch.object(protocol, "_request") as mock_request:
                 mock_request.return_value = mock_response
 
                 access_info = protocol.exchange_code_for_token(
                     client_id="test_client_id",
                     client_secret="test_client_secret",
+                    redirect_uri="https://test.example.com/callback",
                     code="test_code",
                 )
 

@@ -18,6 +18,7 @@ class TestWahooConfig:
             client_secret="test_client_secret",
             tokens_file_path="/path/to/tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
+            scopes=["user_read", "routes_write"],
         )
 
         assert config.client_id == "test_client_id"
@@ -31,6 +32,7 @@ class TestWahooConfig:
             client_secret="test_client_secret",
             tokens_file_path="/path/to/tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
+            scopes=["user_read", "routes_write"],
         )
 
         # NamedTuple should be immutable

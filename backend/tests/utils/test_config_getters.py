@@ -44,6 +44,7 @@ def test_get_database_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -92,6 +93,7 @@ def test_get_storage_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -138,6 +140,7 @@ def test_get_strava_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -184,6 +187,7 @@ def test_get_wahoo_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -231,6 +235,7 @@ def test_get_map_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -275,6 +280,7 @@ def test_get_server_config():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -323,6 +329,7 @@ def test_get_configs_caching():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(
@@ -395,6 +402,7 @@ def test_get_configs_when_none():
             client_secret="test_wahoo_client_secret",
             tokens_file_path="/secure/path/to/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
+            scopes=["user_read", "routes_write"],
         ),
         MapConfig(thunderforest_api_key="test_api_key"),
         ServerConfig(

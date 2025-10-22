@@ -361,3 +361,33 @@ class TestWahooProtocolExtended:
             # Should return the response for successful status codes
             result = protocol._handle_protocol_error(mock_response)
             assert result == mock_response
+
+    def test_request_with_created_at_and_expires_in(self):
+        """Test _request method with response containing created_at and expires_in."""
+        with patch.dict(os.environ, {}, clear=True):
+            protocol = ApiV1()
+
+            with patch.object(protocol, "resolve_url") as mock_resolve:
+                with patch.object(protocol, "rsession") as mock_session:
+                    with patch.object(protocol, "rate_limiter"):
+                        mock_resolve.return_value = "https://api.wahooligan.com/v1/test"
+                        mock_response = Mock()
+                        mock_response.status_code = 200
+                        mock_response.json.return_value = {
+                            "access_token": "new_token",
+                            "created_at": 1640995200,  # Unix timestamp
+                            "expires_in": 3600,  # 1 hour in seconds
+                        }
+                        mock_response.headers = {}
+                        mock_session.get.return_value = mock_response
+
+                        result = protocol._request("test/endpoint", method="GET")
+
+                        # Should calculate expires_at from created_at + expires_in
+                        expected_result = {
+                            "access_token": "new_token",
+                            "created_at": 1640995200,
+                            "expires_in": 3600,
+                            "expires_at": 1640998800,  # created_at + expires_in
+                        }
+                        assert result == expected_result
