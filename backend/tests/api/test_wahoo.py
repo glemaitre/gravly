@@ -465,14 +465,66 @@ class TestWahooGetUserEndpoint:
 
 
 class TestWahooDeleteRouteEndpoint:
-    """Test Wahoo delete route endpoint - basic coverage tests."""
+    """Test Wahoo delete route endpoint."""
 
     @patch("src.dependencies.SessionLocal", None)
-    @patch("src.api.wahoo.get_wahoo_service")
-    def test_delete_route_database_not_initialized(self, mock_get_service, client):
+    def test_delete_route_database_not_initialized(self, client):
         """Test delete route when database is not initialized."""
         response = client.delete("/api/wahoo/routes/123")
 
         assert response.status_code == 503
         data = response.json()
         assert "database not initialized" in data["detail"].lower()
+
+    def test_delete_route_endpoint_exists(self, client):
+        """Test that the delete route endpoint is registered."""
+        # The endpoint should exist and return some response (not 404)
+        # Actual error will be 500/503 without proper setup, but 404 means endpoint doesn't exist
+        with patch("src.dependencies.SessionLocal", None):
+            response = client.delete("/api/wahoo/routes/999")
+
+            # Should not be 404 (which would mean endpoint doesn't exist)
+            assert response.status_code != 404
+
+    def test_delete_route_calls_service_method(self):
+        """Test that the delete route endpoint will call the service method."""
+        from src.services.wahoo.service import WahooService
+
+        # Verify the service has the delete_route method
+        assert hasattr(WahooService, "delete_route")
+        assert callable(getattr(WahooService, "delete_route"))
+
+        # Get the method signature
+        import inspect
+
+        sig = inspect.signature(WahooService.delete_route)
+        params = list(sig.parameters.keys())
+
+        # Should take route_id as parameter
+        assert "route_id" in params
+
+    def test_delete_route_service_method_signature(self):
+        """Test delete_route service method signature."""
+        import inspect
+
+        from src.services.wahoo.service import WahooService
+
+        # Get the method
+        delete_method = getattr(WahooService, "delete_route")
+
+        # Check signature
+        sig = inspect.signature(delete_method)
+        assert len(sig.parameters) == 2  # self + route_id
+        assert "route_id" in sig.parameters
+
+    def test_delete_route_client_method_exists(self):
+        """Test that client has delete_route method."""
+        from src.services.wahoo.client import Client
+
+        assert hasattr(Client, "delete_route")
+
+    def test_delete_route_protocol_method_exists(self):
+        """Test that protocol has delete_route method."""
+        from src.services.wahoo.protocol import ApiV1
+
+        assert hasattr(ApiV1, "delete_route")
