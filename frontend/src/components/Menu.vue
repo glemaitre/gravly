@@ -299,7 +299,8 @@ async function handleStravaLogin() {
 function handleStravaLogout() {
   clearAuth()
   menuOpen.value = false
-  router.push('/')
+  // Use window.location.href for full page reload to refresh navbar
+  window.location.href = '/'
 }
 
 // Wahoo authentication functions

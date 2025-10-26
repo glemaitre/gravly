@@ -24,6 +24,13 @@ vi.mock('vue-router', () => ({
   })
 }))
 
+// Mock window.location
+const mockLocation = { href: '' }
+Object.defineProperty(window, 'location', {
+  writable: true,
+  value: mockLocation
+})
+
 describe('Menu', () => {
   let wrapper: VueWrapper
   let i18n: ReturnType<typeof createI18n>
@@ -80,6 +87,8 @@ describe('Menu', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset location.href
+    mockLocation.href = ''
 
     // Reset mocks
     mockAuthState.isAuthenticated = false
@@ -344,7 +353,7 @@ describe('Menu', () => {
       await logoutBtn.trigger('click')
 
       expect(mockStravaApi.clearAuth).toHaveBeenCalled()
-      expect(mockPush).toHaveBeenCalledWith('/')
+      expect(mockLocation.href).toBe('/')
 
       // Menu should be closed
       expect(wrapper.find('.menu-dropdown-content').classes()).not.toContain('open')
