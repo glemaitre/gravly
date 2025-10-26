@@ -39,6 +39,23 @@
                 </button>
                 <button
                   v-if="segment?.track_type === 'route'"
+                  @click="showDeleteConfirmation"
+                  class="dropdown-item dropdown-item-indented dropdown-item-danger"
+                  :disabled="!isOwner"
+                  :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
+                >
+                  <i class="fa-solid fa-trash"></i>
+                  {{ t('segmentDetail.deleteRoute') }}
+                </button>
+              </div>
+
+              <!-- Wahoo Cloud Section -->
+              <div v-if="segment?.track_type === 'route'" class="dropdown-section">
+                <div class="dropdown-section-title">
+                  <i class="fa-solid fa-cloud"></i>
+                  {{ t('segmentDetail.actionsWahoo') }}
+                </div>
+                <button
                   @click="handleUploadToWahoo"
                   class="dropdown-item dropdown-item-indented"
                   :disabled="isUploadingToWahoo || !wahooAuthState.isAuthenticated"
@@ -54,16 +71,6 @@
                       ? t('segmentDetail.uploadingToWahoo')
                       : t('segmentDetail.uploadToWahoo')
                   }}
-                </button>
-                <button
-                  v-if="segment?.track_type === 'route'"
-                  @click="showDeleteConfirmation"
-                  class="dropdown-item dropdown-item-indented dropdown-item-danger"
-                  :disabled="!isOwner"
-                  :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
-                >
-                  <i class="fa-solid fa-trash"></i>
-                  {{ t('segmentDetail.deleteRoute') }}
                 </button>
               </div>
             </div>

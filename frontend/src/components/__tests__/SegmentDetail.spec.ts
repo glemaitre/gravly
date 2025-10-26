@@ -3387,22 +3387,26 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    // Check that all four buttons exist: Share Link, Download GPX, Upload to Wahoo, and Delete
+    // Check that we have two sections: General and Wahoo Cloud
+    const dropdownSections = wrapper.findAll('.dropdown-section')
+    expect(dropdownSections.length).toBe(2)
+
+    // Check all dropdown items (should be 4 total across both sections)
     const dropdownItems = wrapper.findAll('.dropdown-item')
     expect(dropdownItems.length).toBe(4)
 
-    // First should be share link
-    expect(dropdownItems[0].text()).toContain('segmentDetail.shareLink')
+    // First section (General) should have: Share Link, Download GPX, Delete
+    const generalItems = dropdownSections[0].findAll('.dropdown-item')
+    expect(generalItems.length).toBe(3)
+    expect(generalItems[0].text()).toContain('segmentDetail.shareLink')
+    expect(generalItems[1].text()).toContain('segmentDetail.downloadGPX')
+    expect(generalItems[2].text()).toContain('segmentDetail.deleteRoute')
+    expect(generalItems[2].classes()).toContain('dropdown-item-danger')
 
-    // Second should be download
-    expect(dropdownItems[1].text()).toContain('segmentDetail.downloadGPX')
-
-    // Third should be upload to Wahoo
-    expect(dropdownItems[2].text()).toContain('segmentDetail.uploadToWahoo')
-
-    // Fourth should be delete
-    expect(dropdownItems[3].text()).toContain('segmentDetail.deleteRoute')
-    expect(dropdownItems[3].classes()).toContain('dropdown-item-danger')
+    // Second section (Wahoo Cloud) should have: Upload to Wahoo
+    const wahooItems = dropdownSections[1].findAll('.dropdown-item')
+    expect(wahooItems.length).toBe(1)
+    expect(wahooItems[0].text()).toContain('segmentDetail.uploadToWahoo')
   })
 
   it('should disable delete button when user is not the owner', async () => {
@@ -3473,9 +3477,12 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const dropdownItems = wrapper.findAll('.dropdown-item')
-    // Delete button is now the fourth item (after Share Link, Download GPX, and Upload to Wahoo)
-    const deleteButton = dropdownItems[3]
+    const dropdownSections = wrapper.findAll('.dropdown-section')
+    expect(dropdownSections.length).toBe(2)
+
+    // Delete button is the third item in the General section
+    const generalItems = dropdownSections[0].findAll('.dropdown-item')
+    const deleteButton = generalItems[2]
 
     // Delete button should be disabled
     expect(deleteButton.attributes('disabled')).toBeDefined()
@@ -3628,9 +3635,10 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const dropdownItems = wrapper.findAll('.dropdown-item')
-    // Delete button is now the fourth item (after Share Link, Download GPX, and Upload to Wahoo)
-    const deleteButton = dropdownItems[3]
+    const dropdownSections = wrapper.findAll('.dropdown-section')
+    // Delete button is the third item in the General section
+    const generalItems = dropdownSections[0].findAll('.dropdown-item')
+    const deleteButton = generalItems[2]
 
     // Click delete button
     await deleteButton.trigger('click')
@@ -3715,9 +3723,10 @@ describe('SegmentDetail Delete Route Functionality', () => {
     await exportButton.trigger('click')
     await nextTick()
 
-    const dropdownItems = wrapper.findAll('.dropdown-item')
-    // Delete button is now the fourth item (after Share Link, Download GPX, and Upload to Wahoo)
-    const deleteButton = dropdownItems[3]
+    const dropdownSections = wrapper.findAll('.dropdown-section')
+    // Delete button is the third item in the General section
+    const generalItems = dropdownSections[0].findAll('.dropdown-item')
+    const deleteButton = generalItems[2]
     await deleteButton.trigger('click')
     await nextTick()
 
