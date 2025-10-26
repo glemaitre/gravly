@@ -6,7 +6,6 @@ https://github.com/stravalib/stravalib/blob/main/src/stravalib/protocol.py
 
 from __future__ import annotations
 
-import functools
 import logging
 import os
 import time
@@ -161,6 +160,7 @@ class ApiV1:
         params: dict[str, Any] | None = None,
         files: dict[str, SupportsRead[str | bytes]] | None = None,
         headers: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
         method: RequestMethod = "GET",
         check_for_errors: bool = True,
     ) -> Any:
@@ -180,6 +180,8 @@ class ApiV1:
             Dictionary of file name to file-like objects.
         headers : Dict[str,Any]
             Request headers
+        data : Dict[str,Any]
+            Form data to send in request body
         method : str
             The request method (GET/POST/etc.)
         check_for_errors : bool
@@ -207,18 +209,6 @@ class ApiV1:
             if self.access_token:
                 params["access_token"] = self.access_token
 
-        methods = {
-            "GET": self.rsession.get,
-            "POST": functools.partial(self.rsession.post, files=files),
-            "PUT": self.rsession.put,
-            "DELETE": self.rsession.delete,
-        }
-
-        try:
-            requester = methods[method.upper()]
-        except KeyError:
-            raise ValueError(f"Invalid/unsupported request method specified: {method}")
-
         # Log the full request details
         self.log.info(f"Sending {method} request to {url}")
         if params:
@@ -234,8 +224,29 @@ class ApiV1:
                     self.log.info(f"  {key}: {truncated}")
                 else:
                     self.log.info(f"  {key}: {value}")
+        if data:
+            self.log.info(f"  Data: {list(data.keys())}")
 
-        raw = requester(url, params=params, headers=headers)  # type: ignore[operator]
+        # Build kwargs for request based on method
+        request_kwargs: dict[str, Any] = {"params": params, "headers": headers}
+        if data is not None:
+            request_kwargs["data"] = data
+        if files is not None:
+            request_kwargs["files"] = files
+
+        methods = {
+            "GET": self.rsession.get,
+            "POST": self.rsession.post,
+            "PUT": self.rsession.put,
+            "DELETE": self.rsession.delete,
+        }
+
+        try:
+            requester = methods[method.upper()]
+        except KeyError:
+            raise ValueError(f"Invalid/unsupported request method specified: {method}")
+
+        raw = requester(url, **request_kwargs)  # type: ignore[operator]
         # Rate limits are taken from HTTP response headers
         # https://cloud-api.wahooligan.com/#rate-limiting
         self.rate_limiter(raw.headers, method)
@@ -627,11 +638,8 @@ class ApiV1:
         if not self.access_token:
             raise ValueError("No access token available to get route")
 
-        # Get route endpoint is GET /v1/routes/:id with Authorization header
         url = self.resolve_url(f"routes/{route_id}")
         headers = {"Authorization": f"Bearer {self.access_token}"}
-
-        # Use _request method with custom headers
         return self._request(url, headers=headers, method="GET", check_for_errors=True)
 
     def get_routes(self) -> list[dict[str, Any]]:
@@ -650,11 +658,8 @@ class ApiV1:
         if not self.access_token:
             raise ValueError("No access token available to get routes")
 
-        # Get routes endpoint is GET /v1/routes with Authorization header
         url = self.resolve_url("routes")
         headers = {"Authorization": f"Bearer {self.access_token}"}
-
-        # Use _request method with custom headers
         return self._request(url, headers=headers, method="GET", check_for_errors=True)
 
     def create_route(
@@ -662,26 +667,37 @@ class ApiV1:
         route_file: str,
         filename: str,
         route_name: str,
+        start_lat: float,
+        start_lng: float,
+        distance: float,
+        ascent: float,
+        descent: float,
         description: str = "",
         external_id: str | None = None,
         provider_updated_at: str | None = None,
         workout_type_family_id: int = 0,
-        start_lat: float | None = None,
-        start_lng: float | None = None,
-        distance: float | None = None,
-        ascent: float | None = None,
-        descent: float | None = None,
     ) -> dict[str, Any]:
         """Create a new route in Wahoo Cloud.
 
         Parameters
         ----------
         route_file : str
-            Base64-encoded route file content (data URI format: data:application/vnd.fit;base64,...)
+            Base64-encoded route file content
+            (data URI format: data:application/vnd.fit;base64,...)
         filename : str
             Name of the route file (e.g., 'route.fit')
         route_name : str
             Name of the route
+        start_lat : float
+            Starting latitude
+        start_lng : float
+            Starting longitude
+        distance : float
+            Total distance in meters
+        ascent : float
+            Ascent in meters
+        descent : float
+            Descent in meters
         description : str
             Description of the route (optional)
         external_id : str | None
@@ -690,16 +706,6 @@ class ApiV1:
             ISO timestamp of when route was updated by provider (optional)
         workout_type_family_id : int
             Workout type family ID (default: 0)
-        start_lat : float | None
-            Starting latitude (optional)
-        start_lng : float | None
-            Starting longitude (optional)
-        distance : float | None
-            Total distance in meters (optional)
-        ascent : float | None
-            Ascent in meters (optional)
-        descent : float | None
-            Descent in meters (optional)
 
         Returns
         -------
@@ -715,46 +721,22 @@ class ApiV1:
             "route[workout_type_family_id]": str(workout_type_family_id),
         }
 
-        # Required fields based on error message
         data["route[external_id]"] = external_id or filename
         data["route[provider_updated_at]"] = provider_updated_at or ""
-        data["route[start_lat]"] = str(start_lat) if start_lat is not None else ""
-        data["route[start_lng]"] = str(start_lng) if start_lng is not None else ""
-        data["route[distance]"] = str(distance) if distance is not None else "0"
-        data["route[ascent]"] = str(ascent) if ascent is not None else "0"
+        data["route[start_lat]"] = str(start_lat)
+        data["route[start_lng]"] = str(start_lng)
+        data["route[distance]"] = str(distance)
+        data["route[ascent]"] = str(ascent)
+        data["route[descent]"] = str(descent)
 
         self.log.info(f"Creating route '{route_name}' in Wahoo Cloud")
-        self.log.debug(f"Create data fields: {list(data.keys())}")
 
-        # Build URL with access token
-        url = self.resolve_url(f"https://{self.server}{self.api_base}/routes")
+        # Use _request method for all the heavy lifting
+        params = {}
         if self.access_token:
-            url = f"{url}?access_token={self.access_token}"
+            params["access_token"] = self.access_token
 
-        # Send POST request with form data
-        self.log.info(f"POST {url}")
-        response = self.rsession.post(url, data=data)
-
-        # Handle rate limiting
-        self.rate_limiter(response.headers, "POST")
-
-        # Log response for debugging
-        self.log.info(f"Response status: {response.status_code}")
-        if response.status_code >= 400:
-            self.log.error(f"Response body: {response.text[:500]}")
-            self._handle_protocol_error(response)
-
-        # Parse response
-        if response.status_code == 204:
-            result = {}
-        else:
-            result = response.json()
-            if "created_at" in result and "expires_in" in result:
-                result["expires_at"] = result["created_at"] + result["expires_in"]
-
-        self.log.info(f"Route '{route_name}' created successfully")
-        self.log.debug(f"Create response: {result}")
-        return result
+        return self._request("routes", data=data, params=params, method="POST")
 
     def update_route(
         self,
@@ -762,14 +744,14 @@ class ApiV1:
         route_file: str,
         filename: str,
         route_name: str,
+        start_lat: float,
+        start_lng: float,
+        distance: float,
+        ascent: float,
+        descent: float,
         description: str = "",
         provider_updated_at: str | None = None,
         workout_type_family_id: int = 0,
-        start_lat: float | None = None,
-        start_lng: float | None = None,
-        distance: float | None = None,
-        ascent: float | None = None,
-        descent: float | None = None,
     ) -> dict[str, Any]:
         """Update an existing route in Wahoo Cloud.
 
@@ -778,27 +760,28 @@ class ApiV1:
         route_id : int
             ID of the route to update
         route_file : str
-            Base64-encoded route file content (data URI format: data:application/vnd.fit;base64,...)
+            Base64-encoded route file content
+            (data URI format: data:application/vnd.fit;base64,...)
         filename : str
             Name of the route file (e.g., 'route.fit')
         route_name : str
             Name of the route
+        start_lat : float
+            Starting latitude
+        start_lng : float
+            Starting longitude
+        distance : float
+            Total distance in meters
+        ascent : float
+            Ascent in meters
+        descent : float
+            Descent in meters
         description : str
             Description of the route (optional)
         provider_updated_at : str | None
             ISO timestamp of when route was updated by provider (optional)
         workout_type_family_id : int
             Workout type family ID (default: 0)
-        start_lat : float | None
-            Starting latitude (optional)
-        start_lng : float | None
-            Starting longitude (optional)
-        distance : float | None
-            Total distance in meters (optional)
-        ascent : float | None
-            Ascent in meters (optional)
-        descent : float | None
-            Descent in meters (optional)
 
         Returns
         -------
@@ -822,51 +805,21 @@ class ApiV1:
             "route[workout_type_family_id]": str(workout_type_family_id),
         }
 
-        # Optional fields
         if provider_updated_at:
             data["route[provider_updated_at]"] = provider_updated_at
-        if start_lat is not None:
-            data["route[start_lat]"] = str(start_lat)
-        if start_lng is not None:
-            data["route[start_lng]"] = str(start_lng)
-        if distance is not None:
-            data["route[distance]"] = str(distance)
-        if ascent is not None:
-            data["route[ascent]"] = str(ascent)
-        if descent is not None:
-            data["route[descent]"] = str(descent)
+        data["route[start_lat]"] = str(start_lat)
+        data["route[start_lng]"] = str(start_lng)
+        data["route[distance]"] = str(distance)
+        data["route[ascent]"] = str(ascent)
+        data["route[descent]"] = str(descent)
 
         self.log.info(f"Updating route {route_id} '{route_name}' in Wahoo Cloud")
-        self.log.debug(f"Update data fields: {list(data.keys())}")
 
-        # Get route endpoint is PUT /v1/routes/:id with Authorization header
-        url = self.resolve_url(f"routes/{route_id}")
+        # Use _request method for all the heavy lifting
         headers = {"Authorization": f"Bearer {self.access_token}"}
-
-        # Send PUT request with form data
-        self.log.info(f"PUT {url}")
-        response = self.rsession.put(url, data=data, headers=headers)
-
-        # Handle rate limiting
-        self.rate_limiter(response.headers, "PUT")
-
-        # Log response for debugging
-        self.log.info(f"Response status: {response.status_code}")
-        if response.status_code >= 400:
-            self.log.error(f"Response body: {response.text[:500]}")
-            self._handle_protocol_error(response)
-
-        # Parse response
-        if response.status_code == 204:
-            result = {}
-        else:
-            result = response.json()
-            if "created_at" in result and "expires_in" in result:
-                result["expires_at"] = result["created_at"] + result["expires_in"]
-
-        self.log.info(f"Route {route_id} '{route_name}' updated successfully")
-        self.log.debug(f"Update response: {result}")
-        return result
+        return self._request(
+            f"routes/{route_id}", data=data, headers=headers, method="PUT"
+        )
 
     def deauthorize(self) -> None:
         """Deauthorize the application by revoking access permissions.

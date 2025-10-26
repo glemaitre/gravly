@@ -71,7 +71,9 @@
             <div class="service-name">Wahoo</div>
             <div class="service-status-right">
               <div class="service-status" :class="{ connected: isWahooAuthenticated }">
-                {{ isWahooAuthenticated ? $t('menu.connected') : $t('menu.notConnected') }}
+                {{
+                  isWahooAuthenticated ? $t('menu.connected') : $t('menu.notConnected')
+                }}
               </div>
               <button
                 v-if="isWahooAuthenticated"
@@ -233,12 +235,10 @@ const {
 
 // Wahoo authentication
 const {
-  authState: wahooAuthState,
   isLoading: isLoadingWahoo,
   isAuthenticated: isWahooAuthenticatedFn,
   getAuthUrl: getWahooAuthUrl,
-  deauthorize: wahooDeauthorize,
-  getUser: getWahooUser
+  deauthorize: wahooDeauthorize
 } = useWahooApi()
 
 // Language dropdown functionality
@@ -252,7 +252,6 @@ const isAuthenticated = computed(() => isAuthenticatedFn())
 const athlete = computed(() => authState.value.athlete)
 
 const isWahooAuthenticated = computed(() => isWahooAuthenticatedFn())
-const wahooUser = computed(() => wahooAuthState.value.user)
 
 // Menu state
 const menuOpen = ref(false)

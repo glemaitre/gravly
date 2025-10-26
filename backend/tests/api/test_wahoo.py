@@ -1,8 +1,9 @@
-"""Unit tests for Wahoo API endpoints."""
+"""Tests for Wahoo API endpoints."""
 
 from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from src.main import app
 
@@ -206,6 +207,32 @@ class TestWahooCallbackEndpoint:
         # Check that response is JSON (CORS headers would be set by middleware)
         assert "application/json" in response.headers.get("content-type", "")
 
+    def test_wahoo_callback_general_exception(self, client):
+        """Test Wahoo callback endpoint with general exception handling."""
+        with patch("src.api.wahoo.logger") as mock_logger:
+            # Mock logger.info to raise an exception
+            mock_logger.info.side_effect = Exception("Unexpected error")
+
+            response = client.get("/api/wahoo/callback?code=test_code")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "Failed to handle callback: Unexpected error" in data["detail"]
+
+    def test_wahoo_callback_http_exception_passthrough(self, client):
+        """Test that HTTPException is passed through without modification."""
+        with patch("src.api.wahoo.logger") as mock_logger:
+            # Mock logger.info to raise an HTTPException
+            mock_logger.info.side_effect = HTTPException(
+                status_code=400, detail="Bad request"
+            )
+
+            response = client.get("/api/wahoo/callback?code=test_code")
+
+            assert response.status_code == 400
+            data = response.json()
+            assert data["detail"] == "Bad request"
+
 
 class TestWahooRouterIntegration:
     """Test Wahoo router integration with the main app."""
@@ -236,45 +263,6 @@ class TestWahooRouterIntegration:
         assert "message" in data
         assert "code" in data
         assert "status" in data
-
-
-class TestWahooServiceIntegration:
-    """Test integration between Wahoo API endpoints and service."""
-
-    def test_wahoo_callback_basic_functionality(self, client):
-        """Test Wahoo callback basic functionality."""
-        test_code = "service_integration_test"
-
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["code"] == test_code
-
-        # Verify logging was called (current implementation)
-        mock_logger.info.assert_called_once_with(
-            f"Received Wahoo authorization code: {test_code}"
-        )
-
-    def test_wahoo_callback_future_token_exchange(self, client):
-        """Test how Wahoo callback might work with token exchange in the future."""
-        test_code = "future_token_exchange_test"
-
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["code"] == test_code
-
-        # Verify current behavior
-        mock_logger.info.assert_called_once_with(
-            f"Received Wahoo authorization code: {test_code}"
-        )
-
-        # Note: The service is not currently used in the callback endpoint
-        # but this test shows how token exchange could be integrated in the future
 
 
 class TestWahooAuthUrlEndpoint:
@@ -412,3 +400,65 @@ class TestWahooRefreshTokenEndpoint:
         assert response.status_code == 401
         data = response.json()
         assert "Failed to refresh token" in data["detail"]
+
+
+class TestWahooDeauthorizeEndpoint:
+    """Test Wahoo deauthorize endpoint."""
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_deauthorize_success(self, mock_get_service, client):
+        """Test successful deauthorization."""
+        mock_service = mock_get_service.return_value
+        mock_service.deauthorize.return_value = None
+
+        response = client.post("/api/wahoo/deauthorize")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "deauthorized" in data["message"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_deauthorize_error(self, mock_get_service, client):
+        """Test deauthorization with error."""
+        mock_service = mock_get_service.return_value
+        mock_service.deauthorize.side_effect = Exception("Deauth error")
+
+        response = client.post("/api/wahoo/deauthorize")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert "failed to deauthorize" in data["detail"].lower()
+
+
+class TestWahooGetUserEndpoint:
+    """Test Wahoo get user endpoint."""
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_user_success(self, mock_get_service, client):
+        """Test successful user retrieval."""
+        mock_service = mock_get_service.return_value
+        mock_service.get_user.return_value = {
+            "id": 123,
+            "name": "Test User",
+            "email": "test@example.com",
+        }
+
+        response = client.get("/api/wahoo/user")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == 123
+        assert data["name"] == "Test User"
+
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_get_user_error(self, mock_get_service, client):
+        """Test user retrieval with error."""
+        mock_service = mock_get_service.return_value
+        mock_service.get_user.side_effect = Exception("Auth error")
+
+        response = client.get("/api/wahoo/user")
+
+        assert response.status_code == 401
+        data = response.json()
+        assert "failed to get user" in data["detail"].lower()

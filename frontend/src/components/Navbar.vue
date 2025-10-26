@@ -26,15 +26,6 @@
             <i class="fa-solid fa-edit"></i>
             <span>{{ $t('navbar.editor') }}</span>
           </router-link>
-          <router-link
-            v-if="isEditorAuthorized"
-            to="/labs"
-            class="nav-link"
-            active-class="active"
-          >
-            <i class="fa-solid fa-flask"></i>
-            <span>{{ $t('navbar.labs') }}</span>
-          </router-link>
         </div>
       </div>
 

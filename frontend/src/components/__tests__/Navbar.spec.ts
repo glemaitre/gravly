@@ -132,19 +132,17 @@ describe('Navbar', () => {
       )
     })
 
-    it('displays Explorer, Planner, Editor, and Labs links', () => {
+    it('displays Explorer, Planner, and Editor links', () => {
       const navLinks = wrapper.findAll('.nav-link')
-      expect(navLinks).toHaveLength(4)
+      expect(navLinks).toHaveLength(3)
 
       const explorerLink = navLinks.find((link) => link.text().includes('Explorer'))
       const plannerLink = navLinks.find((link) => link.text().includes('Planner'))
       const editorLink = navLinks.find((link) => link.text().includes('Editor'))
-      const labsLink = navLinks.find((link) => link.text().includes('Labs'))
 
       expect(explorerLink?.exists()).toBe(true)
       expect(plannerLink?.exists()).toBe(true)
       expect(editorLink?.exists()).toBe(true)
-      expect(labsLink?.exists()).toBe(true)
     })
 
     it('has correct router-link attributes', () => {
@@ -152,42 +150,36 @@ describe('Navbar', () => {
       const explorerLink = wrapper.find('a[href="/explorer"]')
       const plannerLink = wrapper.find('a[href="/route-planner"]')
       const editorLink = wrapper.find('a[href="/editor"]')
-      const labsLink = wrapper.find('a[href="/labs"]')
 
       expect(homeLink.exists()).toBe(true)
       expect(explorerLink.exists()).toBe(true)
       expect(plannerLink.exists()).toBe(true)
       expect(editorLink.exists()).toBe(true)
-      expect(labsLink.exists()).toBe(true)
     })
 
     it('displays icons for navigation links', () => {
       const explorerIcon = wrapper.find('.fa-route')
       const plannerIcon = wrapper.find('.fa-map')
       const editorIcon = wrapper.find('.fa-edit')
-      const labsIcon = wrapper.find('.fa-flask')
 
       expect(explorerIcon.exists()).toBe(true)
       expect(plannerIcon.exists()).toBe(true)
       expect(editorIcon.exists()).toBe(true)
-      expect(labsIcon.exists()).toBe(true)
     })
 
-    it('displays navigation links in correct order: Explorer, Planner, Editor, Labs', () => {
+    it('displays navigation links in correct order: Explorer, Planner, Editor', () => {
       const navLinks = wrapper.findAll('.nav-link')
-      expect(navLinks).toHaveLength(4)
+      expect(navLinks).toHaveLength(3)
 
       // Check that links are in the expected order
       expect(navLinks[0].text()).toContain('Explorer')
       expect(navLinks[1].text()).toContain('Planner')
       expect(navLinks[2].text()).toContain('Editor')
-      expect(navLinks[3].text()).toContain('Labs')
 
       // Verify correct routes
       expect(navLinks[0].attributes('href')).toBe('/explorer')
       expect(navLinks[1].attributes('href')).toBe('/route-planner')
       expect(navLinks[2].attributes('href')).toBe('/editor')
-      expect(navLinks[3].attributes('href')).toBe('/labs')
     })
   })
 

@@ -178,8 +178,8 @@ describe('SegmentDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockT.mockImplementation((key: string) => key)
-      // Reset fetch mock
-      ; (global.fetch as any).mockClear()
+    // Reset fetch mock
+    ;(global.fetch as any).mockClear()
   })
 
   afterEach(() => {
@@ -202,7 +202,7 @@ describe('SegmentDetail', () => {
 
     it('shows error state when error occurs', async () => {
       // Mock fetch to return error
-      ; (global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
+      ;(global.fetch as any).mockRejectedValueOnce(new Error('Network error'))
 
       wrapper = mount(SegmentDetail)
 
@@ -241,7 +241,7 @@ describe('SegmentDetail', () => {
   describe('Data Loading', () => {
     it('handles API errors gracefully', async () => {
       // Mock API error
-      ; (global.fetch as any).mockRejectedValueOnce(new Error('API Error'))
+      ;(global.fetch as any).mockRejectedValueOnce(new Error('API Error'))
 
       wrapper = mount(SegmentDetail)
 
@@ -296,7 +296,7 @@ describe('SegmentDetail', () => {
   describe('Error Handling', () => {
     it('shows error message when segment fetch fails', async () => {
       // Mock segment fetch failure - but first ensure we have a segment ID
-      ; (global.fetch as any).mockRejectedValueOnce(new Error('Segment not found'))
+      ;(global.fetch as any).mockRejectedValueOnce(new Error('Segment not found'))
 
       wrapper = mount(SegmentDetail)
 
@@ -311,7 +311,7 @@ describe('SegmentDetail', () => {
 
     it('shows error message when GPX data fetch fails', async () => {
       // Mock successful segment fetch but failed GPX fetch
-      ; (global.fetch as any)
+      ;(global.fetch as any)
         .mockResolvedValueOnce({
           ok: true,
           json: () => Promise.resolve(mockSegment)
@@ -972,7 +972,7 @@ describe('SegmentDetail Image Gallery', () => {
     })
 
     // Mock console.warn to avoid test output noise
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { })
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     wrapper = mount(SegmentDetail)
 
@@ -1670,7 +1670,7 @@ describe('SegmentDetail Video Gallery', () => {
 
   it('should handle video fetch errors gracefully', async () => {
     // Suppress console.warn for this test since we're testing error handling
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { })
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 
     // Mock successful segment and GPX responses, but failed video fetch
     vi.mocked(global.fetch).mockImplementation((url: string | URL | Request) => {
@@ -2625,7 +2625,7 @@ describe('SegmentDetail Export Dropdown', () => {
 
   it('should copy share link to clipboard when "Share Link" is clicked', async () => {
     const mockWriteText = vi.fn().mockResolvedValue(undefined)
-    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => { })
+    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
     // Mock clipboard API
     Object.assign(navigator, {
@@ -2856,7 +2856,7 @@ describe('SegmentDetail Export Dropdown', () => {
   })
 
   it('should handle GPX fetch error gracefully', async () => {
-    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => { })
+    const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {})
 
     // Mock URL.createObjectURL and URL.revokeObjectURL
     const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
@@ -3004,8 +3004,8 @@ describe('SegmentDetail Export Dropdown', () => {
     }
     const mockShowSaveFilePicker = vi.fn().mockResolvedValue(mockHandle)
 
-      // Add the File System Access API to window
-      ; (window as any).showSaveFilePicker = mockShowSaveFilePicker
+    // Add the File System Access API to window
+    ;(window as any).showSaveFilePicker = mockShowSaveFilePicker
 
     // Mock URL.createObjectURL and URL.revokeObjectURL (for fallback)
     const mockCreateObjectURL = vi.fn(() => 'blob:test-url')
@@ -3162,8 +3162,8 @@ describe('SegmentDetail Export Dropdown', () => {
     }
     const mockShowSaveFilePicker = vi.fn().mockResolvedValue(mockHandle)
 
-      // Add the File System Access API to window
-      ; (window as any).showSaveFilePicker = mockShowSaveFilePicker
+    // Add the File System Access API to window
+    ;(window as any).showSaveFilePicker = mockShowSaveFilePicker
 
     // Mock URL.createObjectURL and URL.revokeObjectURL (for fallback)
     const mockCreateObjectURL = vi.fn(() => 'blob:test-url')

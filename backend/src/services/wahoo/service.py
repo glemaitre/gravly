@@ -438,15 +438,15 @@ class WahooService:
         route_file: str,
         filename: str,
         route_name: str,
+        start_lat: float,
+        start_lng: float,
+        distance: float,
+        ascent: float,
+        descent: float,
         description: str = "",
         external_id: str | None = None,
         provider_updated_at: str | None = None,
         workout_type_family_id: int = 0,
-        start_lat: float | None = None,
-        start_lng: float | None = None,
-        distance: float | None = None,
-        ascent: float | None = None,
-        descent: float | None = None,
     ) -> dict[str, Any]:
         """Create a new route in Wahoo Cloud.
 
@@ -458,6 +458,16 @@ class WahooService:
             Name of the route file
         route_name : str
             Name of the route
+        start_lat : float
+            Starting latitude
+        start_lng : float
+            Starting longitude
+        distance : float
+            Total distance in meters
+        ascent : float
+            Ascent in meters
+        descent : float
+            Descent in meters
         description : str
             Description of the route (optional)
         external_id : str | None
@@ -466,16 +476,6 @@ class WahooService:
             ISO timestamp of when route was updated by provider (optional)
         workout_type_family_id : int
             Workout type family ID (default: 0)
-        start_lat : float | None
-            Starting latitude (optional)
-        start_lng : float | None
-            Starting longitude (optional)
-        distance : float | None
-            Total distance in meters (optional)
-        ascent : float | None
-            Ascent in meters (optional)
-        descent : float | None
-            Descent in meters (optional)
 
         Returns
         -------
@@ -497,15 +497,15 @@ class WahooService:
                 route_file=route_file,
                 filename=filename,
                 route_name=route_name,
-                description=description,
-                external_id=external_id,
-                provider_updated_at=provider_updated_at,
-                workout_type_family_id=workout_type_family_id,
                 start_lat=start_lat,
                 start_lng=start_lng,
                 distance=distance,
                 ascent=ascent,
                 descent=descent,
+                description=description,
+                external_id=external_id,
+                provider_updated_at=provider_updated_at,
+                workout_type_family_id=workout_type_family_id,
             )
             logger.info(f"Successfully created route '{route_name}'")
             return result
@@ -527,14 +527,14 @@ class WahooService:
         route_file: str,
         filename: str,
         route_name: str,
+        start_lat: float,
+        start_lng: float,
+        distance: float,
+        ascent: float,
+        descent: float,
         description: str = "",
         provider_updated_at: str | None = None,
         workout_type_family_id: int = 0,
-        start_lat: float | None = None,
-        start_lng: float | None = None,
-        distance: float | None = None,
-        ascent: float | None = None,
-        descent: float | None = None,
     ) -> dict[str, Any]:
         """Update an existing route in Wahoo Cloud.
 
@@ -548,22 +548,22 @@ class WahooService:
             Name of the route file
         route_name : str
             Name of the route
+        start_lat : float
+            Starting latitude
+        start_lng : float
+            Starting longitude
+        distance : float
+            Total distance in meters
+        ascent : float
+            Ascent in meters
+        descent : float
+            Descent in meters
         description : str
             Description of the route (optional)
         provider_updated_at : str | None
             ISO timestamp of when route was updated by provider (optional)
         workout_type_family_id : int
             Workout type family ID (default: 0)
-        start_lat : float | None
-            Starting latitude (optional)
-        start_lng : float | None
-            Starting longitude (optional)
-        distance : float | None
-            Total distance in meters (optional)
-        ascent : float | None
-            Ascent in meters (optional)
-        descent : float | None
-            Descent in meters (optional)
 
         Returns
         -------
@@ -586,14 +586,14 @@ class WahooService:
                 route_file=route_file,
                 filename=filename,
                 route_name=route_name,
-                description=description,
-                provider_updated_at=provider_updated_at,
-                workout_type_family_id=workout_type_family_id,
                 start_lat=start_lat,
                 start_lng=start_lng,
                 distance=distance,
                 ascent=ascent,
                 descent=descent,
+                description=description,
+                provider_updated_at=provider_updated_at,
+                workout_type_family_id=workout_type_family_id,
             )
             logger.info(f"Successfully updated route {route_id} '{route_name}'")
             return result

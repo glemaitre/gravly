@@ -3,12 +3,10 @@
 import base64
 import logging
 from datetime import datetime
-from pathlib import Path
 
 import gpxpy
 from fastapi import APIRouter, Form, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from src.dependencies import get_wahoo_service
 from src.models.track import Track, TrackType
@@ -184,7 +182,8 @@ def create_wahoo_router() -> APIRouter:
                 gpx_data = extract_from_gpx_file(gpx, str(route_id))
 
                 logger.info(
-                    f"Extracted GPX stats: distance={gpx_data.total_stats.total_distance:.2f}km, "
+                    f"Extracted GPX stats: "
+                    f"distance={gpx_data.total_stats.total_distance:.2f}km, "
                     f"elevation_gain={gpx_data.total_stats.total_elevation_gain:.0f}m, "
                     f"elevation_loss={gpx_data.total_stats.total_elevation_loss:.0f}m"
                 )
@@ -216,20 +215,12 @@ def create_wahoo_router() -> APIRouter:
                     "provider_updated_at": (
                         gpx.time.isoformat() if gpx.time else datetime.now().isoformat()
                     ),
-                    "start_lat": start_point.latitude if start_point else None,
-                    "start_lng": start_point.longitude if start_point else None,
+                    "start_lat": start_point.latitude if start_point else 0.0,
+                    "start_lng": start_point.longitude if start_point else 0.0,
                     "distance": gpx_data.total_stats.total_distance
                     * 1000,  # Convert km to meters
-                    "ascent": (
-                        gpx_data.total_stats.total_elevation_gain
-                        if gpx_data.total_stats.total_elevation_gain > 0
-                        else None
-                    ),
-                    "descent": (
-                        gpx_data.total_stats.total_elevation_loss
-                        if gpx_data.total_stats.total_elevation_loss > 0
-                        else None
-                    ),
+                    "ascent": max(0.0, gpx_data.total_stats.total_elevation_gain),
+                    "descent": max(0.0, gpx_data.total_stats.total_elevation_loss),
                 }
 
                 # Get all routes from Wahoo to check if route exists
@@ -254,7 +245,7 @@ def create_wahoo_router() -> APIRouter:
                         route_id=wahoo_route_id, **common_params
                     )
                     logger.info("=== WAHOO UPLOAD RESPONSE ===")
-                    logger.info(f"Status: Success (Updated)")
+                    logger.info("Status: Success (Updated)")
                     logger.info(f"Response: {result}")
                     logger.info("========================================")
                 else:
@@ -263,7 +254,7 @@ def create_wahoo_router() -> APIRouter:
                     create_params = {**common_params, "external_id": external_id}
                     result = wahoo_service.create_route(**create_params)
                     logger.info("=== WAHOO UPLOAD RESPONSE ===")
-                    logger.info(f"Status: Success (Created)")
+                    logger.info("Status: Success (Created)")
                     logger.info(f"Response: {result}")
                     logger.info("========================================")
 
@@ -272,7 +263,9 @@ def create_wahoo_router() -> APIRouter:
                 logger.info(f"{result_message.capitalize()} route {route_id} to Wahoo")
                 return {
                     "success": True,
-                    "message": f"Route '{track.name}' {result_message} to Wahoo successfully",
+                    "message": (
+                        f"Route '{track.name}' {result_message} to Wahoo successfully"
+                    ),
                 }
         except HTTPException as he:
             logger.error(f"HTTPException raised: {he.status_code} - {he.detail}")

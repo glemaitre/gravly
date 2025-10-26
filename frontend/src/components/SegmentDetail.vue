@@ -39,6 +39,24 @@
                 </button>
                 <button
                   v-if="segment?.track_type === 'route'"
+                  @click="handleUploadToWahoo"
+                  class="dropdown-item dropdown-item-indented"
+                  :disabled="isUploadingToWahoo || !wahooAuthState.isAuthenticated"
+                  :title="
+                    !wahooAuthState.isAuthenticated
+                      ? t('segmentDetail.wahooNotConnectedTooltip')
+                      : ''
+                  "
+                >
+                  <i class="fa-solid fa-cloud-upload-alt"></i>
+                  {{
+                    isUploadingToWahoo
+                      ? t('segmentDetail.uploadingToWahoo')
+                      : t('segmentDetail.uploadToWahoo')
+                  }}
+                </button>
+                <button
+                  v-if="segment?.track_type === 'route'"
                   @click="showDeleteConfirmation"
                   class="dropdown-item dropdown-item-indented dropdown-item-danger"
                   :disabled="!isOwner"
@@ -46,23 +64,6 @@
                 >
                   <i class="fa-solid fa-trash"></i>
                   {{ t('segmentDetail.deleteRoute') }}
-                </button>
-              </div>
-
-              <!-- Wahoo Actions Section -->
-              <div v-if="segment?.track_type === 'route'" class="dropdown-section">
-                <div class="dropdown-section-title">
-                  <i class="fa-solid fa-cloud"></i>
-                  {{ t('segmentDetail.actionsWahoo') }}
-                </div>
-                <button
-                  @click="handleUploadToWahoo"
-                  class="dropdown-item dropdown-item-indented"
-                  :disabled="isUploadingToWahoo || !wahooAuthState.isAuthenticated"
-                  :title="!wahooAuthState.isAuthenticated ? t('segmentDetail.wahooNotConnectedTooltip') : ''"
-                >
-                  <i class="fa-solid fa-cloud-upload-alt"></i>
-                  {{ isUploadingToWahoo ? t('segmentDetail.uploadingToWahoo') : t('segmentDetail.uploadToWahoo') }}
                 </button>
               </div>
             </div>
@@ -493,7 +494,7 @@ const { t } = useI18n()
 const { authState } = useStravaApi()
 
 // Wahoo API
-const { 
+const {
   authState: wahooAuthState,
   getAuthUrl,
   uploadRoute: wahooUploadRoute

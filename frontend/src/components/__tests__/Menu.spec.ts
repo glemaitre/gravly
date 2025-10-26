@@ -4,11 +4,13 @@ import { createI18n } from 'vue-i18n'
 import { ref } from 'vue'
 import Menu from '../Menu.vue'
 import { useStravaApi } from '../../composables/useStravaApi'
+import { useWahooApi } from '../../composables/useWahooApi'
 import { useLanguageDropdown } from '../../composables/useLanguageDropdown'
 import { useThemeSettings } from '../../composables/useThemeSettings'
 
 // Mock the composables
 vi.mock('../../composables/useStravaApi')
+vi.mock('../../composables/useWahooApi')
 vi.mock('../../composables/useLanguageDropdown')
 vi.mock('../../composables/useThemeSettings')
 
@@ -40,6 +42,15 @@ describe('Menu', () => {
     isAuthenticated: vi.fn(() => false),
     getAuthUrl: vi.fn().mockResolvedValue('https://strava.com/auth'),
     clearAuth: vi.fn()
+  }
+
+  const mockWahooApi = {
+    authState: { value: { isAuthenticated: false, user: null } },
+    isLoading: { value: false },
+    isAuthenticated: vi.fn(() => false),
+    getAuthUrl: vi.fn().mockResolvedValue('https://wahoo.com/auth'),
+    deauthorize: vi.fn(),
+    getUser: vi.fn()
   }
 
   const currentLanguageRef = ref('en')
@@ -76,6 +87,7 @@ describe('Menu', () => {
     mockStravaApi.isAuthenticated.mockReturnValue(false)
 
     vi.mocked(useStravaApi).mockReturnValue(mockStravaApi as any)
+    vi.mocked(useWahooApi).mockReturnValue(mockWahooApi as any)
     vi.mocked(useLanguageDropdown).mockReturnValue(mockLanguageDropdown as any)
     vi.mocked(useThemeSettings).mockReturnValue(mockThemeSettings as any)
 
@@ -173,18 +185,24 @@ describe('Menu', () => {
   })
 
   describe('Authentication - Not Logged In', () => {
-    it('should show Strava login button when not authenticated', () => {
-      const stravaBtn = wrapper.find('.strava-login-btn')
+    it('should show Strava login button when not authenticated', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
+      const stravaBtn = wrapper.find('.service-connect-btn')
       expect(stravaBtn.exists()).toBe(true)
 
-      const stravaImage = stravaBtn.find('img.strava-btn-image')
+      const stravaImage = stravaBtn.find('img.strava-btn-image-small')
       expect(stravaImage.exists()).toBe(true)
       expect(stravaImage.attributes('alt')).toBe('Connect with Strava')
     })
 
-    it('should not show user info when not authenticated', () => {
-      expect(wrapper.find('.user-info-section').exists()).toBe(false)
-      expect(wrapper.find('.logout-btn').exists()).toBe(false)
+    it('should not show user info when not authenticated', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
+      expect(wrapper.find('.user-info-header').exists()).toBe(false)
+      expect(wrapper.find('.service-disconnect-btn-compact').exists()).toBe(false)
     })
 
     it('should call getAuthUrl when Strava login button is clicked', async () => {
@@ -209,10 +227,13 @@ describe('Menu', () => {
     })
 
     it('should disable login button when loading', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
       mockStravaApi.isLoading.value = true
       await wrapper.vm.$nextTick()
 
-      const stravaBtn = wrapper.find('.strava-login-btn')
+      const stravaBtn = wrapper.find('.service-connect-btn')
       expect(stravaBtn.attributes('disabled')).toBeDefined()
     })
 
@@ -255,19 +276,27 @@ describe('Menu', () => {
       await wrapper.vm.$nextTick()
     })
 
-    it('should show user info when authenticated', () => {
-      expect(wrapper.find('.user-info-section').exists()).toBe(true)
+    it('should show user info when authenticated', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
       expect(wrapper.find('.user-info-header').exists()).toBe(true)
     })
 
-    it('should display user avatar', () => {
+    it('should display user avatar', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
       const avatar = wrapper.find('.user-avatar')
       expect(avatar.exists()).toBe(true)
       expect(avatar.attributes('src')).toBe('https://example.com/avatar.jpg')
       expect(avatar.attributes('alt')).toBe('John')
     })
 
-    it('should display user name and location', () => {
+    it('should display user name and location', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
       const userName = wrapper.find('.user-name')
       expect(userName.text()).toBe('John Doe')
 
@@ -292,18 +321,26 @@ describe('Menu', () => {
       })
       await wrapper.vm.$nextTick()
 
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
       expect(wrapper.find('.user-avatar').exists()).toBe(false)
       expect(wrapper.find('.user-icon').exists()).toBe(true)
     })
 
-    it('should show logout button when authenticated', () => {
-      const logoutBtn = wrapper.find('.logout-btn')
+    it('should show logout button when authenticated', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
+      const logoutBtn = wrapper.find('.service-disconnect-btn-compact')
       expect(logoutBtn.exists()).toBe(true)
-      expect(logoutBtn.text()).toContain('Logout')
     })
 
     it('should handle logout', async () => {
-      const logoutBtn = wrapper.find('.logout-btn')
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
+      const logoutBtn = wrapper.find('.service-disconnect-btn-compact')
       await logoutBtn.trigger('click')
 
       expect(mockStravaApi.clearAuth).toHaveBeenCalled()
@@ -313,8 +350,17 @@ describe('Menu', () => {
       expect(wrapper.find('.menu-dropdown-content').classes()).not.toContain('open')
     })
 
-    it('should not show Strava login button when authenticated', () => {
-      expect(wrapper.find('.strava-login-btn').exists()).toBe(false)
+    it('should not show Strava login button when authenticated', async () => {
+      // Open menu first
+      await wrapper.find('.menu-trigger').trigger('click')
+
+      // Check that there's no Strava connect button (the service-connect-btn with Strava image)
+      const stravaButtons = wrapper.findAll('.service-connect-btn')
+      const hasStravaConnectBtn = stravaButtons.some((btn) => {
+        const img = btn.find('img.strava-btn-image-small')
+        return img.exists()
+      })
+      expect(hasStravaConnectBtn).toBe(false)
     })
   })
 

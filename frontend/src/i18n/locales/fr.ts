@@ -127,7 +127,6 @@ export default {
     home: 'Accueil',
     explorer: 'Explorer',
     editor: 'Éditeur',
-    labs: 'Laboratoire',
     routePlanner: 'Planificateur',
     login: 'Connexion Strava',
     logout: 'Déconnexion'
@@ -257,19 +256,23 @@ export default {
     segmentNotOwned: 'Vous ne possédez pas ce segment',
     uploadToWahoo: 'Télécharger vers Wahoo',
     uploadingToWahoo: 'Téléchargement vers Wahoo Cloud',
-    uploadingToWahooMessage: 'Veuillez patienter pendant que votre itinéraire est téléchargé vers Wahoo...',
+    uploadingToWahooMessage:
+      'Veuillez patienter pendant que votre itinéraire est téléchargé vers Wahoo...',
     uploadToWahooSuccess: 'Itinéraire téléchargé vers Wahoo avec succès',
-    uploadToWahooError: 'Échec du téléchargement de l\'itinéraire vers Wahoo',
-    wahooAuthRequired: 'Vous devez d\'abord autoriser Wahoo. Souhaitez-vous autoriser maintenant ?',
-    wahooAuthError: 'Échec de l\'initiation de l\'autorisation Wahoo',
+    uploadToWahooError: "Échec du téléchargement de l'itinéraire vers Wahoo",
+    wahooAuthRequired:
+      "Vous devez d'abord autoriser Wahoo. Souhaitez-vous autoriser maintenant ?",
+    wahooAuthError: "Échec de l'initiation de l'autorisation Wahoo",
     wahooAuthModalTitle: 'Autoriser Wahoo',
-    wahooAuthModalMessage: 'Vous devez autoriser Gravly à télécharger des itinéraires vers votre compte Wahoo. Vous serez redirigé vers Wahoo pour compléter l\'autorisation.',
+    wahooAuthModalMessage:
+      "Vous devez autoriser Gravly à télécharger des itinéraires vers votre compte Wahoo. Vous serez redirigé vers Wahoo pour compléter l'autorisation.",
     wahooAuthButton: 'Autoriser',
     wahooUploadSuccessTitle: 'Téléchargement réussi',
     wahooUploadErrorTitle: 'Échec du téléchargement',
     actionsGeneral: 'Général',
     actionsWahoo: 'Wahoo Cloud',
-    wahooNotConnectedTooltip: 'Connectez-vous à Wahoo dans le menu pour télécharger des itinéraires'
+    wahooNotConnectedTooltip:
+      'Connectez-vous à Wahoo dans le menu pour télécharger des itinéraires'
   },
 
   // Strava integration
@@ -510,34 +513,5 @@ export default {
     documentation: 'Documentation',
     license: 'Licence MIT',
     version: 'Version 1.0.0'
-  },
-
-  // Labs page
-  labs: {
-    title: 'Laboratoire',
-    description:
-      'Fonctionnalités expérimentales et intégrations pour utilisateurs avancés.',
-    wahooIntegration: {
-      title: 'Intégration Wahoo',
-      description:
-        'Connectez votre appareil Wahoo pour synchroniser les itinéraires et activités.',
-      authorizeButton: 'Autoriser avec Wahoo',
-      authorizing: 'Autorisation...',
-      connected: 'Connecté à Wahoo',
-      notConnected: 'Non connecté à Wahoo',
-      refreshButton: 'Actualiser le Token',
-      uploadRouteButton: 'Télécharger le Parcours vers Wahoo',
-      selectRoute: 'Sélectionner le Parcours à Télécharger',
-      uploadButton: 'Télécharger',
-      noRoutes: 'Aucun parcours disponible'
-    },
-    info: {
-      title: 'À propos du Laboratoire',
-      description:
-        'Les fonctionnalités du laboratoire sont expérimentales et peuvent changer ou être supprimées dans les futures mises à jour.',
-      feature1: 'Accès aux intégrations bêta avec des services tiers',
-      feature2: 'Fonctionnalités avancées pour utilisateurs expérimentés',
-      feature3: 'Accès anticipé aux nouvelles fonctionnalités'
-    }
   }
 }

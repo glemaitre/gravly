@@ -10,7 +10,6 @@ import SegmentDetail from './components/SegmentDetail.vue'
 import StravaCallback from './components/StravaCallback.vue'
 import WahooCallback from './components/WahooCallback.vue'
 import RoutePlanner from './components/RoutePlanner.vue'
-import Labs from './components/Labs.vue'
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: Landing },
@@ -18,11 +17,6 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/editor',
     component: Editor,
-    meta: { requiresAuth: true, requiresEditor: true }
-  },
-  {
-    path: '/labs',
-    component: Labs,
     meta: { requiresAuth: true, requiresEditor: true }
   },
   {
