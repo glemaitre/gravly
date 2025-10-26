@@ -479,7 +479,8 @@ class TestWahooDeleteRouteEndpoint:
     def test_delete_route_endpoint_exists(self, client):
         """Test that the delete route endpoint is registered."""
         # The endpoint should exist and return some response (not 404)
-        # Actual error will be 500/503 without proper setup, but 404 means endpoint doesn't exist
+        # Actual error will be 500/503 without proper setup, but 404 means endpoint
+        # doesn't exist
         with patch("src.dependencies.SessionLocal", None):
             response = client.delete("/api/wahoo/routes/999")
 
@@ -492,7 +493,7 @@ class TestWahooDeleteRouteEndpoint:
 
         # Verify the service has the delete_route method
         assert hasattr(WahooService, "delete_route")
-        assert callable(getattr(WahooService, "delete_route"))
+        assert callable(WahooService.delete_route)
 
         # Get the method signature
         import inspect
@@ -510,7 +511,7 @@ class TestWahooDeleteRouteEndpoint:
         from src.services.wahoo.service import WahooService
 
         # Get the method
-        delete_method = getattr(WahooService, "delete_route")
+        delete_method = WahooService.delete_route
 
         # Check signature
         sig = inspect.signature(delete_method)
