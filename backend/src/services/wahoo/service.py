@@ -609,6 +609,43 @@ class WahooService:
             logger.error(f"Failed to update route: {e}")
             raise
 
+    def delete_route(self, route_id: int) -> None:
+        """Delete a route from Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_id : int
+            ID of the route to delete
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error deleting the route.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info(f"Deleting route {route_id} from Wahoo Cloud")
+            self.client.delete_route(route_id)
+            logger.info(f"Successfully deleted route {route_id}")
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to delete route: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to delete route: {e}")
+            raise
+
     def upload_route(
         self,
         route_file: str,

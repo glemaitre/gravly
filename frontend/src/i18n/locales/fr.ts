@@ -269,6 +269,16 @@ export default {
     wahooAuthButton: 'Autoriser',
     wahooUploadSuccessTitle: 'Téléchargement réussi',
     wahooUploadErrorTitle: 'Échec du téléchargement',
+    deleteFromWahoo: 'Supprimer de Wahoo',
+    deletingFromWahoo: 'Suppression de Wahoo',
+    deleteFromWahooConfirm: 'Supprimer de Wahoo Cloud',
+    deleteFromWahooConfirmMessage:
+      'Êtes-vous sûr de vouloir supprimer cet itinéraire de Wahoo Cloud ? Cette action ne peut pas être annulée.',
+    deleteFromWahooConfirmButton: 'Supprimer',
+    deleteFromWahooSuccess: 'Itinéraire supprimé de Wahoo avec succès',
+    deleteFromWahooError: "Échec de la suppression de l'itinéraire de Wahoo",
+    deletingFromWahooMessage:
+      'Veuillez patienter pendant que votre itinéraire est supprimé de Wahoo...',
     actionsGeneral: 'Général',
     actionsWahoo: 'Wahoo Cloud',
     wahooNotConnectedTooltip:

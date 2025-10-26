@@ -268,6 +268,16 @@ export default {
     wahooAuthButton: 'Authorize',
     wahooUploadSuccessTitle: 'Upload Successful',
     wahooUploadErrorTitle: 'Upload Failed',
+    deleteFromWahoo: 'Delete from Wahoo',
+    deletingFromWahoo: 'Deleting from Wahoo',
+    deleteFromWahooConfirm: 'Delete from Wahoo Cloud',
+    deleteFromWahooConfirmMessage:
+      'Are you sure you want to delete this route from Wahoo Cloud? This action cannot be undone.',
+    deleteFromWahooConfirmButton: 'Delete',
+    deleteFromWahooSuccess: 'Route deleted from Wahoo successfully',
+    deleteFromWahooError: 'Failed to delete route from Wahoo',
+    deletingFromWahooMessage:
+      'Please wait while your route is being deleted from Wahoo...',
     actionsGeneral: 'General',
     actionsWahoo: 'Wahoo Cloud',
     wahooNotConnectedTooltip: 'Connect to Wahoo in the menu to upload routes'

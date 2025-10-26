@@ -844,6 +844,32 @@ class ApiV1:
         # Use _request method with custom headers
         self._request(url, headers=headers, method="DELETE", check_for_errors=True)
 
+    def delete_route(self, route_id: int) -> None:
+        """Delete a route from Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_id : int
+            ID of the route to delete
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If no access token is available or if the request fails.
+        """
+        if not self.access_token:
+            raise ValueError("No access token available to delete route")
+
+        url = self.resolve_url(f"routes/{route_id}")
+        headers = {"Authorization": f"Bearer {self.access_token}"}
+        return self._request(
+            url, headers=headers, method="DELETE", check_for_errors=True
+        )
+
     def get(self, url: str, check_for_errors: bool = True, **kwargs: Any) -> Any:
         """Performs a generic GET request for specified params, returning the
         response.

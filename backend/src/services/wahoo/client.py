@@ -429,6 +429,25 @@ class Client:
             workout_type_family_id=workout_type_family_id,
         )
 
+    def delete_route(self, route_id: int) -> None:
+        """Delete a route from Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_id : int
+            ID of the route to delete
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If no access token is available or if the request fails.
+        """
+        return self.protocol.delete_route(route_id=route_id)
+
     def upload_route(
         self,
         route_file: str,

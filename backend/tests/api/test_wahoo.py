@@ -462,3 +462,17 @@ class TestWahooGetUserEndpoint:
         assert response.status_code == 401
         data = response.json()
         assert "failed to get user" in data["detail"].lower()
+
+
+class TestWahooDeleteRouteEndpoint:
+    """Test Wahoo delete route endpoint - basic coverage tests."""
+
+    @patch("src.dependencies.SessionLocal", None)
+    @patch("src.api.wahoo.get_wahoo_service")
+    def test_delete_route_database_not_initialized(self, mock_get_service, client):
+        """Test delete route when database is not initialized."""
+        response = client.delete("/api/wahoo/routes/123")
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()

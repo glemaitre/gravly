@@ -276,4 +276,76 @@ def create_wahoo_router() -> APIRouter:
                 status_code=500, detail=f"Failed to upload route: {str(e)}"
             )
 
+    @router.delete("/routes/{route_id}")
+    async def delete_route(route_id: int):
+        """Delete a route from Wahoo Cloud"""
+        logger.info(f"Received delete request for route_id={route_id}")
+        from src.dependencies import SessionLocal as global_session_local
+
+        if global_session_local is None:
+            logger.error("Database not initialized")
+            raise HTTPException(status_code=503, detail="Database not initialized")
+
+        try:
+            logger.info(f"Querying database for route_id={route_id}")
+            async with global_session_local() as session:
+                # Get the route from database
+                stmt = select(Track).where(
+                    Track.id == route_id, Track.track_type == TrackType.ROUTE
+                )
+                result = await session.execute(stmt)
+                track = result.scalar_one_or_none()
+
+                if not track:
+                    logger.error(f"Route {route_id} not found in database")
+                    raise HTTPException(status_code=404, detail="Route not found")
+
+                logger.info(f"Found route: {track.name}")
+
+                # Get Wahoo service
+                wahoo_service = get_wahoo_service()
+
+                # Get all routes from Wahoo to check if route exists
+                logger.info("Fetching all routes from Wahoo Cloud")
+                all_routes = wahoo_service.get_routes()
+
+                # Look for existing route with matching external_id
+                external_id = f"gravly_route_{route_id}"
+                wahoo_route_id = None
+                for route in all_routes:
+                    if route.get("external_id") == external_id:
+                        wahoo_route_id = route["id"]
+                        logger.info(
+                            f"Found existing route in Wahoo with ID: {wahoo_route_id}"
+                        )
+                        break
+
+                # Delete the route if it exists
+                if wahoo_route_id:
+                    logger.info(f"Deleting route {wahoo_route_id} from Wahoo")
+                    wahoo_service.delete_route(wahoo_route_id)
+                    logger.info("Successfully deleted route from Wahoo")
+                    return {
+                        "success": True,
+                        "message": (
+                            f"Route '{track.name}' deleted from Wahoo successfully"
+                        ),
+                    }
+                else:
+                    logger.warning(
+                        f"Route with external_id '{external_id}' not found in Wahoo"
+                    )
+                    raise HTTPException(
+                        status_code=404, detail="Route not found in Wahoo Cloud"
+                    )
+
+        except HTTPException as he:
+            logger.error(f"HTTPException raised: {he.status_code} - {he.detail}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to delete route: {str(e)}", exc_info=True)
+            raise HTTPException(
+                status_code=500, detail=f"Failed to delete route: {str(e)}"
+            )
+
     return router

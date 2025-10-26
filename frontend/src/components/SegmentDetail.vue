@@ -58,7 +58,11 @@
                 <button
                   @click="handleUploadToWahoo"
                   class="dropdown-item dropdown-item-indented"
-                  :disabled="isUploadingToWahoo || !wahooAuthState.isAuthenticated"
+                  :disabled="
+                    isUploadingToWahoo ||
+                    isDeletingFromWahoo ||
+                    !wahooAuthState.isAuthenticated
+                  "
                   :title="
                     !wahooAuthState.isAuthenticated
                       ? t('segmentDetail.wahooNotConnectedTooltip')
@@ -70,6 +74,27 @@
                     isUploadingToWahoo
                       ? t('segmentDetail.uploadingToWahoo')
                       : t('segmentDetail.uploadToWahoo')
+                  }}
+                </button>
+                <button
+                  @click="handleDeleteFromWahoo"
+                  class="dropdown-item dropdown-item-indented"
+                  :disabled="
+                    isUploadingToWahoo ||
+                    isDeletingFromWahoo ||
+                    !wahooAuthState.isAuthenticated
+                  "
+                  :title="
+                    !wahooAuthState.isAuthenticated
+                      ? t('segmentDetail.wahooNotConnectedTooltip')
+                      : ''
+                  "
+                >
+                  <i class="fa-solid fa-cloud-slash"></i>
+                  {{
+                    isDeletingFromWahoo
+                      ? t('segmentDetail.deletingFromWahoo')
+                      : t('segmentDetail.deleteFromWahoo')
                   }}
                 </button>
               </div>
@@ -477,6 +502,92 @@
         </div>
       </div>
     </div>
+
+    <!-- Wahoo Delete Confirmation Modal -->
+    <div
+      v-if="showWahooDeleteConfirmModal"
+      class="confirm-modal-overlay"
+      @click="closeWahooDeleteConfirmModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3>
+            <i class="fa-solid fa-cloud-slash"></i>
+            {{ t('segmentDetail.deleteFromWahooConfirm') }}
+          </h3>
+          <button class="confirm-modal-close" @click="closeWahooDeleteConfirmModal">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="confirm-modal-body">
+          <p>{{ t('segmentDetail.deleteFromWahooConfirmMessage') }}</p>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            @click="closeWahooDeleteConfirmModal"
+            class="btn-cancel"
+            :disabled="isDeletingFromWahoo"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            @click="proceedWithWahooDelete"
+            class="btn-danger"
+            :disabled="isDeletingFromWahoo"
+          >
+            <i v-if="isDeletingFromWahoo" class="fa-solid fa-spinner fa-spin"></i>
+            {{ t('segmentDetail.deleteFromWahooConfirmButton') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wahoo Delete Result Modal -->
+    <div
+      v-if="showWahooDeleteResultModal"
+      class="confirm-modal-overlay"
+      @click="closeWahooDeleteResultModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3 class="confirm-modal-title">
+            <i class="fa-solid fa-cloud"></i>
+            {{ t('segmentDetail.deletingFromWahoo') }}
+          </h3>
+        </div>
+        <div class="confirm-modal-body">
+          <div class="wahoo-upload-status">
+            <i
+              class="fa-solid"
+              :class="
+                isDeletingFromWahoo
+                  ? 'fa-spinner fa-spin'
+                  : wahooDeleteError
+                    ? 'fa-times-circle'
+                    : 'fa-check-circle'
+              "
+              :style="{ color: '#f97316' }"
+            ></i>
+            <p>
+              {{
+                isDeletingFromWahoo
+                  ? t('segmentDetail.deletingFromWahooMessage')
+                  : wahooDeleteError || t('segmentDetail.deleteFromWahooSuccess')
+              }}
+            </p>
+          </div>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            v-if="!isDeletingFromWahoo"
+            @click="closeWahooDeleteResultModal"
+            class="btn-primary-modal"
+          >
+            {{ t('common.ok') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -504,10 +615,12 @@ const { authState } = useStravaApi()
 const {
   authState: wahooAuthState,
   getAuthUrl,
-  uploadRoute: wahooUploadRoute
+  uploadRoute: wahooUploadRoute,
+  deleteRoute: wahooDeleteRoute
 } = useWahooApi()
 
 const isUploadingToWahoo = ref(false)
+const isDeletingFromWahoo = ref(false)
 
 // Reactive data
 const segment = ref<TrackResponse | null>(null)
@@ -540,6 +653,11 @@ const showWahooAuthModal = ref(false) // State for Wahoo authorization modal
 const showWahooUploadResultModal = ref(false) // State for upload result modal
 const wahooUploadError = ref<string | null>(null) // Error message for upload result
 const isLoadingWahooAuth = ref(false) // State for Wahoo authorization loading
+
+// Wahoo delete state
+const showWahooDeleteConfirmModal = ref(false) // State for delete confirmation modal
+const showWahooDeleteResultModal = ref(false) // State for delete result modal
+const wahooDeleteError = ref<string | null>(null) // Error message for delete result
 
 // Current position tracking for cursor sync
 const currentPosition = ref({
@@ -770,6 +888,54 @@ async function proceedWithWahooAuth() {
 function closeWahooUploadResultModal() {
   showWahooUploadResultModal.value = false
   wahooUploadError.value = null
+}
+
+async function handleDeleteFromWahoo() {
+  if (!segment.value) return
+
+  closeExportMenu()
+
+  // Check if authenticated with Wahoo
+  if (!wahooAuthState.value.isAuthenticated) {
+    // Show auth modal
+    showWahooAuthModal.value = true
+    return
+  }
+
+  // Show confirmation modal
+  showWahooDeleteConfirmModal.value = true
+}
+
+function closeWahooDeleteConfirmModal() {
+  showWahooDeleteConfirmModal.value = false
+}
+
+async function proceedWithWahooDelete() {
+  if (!segment.value) return
+
+  closeWahooDeleteConfirmModal()
+
+  // Show progress modal immediately
+  wahooDeleteError.value = null
+  showWahooDeleteResultModal.value = true
+  isDeletingFromWahoo.value = true
+
+  // Delete from Wahoo
+  try {
+    await wahooDeleteRoute(segmentId.value)
+    // Delete successful - modal will show success state
+  } catch (error: any) {
+    console.error('Error deleting from Wahoo:', error)
+    wahooDeleteError.value = error.message || t('segmentDetail.deleteFromWahooError')
+    // Modal will show error state
+  } finally {
+    isDeletingFromWahoo.value = false
+  }
+}
+
+function closeWahooDeleteResultModal() {
+  showWahooDeleteResultModal.value = false
+  wahooDeleteError.value = null
 }
 
 async function downloadGPX() {

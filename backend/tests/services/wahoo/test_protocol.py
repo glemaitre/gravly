@@ -1119,6 +1119,30 @@ class TestWahooProtocolDataParameter:
             data_logged = any("Data: " in str(call) for call in log_calls)
             assert data_logged
 
+    def test_delete_route_without_access_token(self):
+        """Test delete_route raises error without access token."""
+        protocol = ApiV1(access_token=None)
+
+        with pytest.raises(ValueError, match="No access token available"):
+            protocol.delete_route(123)
+
+    def test_delete_route_success(self):
+        """Test successful delete_route call."""
+        protocol = ApiV1(access_token="test_token")
+
+        with patch.object(protocol, "_request") as mock_request:
+            mock_request.return_value = {}
+
+            result = protocol.delete_route(123)
+
+            assert result == {}
+            mock_request.assert_called_once()
+            call_args = mock_request.call_args
+            # Check it was DELETE method
+            assert call_args[1]["method"] == "DELETE"
+            # Check it uses routes endpoint
+            assert "routes/123" in call_args[0][0]
+
 
 class TestWahooProtocolWithDataLogging:
     """Test logging when data parameter is provided."""

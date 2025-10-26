@@ -3391,9 +3391,9 @@ describe('SegmentDetail Delete Route Functionality', () => {
     const dropdownSections = wrapper.findAll('.dropdown-section')
     expect(dropdownSections.length).toBe(2)
 
-    // Check all dropdown items (should be 4 total across both sections)
+    // Check all dropdown items (should be 5 total across both sections)
     const dropdownItems = wrapper.findAll('.dropdown-item')
-    expect(dropdownItems.length).toBe(4)
+    expect(dropdownItems.length).toBe(5)
 
     // First section (General) should have: Share Link, Download GPX, Delete
     const generalItems = dropdownSections[0].findAll('.dropdown-item')
@@ -3403,10 +3403,11 @@ describe('SegmentDetail Delete Route Functionality', () => {
     expect(generalItems[2].text()).toContain('segmentDetail.deleteRoute')
     expect(generalItems[2].classes()).toContain('dropdown-item-danger')
 
-    // Second section (Wahoo Cloud) should have: Upload to Wahoo
+    // Second section (Wahoo Cloud) should have: Upload to Wahoo, Delete from Wahoo
     const wahooItems = dropdownSections[1].findAll('.dropdown-item')
-    expect(wahooItems.length).toBe(1)
+    expect(wahooItems.length).toBe(2)
     expect(wahooItems[0].text()).toContain('segmentDetail.uploadToWahoo')
+    expect(wahooItems[1].text()).toContain('segmentDetail.deleteFromWahoo')
   })
 
   it('should disable delete button when user is not the owner', async () => {

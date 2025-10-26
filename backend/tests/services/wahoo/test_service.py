@@ -1300,6 +1300,97 @@ class TestWahooServiceSaveError:
                         service._save_tokens(tokens)
 
                         # Should log the error
-                        mock_logger.error.assert_called_once_with(
-                            "Failed to save tokens: Not JSON serializable"
-                        )
+                    mock_logger.error.assert_called_once_with(
+                        "Failed to save tokens: Not JSON serializable"
+                    )
+
+
+class TestWahooServiceDeleteRoute:
+    """Test delete_route method in WahooService."""
+
+    @pytest.fixture
+    def service(self):
+        """Create a WahooService instance."""
+        config = WahooConfig(
+            client_id="test_client_id",
+            client_secret="test_client_secret",
+            tokens_file_path="/tmp/test_tokens.json",
+            callback_url="https://test.example.com/wahoo-callback",
+            scopes=["user_read", "routes_write"],
+        )
+
+        with patch("backend.src.services.wahoo.service.Client"):
+            return WahooService(config)
+
+    def test_delete_route_success(self, service):
+        """Test delete_route successful execution."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.return_value = None
+
+            service.delete_route(123)
+
+            mock_delete.assert_called_once_with(123)
+
+    def test_delete_route_unauthorized_error(self, service):
+        """Test delete_route with unauthorized error."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.side_effect = ValueError("401 Unauthorized")
+
+            with pytest.raises(WahooAccessUnauthorized):
+                service.delete_route(123)
+
+    def test_delete_route_unauthorized_error_lowercase(self, service):
+        """Test delete_route with unauthorized error (lowercase)."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.side_effect = ValueError("unauthorized access")
+
+            with pytest.raises(WahooAccessUnauthorized):
+                service.delete_route(123)
+
+    def test_delete_route_401_in_message(self, service):
+        """Test delete_route with 401 in error message."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.side_effect = ValueError("Error 401 occurred")
+
+            with pytest.raises(WahooAccessUnauthorized):
+                service.delete_route(123)
+
+    def test_delete_route_other_value_error(self, service):
+        """Test delete_route with other ValueError."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.side_effect = ValueError("Route not found")
+
+            with pytest.raises(ValueError, match="Route not found"):
+                service.delete_route(999)
+
+    def test_delete_route_exception(self, service):
+        """Test delete_route with general exception."""
+        with (
+            patch.object(service, "_ensure_authenticated"),
+            patch.object(service.client, "delete_route") as mock_delete,
+            patch("backend.src.services.wahoo.service.logger"),
+        ):
+            mock_delete.side_effect = Exception("Network error")
+
+            with pytest.raises(Exception, match="Network error"):
+                service.delete_route(456)

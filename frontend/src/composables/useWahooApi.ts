@@ -365,6 +365,36 @@ export function useWahooApi() {
   }
 
   /**
+   * Delete a route from Wahoo Cloud
+   */
+  async function deleteRoute(routeId: string): Promise<void> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await fetch(`/api/wahoo/routes/${routeId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        await response.text()
+        if (response.status === 401) {
+          await handleAuthenticationError()
+          throw new Error('Authentication failed - redirecting to login')
+        }
+        throw new Error(`Failed to delete route: ${response.statusText}`)
+      }
+
+      await response.json()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to delete route'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
    * Deauthorize the application and clear tokens
    */
   async function deauthorize(): Promise<void> {
@@ -449,6 +479,7 @@ export function useWahooApi() {
     attemptTokenRefresh,
     getRoutes,
     uploadRoute,
+    deleteRoute,
     deauthorize,
     getUser
   }

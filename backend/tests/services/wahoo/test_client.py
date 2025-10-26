@@ -306,3 +306,14 @@ class TestWahooClient:
             call_args = mock_request.call_args
             assert "permissions" in call_args[0][0]  # URL contains permissions endpoint
             assert call_args[1]["method"] == "DELETE"  # method is DELETE
+
+    def test_delete_route_method(self):
+        """Test client delete_route method."""
+        client = Client()
+
+        with patch.object(client.protocol, "delete_route") as mock_delete:
+            mock_delete.return_value = None
+
+            client.delete_route(route_id=456)
+
+            mock_delete.assert_called_once_with(route_id=456)
