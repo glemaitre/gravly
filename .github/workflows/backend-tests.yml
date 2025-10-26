@@ -47,6 +47,11 @@ jobs:
           echo "STRAVA_CLIENT_ID=${{ secrets.STRAVA_CLIENT_ID }}" >> .env/strava
           echo "STRAVA_CLIENT_SECRET=${{ secrets.STRAVA_CLIENT_SECRET }}" >> .env/strava
           echo "STRAVA_TOKENS_FILE_PATH=${{ secrets.STRAVA_TOKENS_FILE_PATH }}" >> .env/strava
+          echo "WAHOO_CLIENT_ID=${{ secrets.WAHOO_CLIENT_ID }}" >> .env/wahoo
+          echo "WAHOO_CLIENT_SECRET=${{ secrets.WAHOO_CLIENT_SECRET }}" >> .env/wahoo
+          echo "WAHOO_TOKENS_FILE_PATH=${{ secrets.WAHOO_TOKENS_FILE_PATH }}" >> .env/wahoo
+          echo "WAHOO_CALLBACK_URL=${{ secrets.WAHOO_CALLBACK_URL }}" >> .env/wahoo
+          echo "WAHOO_SCOPES=${{ secrets.WAHOO_SCOPES }}" >> .env/wahoo
           echo "THUNDERFOREST_API_KEY=${{ secrets.THUNDERFOREST_API_KEY }}" >> .env/thunderforest
 
       - name: Setup database
