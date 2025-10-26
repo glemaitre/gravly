@@ -15,7 +15,12 @@ export default {
     expandSidebar: 'Expand sidebar',
     title: 'Menu',
     settings: 'Settings',
-    support: 'Support'
+    support: 'Support',
+    connectedServices: 'Connected Services',
+    connected: 'Connected',
+    notConnected: 'Not connected',
+    connectWahoo: 'Connect to Wahoo',
+    disconnect: 'Disconnect'
   },
 
   // Chart and controls
@@ -248,7 +253,22 @@ export default {
     notRouteOwner: 'Only the route owner can delete it',
     notSegmentOwner: 'Only the segment owner can delete it',
     routeNotOwned: 'You do not own this route',
-    segmentNotOwned: 'You do not own this segment'
+    segmentNotOwned: 'You do not own this segment',
+    uploadToWahoo: 'Upload to Wahoo',
+    uploadingToWahoo: 'Uploading to Wahoo Cloud',
+    uploadingToWahooMessage: 'Please wait while your route is being uploaded to Wahoo...',
+    uploadToWahooSuccess: 'Route uploaded to Wahoo successfully',
+    uploadToWahooError: 'Failed to upload route to Wahoo',
+    wahooAuthRequired: 'You need to authorize with Wahoo first. Would you like to authorize now?',
+    wahooAuthError: 'Failed to initiate Wahoo authorization',
+    wahooAuthModalTitle: 'Authorize with Wahoo',
+    wahooAuthModalMessage: 'You need to authorize Gravly to upload routes to your Wahoo account. This will redirect you to Wahoo to complete the authorization.',
+    wahooAuthButton: 'Authorize',
+    wahooUploadSuccessTitle: 'Upload Successful',
+    wahooUploadErrorTitle: 'Upload Failed',
+    actionsGeneral: 'General',
+    actionsWahoo: 'Wahoo Cloud',
+    wahooNotConnectedTooltip: 'Connect to Wahoo in the menu to upload routes'
   },
 
   // Strava integration
@@ -470,7 +490,9 @@ export default {
     save: 'Save',
     saving: 'Saving...',
     delete: 'Delete',
-    deleting: 'Deleting...'
+    deleting: 'Deleting...',
+    retry: 'Retry',
+    ok: 'OK'
   },
 
   // Footer
@@ -491,7 +513,14 @@ export default {
       title: 'Wahoo Integration',
       description: 'Connect your Wahoo device to sync routes and activities.',
       authorizeButton: 'Authorize with Wahoo',
-      authorizing: 'Authorizing...'
+      authorizing: 'Authorizing...',
+      connected: 'Connected to Wahoo',
+      notConnected: 'Not connected to Wahoo',
+      refreshButton: 'Refresh Token',
+      uploadRouteButton: 'Upload Route to Wahoo',
+      selectRoute: 'Select Route to Upload',
+      uploadButton: 'Upload',
+      noRoutes: 'No routes available'
     },
     info: {
       title: 'About Labs',

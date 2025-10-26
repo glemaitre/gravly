@@ -19,28 +19,52 @@
               <i class="fa-solid fa-chevron-down dropdown-icon"></i>
             </button>
             <div v-if="showExportMenu" class="dropdown-menu" ref="exportMenu">
-              <button @click="shareLink" class="dropdown-item">
-                <i class="fa-solid fa-share-nodes"></i>
-                {{ t('segmentDetail.shareLink') }}
-              </button>
-              <button
-                v-if="segment?.track_type === 'route'"
-                @click="downloadGPX"
-                class="dropdown-item"
-              >
-                <i class="fa-solid fa-download"></i>
-                {{ t('segmentDetail.downloadGPX') }}
-              </button>
-              <button
-                v-if="segment?.track_type === 'route'"
-                @click="showDeleteConfirmation"
-                class="dropdown-item dropdown-item-danger"
-                :disabled="!isOwner"
-                :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
-              >
-                <i class="fa-solid fa-trash"></i>
-                {{ t('segmentDetail.deleteRoute') }}
-              </button>
+              <!-- General Actions Section -->
+              <div v-if="hasGeneralActions" class="dropdown-section">
+                <div class="dropdown-section-title">
+                  <i class="fa-solid fa-list"></i>
+                  {{ t('segmentDetail.actionsGeneral') }}
+                </div>
+                <button @click="shareLink" class="dropdown-item dropdown-item-indented">
+                  <i class="fa-solid fa-share-nodes"></i>
+                  {{ t('segmentDetail.shareLink') }}
+                </button>
+                <button
+                  v-if="segment?.track_type === 'route'"
+                  @click="downloadGPX"
+                  class="dropdown-item dropdown-item-indented"
+                >
+                  <i class="fa-solid fa-download"></i>
+                  {{ t('segmentDetail.downloadGPX') }}
+                </button>
+                <button
+                  v-if="segment?.track_type === 'route'"
+                  @click="showDeleteConfirmation"
+                  class="dropdown-item dropdown-item-indented dropdown-item-danger"
+                  :disabled="!isOwner"
+                  :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
+                >
+                  <i class="fa-solid fa-trash"></i>
+                  {{ t('segmentDetail.deleteRoute') }}
+                </button>
+              </div>
+
+              <!-- Wahoo Actions Section -->
+              <div v-if="segment?.track_type === 'route'" class="dropdown-section">
+                <div class="dropdown-section-title">
+                  <i class="fa-solid fa-cloud"></i>
+                  {{ t('segmentDetail.actionsWahoo') }}
+                </div>
+                <button
+                  @click="handleUploadToWahoo"
+                  class="dropdown-item dropdown-item-indented"
+                  :disabled="isUploadingToWahoo || !wahooAuthState.isAuthenticated"
+                  :title="!wahooAuthState.isAuthenticated ? t('segmentDetail.wahooNotConnectedTooltip') : ''"
+                >
+                  <i class="fa-solid fa-cloud-upload-alt"></i>
+                  {{ isUploadingToWahoo ? t('segmentDetail.uploadingToWahoo') : t('segmentDetail.uploadToWahoo') }}
+                </button>
+              </div>
             </div>
           </div>
           <button @click="goBack" class="back-button">
@@ -359,6 +383,92 @@
         </div>
       </div>
     </div>
+
+    <!-- Wahoo Authorization Modal -->
+    <div
+      v-if="showWahooAuthModal"
+      class="confirm-modal-overlay"
+      @click="closeWahooAuthModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3>
+            <i class="fa-solid fa-cloud"></i>
+            {{ t('segmentDetail.wahooAuthModalTitle') }}
+          </h3>
+          <button class="confirm-modal-close" @click="closeWahooAuthModal">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="confirm-modal-body">
+          <p>{{ t('segmentDetail.wahooAuthModalMessage') }}</p>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            @click="closeWahooAuthModal"
+            class="btn-cancel"
+            :disabled="isLoadingWahooAuth"
+          >
+            {{ t('common.cancel') }}
+          </button>
+          <button
+            @click="proceedWithWahooAuth"
+            class="btn-primary-modal"
+            :disabled="isLoadingWahooAuth"
+          >
+            <i v-if="isLoadingWahooAuth" class="fa-solid fa-spinner fa-spin"></i>
+            {{ t('segmentDetail.wahooAuthButton') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Wahoo Upload Progress/Success/Error Modal -->
+    <div
+      v-if="showWahooUploadResultModal"
+      class="confirm-modal-overlay"
+      @click="closeWahooUploadResultModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3 class="confirm-modal-title">
+            <i class="fa-solid fa-cloud"></i>
+            {{ t('segmentDetail.uploadingToWahoo') }}
+          </h3>
+        </div>
+        <div class="confirm-modal-body">
+          <div class="wahoo-upload-status">
+            <i
+              class="fa-solid"
+              :class="
+                isUploadingToWahoo
+                  ? 'fa-spinner fa-spin'
+                  : wahooUploadError
+                    ? 'fa-times-circle'
+                    : 'fa-check-circle'
+              "
+              :style="{ color: '#f97316' }"
+            ></i>
+            <p>
+              {{
+                isUploadingToWahoo
+                  ? t('segmentDetail.uploadingToWahooMessage')
+                  : wahooUploadError || t('segmentDetail.uploadToWahooSuccess')
+              }}
+            </p>
+          </div>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            v-if="!isUploadingToWahoo"
+            @click="closeWahooUploadResultModal"
+            class="btn-primary-modal"
+          >
+            {{ t('common.ok') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -371,6 +481,7 @@ import type { TrackResponse, GPXData, TrackVideoResponse } from '../types'
 import SegmentInfoCard from './SegmentInfoCard.vue'
 import ElevationChart from './ElevationChart.vue'
 import { useStravaApi } from '../composables/useStravaApi'
+import { useWahooApi } from '../composables/useWahooApi'
 
 const router = useRouter()
 const route = useRoute()
@@ -380,6 +491,15 @@ const { t } = useI18n()
 
 // Authentication state
 const { authState } = useStravaApi()
+
+// Wahoo API
+const { 
+  authState: wahooAuthState,
+  getAuthUrl,
+  uploadRoute: wahooUploadRoute
+} = useWahooApi()
+
+const isUploadingToWahoo = ref(false)
 
 // Reactive data
 const segment = ref<TrackResponse | null>(null)
@@ -406,6 +526,12 @@ const exportButton = ref<HTMLElement | null>(null)
 const exportMenu = ref<HTMLElement | null>(null)
 const showDeleteConfirmModal = ref(false) // State for delete confirmation modal
 const isDeleting = ref(false) // State for delete operation
+
+// Wahoo upload state
+const showWahooAuthModal = ref(false) // State for Wahoo authorization modal
+const showWahooUploadResultModal = ref(false) // State for upload result modal
+const wahooUploadError = ref<string | null>(null) // Error message for upload result
+const isLoadingWahooAuth = ref(false) // State for Wahoo authorization loading
 
 // Current position tracking for cursor sync
 const currentPosition = ref({
@@ -465,6 +591,15 @@ const isOwner = computed(() => {
     return false
   }
   return segment.value.strava_id === authState.value.athlete.id
+})
+
+// Check if there are any general actions to display
+const hasGeneralActions = computed(() => {
+  // Share link is always available
+  const hasShare = true
+  // Download GPX and delete are only available for routes
+  const hasRouteActions = segment.value?.track_type === 'route'
+  return hasShare || hasRouteActions
 })
 
 // Methods
@@ -571,6 +706,62 @@ async function shareLink() {
     console.error('Error sharing link:', err)
     alert(t('segmentDetail.shareLinkError'))
   }
+}
+
+async function handleUploadToWahoo() {
+  if (!segment.value) return
+
+  closeExportMenu()
+
+  // Check if authenticated with Wahoo
+  if (!wahooAuthState.value.isAuthenticated) {
+    // Show auth modal
+    showWahooAuthModal.value = true
+    return
+  }
+
+  // Show progress modal immediately
+  wahooUploadError.value = null
+  showWahooUploadResultModal.value = true
+  isUploadingToWahoo.value = true
+
+  // Upload to Wahoo
+  try {
+    await wahooUploadRoute(segmentId.value)
+    // Upload successful - modal will show success state
+  } catch (error: any) {
+    console.error('Error uploading to Wahoo:', error)
+    wahooUploadError.value = error.message || t('segmentDetail.uploadToWahooError')
+    // Modal will show error state
+  } finally {
+    isUploadingToWahoo.value = false
+  }
+}
+
+function closeWahooAuthModal() {
+  showWahooAuthModal.value = false
+}
+
+async function proceedWithWahooAuth() {
+  try {
+    isLoadingWahooAuth.value = true
+    const authUrl = await getAuthUrl()
+    // Store current URL to redirect back after auth
+    sessionStorage.setItem('wahoo_redirect_after_auth', `/segment/${segmentId.value}`)
+    window.location.href = authUrl
+  } catch (error) {
+    console.error('Error getting Wahoo auth URL:', error)
+    wahooUploadError.value = t('segmentDetail.wahooAuthError')
+    showWahooAuthModal.value = false
+    showWahooUploadResultModal.value = true
+  } finally {
+    isLoadingWahooAuth.value = false
+  }
+}
+
+function closeWahooUploadResultModal() {
+  showWahooUploadResultModal.value = false
+  wahooUploadError.value = null
 }
 
 async function downloadGPX() {
@@ -1217,6 +1408,36 @@ onUnmounted(() => {
   min-width: 200px;
   z-index: 1000;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-section:not(:last-child) {
+  border-bottom: 1px solid var(--border-muted);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.dropdown-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 1rem 0.25rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dropdown-section-title i {
+  font-size: 0.875rem;
+  color: var(--brand-primary);
 }
 
 .dropdown-item {
@@ -1279,6 +1500,10 @@ onUnmounted(() => {
 
 .dropdown-item-danger:hover i {
   color: var(--status-error);
+}
+
+.dropdown-item-indented {
+  padding-left: 2rem;
 }
 
 .back-button {
@@ -2379,13 +2604,19 @@ onUnmounted(() => {
   justify-content: space-between;
   padding: 1.5rem;
   border-bottom: 1px solid var(--card-border);
+  background: var(--bg-secondary);
 }
 
-.confirm-modal-header h3 {
+.confirm-modal-header h3,
+.confirm-modal-title {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.confirm-modal-title i {
+  color: var(--brand-primary);
 }
 
 .confirm-modal-close {
@@ -2405,11 +2636,56 @@ onUnmounted(() => {
   color: var(--text-primary);
 }
 
+.confirm-modal-header.error-header {
+  border-left: 4px solid var(--status-error);
+}
+
+.confirm-modal-header.error-header h3 {
+  color: var(--status-error);
+}
+
+.btn-primary-modal {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid;
+  background: var(--brand-primary);
+  color: #ffffff;
+  border-color: var(--brand-primary);
+}
+
+.btn-primary-modal:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+  border-color: var(--brand-primary-hover);
+}
+
 .confirm-modal-body {
   padding: 1.5rem;
+  background: var(--bg-tertiary);
 }
 
 .confirm-modal-body p {
+  margin: 0;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.wahoo-upload-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.wahoo-upload-status i {
+  font-size: 3rem;
+}
+
+.wahoo-upload-status p {
   margin: 0;
   color: var(--text-primary);
   line-height: 1.6;
@@ -2422,7 +2698,7 @@ onUnmounted(() => {
   gap: 0.75rem;
   padding: 1.5rem;
   border-top: 1px solid var(--card-border);
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
 }
 
 .btn-cancel,

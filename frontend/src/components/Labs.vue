@@ -22,24 +22,62 @@
           </p>
 
           <div class="wahoo-auth-section">
-            <div class="auth-status" v-if="wahooAuthStatus">
-              <div class="status-indicator" :class="wahooAuthStatus.status">
+            <!-- Authentication Status -->
+            <div class="auth-status">
+              <div 
+                v-if="isWahooAuthenticated" 
+                class="status-indicator success"
+              >
+                <i class="fa-solid fa-check-circle"></i>
+                <span>{{ $t('labs.wahooIntegration.connected') }}</span>
+                <span class="token-expiry" v-if="tokenExpiresIn">
+                  ({{ Math.floor(tokenExpiresIn / 60) }}m {{ tokenExpiresIn % 60 }}s)
+                </span>
+              </div>
+              <div 
+                v-else-if="wahooAuthStatus" 
+                class="status-indicator"
+                :class="wahooAuthStatus.status"
+              >
                 <i :class="wahooAuthStatus.icon"></i>
                 <span>{{ wahooAuthStatus.message }}</span>
               </div>
+              <div 
+                v-else 
+                class="status-indicator info"
+              >
+                <i class="fa-solid fa-info-circle"></i>
+                <span>{{ $t('labs.wahooIntegration.notConnected') }}</span>
+              </div>
             </div>
 
+            <!-- Authentication Button -->
             <button
               class="btn btn-primary wahoo-auth-btn"
               @click="handleWahooAuthorization"
               :disabled="isLoadingWahooAuth"
             >
-              <i class="fa-solid fa-external-link-alt"></i>
-              <span v-if="!isLoadingWahooAuth">{{
-                $t('labs.wahooIntegration.authorizeButton')
-              }}</span>
+              <i class="fa-solid" :class="isWahooAuthenticated ? 'fa-sync' : 'fa-external-link-alt'"></i>
+              <span v-if="!isLoadingWahooAuth">
+                {{ isWahooAuthenticated 
+                  ? $t('labs.wahooIntegration.refreshButton')
+                  : $t('labs.wahooIntegration.authorizeButton')
+                }}
+              </span>
               <span v-else>{{ $t('labs.wahooIntegration.authorizing') }}</span>
             </button>
+
+            <!-- Route Upload Section (only shown when authenticated) -->
+            <div v-if="isWahooAuthenticated" class="route-upload-section">
+              <button
+                class="btn btn-secondary upload-route-btn"
+                @click="showRouteModal = true"
+                :disabled="isLoadingWahooAuth"
+              >
+                <i class="fa-solid fa-cloud-upload-alt"></i>
+                <span>{{ $t('labs.wahooIntegration.uploadRouteButton') }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -57,21 +95,45 @@
             </ul>
           </div>
         </div>
+
+        <!-- Route Selection Modal -->
+        <RouteSelectionModal
+          v-if="showRouteModal"
+          @close="showRouteModal = false"
+          @route-selected="handleRouteSelected"
+        />
       </section>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useAuthorization } from '../composables/useAuthorization'
 import { useWahooApi } from '../composables/useWahooApi'
+import RouteSelectionModal from './RouteSelectionModal.vue'
 
 // Authorization check
 const { isAuthorized, isLoadingAuthorization } = useAuthorization()
 
 // Wahoo API composable
-const { getAuthUrl, isLoading: isLoadingWahooAuth } = useWahooApi()
+const { 
+  getAuthUrl, 
+  isLoading: isLoadingWahooAuth,
+  authState,
+  attemptTokenRefresh,
+  clearAuth,
+  uploadRoute
+} = useWahooApi()
+
+// Computed properties for auth status
+const isWahooAuthenticated = computed(() => authState.value.isAuthenticated)
+const tokenExpiresIn = computed(() => {
+  if (!authState.value.expiresAt) return null
+  const now = Date.now()
+  const expiresAt = authState.value.expiresAt * 1000
+  return Math.max(0, Math.floor((expiresAt - now) / 1000))
+})
 
 // Wahoo authorization state
 const wahooAuthStatus = ref<{
@@ -87,6 +149,21 @@ async function handleWahooAuthorization() {
   try {
     wahooAuthStatus.value = null
 
+    if (isWahooAuthenticated.value) {
+      // If authenticated, try to refresh token
+      const refreshed = await attemptTokenRefresh()
+      if (refreshed) {
+        wahooAuthStatus.value = {
+          status: 'success',
+          message: 'Token refreshed successfully',
+          icon: 'fa-solid fa-check-circle'
+        }
+        return
+      }
+      // If refresh failed, clear auth and proceed with new authorization
+      clearAuth()
+    }
+
     const authUrl = await getAuthUrl()
 
     // Redirect to Wahoo authorization URL
@@ -96,6 +173,79 @@ async function handleWahooAuthorization() {
     wahooAuthStatus.value = {
       status: 'error',
       message: error.message || 'Failed to initiate Wahoo authorization',
+      icon: 'fa-solid fa-exclamation-triangle'
+    }
+  }
+}
+
+/**
+ * Handle token refresh
+ */
+async function handleTokenRefresh() {
+  try {
+    wahooAuthStatus.value = {
+      status: 'info',
+      message: 'Refreshing token...',
+      icon: 'fa-solid fa-sync fa-spin'
+    }
+
+    const refreshed = await attemptTokenRefresh()
+    
+    if (refreshed) {
+      wahooAuthStatus.value = {
+        status: 'success',
+        message: 'Token refreshed successfully',
+        icon: 'fa-solid fa-check-circle'
+      }
+    } else {
+      throw new Error('Token refresh failed')
+    }
+  } catch (error: any) {
+    console.error('Token refresh error:', error)
+    wahooAuthStatus.value = {
+      status: 'error',
+      message: 'Failed to refresh token',
+      icon: 'fa-solid fa-exclamation-triangle'
+    }
+    clearAuth()
+  }
+}
+
+// Watch token expiration and refresh when needed
+watch(tokenExpiresIn, (seconds) => {
+  if (seconds && seconds < 300 && seconds > 0) { // Refresh when less than 5 minutes remain
+    handleTokenRefresh()
+  }
+})
+
+// Route selection modal state
+const showRouteModal = ref(false)
+
+/**
+ * Handle route selection from modal
+ */
+async function handleRouteSelected(route: any) {
+  try {
+    wahooAuthStatus.value = {
+      status: 'info',
+      message: 'Uploading route to Wahoo...',
+      icon: 'fa-solid fa-sync fa-spin'
+    }
+
+    await uploadRoute(route.id)
+
+    wahooAuthStatus.value = {
+      status: 'success',
+      message: 'Route uploaded successfully',
+      icon: 'fa-solid fa-check-circle'
+    }
+
+    showRouteModal.value = false
+  } catch (error: any) {
+    console.error('Route upload error:', error)
+    wahooAuthStatus.value = {
+      status: 'error',
+      message: error.message || 'Failed to upload route',
       icon: 'fa-solid fa-exclamation-triangle'
     }
   }
@@ -233,7 +383,8 @@ onMounted(() => {
   border-color: var(--info-border);
 }
 
-.wahoo-auth-btn {
+.wahoo-auth-btn,
+.upload-route-btn {
   align-self: flex-start;
   display: flex;
   align-items: center;
@@ -243,16 +394,63 @@ onMounted(() => {
   font-weight: 500;
   border-radius: 8px;
   transition: all 0.2s ease;
+  width: 100%;
+  justify-content: center;
 }
 
-.wahoo-auth-btn:disabled {
+.wahoo-auth-btn:disabled,
+.upload-route-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.route-upload-section {
+  margin-top: 1rem;
+  width: 100%;
+}
+
+.token-expiry {
+  font-size: 0.875rem;
+  opacity: 0.8;
+  margin-left: 0.5rem;
 }
 
 .info-content {
   color: var(--text-secondary);
   line-height: 1.6;
+}
+
+/* Status indicator improvements */
+.status-indicator {
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.status-indicator i {
+  font-size: 1rem;
+}
+
+.status-indicator.success {
+  background-color: var(--success-background);
+  color: var(--success-color);
+  border: 1px solid var(--success-border);
+}
+
+.status-indicator.error {
+  background-color: var(--error-background);
+  color: var(--error-color);
+  border: 1px solid var(--error-border);
+}
+
+.status-indicator.info {
+  background-color: var(--info-background);
+  color: var(--info-color);
+  border: 1px solid var(--info-border);
 }
 
 .info-list {
@@ -278,9 +476,48 @@ onMounted(() => {
     padding: 1.5rem;
   }
 
-  .wahoo-auth-btn {
+  .wahoo-auth-btn,
+  .upload-route-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .status-indicator {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .token-expiry {
+    margin-left: 0;
+    margin-top: 0.25rem;
+  }
+
+  .route-upload-section {
+    margin-top: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .labs-title {
+    font-size: 1.75rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .labs-description {
+    font-size: 1rem;
+  }
+
+  .status-indicator {
+    font-size: 0.875rem;
+  }
+
+  .token-expiry {
+    font-size: 0.75rem;
   }
 }
 </style>

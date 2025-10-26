@@ -10,23 +10,13 @@
     </button>
 
     <div class="menu-dropdown-content" :class="{ open: menuOpen }">
-      <!-- Strava Authentication Section -->
+      <!-- Connected Services Section -->
       <div class="menu-section">
-        <div v-if="!isAuthenticated" class="strava-section">
-          <button
-            class="strava-login-btn menu-item"
-            @click="handleStravaLogin"
-            :disabled="isLoading"
-          >
-            <img
-              :src="stravaConnectBtn"
-              alt="Connect with Strava"
-              class="strava-btn-image"
-            />
-          </button>
-        </div>
-        <div v-else class="user-info-section">
-          <div class="user-info-header">
+        <div class="menu-section-title">{{ $t('menu.connectedServices') }}</div>
+
+        <!-- Strava Service -->
+        <div class="service-item">
+          <div v-if="isAuthenticated" class="user-info-header">
             <img
               v-if="athlete?.profile_medium"
               :src="athlete.profile_medium"
@@ -43,9 +33,64 @@
               </div>
             </div>
           </div>
-          <button class="logout-btn menu-item" @click="handleLogout">
-            <i class="fas fa-sign-out-alt"></i>
-            <span>{{ $t('navbar.logout') }}</span>
+          <div class="service-header">
+            <i class="fa-brands fa-strava strava-icon"></i>
+            <div class="service-name">Strava</div>
+            <div class="service-status-right">
+              <div class="service-status" :class="{ connected: isAuthenticated }">
+                {{ isAuthenticated ? $t('menu.connected') : $t('menu.notConnected') }}
+              </div>
+              <button
+                v-if="isAuthenticated"
+                class="service-disconnect-btn-compact"
+                @click="handleStravaLogout"
+                :title="$t('menu.disconnect')"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+              </button>
+            </div>
+          </div>
+          <button
+            v-if="!isAuthenticated"
+            class="service-connect-btn menu-item"
+            @click="handleStravaLogin"
+            :disabled="isLoading"
+          >
+            <img
+              :src="stravaConnectBtn"
+              alt="Connect with Strava"
+              class="strava-btn-image-small"
+            />
+          </button>
+        </div>
+
+        <!-- Wahoo Service -->
+        <div class="service-item">
+          <div class="service-header">
+            <i class="fa-solid fa-cloud wahoo-icon"></i>
+            <div class="service-name">Wahoo</div>
+            <div class="service-status-right">
+              <div class="service-status" :class="{ connected: isWahooAuthenticated }">
+                {{ isWahooAuthenticated ? $t('menu.connected') : $t('menu.notConnected') }}
+              </div>
+              <button
+                v-if="isWahooAuthenticated"
+                class="service-disconnect-btn-compact"
+                @click="handleWahooLogout"
+                :title="$t('menu.disconnect')"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+              </button>
+            </div>
+          </div>
+          <button
+            v-if="!isWahooAuthenticated"
+            class="service-connect-btn menu-item wahoo-connect-btn"
+            @click="handleWahooLogin"
+            :disabled="isLoadingWahoo"
+          >
+            <i class="fa-solid fa-cloud"></i>
+            <span>{{ $t('menu.connectWahoo') }}</span>
           </button>
         </div>
       </div>
@@ -169,6 +214,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStravaApi } from '../composables/useStravaApi'
+import { useWahooApi } from '../composables/useWahooApi'
 import { useLanguageDropdown } from '../composables/useLanguageDropdown'
 import { useThemeSettings } from '../composables/useThemeSettings'
 import type { MessageLanguages } from '../i18n'
@@ -185,6 +231,16 @@ const {
   clearAuth
 } = useStravaApi()
 
+// Wahoo authentication
+const {
+  authState: wahooAuthState,
+  isLoading: isLoadingWahoo,
+  isAuthenticated: isWahooAuthenticatedFn,
+  getAuthUrl: getWahooAuthUrl,
+  deauthorize: wahooDeauthorize,
+  getUser: getWahooUser
+} = useWahooApi()
+
 // Language dropdown functionality
 const { currentLanguage, languageOptions, changeLanguage } = useLanguageDropdown()
 
@@ -194,6 +250,9 @@ const { currentTheme, themeOptions, changeTheme } = useThemeSettings()
 // Computed properties
 const isAuthenticated = computed(() => isAuthenticatedFn())
 const athlete = computed(() => authState.value.athlete)
+
+const isWahooAuthenticated = computed(() => isWahooAuthenticatedFn())
+const wahooUser = computed(() => wahooAuthState.value.user)
 
 // Menu state
 const menuOpen = ref(false)
@@ -228,6 +287,8 @@ function toggleThemeDropdown(event: Event) {
 async function handleStravaLogin() {
   try {
     const currentRoute = router.currentRoute.value.fullPath
+    // Store the current path for redirect after auth
+    sessionStorage.setItem('strava_redirect_after_auth', currentRoute)
     const authUrl = await getAuthUrl(currentRoute)
     menuOpen.value = false
     window.location.href = authUrl
@@ -236,10 +297,33 @@ async function handleStravaLogin() {
   }
 }
 
-function handleLogout() {
+function handleStravaLogout() {
   clearAuth()
   menuOpen.value = false
   router.push('/')
+}
+
+// Wahoo authentication functions
+async function handleWahooLogin() {
+  try {
+    const currentRoute = router.currentRoute.value.fullPath
+    // Store the current path for redirect after auth
+    sessionStorage.setItem('wahoo_redirect_after_auth', currentRoute)
+    const authUrl = await getWahooAuthUrl()
+    menuOpen.value = false
+    window.location.href = authUrl
+  } catch (error) {
+    console.error('Failed to get Wahoo auth URL:', error)
+  }
+}
+
+async function handleWahooLogout() {
+  try {
+    await wahooDeauthorize()
+    menuOpen.value = false
+  } catch (error) {
+    console.error('Failed to deauthorize Wahoo:', error)
+  }
 }
 
 onMounted(() => {
@@ -353,35 +437,122 @@ onUnmounted(() => {
   border-top: 1px solid var(--border-primary);
 }
 
-/* Strava Login Button in Menu */
-.strava-login-btn {
+/* Service Item */
+.service-item {
+  margin-bottom: 1rem;
+}
+
+.service-item:last-child {
+  margin-bottom: 0;
+}
+
+.service-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.service-name {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.service-status-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.service-status {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.service-status.connected {
+  background: rgba(34, 197, 94, 0.1);
+  color: rgb(34, 197, 94);
+}
+
+.service-disconnect-btn-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--status-error);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.service-disconnect-btn-compact:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--button-danger-hover);
+}
+
+.strava-icon {
+  color: #fc4c02;
+  font-size: 1.25rem;
+}
+
+.wahoo-icon {
+  color: var(--brand-primary);
+  font-size: 1.25rem;
+}
+
+.service-connect-btn {
+  justify-content: center;
   padding: 0.5rem;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%;
-  display: flex;
-  justify-content: center;
 }
 
-.strava-login-btn:hover {
+.service-connect-btn:hover:not(:disabled) {
   background: var(--bg-hover);
-  border: none;
 }
 
-.strava-btn-image {
+.service-connect-btn.wahoo-connect-btn {
+  background: var(--brand-primary);
+  color: #ffffff;
+  padding: 0.625rem 1rem;
+  font-weight: 500;
+}
+
+.service-connect-btn.wahoo-connect-btn:hover:not(:disabled) {
+  background: var(--brand-primary-hover);
+}
+
+.strava-btn-image-small {
   display: block;
-  height: 32px;
+  height: 28px;
   width: auto;
   max-width: 100%;
 }
 
-/* User Info Section */
-.user-info-section {
-  width: 100%;
+.service-disconnect-btn {
+  justify-content: flex-start;
+  color: var(--status-error);
 }
 
+.service-disconnect-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--button-danger-hover);
+}
+
+/* User Info Section */
 .user-info-header {
   display: flex;
   align-items: center;
@@ -418,16 +589,6 @@ onUnmounted(() => {
   font-size: 0.75rem;
   color: var(--text-tertiary);
   margin-top: 0.125rem;
-}
-
-.logout-btn {
-  color: var(--status-error);
-  justify-content: flex-start;
-}
-
-.logout-btn:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--button-danger-hover);
 }
 
 /* Settings Buttons */

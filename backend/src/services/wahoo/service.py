@@ -325,3 +325,380 @@ class WahooService:
         except Exception as e:
             logger.error(f"Failed to deauthorize: {e}")
             raise
+
+    def get_user(self) -> dict[str, Any]:
+        """Get authenticated user information.
+
+        Returns
+        -------
+        dict[str, Any]
+            Dictionary containing user information
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error getting user information.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info("Getting user information from Wahoo")
+            result = self.client.get_user()
+            logger.info("Successfully retrieved user information")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to get user: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to get user: {e}")
+            raise
+
+    def get_route(self, route_id: int) -> dict[str, Any]:
+        """Get a route by ID from Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_id : int
+            ID of the route to retrieve
+
+        Returns
+        -------
+        dict[str, Any]
+            Response from Wahoo API containing the route information
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error getting the route.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info(f"Getting route {route_id} from Wahoo Cloud")
+            result = self.client.get_route(route_id=route_id)
+            logger.info(f"Successfully retrieved route {route_id}")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to get route: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to get route: {e}")
+            raise
+
+    def get_routes(self) -> list[dict[str, Any]]:
+        """Get all routes from Wahoo Cloud.
+
+        Returns
+        -------
+        list[dict[str, Any]]
+            List of routes from Wahoo API
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error getting the routes.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info("Getting all routes from Wahoo Cloud")
+            result = self.client.get_routes()
+            logger.info(f"Successfully retrieved {len(result)} routes")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to get routes: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to get routes: {e}")
+            raise
+
+    def create_route(
+        self,
+        route_file: str,
+        filename: str,
+        route_name: str,
+        description: str = "",
+        external_id: str | None = None,
+        provider_updated_at: str | None = None,
+        workout_type_family_id: int = 0,
+        start_lat: float | None = None,
+        start_lng: float | None = None,
+        distance: float | None = None,
+        ascent: float | None = None,
+        descent: float | None = None,
+    ) -> dict[str, Any]:
+        """Create a new route in Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_file : str
+            Base64-encoded route file content (data URI format)
+        filename : str
+            Name of the route file
+        route_name : str
+            Name of the route
+        description : str
+            Description of the route (optional)
+        external_id : str | None
+            External identifier for the route (optional)
+        provider_updated_at : str | None
+            ISO timestamp of when route was updated by provider (optional)
+        workout_type_family_id : int
+            Workout type family ID (default: 0)
+        start_lat : float | None
+            Starting latitude (optional)
+        start_lng : float | None
+            Starting longitude (optional)
+        distance : float | None
+            Total distance in meters (optional)
+        ascent : float | None
+            Ascent in meters (optional)
+        descent : float | None
+            Descent in meters (optional)
+
+        Returns
+        -------
+        dict[str, Any]
+            Response from Wahoo API containing the created route information
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error creating the route.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info(f"Creating route '{route_name}' in Wahoo Cloud")
+            result = self.client.create_route(
+                route_file=route_file,
+                filename=filename,
+                route_name=route_name,
+                description=description,
+                external_id=external_id,
+                provider_updated_at=provider_updated_at,
+                workout_type_family_id=workout_type_family_id,
+                start_lat=start_lat,
+                start_lng=start_lng,
+                distance=distance,
+                ascent=ascent,
+                descent=descent,
+            )
+            logger.info(f"Successfully created route '{route_name}'")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to create route: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to create route: {e}")
+            raise
+
+    def update_route(
+        self,
+        route_id: int,
+        route_file: str,
+        filename: str,
+        route_name: str,
+        description: str = "",
+        provider_updated_at: str | None = None,
+        workout_type_family_id: int = 0,
+        start_lat: float | None = None,
+        start_lng: float | None = None,
+        distance: float | None = None,
+        ascent: float | None = None,
+        descent: float | None = None,
+    ) -> dict[str, Any]:
+        """Update an existing route in Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_id : int
+            ID of the route to update
+        route_file : str
+            Base64-encoded route file content (data URI format)
+        filename : str
+            Name of the route file
+        route_name : str
+            Name of the route
+        description : str
+            Description of the route (optional)
+        provider_updated_at : str | None
+            ISO timestamp of when route was updated by provider (optional)
+        workout_type_family_id : int
+            Workout type family ID (default: 0)
+        start_lat : float | None
+            Starting latitude (optional)
+        start_lng : float | None
+            Starting longitude (optional)
+        distance : float | None
+            Total distance in meters (optional)
+        ascent : float | None
+            Ascent in meters (optional)
+        descent : float | None
+            Descent in meters (optional)
+
+        Returns
+        -------
+        dict[str, Any]
+            Response from Wahoo API containing the updated route information
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error updating the route.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info(f"Updating route {route_id} '{route_name}' in Wahoo Cloud")
+            result = self.client.update_route(
+                route_id=route_id,
+                route_file=route_file,
+                filename=filename,
+                route_name=route_name,
+                description=description,
+                provider_updated_at=provider_updated_at,
+                workout_type_family_id=workout_type_family_id,
+                start_lat=start_lat,
+                start_lng=start_lng,
+                distance=distance,
+                ascent=ascent,
+                descent=descent,
+            )
+            logger.info(f"Successfully updated route {route_id} '{route_name}'")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            else:
+                logger.error(f"Failed to update route: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to update route: {e}")
+            raise
+
+    def upload_route(
+        self,
+        route_file: str,
+        filename: str,
+        route_name: str,
+        description: str = "",
+        external_id: str | None = None,
+        provider_updated_at: str | None = None,
+        workout_type_family_id: int = 0,
+        start_lat: float | None = None,
+        start_lng: float | None = None,
+        distance: float | None = None,
+        ascent: float | None = None,
+        descent: float | None = None,
+    ) -> dict[str, Any]:
+        """Upload a route to Wahoo Cloud.
+
+        Parameters
+        ----------
+        route_file : str
+            Base64-encoded route file content (data URI format)
+        filename : str
+            Name of the route file
+        route_name : str
+            Name of the route
+        description : str
+            Description of the route (optional)
+        external_id : str | None
+            External identifier for the route (optional)
+        provider_updated_at : str | None
+            ISO timestamp of when route was updated by provider (optional)
+        workout_type_family_id : int
+            Workout type family ID (default: 0)
+        start_lat : float | None
+            Starting latitude (optional)
+        start_lng : float | None
+            Starting longitude (optional)
+        ascent : float | None
+            Ascent in meters (optional)
+        descent : float | None
+            Descent in meters (optional)
+
+        Returns
+        -------
+        dict[str, Any]
+            Response from Wahoo API containing the uploaded route information
+
+        Raises
+        ------
+        WahooAccessUnauthorized
+            If the user is not authenticated or tokens are invalid.
+        Exception
+            If there's an error uploading the route.
+        """
+        self._ensure_authenticated()
+
+        try:
+            logger.info(f"Uploading route '{route_name}' to Wahoo Cloud")
+            # Try to create the route
+            result = self.create_route(
+                route_file=route_file,
+                filename=filename,
+                route_name=route_name,
+                description=description,
+                external_id=external_id,
+                provider_updated_at=provider_updated_at,
+                workout_type_family_id=workout_type_family_id,
+                start_lat=start_lat,
+                start_lng=start_lng,
+                distance=distance,
+                ascent=ascent,
+                descent=descent,
+            )
+            logger.info(f"Successfully uploaded route '{route_name}'")
+            return result
+        except ValueError as e:
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                logger.error(f"Wahoo API access unauthorized: {e}")
+                raise WahooAccessUnauthorized(error_msg)
+            elif "already exists" in error_msg:
+                # Route already exists - for now just log and re-raise
+                # In the future, we could implement update logic here
+                logger.warning(
+                    f"Route with external_id '{external_id}' already exists: {e}"
+                )
+                raise ValueError("Route already exists. Update not implemented yet.")
+            else:
+                logger.error(f"Failed to upload route: {e}")
+                raise
+        except Exception as e:
+            logger.error(f"Failed to upload route: {e}")
+            raise

@@ -183,9 +183,15 @@ class TestWahooClient:
         """Test Client deauthorize method."""
         client = Client()
 
-        with patch.object(client.protocol, "post") as mock_post:
+        with patch.object(client.protocol, "_request") as mock_request:
             client.deauthorize()
-            mock_post.assert_called_once_with("oauth/deauthorize")
+            # Verify _request was called with the correct URL and method
+            mock_request.assert_called_once()
+            call_args = mock_request.call_args
+            assert (
+                "oauth/deauthorize" in call_args[0][0]
+            )  # URL contains oauth/deauthorize
+            assert call_args[1]["method"] == "POST"  # method is POST
 
 
 class TestWahooProtocol:

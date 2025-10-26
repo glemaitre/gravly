@@ -58,6 +58,8 @@ router.beforeEach(async (to, from, next) => {
       } else {
         console.info('Token refresh failed, redirecting to Strava login')
         try {
+          // Store the current path for redirect after auth
+          sessionStorage.setItem('strava_redirect_after_auth', to.fullPath)
           const authUrl = await getAuthUrl(to.fullPath)
           window.location.href = authUrl
           // Don't call next() as we're redirecting away from the app

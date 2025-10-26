@@ -212,6 +212,9 @@ export function useStravaApi() {
       clearAuth()
 
       try {
+        // Store current path for redirect after auth
+        const currentPath = window.location.pathname + window.location.search
+        sessionStorage.setItem('strava_redirect_after_auth', currentPath)
         const authUrl = await getAuthUrl()
         window.location.href = authUrl
       } catch (error) {

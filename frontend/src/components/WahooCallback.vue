@@ -32,7 +32,7 @@ import { useWahooApi } from '../composables/useWahooApi'
 
 const { t } = useI18n()
 const router = useRouter()
-const { exchangeCode, isLoading, error } = useWahooApi()
+const { exchangeCode, getUser, isLoading, error } = useWahooApi()
 
 const goToHome = () => {
   router.push('/')
@@ -43,7 +43,6 @@ onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
     const errorParam = urlParams.get('error')
-    const state = urlParams.get('state')
 
     if (errorParam) {
       throw new Error(`Wahoo authorization error: ${errorParam}`)
@@ -56,16 +55,31 @@ onMounted(async () => {
     await exchangeCode(code)
     console.info('Wahoo authentication successful')
 
-    // Always redirect to home page to trigger navbar reload
-    // Store the original destination in localStorage for later redirect
-    if (state && state !== 'wahoo_auth') {
-      localStorage.setItem('wahoo_redirect_after_auth', state)
+    // Get user information
+    try {
+      await getUser()
+      console.info('User information loaded')
+    } catch (error) {
+      console.warn('Failed to get user info:', error)
+      // Continue with redirect even if user info fails
     }
 
-    console.info('Redirecting to home page to reload navbar')
-    setTimeout(() => {
-      window.location.href = '/' // Full page reload to refresh navbar
-    }, 2000)
+    // Check if we have a redirect URL in sessionStorage
+    const redirectUrl = sessionStorage.getItem('wahoo_redirect_after_auth')
+
+    if (redirectUrl) {
+      sessionStorage.removeItem('wahoo_redirect_after_auth')
+      console.info(`Redirecting to ${redirectUrl}`)
+      setTimeout(() => {
+        window.location.href = redirectUrl // Redirect to original page
+      }, 2000)
+    } else {
+      // Default to home page to reload navbar
+      console.info('Redirecting to home page to reload navbar')
+      setTimeout(() => {
+        window.location.href = '/' // Full page reload to refresh navbar
+      }, 2000)
+    }
   } catch (err) {
     console.error('Wahoo callback error:', err)
   }

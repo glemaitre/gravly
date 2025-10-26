@@ -15,7 +15,12 @@ export default {
     expandSidebar: 'Développer la barre latérale',
     title: 'Menu',
     settings: 'Paramètres',
-    support: 'Support'
+    support: 'Support',
+    connectedServices: 'Services connectés',
+    connected: 'Connecté',
+    notConnected: 'Non connecté',
+    connectWahoo: 'Se connecter à Wahoo',
+    disconnect: 'Se déconnecter'
   },
 
   // Chart and controls
@@ -249,7 +254,22 @@ export default {
     notRouteOwner: 'Seul le propriétaire de la sortie peut la supprimer',
     notSegmentOwner: 'Seul le propriétaire du segment peut le supprimer',
     routeNotOwned: 'Vous ne possédez pas cette sortie',
-    segmentNotOwned: 'Vous ne possédez pas ce segment'
+    segmentNotOwned: 'Vous ne possédez pas ce segment',
+    uploadToWahoo: 'Télécharger vers Wahoo',
+    uploadingToWahoo: 'Téléchargement vers Wahoo Cloud',
+    uploadingToWahooMessage: 'Veuillez patienter pendant que votre itinéraire est téléchargé vers Wahoo...',
+    uploadToWahooSuccess: 'Itinéraire téléchargé vers Wahoo avec succès',
+    uploadToWahooError: 'Échec du téléchargement de l\'itinéraire vers Wahoo',
+    wahooAuthRequired: 'Vous devez d\'abord autoriser Wahoo. Souhaitez-vous autoriser maintenant ?',
+    wahooAuthError: 'Échec de l\'initiation de l\'autorisation Wahoo',
+    wahooAuthModalTitle: 'Autoriser Wahoo',
+    wahooAuthModalMessage: 'Vous devez autoriser Gravly à télécharger des itinéraires vers votre compte Wahoo. Vous serez redirigé vers Wahoo pour compléter l\'autorisation.',
+    wahooAuthButton: 'Autoriser',
+    wahooUploadSuccessTitle: 'Téléchargement réussi',
+    wahooUploadErrorTitle: 'Échec du téléchargement',
+    actionsGeneral: 'Général',
+    actionsWahoo: 'Wahoo Cloud',
+    wahooNotConnectedTooltip: 'Connectez-vous à Wahoo dans le menu pour télécharger des itinéraires'
   },
 
   // Strava integration
@@ -477,7 +497,9 @@ export default {
     save: 'Sauvegarder',
     saving: 'Sauvegarde...',
     delete: 'Supprimer',
-    deleting: 'Suppression...'
+    deleting: 'Suppression...',
+    retry: 'Réessayer',
+    ok: 'OK'
   },
 
   // Footer
@@ -500,7 +522,14 @@ export default {
       description:
         'Connectez votre appareil Wahoo pour synchroniser les itinéraires et activités.',
       authorizeButton: 'Autoriser avec Wahoo',
-      authorizing: 'Autorisation...'
+      authorizing: 'Autorisation...',
+      connected: 'Connecté à Wahoo',
+      notConnected: 'Non connecté à Wahoo',
+      refreshButton: 'Actualiser le Token',
+      uploadRouteButton: 'Télécharger le Parcours vers Wahoo',
+      selectRoute: 'Sélectionner le Parcours à Télécharger',
+      uploadButton: 'Télécharger',
+      noRoutes: 'Aucun parcours disponible'
     },
     info: {
       title: 'À propos du Laboratoire',

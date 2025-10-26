@@ -5,6 +5,21 @@
 
 import { ref } from 'vue'
 
+export interface WahooRoute {
+  id: string
+  name: string
+  distance: number
+  elevation_gain: number
+  type: string
+  created_at: string
+  updated_at: string
+  points: Array<{
+    lat: number
+    lng: number
+    elevation?: number
+  }>
+}
+
 export interface WahooActivity {
   id: string
   name: string
@@ -184,6 +199,9 @@ export function useWahooApi() {
       clearAuth()
 
       try {
+        // Store current path for redirect after auth
+        const currentPath = window.location.pathname + window.location.search
+        sessionStorage.setItem('wahoo_redirect_after_auth', currentPath)
         const authUrl = await getAuthUrl()
         window.location.href = authUrl
       } catch (error) {
@@ -287,6 +305,126 @@ export function useWahooApi() {
   // Initialize auth state on composable creation
   initializeAuth()
 
+  /**
+   * Get available routes
+   */
+  async function getRoutes(): Promise<WahooRoute[]> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await fetch('/api/wahoo/routes')
+
+      if (!response.ok) {
+        await response.text()
+        if (response.status === 401) {
+          await handleAuthenticationError()
+          throw new Error('Authentication failed - redirecting to login')
+        }
+        throw new Error(`Failed to get routes: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      return data.routes || []
+    } catch (err: any) {
+      error.value = err.message || 'Failed to get routes'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Upload a route to Wahoo
+   */
+  async function uploadRoute(routeId: string): Promise<void> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await fetch(`/api/wahoo/routes/${routeId}/upload`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        await response.text()
+        if (response.status === 401) {
+          await handleAuthenticationError()
+          throw new Error('Authentication failed - redirecting to login')
+        }
+        throw new Error(`Failed to upload route: ${response.statusText}`)
+      }
+
+      await response.json()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to upload route'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Deauthorize the application and clear tokens
+   */
+  async function deauthorize(): Promise<void> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await fetch('/api/wahoo/deauthorize', {
+        method: 'POST'
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to deauthorize')
+      }
+
+      // Clear local auth state
+      clearAuth()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to deauthorize'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Get user information from Wahoo
+   */
+  async function getUser(): Promise<any> {
+    try {
+      isLoading.value = true
+      error.value = null
+
+      const response = await fetch('/api/wahoo/user')
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          await handleAuthenticationError()
+          throw new Error('Authentication failed')
+        }
+        throw new Error('Failed to get user info')
+      }
+
+      const data = await response.json()
+
+      // Update auth state with user info
+      authState.value.user = data
+
+      // Save to localStorage
+      localStorage.setItem('wahoo_auth', JSON.stringify(authState.value))
+
+      return data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to get user info'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     // State
     isLoading,
@@ -308,6 +446,10 @@ export function useWahooApi() {
     getActivities,
     getActivityRoute,
     handleAuthenticationError,
-    attemptTokenRefresh
+    attemptTokenRefresh,
+    getRoutes,
+    uploadRoute,
+    deauthorize,
+    getUser
   }
 }

@@ -43,7 +43,6 @@ onMounted(async () => {
     const urlParams = new URLSearchParams(window.location.search)
     const code = urlParams.get('code')
     const error = urlParams.get('error')
-    const state = urlParams.get('state')
 
     if (error) {
       throw new Error(`Strava authorization error: ${error}`)
@@ -56,16 +55,22 @@ onMounted(async () => {
     await exchangeCode(code)
     console.info('Strava authentication successful')
 
-    // Always redirect to home page to trigger navbar reload
-    // Store the original destination in localStorage for later redirect
-    if (state && state !== 'strava_auth') {
-      localStorage.setItem('strava_redirect_after_auth', state)
-    }
+    // Check if we have a redirect URL in sessionStorage
+    const redirectUrl = sessionStorage.getItem('strava_redirect_after_auth')
 
-    console.info('Redirecting to home page to reload navbar')
-    setTimeout(() => {
-      window.location.href = '/' // Full page reload to refresh navbar
-    }, 2000)
+    if (redirectUrl) {
+      sessionStorage.removeItem('strava_redirect_after_auth')
+      console.info(`Redirecting to ${redirectUrl}`)
+      setTimeout(() => {
+        window.location.href = redirectUrl // Redirect to original page
+      }, 2000)
+    } else {
+      // Default to home page to reload navbar
+      console.info('Redirecting to home page to reload navbar')
+      setTimeout(() => {
+        window.location.href = '/' // Full page reload to refresh navbar
+      }, 2000)
+    }
   } catch (err) {
     console.error('Strava callback error:', err)
   }
