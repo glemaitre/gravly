@@ -90,7 +90,7 @@
                       : ''
                   "
                 >
-                  <i class="fa-solid fa-cloud-slash"></i>
+                  <i class="fa-solid fa-trash"></i>
                   {{
                     isDeletingFromWahoo
                       ? t('segmentDetail.deletingFromWahoo')
@@ -381,7 +381,7 @@
     >
       <div class="confirm-modal" @click.stop>
         <div class="confirm-modal-header">
-          <h3>
+          <h3 class="confirm-modal-title">
             <i class="fa-solid fa-trash"></i>
             {{
               segment?.track_type === 'route'
@@ -389,9 +389,6 @@
                 : t('segmentDetail.deleteSegment')
             }}
           </h3>
-          <button class="confirm-modal-close" @click="closeDeleteConfirmModal">
-            <i class="fa-solid fa-times"></i>
-          </button>
         </div>
         <div class="confirm-modal-body">
           <p>
@@ -561,13 +558,10 @@
     >
       <div class="confirm-modal" @click.stop>
         <div class="confirm-modal-header">
-          <h3>
-            <i class="fa-solid fa-cloud-slash"></i>
+          <h3 class="confirm-modal-title">
+            <i class="fa-solid fa-trash"></i>
             {{ t('segmentDetail.deleteFromWahooConfirm') }}
           </h3>
-          <button class="confirm-modal-close" @click="closeWahooDeleteConfirmModal">
-            <i class="fa-solid fa-times"></i>
-          </button>
         </div>
         <div class="confirm-modal-body">
           <p>{{ t('segmentDetail.deleteFromWahooConfirmMessage') }}</p>
@@ -2838,6 +2832,9 @@ onUnmounted(() => {
 
 .confirm-modal-header h3,
 .confirm-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   margin: 0;
   font-size: 1.5rem;
   font-weight: 600;
