@@ -279,6 +279,9 @@ export default {
     deleteFromWahooError: "Échec de la suppression de l'itinéraire de Wahoo",
     deletingFromWahooMessage:
       'Veuillez patienter pendant que votre itinéraire est supprimé de Wahoo...',
+    deleting: 'Suppression',
+    deletingMessage: 'Veuillez patienter pendant que votre itinéraire est supprimé...',
+    deleteSuccess: 'Sortie supprimée avec succès',
     actionsGeneral: 'Général',
     actionsWahoo: 'Wahoo Cloud',
     wahooNotConnectedTooltip:

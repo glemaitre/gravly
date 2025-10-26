@@ -382,6 +382,7 @@
       <div class="confirm-modal" @click.stop>
         <div class="confirm-modal-header">
           <h3>
+            <i class="fa-solid fa-trash"></i>
             {{
               segment?.track_type === 'route'
                 ? t('segmentDetail.deleteRoute')
@@ -412,6 +413,55 @@
           <button @click="confirmDelete" class="btn-delete" :disabled="isDeleting">
             <i v-if="isDeleting" class="fa-solid fa-spinner fa-spin"></i>
             {{ isDeleting ? t('common.deleting') : t('common.delete') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Result Modal -->
+    <div
+      v-if="showDeleteResultModal"
+      class="confirm-modal-overlay"
+      @click="closeDeleteResultModal"
+    >
+      <div class="confirm-modal" @click.stop>
+        <div class="confirm-modal-header">
+          <h3 class="confirm-modal-title">
+            <i class="fa-solid fa-trash"></i>
+            {{ t('segmentDetail.deleting') }}
+          </h3>
+        </div>
+        <div class="confirm-modal-body">
+          <div class="wahoo-upload-status">
+            <i
+              class="fa-solid"
+              :class="
+                isDeleting
+                  ? 'fa-spinner fa-spin'
+                  : deleteError
+                    ? 'fa-times-circle'
+                    : 'fa-check-circle'
+              "
+              :style="{
+                color: deleteError ? 'var(--status-error)' : 'var(--brand-primary)'
+              }"
+            ></i>
+            <p>
+              {{
+                isDeleting
+                  ? t('segmentDetail.deletingMessage')
+                  : deleteError || t('segmentDetail.deleteSuccess')
+              }}
+            </p>
+          </div>
+        </div>
+        <div class="confirm-modal-footer">
+          <button
+            v-if="!isDeleting"
+            @click="closeDeleteResultModal"
+            class="btn-primary-modal"
+          >
+            {{ t('common.ok') }}
           </button>
         </div>
       </div>
@@ -532,7 +582,7 @@
           </button>
           <button
             @click="proceedWithWahooDelete"
-            class="btn-danger"
+            class="btn-delete"
             :disabled="isDeletingFromWahoo"
           >
             <i v-if="isDeletingFromWahoo" class="fa-solid fa-spinner fa-spin"></i>
@@ -647,6 +697,8 @@ const exportButton = ref<HTMLElement | null>(null)
 const exportMenu = ref<HTMLElement | null>(null)
 const showDeleteConfirmModal = ref(false) // State for delete confirmation modal
 const isDeleting = ref(false) // State for delete operation
+const showDeleteResultModal = ref(false) // State for delete result modal
+const deleteError = ref<string | null>(null) // Error message for delete result
 
 // Wahoo upload state
 const showWahooAuthModal = ref(false) // State for Wahoo authorization modal
@@ -750,17 +802,26 @@ function closeDeleteConfirmModal() {
   showDeleteConfirmModal.value = false
 }
 
+function closeDeleteResultModal() {
+  showDeleteResultModal.value = false
+  deleteError.value = null
+  // Redirect to explorer after closing result modal
+  router.push('/explorer')
+}
+
 async function confirmDelete() {
   if (!segment.value || !authState.value.isAuthenticated || !authState.value.athlete) {
     return
   }
 
+  closeDeleteConfirmModal()
+
+  // Show result modal immediately
+  deleteError.value = null
+  showDeleteResultModal.value = true
   isDeleting.value = true
 
   const isRoute = segment.value.track_type === 'route'
-  const successMessage = isRoute
-    ? t('segmentDetail.deleteRouteSuccess')
-    : t('segmentDetail.deleteSegmentSuccess')
   const errorMessage = isRoute
     ? t('segmentDetail.deleteRouteError')
     : t('segmentDetail.deleteSegmentError')
@@ -779,17 +840,11 @@ async function confirmDelete() {
       throw new Error(errorText || errorMessage)
     }
 
-    // Show success message (could be improved with a toast notification)
-    alert(successMessage)
-
-    // Close modal
-    closeDeleteConfirmModal()
-
-    // Redirect to explorer
-    router.push('/explorer')
+    // Delete successful - modal will show success state
   } catch (err: any) {
     console.error('Error deleting:', err)
-    alert(err.message || errorMessage)
+    deleteError.value = err.message || errorMessage
+    // Modal will show error state
   } finally {
     isDeleting.value = false
   }

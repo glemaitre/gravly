@@ -278,6 +278,9 @@ export default {
     deleteFromWahooError: 'Failed to delete route from Wahoo',
     deletingFromWahooMessage:
       'Please wait while your route is being deleted from Wahoo...',
+    deleting: 'Deleting',
+    deletingMessage: 'Please wait while your route is being deleted...',
+    deleteSuccess: 'Route deleted successfully',
     actionsGeneral: 'General',
     actionsWahoo: 'Wahoo Cloud',
     wahooNotConnectedTooltip: 'Connect to Wahoo in the menu to upload routes'
