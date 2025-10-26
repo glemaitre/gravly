@@ -3401,7 +3401,6 @@ describe('SegmentDetail Delete Route Functionality', () => {
     expect(generalItems[0].text()).toContain('segmentDetail.shareLink')
     expect(generalItems[1].text()).toContain('segmentDetail.downloadGPX')
     expect(generalItems[2].text()).toContain('segmentDetail.deleteRoute')
-    expect(generalItems[2].classes()).toContain('dropdown-item-danger')
 
     // Second section (Wahoo Cloud) should have: Upload to Wahoo, Delete from Wahoo
     const wahooItems = dropdownSections[1].findAll('.dropdown-item')

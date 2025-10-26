@@ -253,7 +253,7 @@ export default {
     notSegmentOwner: 'Only the segment owner can delete it',
     routeNotOwned: 'You do not own this route',
     segmentNotOwned: 'You do not own this segment',
-    uploadToWahoo: 'Upload to Wahoo',
+    uploadToWahoo: 'Upload',
     uploadingToWahoo: 'Uploading to Wahoo Cloud',
     uploadingToWahooMessage:
       'Please wait while your route is being uploaded to Wahoo...',
@@ -268,7 +268,7 @@ export default {
     wahooAuthButton: 'Authorize',
     wahooUploadSuccessTitle: 'Upload Successful',
     wahooUploadErrorTitle: 'Upload Failed',
-    deleteFromWahoo: 'Delete from Wahoo',
+    deleteFromWahoo: 'Delete',
     deletingFromWahoo: 'Deleting from Wahoo',
     deleteFromWahooConfirm: 'Delete from Wahoo Cloud',
     deleteFromWahooConfirmMessage:

@@ -254,7 +254,7 @@ export default {
     notSegmentOwner: 'Seul le propriétaire du segment peut le supprimer',
     routeNotOwned: 'Vous ne possédez pas cette sortie',
     segmentNotOwned: 'Vous ne possédez pas ce segment',
-    uploadToWahoo: 'Télécharger vers Wahoo',
+    uploadToWahoo: 'Télécharger',
     uploadingToWahoo: 'Téléchargement vers Wahoo Cloud',
     uploadingToWahooMessage:
       'Veuillez patienter pendant que votre itinéraire est téléchargé vers Wahoo...',
@@ -269,7 +269,7 @@ export default {
     wahooAuthButton: 'Autoriser',
     wahooUploadSuccessTitle: 'Téléchargement réussi',
     wahooUploadErrorTitle: 'Échec du téléchargement',
-    deleteFromWahoo: 'Supprimer de Wahoo',
+    deleteFromWahoo: 'Supprimer',
     deletingFromWahoo: 'Suppression de Wahoo',
     deleteFromWahooConfirm: 'Supprimer de Wahoo Cloud',
     deleteFromWahooConfirmMessage:

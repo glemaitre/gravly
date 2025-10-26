@@ -40,7 +40,7 @@
                 <button
                   v-if="segment?.track_type === 'route'"
                   @click="showDeleteConfirmation"
-                  class="dropdown-item dropdown-item-indented dropdown-item-danger"
+                  class="dropdown-item dropdown-item-indented"
                   :disabled="!isOwner"
                   :title="!isOwner ? t('segmentDetail.notRouteOwner') : ''"
                 >
