@@ -46,7 +46,6 @@ class StravaConfig(NamedTuple):
 
     client_id: str
     client_secret: str
-    tokens_file_path: str
 
 
 class WahooConfig(NamedTuple):
@@ -263,7 +262,6 @@ def load_environment_config(
     required_strava_params = [
         "STRAVA_CLIENT_ID",
         "STRAVA_CLIENT_SECRET",
-        "STRAVA_TOKENS_FILE_PATH",
     ]
     missing_strava_params = [
         param for param in required_strava_params if not os.getenv(param)
@@ -273,17 +271,12 @@ def load_environment_config(
         raise ValueError(
             f"Missing required Strava configuration parameters: "
             f"{', '.join(missing_strava_params)}. "
-            f"Please set these environment variables in your .env/strava file. "
-            f"STRAVA_TOKENS_FILE_PATH must be set to a secure location for "
-            f"storing tokens."
+            f"Please set these environment variables in your .env/strava file."
         )
-
-    tokens_file_path = os.getenv("STRAVA_TOKENS_FILE_PATH")
 
     strava_config = StravaConfig(
         client_id=os.getenv("STRAVA_CLIENT_ID"),
         client_secret=os.getenv("STRAVA_CLIENT_SECRET"),
-        tokens_file_path=tokens_file_path,
     )
 
     # Load Wahoo configuration

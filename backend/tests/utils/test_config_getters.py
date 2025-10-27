@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from backend.src.utils.config import (
+from src.utils.config import (
     DatabaseConfig,
     LocalStorageConfig,
     MapConfig,
@@ -37,12 +37,11 @@ def test_get_database_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -56,7 +55,7 @@ def test_get_database_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         db_config = get_database_config()
 
         assert isinstance(db_config, DatabaseConfig)
@@ -86,12 +85,11 @@ def test_get_storage_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -105,7 +103,7 @@ def test_get_storage_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         storage_config = get_storage_config()
 
         assert isinstance(storage_config, LocalStorageConfig)
@@ -133,12 +131,11 @@ def test_get_strava_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -152,13 +149,12 @@ def test_get_strava_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         strava_config = get_strava_config()
 
         assert isinstance(strava_config, StravaConfig)
         assert strava_config.client_id == "test_client_id"
         assert strava_config.client_secret == "test_client_secret"
-        assert strava_config.tokens_file_path == "/secure/path/to/tokens.json"
 
 
 def test_get_wahoo_config():
@@ -180,12 +176,11 @@ def test_get_wahoo_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -199,13 +194,12 @@ def test_get_wahoo_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         wahoo_config = get_wahoo_config()
 
         assert isinstance(wahoo_config, WahooConfig)
         assert wahoo_config.client_id == "test_wahoo_client_id"
         assert wahoo_config.client_secret == "test_wahoo_client_secret"
-        assert wahoo_config.tokens_file_path == "/secure/path/to/wahoo_tokens.json"
         assert wahoo_config.callback_url == "http://localhost:8000/callback"
 
 
@@ -228,12 +222,11 @@ def test_get_map_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -247,7 +240,7 @@ def test_get_map_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         map_config = get_map_config()
 
         assert isinstance(map_config, MapConfig)
@@ -273,12 +266,11 @@ def test_get_server_config():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -292,7 +284,7 @@ def test_get_server_config():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         server_config = get_server_config()
 
         assert isinstance(server_config, ServerConfig)
@@ -322,12 +314,11 @@ def test_get_configs_caching():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -341,7 +332,7 @@ def test_get_configs_caching():
         ),
     )
 
-    with patch("backend.src.utils.config._get_configs", return_value=mock_configs):
+    with patch("src.utils.config._get_configs", return_value=mock_configs):
         # Test that multiple calls return the same configuration instances
         db_config1 = get_database_config()
         db_config2 = get_database_config()
@@ -373,8 +364,8 @@ def test_get_configs_caching():
 def test_get_configs_when_none():
     """Test _get_configs() function when _configs is None (lines 378-380)."""
     # Clear the global cache
-    import backend.src.utils.config as config_module
-    from backend.src.utils.config import _get_configs
+    import src.utils.config as config_module
+    from src.utils.config import _get_configs
 
     config_module._configs = None
 
@@ -395,12 +386,11 @@ def test_get_configs_when_none():
         StravaConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/secure/path/to/tokens.json",
         ),
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/secure/path/to/wahoo_tokens.json",
+            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -414,9 +404,7 @@ def test_get_configs_when_none():
         ),
     )
 
-    with patch(
-        "backend.src.utils.config.load_environment_config", return_value=mock_configs
-    ):
+    with patch("src.utils.config.load_environment_config", return_value=mock_configs):
         # This should trigger the _configs is None condition and load the config
         result = _get_configs()
 

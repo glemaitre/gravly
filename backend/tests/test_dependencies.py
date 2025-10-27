@@ -77,23 +77,12 @@ def test_get_storage_returns_manager(app):
     assert manager is not None
 
 
-def test_get_strava_service_raises_when_not_initialized():
-    """Test that get_strava_service raises RuntimeError when strava is None."""
-    original_strava = dependencies.strava
-    dependencies.strava = None
-
-    try:
-        with pytest.raises(RuntimeError, match="Strava service not initialized"):
-            dependencies.get_strava_service()
-    finally:
-        dependencies.strava = original_strava
-
-
-def test_get_strava_service_returns_service():
-    """Test that get_strava_service returns the Strava service."""
-    service = dependencies.get_strava_service()
-    assert service is not None
-    assert hasattr(service, "get_authorization_url")
+def test_get_strava_config():
+    """Test that get_strava_config returns the Strava configuration."""
+    config = dependencies.get_strava_config()
+    assert config is not None
+    assert hasattr(config, "client_id")
+    assert hasattr(config, "client_secret")
 
 
 def test_configuration_loaded_at_module_level():
@@ -104,7 +93,8 @@ def test_configuration_loaded_at_module_level():
     assert dependencies.map_config is not None
 
 
-def test_strava_service_initialized_at_module_level():
-    """Test that Strava service is initialized at module level."""
-    assert dependencies.strava is not None
-    assert isinstance(dependencies.strava, dependencies.StravaService)
+def test_strava_config_loaded_at_module_level():
+    """Test that Strava configuration is loaded at module level."""
+    assert dependencies.strava_config is not None
+    assert hasattr(dependencies.strava_config, "client_id")
+    assert hasattr(dependencies.strava_config, "client_secret")

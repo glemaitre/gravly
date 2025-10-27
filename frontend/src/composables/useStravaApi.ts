@@ -235,7 +235,13 @@ export function useStravaApi() {
       isLoading.value = true
       error.value = null
 
-      const url = `/api/strava/activities?page=${page}&per_page=${perPage}`
+      // Get strava_id from athlete info
+      const stravaId = authState.value.athlete?.id
+      if (!stravaId) {
+        throw new Error('No Strava user ID available')
+      }
+
+      const url = `/api/strava/activities?strava_id=${stravaId}&page=${page}&per_page=${perPage}`
       const response = await fetch(url)
 
       if (!response.ok) {
@@ -266,7 +272,13 @@ export function useStravaApi() {
       isLoading.value = true
       error.value = null
 
-      const url = `/api/strava/activities/${activityId}/gpx`
+      // Get strava_id from athlete info
+      const stravaId = authState.value.athlete?.id
+      if (!stravaId) {
+        throw new Error('No Strava user ID available')
+      }
+
+      const url = `/api/strava/activities/${activityId}/gpx?strava_id=${stravaId}`
       const response = await fetch(url)
 
       if (!response.ok) {

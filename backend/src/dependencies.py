@@ -10,7 +10,6 @@ from tempfile import TemporaryDirectory
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .services.strava import StravaService
 from .services.wahoo.service import WahooService
 from .utils.config import (
     DatabaseConfig,
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 # Global state
 temp_dir: TemporaryDirectory | None = None
 storage_manager: StorageManager | None = None
-strava: StravaService = StravaService(_strava_config)  # Initialize at module level
+# Strava service is now created per-request with database session
 wahoo: WahooService = WahooService(_wahoo_config)  # Initialize at module level
 engine = None
 SessionLocal = None
@@ -93,22 +92,15 @@ def get_storage() -> StorageManager:
     return storage_manager
 
 
-def get_strava_service() -> StravaService:
-    """Dependency for Strava service.
+def get_strava_config() -> StravaConfig:
+    """Get Strava configuration.
 
     Returns
     -------
-    StravaService
-        Strava service instance
-
-    Raises
-    ------
-    RuntimeError
-        If Strava service is not initialized
+    StravaConfig
+        Strava configuration
     """
-    if strava is None:
-        raise RuntimeError("Strava service not initialized")
-    return strava
+    return strava_config
 
 
 def get_wahoo_service() -> WahooService:

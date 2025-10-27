@@ -6,9 +6,3 @@ STRAVA_CLIENT_ID=your_client_id_here
 
 # Required: Your Strava application client secret
 STRAVA_CLIENT_SECRET=your_client_secret_here
-
-# Required: Path for storing Strava tokens
-# For security, use an absolute path outside the project directory
-# Example: /home/user/.config/strava_tokens.json
-# Example: /secure/path/to/strava_tokens.json
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json

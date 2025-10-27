@@ -3,8 +3,7 @@
 import os
 
 import pytest
-
-from backend.src.utils.config import (
+from src.utils.config import (
     DatabaseConfig,
     LocalStorageConfig,
     MapConfig,
@@ -38,8 +37,8 @@ DB_PASSWORD=test_password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -81,7 +80,6 @@ WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
     # Check Strava configuration
     assert strava_config.client_id == "test_client_id"
     assert strava_config.client_secret == "test_client_secret"
-    assert strava_config.tokens_file_path == "/secure/path/to/tokens.json"
 
 
 def test_load_s3_storage_configuration(tmp_path):
@@ -109,7 +107,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -165,7 +163,7 @@ DB_PORT=5432""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -209,7 +207,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -265,7 +263,7 @@ DB_USER=postgres""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -308,7 +306,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -453,7 +451,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -498,7 +496,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -596,7 +594,6 @@ WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
     error_message = str(exc_info.value)
     assert "Missing required Strava configuration parameters" in error_message
     assert "STRAVA_CLIENT_SECRET" in error_message
-    assert "STRAVA_TOKENS_FILE_PATH" in error_message
 
 
 def test_missing_strava_file(tmp_path):
@@ -628,113 +625,6 @@ DB_PASSWORD=password""")
     assert "and no example file available" in error_message
 
 
-def test_custom_strava_tokens_file_path(tmp_path):
-    """Test custom Strava tokens file path configuration."""
-    env_folder = tmp_path / ".env"
-    env_folder.mkdir()
-
-    # Create storage file
-    storage_file = env_folder / "storage"
-    storage_file.write_text("""STORAGE_TYPE=local
-LOCAL_STORAGE_ROOT=./storage
-LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
-
-    # Create database file
-    database_file = env_folder / "database"
-    database_file.write_text("""DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=cycling
-DB_USER=postgres
-DB_PASSWORD=password""")
-
-    # Create Strava file with custom tokens path
-    custom_tokens_path = "/secure/path/to/tokens.json"
-    strava_file = env_folder / "strava"
-    strava_file.write_text(f"""STRAVA_CLIENT_ID=test_client_id
-STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json
-STRAVA_TOKENS_FILE_PATH={custom_tokens_path}""")
-
-    # Create Wahoo file
-    wahoo_file = env_folder / "wahoo"
-    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
-WAHOO_CLIENT_SECRET=test_wahoo_client_secret
-WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
-
-    # Create thunderforest file
-    thunderforest_file = env_folder / "thunderforest"
-    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
-
-    (
-        db_config,
-        storage_config,
-        strava_config,
-        wahoo_config,
-        map_config,
-        server_config,
-    ) = load_environment_config(project_root=tmp_path)
-
-    # Check Strava configuration
-    assert strava_config.client_id == "test_client_id"
-    assert strava_config.client_secret == "test_client_secret"
-    assert strava_config.tokens_file_path == custom_tokens_path
-
-
-def test_missing_strava_tokens_file_path(tmp_path):
-    """Test error when STRAVA_TOKENS_FILE_PATH is missing."""
-    import os
-
-    # Clear any existing Strava environment variables to avoid interference
-    strava_env_vars = [
-        "STRAVA_CLIENT_ID",
-        "STRAVA_CLIENT_SECRET",
-        "STRAVA_TOKENS_FILE_PATH",
-    ]
-    for param in strava_env_vars:
-        if param in os.environ:
-            del os.environ[param]
-
-    env_folder = tmp_path / ".env"
-    env_folder.mkdir()
-
-    # Create storage file
-    storage_file = env_folder / "storage"
-    storage_file.write_text("""STORAGE_TYPE=local
-LOCAL_STORAGE_ROOT=./storage
-LOCAL_STORAGE_BASE_URL=http://localhost:8000/storage""")
-
-    # Create database file
-    database_file = env_folder / "database"
-    database_file.write_text("""DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=cycling
-DB_USER=postgres
-DB_PASSWORD=password""")
-
-    # Create Strava file without tokens file path
-    strava_file = env_folder / "strava"
-    strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
-STRAVA_CLIENT_SECRET=test_client_secret""")
-
-    # Create Wahoo file
-    wahoo_file = env_folder / "wahoo"
-    wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
-WAHOO_CLIENT_SECRET=test_wahoo_client_secret
-WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
-
-    # Create thunderforest file
-    thunderforest_file = env_folder / "thunderforest"
-    thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
-
-    with pytest.raises(ValueError) as exc_info:
-        load_environment_config(project_root=tmp_path)
-
-    error_message = str(exc_info.value)
-    assert "Missing required Strava configuration parameters" in error_message
-    assert "STRAVA_TOKENS_FILE_PATH" in error_message
-    assert "must be set to a secure location" in error_message
-
-
 def test_strava_file_not_found_with_example(tmp_path):
     """Test error when Strava file is missing but example file exists."""
     env_folder = tmp_path / ".env"
@@ -757,8 +647,7 @@ DB_PASSWORD=password""")
     # Create example file but NOT the actual strava file
     strava_example_file = env_folder / "strava.example"
     strava_example_file.write_text("""STRAVA_CLIENT_ID=your_client_id_here
-STRAVA_CLIENT_SECRET=your_client_secret_here
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json""")
+STRAVA_CLIENT_SECRET=your_client_secret_here""")
 
     with pytest.raises(FileNotFoundError) as exc_info:
         load_environment_config(project_root=tmp_path)
@@ -823,8 +712,7 @@ DB_PASSWORD=password""")
     # Create strava.example file
     strava_example_file = env_folder / "strava.example"
     strava_example_file.write_text("""STRAVA_CLIENT_ID=your_client_id_here
-STRAVA_CLIENT_SECRET=your_client_secret_here
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/strava_tokens.json""")
+STRAVA_CLIENT_SECRET=your_client_secret_here""")
 
     # Mock Path.exists to simulate that strava file doesn't exist
     # but strava.example does exist
@@ -877,7 +765,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -921,7 +809,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -968,7 +856,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"
@@ -1017,7 +905,7 @@ DB_PASSWORD=password""")
     strava_file = env_folder / "strava"
     strava_file.write_text("""STRAVA_CLIENT_ID=test_client_id
 STRAVA_CLIENT_SECRET=test_client_secret
-STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
+""")
 
     # Create Wahoo file
     wahoo_file = env_folder / "wahoo"

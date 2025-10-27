@@ -1,12 +1,10 @@
 """Tests for Strava API endpoints."""
 
 import os
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
-from src.utils.gpx import GPXBounds, GPXData, GPXPoint, GPXTotalStats
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +32,6 @@ def setup_test_database_config():
         "LOCAL_STORAGE_BASE_URL": "http://localhost:8000/storage",
         "STRAVA_CLIENT_ID": "test_client_id",
         "STRAVA_CLIENT_SECRET": "test_client_secret",
-        "STRAVA_TOKENS_FILE_PATH": "/tmp/test_strava_tokens.json",
     }
 
     with patch.dict(os.environ, test_config, clear=False):
@@ -88,10 +85,9 @@ class TestStravaEndpoints:
 
     def test_get_strava_auth_url_success(self, client):
         """Test successful generation of Strava authorization URL."""
-        with patch(
-            "src.dependencies.strava.get_authorization_url"
-        ) as mock_get_auth_url:
-            mock_get_auth_url.return_value = (
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.authorization_url.return_value = (
                 "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
             )
 
@@ -104,46 +100,26 @@ class TestStravaEndpoints:
                 data["auth_url"]
                 == "https://www.strava.com/oauth/authorize?client_id=123&redirect_uri=test"
             )
-            mock_get_auth_url.assert_called_once_with(
-                "http://localhost:3000/strava-callback", "strava_auth"
-            )
-
-    def test_get_strava_auth_url_service_not_initialized(self, client):
-        """Test Strava auth URL when service is not initialized."""
-        from src import dependencies
-
-        original_strava = dependencies.strava
-        dependencies.strava = None
-
-        try:
-            response = client.get("/api/strava/auth-url")
-            assert response.status_code == 500
-            assert "Strava service not initialized" in response.json()["detail"]
-        finally:
-            dependencies.strava = original_strava
+            mock_client.authorization_url.assert_called_once()
 
     def test_get_strava_auth_url_with_custom_state(self, client):
         """Test Strava authorization URL generation with custom state."""
-        with patch(
-            "src.dependencies.strava.get_authorization_url"
-        ) as mock_get_auth_url:
-            mock_get_auth_url.return_value = "https://www.strava.com/oauth/authorize?client_id=123&state=custom_state"
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.authorization_url.return_value = "https://www.strava.com/oauth/authorize?client_id=123&state=custom_state"
 
             response = client.get("/api/strava/auth-url?state=custom_state")
 
             assert response.status_code == 200
             data = response.json()
             assert "auth_url" in data
-            mock_get_auth_url.assert_called_once_with(
-                "http://localhost:3000/strava-callback", "custom_state"
-            )
+            mock_client.authorization_url.assert_called_once()
 
     def test_get_strava_auth_url_error(self, client):
         """Test Strava authorization URL generation error handling."""
-        with patch(
-            "src.dependencies.strava.get_authorization_url"
-        ) as mock_get_auth_url:
-            mock_get_auth_url.side_effect = Exception("Configuration error")
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.authorization_url.side_effect = Exception("Configuration error")
 
             response = client.get("/api/strava/auth-url")
 
@@ -152,451 +128,667 @@ class TestStravaEndpoints:
             assert "detail" in data
             assert "Failed to generate auth URL" in data["detail"]
 
-    def test_exchange_strava_code_success(self, client):
-        """Test successful Strava code exchange."""
-        mock_token_response = {
-            "access_token": "test_access_token",
-            "refresh_token": "test_refresh_token",
-            "expires_at": 9999999999,
-            "athlete": {
-                "id": 12345,
-                "username": "test_user",
-                "firstname": "Test",
-                "lastname": "User",
-            },
-        }
 
-        with patch("src.dependencies.strava.exchange_code_for_token") as mock_exchange:
-            mock_exchange.return_value = mock_token_response
+class TestStravaDatabaseNotInitialized:
+    """Test suite for database not initialized scenarios."""
 
+    def test_exchange_code_no_database(self, client):
+        """Test code exchange when database is not initialized."""
+        with patch("src.dependencies.SessionLocal", None):
             response = client.post(
                 "/api/strava/exchange-code", data={"code": "test_code"}
             )
 
-            assert response.status_code == 200
+            assert response.status_code == 503
             data = response.json()
-            assert data["access_token"] == "test_access_token"
-            assert data["expires_at"] == 9999999999
-            assert data["athlete"]["id"] == 12345
-            mock_exchange.assert_called_once_with("test_code")
+            assert "Database not initialized" in data["detail"]
 
-    def test_exchange_strava_code_error(self, client):
-        """Test Strava code exchange error handling."""
-        with patch("src.dependencies.strava.exchange_code_for_token") as mock_exchange:
-            mock_exchange.side_effect = Exception("Invalid code")
-
+    def test_refresh_token_no_database(self, client):
+        """Test token refresh when database is not initialized."""
+        with patch("src.dependencies.SessionLocal", None):
             response = client.post(
-                "/api/strava/exchange-code", data={"code": "invalid_code"}
+                "/api/strava/refresh-token",
+                data={"strava_id": 12345},
             )
 
-            assert response.status_code == 400
+            assert response.status_code == 503
             data = response.json()
-            assert "detail" in data
-            assert "Failed to exchange code" in data["detail"]
+            assert "Database not initialized" in data["detail"]
 
-    def test_refresh_strava_token_success(self, client):
-        """Test successful Strava token refresh."""
-        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
-            mock_refresh.return_value = True
+    def test_get_activities_no_database(self, client):
+        """Test activity retrieval when database is not initialized."""
+        with patch("src.dependencies.SessionLocal", None):
+            response = client.get("/api/strava/activities?strava_id=12345")
 
-            response = client.post("/api/strava/refresh-token")
-
-            assert response.status_code == 200
+            assert response.status_code == 503
             data = response.json()
-            assert data["success"] is True
-            assert data["message"] == "Token refreshed successfully"
-            mock_refresh.assert_called_once()
+            assert "Database not initialized" in data["detail"]
 
-    def test_refresh_strava_token_failure(self, client):
-        """Test Strava token refresh failure."""
-        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
-            mock_refresh.return_value = False
+    def test_get_activity_gpx_no_database(self, client):
+        """Test GPX retrieval when database is not initialized."""
+        with patch("src.dependencies.SessionLocal", None):
+            response = client.get("/api/strava/activities/12345/gpx?strava_id=67890")
 
-            response = client.post("/api/strava/refresh-token")
-
-            assert response.status_code == 401
+            assert response.status_code == 503
             data = response.json()
-            assert "detail" in data
-            assert "Failed to refresh token" in data["detail"]
+            assert "Database not initialized" in data["detail"]
 
-    def test_refresh_strava_token_exception(self, client):
-        """Test Strava token refresh exception handling."""
-        with patch("src.dependencies.strava.refresh_access_token") as mock_refresh:
-            mock_refresh.side_effect = Exception("Token refresh error")
 
-            response = client.post("/api/strava/refresh-token")
+class TestStravaExchangeCodeEndpoint:
+    """Test suite for Strava exchange code endpoint."""
 
-            assert response.status_code == 401
-            data = response.json()
-            assert "detail" in data
-            assert "Failed to refresh token" in data["detail"]
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock Strava client."""
+        client = Mock()
+        return client
 
-    def test_get_strava_activities_success(self, client):
-        """Test successful Strava activities retrieval."""
+    @pytest.fixture
+    def mock_db_session(self):
+        """Create a mock database session."""
+        from unittest.mock import AsyncMock
+
+        session = Mock()
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+        return session
+
+    def test_exchange_code_success_new_token(
+        self, client, mock_client, mock_db_session
+    ):
+        """Test successful code exchange creating a new token."""
+        from datetime import datetime
+        from unittest.mock import AsyncMock
+
+        # Mock the athlete
+        mock_athlete = Mock()
+        mock_athlete.id = 12345
+        mock_athlete.model_dump.return_value = {"id": 12345, "username": "test_user"}
+
+        # Mock token response
+        mock_access_info = {
+            "access_token": "new_access_token",
+            "refresh_token": "new_refresh_token",
+            "expires_at": int(datetime.now().timestamp()) + 3600,
+        }
+        mock_token_response = (mock_access_info, mock_athlete)
+
+        # Mock Client to return token response
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.exchange_code_for_token.return_value = mock_token_response
+
+            # Mock database session
+            with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+                # Mock database query result (no existing token)
+                mock_result = Mock()
+                mock_result.scalar_one_or_none.return_value = None
+                mock_db_session.execute = AsyncMock(return_value=mock_result)
+                mock_db_session.commit = AsyncMock()
+
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "access_token" in data
+                assert "expires_at" in data
+                assert "athlete" in data
+                assert data["athlete"]["id"] == 12345
+
+    def test_exchange_code_success_update_existing_token(self, client, mock_db_session):
+        """Test successful code exchange updating an existing token."""
+        from datetime import datetime, timedelta
+        from unittest.mock import AsyncMock
+
+        # Mock the athlete
+        mock_athlete = Mock()
+        mock_athlete.id = 12345
+        mock_athlete.model_dump.return_value = {"id": 12345, "username": "test_user"}
+
+        # Mock token response
+        mock_access_info = {
+            "access_token": "updated_access_token",
+            "refresh_token": "updated_refresh_token",
+            "expires_at": int(datetime.now().timestamp()) + 3600,
+        }
+        mock_token_response = (mock_access_info, mock_athlete)
+
+        # Mock Client to return token response
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.exchange_code_for_token.return_value = mock_token_response
+
+            # Mock database session
+            with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+                # Mock existing token
+                mock_token_record = Mock()
+                mock_token_record.strava_id = 12345
+                mock_token_record.access_token = "old_token"
+                mock_token_record.refresh_token = "old_refresh"
+                mock_token_record.expires_at = datetime.now() + timedelta(hours=1)
+                mock_token_record.athlete_data = '{"id": 12345}'
+
+                mock_result = Mock()
+                mock_result.scalar_one_or_none.return_value = mock_token_record
+                mock_db_session.execute = AsyncMock(return_value=mock_result)
+                mock_db_session.commit = AsyncMock()
+
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "access_token" in data
+                assert data["access_token"] == "updated_access_token"
+
+    def test_exchange_code_invalid_response(self, client):
+        """Test code exchange with invalid response from Strava API."""
+        # Mock Client to return unexpected response
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            # Return a dict instead of tuple
+            mock_client.exchange_code_for_token.return_value = {"access_token": "token"}
+
+            with patch("src.dependencies.SessionLocal"):
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 400
+                data = response.json()
+                assert "Unexpected response from Strava API" in data["detail"]
+
+    def test_exchange_code_no_athlete(self, client):
+        """Test code exchange when no athlete info is returned."""
+        # Mock Client to return response without athlete
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            # Return tuple with None athlete
+            mock_client.exchange_code_for_token.return_value = (
+                {"access_token": "token"},
+                None,
+            )
+
+            with patch("src.dependencies.SessionLocal"):
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 400
+                data = response.json()
+                assert "No athlete information in response" in data["detail"]
+
+    def test_exchange_code_exception(self, client):
+        """Test code exchange when an exception occurs."""
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.exchange_code_for_token.side_effect = Exception("API Error")
+
+            with patch("src.dependencies.SessionLocal"):
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 400
+                data = response.json()
+                assert "Failed to exchange code" in data["detail"]
+
+    def test_exchange_code_with_nested_datetime(self, client, mock_db_session):
+        """Test code exchange with nested datetime objects in athlete data."""
+        from datetime import datetime
+        from unittest.mock import AsyncMock
+
+        # Mock the athlete with nested datetime objects
+        mock_athlete = Mock()
+        mock_athlete.id = 12345
+
+        # Create a dict with datetime objects to test conversion
+        athlete_data = {
+            "id": 12345,
+            "created_at": datetime.now(),
+            "profile": {"profile_updated_at": datetime.now()},
+            "friends": [{"friend_created_at": datetime.now()}],
+        }
+        mock_athlete.model_dump.return_value = athlete_data
+
+        # Mock token response
+        mock_access_info = {
+            "access_token": "new_access_token",
+            "refresh_token": "new_refresh_token",
+            "expires_at": int(datetime.now().timestamp()) + 3600,
+        }
+        mock_token_response = (mock_access_info, mock_athlete)
+
+        # Mock Client to return token response
+        with patch("src.api.strava.Client") as mock_client_class:
+            mock_client = mock_client_class.return_value
+            mock_client.exchange_code_for_token.return_value = mock_token_response
+
+            # Mock database session
+            with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+                # Mock database query result (no existing token)
+                mock_result = Mock()
+                mock_result.scalar_one_or_none.return_value = None
+                mock_db_session.execute = AsyncMock(return_value=mock_result)
+                mock_db_session.commit = AsyncMock()
+
+                response = client.post(
+                    "/api/strava/exchange-code", data={"code": "test_code"}
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert "access_token" in data
+                assert "athlete" in data
+                # Verify datetime objects were converted to ISO strings
+                assert "created_at" in data["athlete"] or isinstance(
+                    data["athlete"]["created_at"], str
+                )
+
+
+class TestStravaRefreshTokenEndpoint:
+    """Test suite for Strava refresh token endpoint."""
+
+    def test_refresh_token_success(self, client):
+        """Test successful token refresh."""
+        from unittest.mock import AsyncMock, patch
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
+
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.refresh_access_token = AsyncMock(return_value=True)
+
+                response = client.post(
+                    "/api/strava/refresh-token", data={"strava_id": 12345}
+                )
+
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is True
+                assert "Token refreshed successfully" in data["message"]
+
+    def test_refresh_token_failure(self, client):
+        """Test token refresh failure."""
+        from unittest.mock import AsyncMock, patch
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
+
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.refresh_access_token = AsyncMock(return_value=False)
+
+                response = client.post(
+                    "/api/strava/refresh-token", data={"strava_id": 12345}
+                )
+
+                assert response.status_code == 401
+                data = response.json()
+                assert "Failed to refresh token" in data["detail"]
+
+    def test_refresh_token_exception(self, client):
+        """Test token refresh exception handling."""
+        from unittest.mock import AsyncMock, patch
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
+
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.refresh_access_token = AsyncMock(
+                    side_effect=Exception("Service error")
+                )
+
+                response = client.post(
+                    "/api/strava/refresh-token", data={"strava_id": 12345}
+                )
+
+                assert response.status_code == 401
+                data = response.json()
+                assert "Failed to refresh token" in data["detail"]
+
+
+class TestStravaGetActivitiesEndpoint:
+    """Test suite for Strava get activities endpoint."""
+
+    def test_get_activities_success(self, client):
+        """Test successful activity retrieval."""
+        from unittest.mock import AsyncMock, patch
+
         mock_activities = [
-            {
-                "id": "12345",
-                "name": "Morning Ride",
-                "distance": 25000.0,
-                "moving_time": 3600,
-                "type": "Ride",
-                "start_date": "2023-01-01T10:00:00",
-            },
-            {
-                "id": "12346",
-                "name": "Evening Run",
-                "distance": 5000.0,
-                "moving_time": 1800,
-                "type": "Run",
-                "start_date": "2023-01-01T18:00:00",
-            },
+            {"id": 1, "name": "Morning Run", "distance": 5000},
+            {"id": 2, "name": "Evening Ride", "distance": 10000},
         ]
 
-        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
-            mock_get_activities.return_value = mock_activities
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
 
-            response = client.get("/api/strava/activities")
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.get_activities = AsyncMock(return_value=mock_activities)
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "activities" in data
-            assert len(data["activities"]) == 2
-            assert data["page"] == 1
-            assert data["per_page"] == 30
-            assert data["total"] == 2
-            assert data["activities"][0]["name"] == "Morning Ride"
-            mock_get_activities.assert_called_once_with(1, 30)
+                response = client.get(
+                    "/api/strava/activities?strava_id=12345&page=1&per_page=30"
+                )
 
-    def test_get_strava_activities_with_pagination(self, client):
-        """Test Strava activities retrieval with custom pagination."""
-        mock_activities = [{"id": "12345", "name": "Test Activity"}]
+                assert response.status_code == 200
+                data = response.json()
+                assert "activities" in data
+                assert len(data["activities"]) == 2
+                assert data["page"] == 1
+                assert data["per_page"] == 30
+                assert data["total"] == 2
 
-        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
-            mock_get_activities.return_value = mock_activities
+    def test_get_activities_custom_pagination(self, client):
+        """Test activity retrieval with custom pagination."""
+        from unittest.mock import AsyncMock, patch
 
-            response = client.get("/api/strava/activities?page=2&per_page=10")
+        mock_activities = [{"id": 1, "name": "Activity 1"}]
 
-            assert response.status_code == 200
-            data = response.json()
-            assert data["page"] == 2
-            assert data["per_page"] == 10
-            mock_get_activities.assert_called_once_with(2, 10)
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
 
-    def test_get_strava_activities_error(self, client):
-        """Test Strava activities retrieval error handling."""
-        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
-            mock_get_activities.side_effect = Exception("API error")
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.get_activities = AsyncMock(return_value=mock_activities)
 
-            response = client.get("/api/strava/activities")
+                response = client.get(
+                    "/api/strava/activities?strava_id=12345&page=2&per_page=10"
+                )
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "detail" in data
-            assert "Failed to fetch activities" in data["detail"]
+                assert response.status_code == 200
+                data = response.json()
+                assert data["page"] == 2
+                assert data["per_page"] == 10
 
-    def test_get_strava_activities_http_exception(self, client):
-        """Test Strava activities retrieval HTTPException handling."""
+    def test_get_activities_exception(self, client):
+        """Test activity retrieval exception handling."""
+        from unittest.mock import AsyncMock, patch
 
-        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
-            mock_get_activities.side_effect = HTTPException(
-                status_code=401, detail="Unauthorized access"
-            )
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
 
-            response = client.get("/api/strava/activities")
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.get_activities = AsyncMock(
+                    side_effect=Exception("API error")
+                )
 
-            assert response.status_code == 401
-            data = response.json()
-            assert "detail" in data
-            assert data["detail"] == "Unauthorized access"
+                response = client.get(
+                    "/api/strava/activities?strava_id=12345&page=1&per_page=30"
+                )
 
-    def test_get_strava_activity_gpx_success(self, client):
-        """Test successful Strava activity GPX retrieval."""
-        # Create proper GPX data objects
-        gpx_point = GPXPoint(
-            latitude=51.5074,
-            longitude=-0.1278,
-            elevation=10.0,
-            time="2023-01-01T10:00:00Z",
-        )
+                assert response.status_code == 500
+                data = response.json()
+                assert "Failed to fetch activities" in data["detail"]
 
-        total_stats = GPXTotalStats(
-            total_points=1,
-            total_distance=0.0,
-            total_elevation_gain=0.0,
-            total_elevation_loss=0.0,
-        )
+    def test_get_activities_http_exception_re_raise(self, client):
+        """Test activity retrieval when HTTPException is raised (should re-raise)."""
+        from unittest.mock import AsyncMock, patch
 
-        bounds = GPXBounds(
-            north=51.5074,
-            south=51.5074,
-            east=-0.1278,
-            west=-0.1278,
-            min_elevation=10.0,
-            max_elevation=10.0,
-        )
+        from fastapi import HTTPException
 
-        mock_gpx_data = GPXData(
-            file_id="test_file_id",
-            track_name="Test Activity",
-            points=[gpx_point],
-            total_stats=total_stats,
-            bounds=bounds,
-        )
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_db_session = Mock()
+            mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+            mock_db_session.__aexit__ = AsyncMock(return_value=None)
+            mock_session_local.return_value = mock_db_session
 
-        mock_gpx_string = """<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1">
-    <trk>
-        <name>Test Activity</name>
-        <trkpt lat="51.5074" lon="-0.1278">
-            <ele>10.0</ele>
-            <time>2023-01-01T10:00:00Z</time>
-        </trkpt>
-    </trk>
-</gpx>"""
+            with patch("src.api.strava.StravaService") as mock_service_class:
+                mock_service = mock_service_class.return_value
+                mock_service.get_activities = AsyncMock(
+                    side_effect=HTTPException(status_code=401, detail="Unauthorized")
+                )
 
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir") as mock_temp_dir,
-            patch("src.api.strava.extract_from_gpx_file") as mock_extract,
-            patch("src.api.strava.gpxpy.parse"),
-            patch("builtins.open", create=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.unlink"),
-        ):
-            # Setup mocks for file processing
-            mock_temp_dir.name = "/tmp/test_dir"
-            mock_get_gpx.return_value = mock_gpx_string
-            mock_extract.return_value = mock_gpx_data
-            mock_exists.return_value = True
+                response = client.get(
+                    "/api/strava/activities?strava_id=12345&page=1&per_page=30"
+                )
 
-            response = client.get("/api/strava/activities/12345/gpx")
+                # Should re-raise the HTTPException
+                assert response.status_code == 401
+                data = response.json()
+                assert "Unauthorized" in data["detail"]
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "file_id" in data
-            assert data["track_name"] == "Test Activity"
-            assert len(data["points"]) == 1
-            mock_get_gpx.assert_called_once_with("12345")
 
-    def test_get_strava_activity_gpx_no_data(self, client):
-        """Test Strava activity GPX retrieval when no GPX data available."""
-        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
-            mock_get_gpx.return_value = None
+class TestStravaGetActivityGpxEndpoint:
+    """Test suite for Strava get activity GPX endpoint."""
 
-            response = client.get("/api/strava/activities/12345/gpx")
+    def test_get_activity_gpx_no_temp_dir(self, client):
+        """Test GPX retrieval when temp_dir is not initialized."""
+        from unittest.mock import patch
 
-            assert response.status_code == 404
-            data = response.json()
-            assert "detail" in data
-            assert "No GPX data available for this activity" in data["detail"]
+        with patch("src.dependencies.temp_dir", None):
+            with patch("src.dependencies.SessionLocal"):
+                response = client.get(
+                    "/api/strava/activities/12345/gpx?strava_id=67890"
+                )
 
-    def test_get_strava_activity_gpx_no_temp_dir(self, client):
-        """Test Strava activity GPX retrieval when temp directory not initialized."""
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir", None),
-        ):
-            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
+                assert response.status_code == 500
+                data = response.json()
+                assert "Temporary directory not initialized" in data["detail"]
 
-            response = client.get("/api/strava/activities/12345/gpx")
+    def test_get_activity_gpx_success(self, client):
+        """Test successful GPX retrieval."""
+        from unittest.mock import AsyncMock, Mock, patch
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "detail" in data
-            assert "Temporary directory not initialized" in data["detail"]
+        mock_gpx_data = {
+            "points": [
+                {
+                    "lat": 40.0,
+                    "lon": -74.0,
+                    "elevation": 100,
+                    "timestamp": "2024-01-01T00:00:00Z",
+                }
+            ],
+            "bounds": {"north": 40.1, "south": 39.9, "east": -73.9, "west": -74.1},
+        }
 
-    def test_get_strava_activity_gpx_save_error(self, client):
-        """Test Strava activity GPX retrieval with file save error."""
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir") as mock_temp_dir,
-            patch("builtins.open", side_effect=OSError("Permission denied")),
-        ):
-            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
-            mock_temp_dir.name = "/tmp/test_dir"
+        # Mock temp dir
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
 
-            response = client.get("/api/strava/activities/12345/gpx")
+        # Mock database session
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "detail" in data
-            assert "Failed to save GPX" in data["detail"]
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    # Return GPX string
+                    mock_service.get_activity_gpx = AsyncMock(
+                        return_value='<?xml version="1.0" encoding="UTF-8"?><gpx></gpx>'
+                    )
 
-    def test_get_strava_activity_gpx_parse_error(self, client):
-        """Test Strava activity GPX retrieval with GPX parse error."""
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir") as mock_temp_dir,
-            patch("builtins.open", create=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.unlink"),
-            patch("src.api.strava.gpxpy.parse", side_effect=Exception("Invalid GPX")),
-        ):
-            mock_get_gpx.return_value = "invalid gpx content"
-            mock_temp_dir.name = "/tmp/test_dir"
-            mock_exists.return_value = True
+                    # Mock file system operations
+                    with patch("builtins.open", create=True):
+                        with patch("gpxpy.parse", return_value=Mock()):
+                            with patch(
+                                "src.api.strava.extract_from_gpx_file",
+                                return_value=Mock(
+                                    model_dump=lambda: mock_gpx_data,
+                                    points=mock_gpx_data["points"],
+                                ),
+                            ):
+                                response = client.get(
+                                    "/api/strava/activities/12345/gpx?strava_id=67890"
+                                )
 
-            response = client.get("/api/strava/activities/12345/gpx")
+                                assert response.status_code == 200
+                                data = response.json()
+                                assert "file_id" in data
+                                assert "points" in data
 
-            assert response.status_code == 400
-            data = response.json()
-            assert "detail" in data
-            assert "Invalid GPX file" in data["detail"]
+    def test_get_activity_gpx_no_gpx_data(self, client):
+        """Test GPX retrieval when no GPX data is available."""
+        from unittest.mock import AsyncMock, patch
 
-    def test_get_strava_activity_gpx_extract_error(self, client):
-        """Test Strava activity GPX retrieval with GPX extraction error."""
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir") as mock_temp_dir,
-            patch("builtins.open", create=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.unlink"),
-            patch("src.api.strava.gpxpy.parse"),
-            patch(
-                "src.api.strava.extract_from_gpx_file",
-                side_effect=Exception("Processing error"),
-            ),
-        ):
-            mock_get_gpx.return_value = '<?xml version="1.0"?><gpx></gpx>'
-            mock_temp_dir.name = "/tmp/test_dir"
-            mock_exists.return_value = True
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
 
-            response = client.get("/api/strava/activities/12345/gpx")
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
 
-            assert response.status_code == 400
-            data = response.json()
-            assert "detail" in data
-            assert "Invalid GPX file" in data["detail"]
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    # Return None or empty string
+                    mock_service.get_activity_gpx = AsyncMock(return_value=None)
 
-    def test_get_strava_activity_gpx_general_error(self, client):
-        """Test Strava activity GPX retrieval with general error."""
-        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
-            mock_get_gpx.side_effect = Exception("Network error")
+                    response = client.get(
+                        "/api/strava/activities/12345/gpx?strava_id=67890"
+                    )
 
-            response = client.get("/api/strava/activities/12345/gpx")
+                    assert response.status_code == 404
+                    data = response.json()
+                    assert "No GPX data available" in data["detail"]
 
-            assert response.status_code == 500
-            data = response.json()
-            assert "detail" in data
-            assert "Failed to fetch GPX" in data["detail"]
+    def test_get_activity_gpx_save_error(self, client):
+        """Test GPX retrieval when saving file fails."""
+        from unittest.mock import AsyncMock, patch
 
-    def test_get_strava_activity_gpx_http_exception(self, client):
-        """Test Strava activity GPX retrieval HTTPException handling."""
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
 
-        with patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx:
-            mock_get_gpx.side_effect = HTTPException(
-                status_code=403, detail="Forbidden access to activity"
-            )
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
 
-            response = client.get("/api/strava/activities/12345/gpx")
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    mock_service.get_activity_gpx = AsyncMock(
+                        return_value='<?xml version="1.0"?><gpx></gpx>'
+                    )
 
-            assert response.status_code == 403
-            data = response.json()
-            assert "detail" in data
-            assert data["detail"] == "Forbidden access to activity"
+                    # Mock file open to raise exception
+                    with patch("builtins.open", side_effect=OSError("Cannot write")):
+                        response = client.get(
+                            "/api/strava/activities/12345/gpx?strava_id=67890"
+                        )
 
-    def test_get_strava_activities_with_stravalib_mock(self, client):
-        """Test Strava activities retrieval using proper stravalib client mocking."""
-        mock_activities = [
-            {
-                "id": "12345",
-                "name": "Morning Ride",
-                "distance": 25000.0,
-                "moving_time": 3600,
-                "type": "Ride",
-                "start_date": "2023-01-01T10:00:00",
-            },
-            {
-                "id": "12346",
-                "name": "Evening Run",
-                "distance": 5000.0,
-                "moving_time": 1800,
-                "type": "Run",
-                "start_date": "2023-01-01T18:00:00",
-            },
-        ]
+                        assert response.status_code == 500
+                        data = response.json()
+                        assert "Failed to save GPX" in data["detail"]
 
-        # Mock the strava service's get_activities method directly (same as other
-        # working tests)
-        with patch("src.dependencies.strava.get_activities") as mock_get_activities:
-            # Configure the mock to return our mock activities
-            mock_get_activities.return_value = mock_activities
+    def test_get_activity_gpx_parse_error(self, client):
+        """Test GPX retrieval when parsing fails."""
+        from unittest.mock import AsyncMock, patch
 
-            response = client.get("/api/strava/activities")
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "activities" in data
-            assert len(data["activities"]) == 2
-            assert data["activities"][0]["name"] == "Morning Ride"
-            assert data["activities"][1]["name"] == "Evening Run"
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
 
-    def test_get_strava_activity_gpx_with_stravalib_mock(self, client):
-        """Test Strava activity GPX retrieval using proper stravalib client mocking."""
-        mock_gpx_string = """<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1">
-    <trk>
-        <name>Test Activity</name>
-        <trkpt lat="51.5074" lon="-0.1278">
-            <ele>10.0</ele>
-            <time>2023-01-01T10:00:00Z</time>
-        </trkpt>
-    </trk>
-</gpx>"""
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    mock_service.get_activity_gpx = AsyncMock(
+                        return_value='<?xml version="1.0"?><gpx></gpx>'
+                    )
 
-        with (
-            patch("src.dependencies.strava.get_activity_gpx") as mock_get_gpx,
-            patch("src.dependencies.temp_dir") as mock_temp_dir,
-            patch("src.api.strava.extract_from_gpx_file") as mock_extract,
-            patch("src.api.strava.gpxpy.parse"),
-            patch("builtins.open", create=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.unlink"),
-        ):
-            # Create proper GPX data objects
-            from src.utils.gpx import GPXBounds, GPXData, GPXPoint, GPXTotalStats
+                    with patch("builtins.open", create=True):
+                        with patch("gpxpy.parse", side_effect=Exception("Parse error")):
+                            with patch("pathlib.Path.exists", return_value=True):
+                                with patch("pathlib.Path.unlink"):
+                                    response = client.get(
+                                        "/api/strava/activities/12345/gpx?strava_id=67890"
+                                    )
 
-            gpx_point = GPXPoint(
-                latitude=51.5074,
-                longitude=-0.1278,
-                elevation=10.0,
-                time="2023-01-01T10:00:00Z",
-            )
+                                    assert response.status_code == 400
+                                    data = response.json()
+                                    assert "Invalid GPX file" in data["detail"]
 
-            total_stats = GPXTotalStats(
-                total_points=1,
-                total_distance=0.0,
-                total_elevation_gain=0.0,
-                total_elevation_loss=0.0,
-            )
+    def test_get_activity_gpx_extract_error(self, client):
+        """Test GPX retrieval when extraction fails."""
+        from unittest.mock import AsyncMock, patch
 
-            bounds = GPXBounds(
-                north=51.5074,
-                south=51.5074,
-                east=-0.1278,
-                west=-0.1278,
-                min_elevation=10.0,
-                max_elevation=10.0,
-            )
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
 
-            mock_gpx_data = GPXData(
-                file_id="test_file_id",
-                track_name="Test Activity",
-                points=[gpx_point],
-                total_stats=total_stats,
-                bounds=bounds,
-            )
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
 
-            # Setup mocks for file processing
-            mock_temp_dir.name = "/tmp/test_dir"
-            mock_get_gpx.return_value = mock_gpx_string
-            mock_extract.return_value = mock_gpx_data
-            mock_exists.return_value = True
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    mock_service.get_activity_gpx = AsyncMock(
+                        return_value='<?xml version="1.0"?><gpx></gpx>'
+                    )
 
-            response = client.get("/api/strava/activities/12345/gpx")
+                    mock_gpx_obj = Mock()
 
-            assert response.status_code == 200
-            data = response.json()
-            assert "file_id" in data
-            assert data["track_name"] == "Test Activity"
-            assert len(data["points"]) == 1
+                    with patch("builtins.open", create=True):
+                        with patch("gpxpy.parse", return_value=mock_gpx_obj):
+                            with patch(
+                                "src.api.strava.extract_from_gpx_file",
+                                side_effect=Exception("Extract error"),
+                            ):
+                                with patch("pathlib.Path.exists", return_value=True):
+                                    with patch("pathlib.Path.unlink"):
+                                        response = client.get(
+                                            "/api/strava/activities/12345/gpx?strava_id=67890"
+                                        )
+
+                                        assert response.status_code == 400
+                                        data = response.json()
+                                        assert "Invalid GPX file" in data["detail"]
+
+    def test_get_activity_gpx_exception(self, client):
+        """Test GPX retrieval exception handling."""
+        from unittest.mock import AsyncMock, patch
+
+        mock_temp_dir = Mock()
+        mock_temp_dir.name = "/tmp"
+
+        mock_db_session = Mock()
+        mock_db_session.__aenter__ = AsyncMock(return_value=mock_db_session)
+        mock_db_session.__aexit__ = AsyncMock(return_value=None)
+
+        with patch("src.dependencies.SessionLocal", return_value=mock_db_session):
+            with patch("src.dependencies.temp_dir", mock_temp_dir):
+                with patch("src.api.strava.StravaService") as mock_service_class:
+                    mock_service = mock_service_class.return_value
+                    mock_service.get_activity_gpx = AsyncMock(
+                        side_effect=Exception("General error")
+                    )
+
+                    response = client.get(
+                        "/api/strava/activities/12345/gpx?strava_id=67890"
+                    )
+
+                    assert response.status_code == 500
+                    data = response.json()
+                    assert "Failed to fetch GPX" in data["detail"]

@@ -3,12 +3,14 @@
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from stravalib import Client
 from stravalib.exc import AccessUnauthorized, RateLimitExceeded
 
+from ..models.strava_token import StravaToken
 from ..utils.config import StravaConfig
 
 logger = logging.getLogger(__name__)
@@ -40,192 +42,126 @@ class StravaService:
     token refresh if needed.
     """
 
-    def __init__(self, strava_config: StravaConfig):
+    def __init__(
+        self,
+        strava_config: StravaConfig,
+        db_session: AsyncSession,
+        strava_id: int,
+    ):
         """Initialize the Strava service.
 
         Parameters
         ----------
         strava_config : StravaConfig
-            Strava configuration containing client credentials and token file
-            path.
+            Strava configuration containing client credentials.
+        db_session : AsyncSession
+            Database session for loading/saving tokens from database.
+        strava_id : int
+            Strava user ID for database-based token storage.
 
         Notes
         -----
-        This method initializes the Strava API client and sets up the token file
-        path for storing authentication tokens securely.
+        This method initializes the Strava API client and sets up database-backed
+        token storage. Database session and strava_id are required.
         """
         # Convert client_id to int as required by stravalib
         self.client_id = int(strava_config.client_id)
         self.client_secret = strava_config.client_secret
 
         self.client = Client()
-        self.tokens_file = Path(strava_config.tokens_file_path)
+        self.db_session = db_session
+        self.strava_id = strava_id
 
-    def _load_tokens(self) -> dict[str, Any] | None:
-        """Load Strava authentication tokens from the configured file.
+    async def _load_tokens(self) -> dict[str, Any] | None:
+        """Load Strava authentication tokens from database.
 
         Returns
         -------
         dict[str, Any] | None
             Dictionary containing access_token, refresh_token, and expires_at,
-            or None if the file doesn't exist or cannot be read.
-
-        Notes
-        -----
-        This method attempts to load tokens from the file specified in the
-        configuration. If the file doesn't exist or contains invalid JSON,
-        it returns None and logs the error.
+            or None if not available.
         """
-        if not self.tokens_file.exists():
-            return None
 
         try:
-            with open(self.tokens_file) as f:
-                tokens = json.load(f)
-            logger.info("Loaded Strava tokens from file")
-            return tokens
+            # Get the column name from the model mapping
+            strava_id_col = StravaToken.__table__.c.user_id
+            result = await self.db_session.execute(
+                select(StravaToken).where(strava_id_col == self.strava_id)
+            )
+            token_record = result.scalar_one_or_none()
+
+            if token_record:
+                # Convert datetime to int timestamp for consistency
+                expires_at_timestamp = int(token_record.expires_at.timestamp())
+                tokens = {
+                    "access_token": token_record.access_token,
+                    "refresh_token": token_record.refresh_token,
+                    "expires_at": expires_at_timestamp,
+                }
+                # athlete_data maps to athlete_info in the database
+                athlete_info_attr = getattr(token_record, "athlete_data", None)
+                if athlete_info_attr:
+                    tokens["athlete"] = json.loads(athlete_info_attr)
+                logger.info(
+                    f"Loaded Strava tokens from database for user {self.strava_id}"
+                )
+                return tokens
+            return None
         except Exception as e:
-            logger.error(f"Failed to load tokens: {e}")
+            logger.error(f"Failed to load tokens from database: {e}")
             return None
 
-    def _save_tokens(self, tokens: dict[str, Any]) -> None:
-        """Save Strava authentication tokens to the configured file.
+    async def _save_tokens(self, tokens: dict[str, Any]) -> None:
+        """Save Strava authentication tokens to database.
 
         Parameters
         ----------
         tokens : dict[str, Any]
             Dictionary containing access_token, refresh_token, expires_at,
             and any other token-related data.
-
-        Raises
-        ------
-        Exception
-            If the file cannot be written or the directory cannot be created.
-
-        Notes
-        -----
-        This method creates the parent directory if it doesn't exist and
-        converts any datetime objects to ISO format strings for JSON
-        serialization. The tokens are saved as JSON format.
         """
+
         try:
-            self.tokens_file.parent.mkdir(parents=True, exist_ok=True)
-
-            # Convert any datetime objects to ISO format strings for JSON serialization
-            def convert_datetime(obj):
-                if hasattr(obj, "isoformat"):
-                    return obj.isoformat()
-                elif isinstance(obj, dict):
-                    return {k: convert_datetime(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
-                    return [convert_datetime(item) for item in obj]
-                return obj
-
-            tokens_serializable = convert_datetime(tokens)
-
-            with open(self.tokens_file, "w") as f:
-                json.dump(tokens_serializable, f, indent=2)
-            logger.info("Saved Strava tokens to file")
-        except Exception as e:
-            logger.error(f"Failed to save tokens: {e}")
-
-    def get_authorization_url(
-        self, redirect_uri: str, state: str = "strava_auth"
-    ) -> str:
-        """Generate Strava OAuth authorization URL.
-
-        Parameters
-        ----------
-        redirect_uri : str
-            The redirect URI for OAuth callback. This should match the URI
-            configured in your Strava application settings.
-        state : str, default="strava_auth"
-            Optional state parameter for tracking the request and preventing
-            CSRF attacks.
-
-        Returns
-        -------
-        str
-            The complete authorization URL that users should visit to authorize
-            the application.
-
-        Notes
-        -----
-        This method generates the URL that users need to visit to authorize
-        your application to access their Strava data. The URL includes the
-        necessary OAuth parameters and scopes.
-        """
-        # Convert client_id to int as required by stravalib
-
-        auth_url = self.client.authorization_url(
-            client_id=self.client_id,
-            redirect_uri=redirect_uri,
-            scope=["activity:read_all"],
-            state=state,
-        )
-        logger.info(f"Generated Strava authorization URL with state: {state}")
-        return auth_url
-
-    def exchange_code_for_token(self, code: str) -> dict[str, Any]:
-        """Exchange authorization code for access token.
-
-        Parameters
-        ----------
-        code : str
-            The authorization code received from Strava after user
-            authorization. This code is obtained from the OAuth callback URL.
-
-        Returns
-        -------
-        dict[str, Any]
-            Dictionary containing access_token, refresh_token, expires_at,
-            athlete information, and other token-related data.
-
-        Raises
-        ------
-        Exception
-            If the token exchange fails or the code is invalid.
-
-        Notes
-        -----
-        This method exchanges the authorization code for an access token and
-        refresh token. It also fetches the athlete information and saves
-        all tokens to the configured file for future use.
-        """
-        try:
-            token_response = self.client.exchange_code_for_token(
-                client_id=self.client_id,
-                client_secret=self.client_secret,
-                code=code,
-                return_athlete=True,  # Get athlete info too
+            # Get the column name from the model mapping
+            strava_id_col = StravaToken.__table__.c.user_id
+            result = await self.db_session.execute(
+                select(StravaToken).where(strava_id_col == self.strava_id)
             )
+            token_record = result.scalar_one_or_none()
 
-            # Extract AccessInfo and athlete from response
-            if isinstance(token_response, tuple):
-                access_info, athlete = token_response
+            athlete_data = None
+            if "athlete" in tokens and tokens["athlete"]:
+                athlete_data = json.dumps(tokens["athlete"])
+
+            # Convert integer timestamp to datetime
+            expires_at_dt = datetime.fromtimestamp(tokens["expires_at"])
+
+            if token_record:
+                # Update existing record
+                token_record.access_token = tokens["access_token"]
+                token_record.refresh_token = tokens["refresh_token"]
+                token_record.expires_at = expires_at_dt
+                token_record.athlete_data = athlete_data
+                token_record.updated_at = datetime.now()
             else:
-                access_info = token_response
-                athlete = None
+                # Create new record - note: strava_id maps to user_id column in DB
+                token_record = StravaToken(
+                    strava_id=self.strava_id,
+                    access_token=tokens["access_token"],
+                    refresh_token=tokens["refresh_token"],
+                    expires_at=expires_at_dt,
+                    athlete_data=athlete_data,
+                )
+                self.db_session.add(token_record)
 
-            # Convert AccessInfo to dictionary for saving and returning
-            token_dict = {
-                "access_token": access_info["access_token"],
-                "refresh_token": access_info["refresh_token"],
-                "expires_at": access_info["expires_at"],
-                "athlete": athlete.model_dump() if athlete else None,
-            }
-
-            # Save tokens
-            self._save_tokens(token_dict)
-
-            logger.info("Successfully exchanged code for token")
-            return token_dict
-
+            await self.db_session.commit()
+            logger.info(f"Saved Strava tokens to database for user {self.strava_id}")
         except Exception as e:
-            logger.error(f"Failed to exchange code for token: {e}")
+            logger.error(f"Failed to save tokens to database: {e}")
+            await self.db_session.rollback()
             raise
 
-    def refresh_access_token(self) -> bool:
+    async def refresh_access_token(self) -> bool:
         """Refresh the access token using the stored refresh token.
 
         Returns
@@ -240,7 +176,7 @@ class StravaService:
         the new access token and refresh token. If the refresh fails,
         the user will need to re-authorize the application.
         """
-        tokens = self._load_tokens()
+        tokens = await self._load_tokens()
         if not tokens or "refresh_token" not in tokens:
             logger.error("No refresh token available")
             return False
@@ -253,7 +189,7 @@ class StravaService:
             )
 
             # Save new tokens
-            self._save_tokens(refresh_response)
+            await self._save_tokens(refresh_response)
 
             logger.info("Successfully refreshed access token")
             return True
@@ -262,7 +198,7 @@ class StravaService:
             logger.error(f"Failed to refresh access token: {e}")
             return False
 
-    def _ensure_authenticated(self) -> None:
+    async def _ensure_authenticated(self) -> None:
         """Ensure the client is authenticated with valid tokens.
 
         Raises
@@ -277,7 +213,7 @@ class StravaService:
         the refresh token. If authentication fails, it raises an
         AccessUnauthorized exception.
         """
-        tokens = self._load_tokens()
+        tokens = await self._load_tokens()
         if not tokens:
             raise AccessUnauthorized("No tokens available. Please authenticate first.")
 
@@ -291,14 +227,16 @@ class StravaService:
             expires_at = datetime.fromtimestamp(tokens["expires_at"])
             if datetime.now() >= expires_at:
                 logger.info("Access token expired, attempting refresh")
-                if not self.refresh_access_token():
+                if not await self.refresh_access_token():
                     raise AccessUnauthorized("Token expired and refresh failed")
-                tokens = self._load_tokens()
+                tokens = await self._load_tokens()
 
         # Set the access token on the client
         self.client.access_token = tokens["access_token"]
 
-    def get_activities(self, page: int = 1, per_page: int = 30) -> list[dict[str, Any]]:
+    async def get_activities(
+        self, page: int = 1, per_page: int = 30
+    ) -> list[dict[str, Any]]:
         """Get athlete activities from Strava with proper pagination.
 
         Parameters
@@ -328,7 +266,7 @@ class StravaService:
         all previous pages and using the last activity's date as the 'before' parameter.
         """
         try:
-            self._ensure_authenticated()
+            await self._ensure_authenticated()
 
             activities = []
             limit = per_page
@@ -481,7 +419,7 @@ class StravaService:
             "suffer_score": activity.suffer_score,
         }
 
-    def get_activity_gpx(self, activity_id: str) -> str | None:
+    async def get_activity_gpx(self, activity_id: str) -> str | None:
         """Get GPX data for a specific activity.
 
         Parameters
@@ -509,7 +447,7 @@ class StravaService:
         The GPX data includes time, position, distance, and altitude information.
         """
         try:
-            self._ensure_authenticated()
+            await self._ensure_authenticated()
 
             # Get activity details
             activity = self.client.get_activity(int(activity_id))
@@ -644,7 +582,7 @@ class StravaService:
             logger.error(f"Failed to construct GPX from streams: {e}")
             return None
 
-    def get_athlete(self) -> dict[str, Any]:
+    async def get_athlete(self) -> dict[str, Any]:
         """Get current athlete information from Strava.
 
         Returns
@@ -668,7 +606,7 @@ class StravaService:
         information and account status.
         """
         try:
-            self._ensure_authenticated()
+            await self._ensure_authenticated()
 
             athlete = self.client.get_athlete()
 

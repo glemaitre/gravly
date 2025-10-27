@@ -141,7 +141,7 @@ app.add_middleware(
 # Register routers
 app.include_router(utils_router)
 app.include_router(
-    create_strava_router(dependencies.strava, None)
+    create_strava_router(None)
 )  # temp_dir will be set via dependencies module
 app.include_router(
     create_upload_router(None, None)
