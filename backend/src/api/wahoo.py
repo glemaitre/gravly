@@ -1,6 +1,7 @@
 """Wahoo API endpoints."""
 
 import base64
+import json
 import logging
 from datetime import datetime
 
@@ -8,8 +9,11 @@ import gpxpy
 from fastapi import APIRouter, Form, HTTPException, Query
 from sqlalchemy import select
 
-from src.dependencies import get_wahoo_service
+from src.dependencies import get_wahoo_config
 from src.models.track import Track, TrackType
+from src.models.wahoo_token import WahooToken
+from src.services.wahoo.client import Client
+from src.services.wahoo.service import WahooService
 from src.utils.gpx import convert_gpx_to_fit, extract_from_gpx_file
 
 logger = logging.getLogger(__name__)
@@ -23,12 +27,17 @@ def create_wahoo_router() -> APIRouter:
     @router.get("/auth-url")
     async def get_wahoo_auth_url(state: str = "wahoo_auth"):
         """Get Wahoo OAuth authorization URL"""
+        from ..dependencies import wahoo_config
+
         try:
-            wahoo_service = get_wahoo_service()
+            client = Client()
 
-            # Use centralized server configuration for OAuth redirect
-
-            auth_url = wahoo_service.get_authorization_url(state)
+            auth_url = client.authorization_url(
+                client_id=wahoo_config.client_id,
+                redirect_uri=wahoo_config.callback_url,
+                scope=wahoo_config.scopes,
+                state=state,
+            )
 
             logger.info("Generated Wahoo authorization URL")
 
@@ -43,41 +52,140 @@ def create_wahoo_router() -> APIRouter:
     @router.post("/exchange-code")
     async def exchange_wahoo_code(code: str = Form(...)):
         """Exchange Wahoo authorization code for access token"""
+        from ..dependencies import SessionLocal, get_wahoo_config
+
+        if SessionLocal is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+
         try:
-            wahoo_service = get_wahoo_service()
-            token_response = wahoo_service.exchange_code_for_token(code)
-            return {
-                "access_token": token_response["access_token"],
-                "expires_at": token_response["expires_at"],
-            }
+            async with SessionLocal() as db_session:
+                # Exchange the code using the client directly
+                client = Client()
+                token_response = client.exchange_code_for_token(
+                    client_id=get_wahoo_config().client_id,
+                    client_secret=get_wahoo_config().client_secret,
+                    code=code,
+                    redirect_uri=get_wahoo_config().callback_url,
+                )
+
+                # Set the access token on the client to fetch user info
+                client.access_token = token_response["access_token"]
+
+                # Get user information to get the wahoo_id
+                user_info = client.get_user()
+                wahoo_id = user_info.get("id")
+
+                if not wahoo_id:
+                    raise HTTPException(
+                        status_code=400, detail="No user ID in Wahoo response"
+                    )
+
+                # Convert integer timestamp to datetime
+                expires_at_dt = datetime.fromtimestamp(token_response["expires_at"])
+
+                # Check if token already exists
+                wahoo_id_col = WahooToken.__table__.c.user_id
+                result = await db_session.execute(
+                    select(WahooToken).where(wahoo_id_col == wahoo_id)
+                )
+                token_record = result.scalar_one_or_none()
+
+                # Serialize user_info for storage
+                user_data_json = json.dumps(user_info)
+
+                if token_record:
+                    # Update existing
+                    token_record.access_token = token_response["access_token"]
+                    token_record.refresh_token = token_response["refresh_token"]
+                    token_record.expires_at = expires_at_dt
+                    token_record.user_data = user_data_json
+                else:
+                    # Create new
+                    token_record = WahooToken(
+                        wahoo_id=wahoo_id,
+                        access_token=token_response["access_token"],
+                        refresh_token=token_response["refresh_token"],
+                        expires_at=expires_at_dt,
+                        user_data=user_data_json,
+                    )
+                    db_session.add(token_record)
+
+                await db_session.commit()
+
+                return {
+                    "access_token": token_response["access_token"],
+                    "expires_at": token_response["expires_at"],
+                    "user": user_info,
+                }
         except Exception as e:
-            print(e)
             logger.error(f"Error exchanging Wahoo code: {str(e)}")
             raise HTTPException(
                 status_code=400, detail=f"Failed to exchange code: {str(e)}"
             )
 
     @router.post("/refresh-token")
-    async def refresh_wahoo_token():
+    async def refresh_wahoo_token(wahoo_id: int = Form(...)):
         """Refresh Wahoo access token using refresh token"""
+        from ..dependencies import SessionLocal
+
+        if SessionLocal is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+
         try:
-            wahoo_service = get_wahoo_service()
-            success = wahoo_service.refresh_access_token()
-            if success:
-                return {"success": True, "message": "Token refreshed successfully"}
-            else:
-                raise HTTPException(status_code=401, detail="Failed to refresh token")
+            async with SessionLocal() as db_session:
+                wahoo_config = get_wahoo_config()
+                wahoo_service = WahooService(
+                    wahoo_config, db_session=db_session, wahoo_id=wahoo_id
+                )
+                success = await wahoo_service.refresh_access_token()
+                if success:
+                    return {"success": True, "message": "Token refreshed successfully"}
+                else:
+                    raise HTTPException(
+                        status_code=401, detail="Failed to refresh token"
+                    )
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error refreshing Wahoo token: {str(e)}")
             raise HTTPException(status_code=401, detail="Failed to refresh token")
 
     @router.post("/deauthorize")
-    async def deauthorize_wahoo():
+    async def deauthorize_wahoo(wahoo_id: int = Form(...)):
         """Deauthorize the application and delete all tokens"""
+        from ..dependencies import SessionLocal
+
+        if SessionLocal is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+
         try:
-            wahoo_service = get_wahoo_service()
-            wahoo_service.deauthorize()
-            return {"success": True, "message": "Deauthorized successfully"}
+            async with SessionLocal() as db_session:
+                wahoo_config = get_wahoo_config()
+                wahoo_service = WahooService(
+                    wahoo_config, db_session=db_session, wahoo_id=wahoo_id
+                )
+
+                # Deauthorize with Wahoo API
+                await wahoo_service.deauthorize()
+                logger.info(
+                    f"Successfully deauthorized with Wahoo API for user {wahoo_id}"
+                )
+
+                # Delete tokens from our database
+                wahoo_id_col = WahooToken.__table__.c.user_id
+                result = await db_session.execute(
+                    select(WahooToken).where(wahoo_id_col == wahoo_id)
+                )
+                token_record = result.scalar_one_or_none()
+
+                if token_record:
+                    await db_session.delete(token_record)
+                    await db_session.commit()
+                    logger.info(f"Deleted tokens from database for user {wahoo_id}")
+
+                return {"success": True, "message": "Deauthorized successfully"}
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error deauthorizing: {str(e)}")
             raise HTTPException(
@@ -85,12 +193,23 @@ def create_wahoo_router() -> APIRouter:
             )
 
     @router.get("/user")
-    async def get_wahoo_user():
+    async def get_wahoo_user(wahoo_id: int = Query(..., description="Wahoo user ID")):
         """Get authenticated user information"""
+        from ..dependencies import SessionLocal
+
+        if SessionLocal is None:
+            raise HTTPException(status_code=503, detail="Database not initialized")
+
         try:
-            wahoo_service = get_wahoo_service()
-            user = wahoo_service.get_user()
-            return user
+            async with SessionLocal() as db_session:
+                wahoo_config = get_wahoo_config()
+                wahoo_service = WahooService(
+                    wahoo_config, db_session=db_session, wahoo_id=wahoo_id
+                )
+                user = await wahoo_service.get_user()
+                return user
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error getting user: {str(e)}")
             raise HTTPException(status_code=401, detail=f"Failed to get user: {str(e)}")
@@ -123,7 +242,9 @@ def create_wahoo_router() -> APIRouter:
             )
 
     @router.post("/routes/{route_id}/upload")
-    async def upload_route(route_id: int):
+    async def upload_route(
+        route_id: int, wahoo_id: int = Query(..., description="Wahoo user ID")
+    ):
         """Upload a route from the database to Wahoo"""
         logger.info(f"Received upload request for route_id={route_id}")
         from src.dependencies import SessionLocal as global_session_local
@@ -175,7 +296,10 @@ def create_wahoo_router() -> APIRouter:
                 logger.info("Endpoint: POST https://api.wahooligan.com/v1/routes")
                 logger.info(f"Uploading route: {track.name}")
 
-                wahoo_service = get_wahoo_service()
+                wahoo_config = get_wahoo_config()
+                wahoo_service = WahooService(
+                    wahoo_config, db_session=session, wahoo_id=wahoo_id
+                )
 
                 # Parse GPX and extract metadata
                 gpx = gpxpy.parse(gpx_content)
@@ -225,7 +349,7 @@ def create_wahoo_router() -> APIRouter:
 
                 # Get all routes from Wahoo to check if route exists
                 logger.info("Fetching all routes from Wahoo Cloud")
-                all_routes = wahoo_service.get_routes()
+                all_routes = await wahoo_service.get_routes()
 
                 # Look for existing route with matching external_id
                 wahoo_route_id = None
@@ -241,7 +365,7 @@ def create_wahoo_router() -> APIRouter:
                 if wahoo_route_id:
                     # Update existing route (external_id is not passed for updates)
                     logger.info(f"Updating existing route {wahoo_route_id} in Wahoo")
-                    result = wahoo_service.update_route(
+                    result = await wahoo_service.update_route(
                         route_id=wahoo_route_id, **common_params
                     )
                     logger.info("=== WAHOO UPLOAD RESPONSE ===")
@@ -252,7 +376,7 @@ def create_wahoo_router() -> APIRouter:
                     # Create new route (include external_id for new routes)
                     logger.info(f"Creating new route with external_id: {external_id}")
                     create_params = {**common_params, "external_id": external_id}
-                    result = wahoo_service.create_route(**create_params)
+                    result = await wahoo_service.create_route(**create_params)
                     logger.info("=== WAHOO UPLOAD RESPONSE ===")
                     logger.info("Status: Success (Created)")
                     logger.info(f"Response: {result}")
@@ -277,7 +401,9 @@ def create_wahoo_router() -> APIRouter:
             )
 
     @router.delete("/routes/{route_id}")
-    async def delete_route(route_id: int):
+    async def delete_route(
+        route_id: int, wahoo_id: int = Query(..., description="Wahoo user ID")
+    ):
         """Delete a route from Wahoo Cloud"""
         logger.info(f"Received delete request for route_id={route_id}")
         from src.dependencies import SessionLocal as global_session_local
@@ -303,11 +429,14 @@ def create_wahoo_router() -> APIRouter:
                 logger.info(f"Found route: {track.name}")
 
                 # Get Wahoo service
-                wahoo_service = get_wahoo_service()
+                wahoo_config = get_wahoo_config()
+                wahoo_service = WahooService(
+                    wahoo_config, db_session=session, wahoo_id=wahoo_id
+                )
 
                 # Get all routes from Wahoo to check if route exists
                 logger.info("Fetching all routes from Wahoo Cloud")
-                all_routes = wahoo_service.get_routes()
+                all_routes = await wahoo_service.get_routes()
 
                 # Look for existing route with matching external_id
                 external_id = f"gravly_route_{route_id}"
@@ -323,7 +452,7 @@ def create_wahoo_router() -> APIRouter:
                 # Delete the route if it exists
                 if wahoo_route_id:
                     logger.info(f"Deleting route {wahoo_route_id} from Wahoo")
-                    wahoo_service.delete_route(wahoo_route_id)
+                    await wahoo_service.delete_route(wahoo_route_id)
                     logger.info("Successfully deleted route from Wahoo")
                     return {
                         "success": True,

@@ -124,13 +124,13 @@ class TestWahooCallback:
 class TestWahooAuthorizationUrl:
     """Test Wahoo authorization URL endpoint."""
 
-    @patch("src.api.wahoo.get_wahoo_service")
-    def test_get_authorization_url_success(self, mock_get_service, client):
+    @patch("src.api.wahoo.Client")
+    def test_get_authorization_url_success(self, mock_client_class, client):
         """Test successful authorization URL generation."""
-        # Mock the WahooService instance
-        mock_wahoo_service = mock_get_service.return_value
+        # Mock the Client
+        mock_client = mock_client_class.return_value
         expected_auth_url = "https://api.wahooligan.com/oauth/authorize?client_id=test&redirect_uri=test&response_type=code&scope=routes_write+user_read&state=wahoo_auth"
-        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+        mock_client.authorization_url.return_value = expected_auth_url
 
         response = client.get("/api/wahoo/auth-url")
 
@@ -138,17 +138,12 @@ class TestWahooAuthorizationUrl:
         data = response.json()
         assert data["auth_url"] == expected_auth_url
 
-        # Verify that the service was called with default state
-        mock_wahoo_service.get_authorization_url.assert_called_once_with("wahoo_auth")
-
-    @patch("src.api.wahoo.get_wahoo_service")
-    def test_get_authorization_url_service_error(self, mock_get_service, client):
+    @patch("src.api.wahoo.Client")
+    def test_get_authorization_url_service_error(self, mock_client_class, client):
         """Test authorization URL generation when service raises an exception."""
-        # Mock the WahooService to raise an exception
-        mock_wahoo_service = mock_get_service.return_value
-        mock_wahoo_service.get_authorization_url.side_effect = Exception(
-            "Service error"
-        )
+        # Mock the Client to raise an exception
+        mock_client = mock_client_class.return_value
+        mock_client.authorization_url.side_effect = Exception("Service error")
 
         response = client.get("/api/wahoo/auth-url")
 
@@ -157,13 +152,13 @@ class TestWahooAuthorizationUrl:
         assert "Failed to generate authorization URL" in data["detail"]
         assert "Service error" in data["detail"]
 
-    @patch("src.api.wahoo.get_wahoo_service")
+    @patch("src.api.wahoo.Client")
     def test_get_authorization_url_service_initialization_error(
-        self, mock_get_service, client
+        self, mock_client_class, client
     ):
         """Test authorization URL generation when service initialization fails."""
-        # Mock the service to raise an exception during initialization
-        mock_get_service.side_effect = Exception("Service initialization error")
+        # Mock the client to raise an exception during initialization
+        mock_client_class.side_effect = Exception("Service initialization error")
 
         response = client.get("/api/wahoo/auth-url")
 
@@ -172,13 +167,13 @@ class TestWahooAuthorizationUrl:
         assert "Failed to generate authorization URL" in data["detail"]
         assert "Service initialization error" in data["detail"]
 
-    @patch("src.api.wahoo.get_wahoo_service")
-    def test_get_authorization_url_logging(self, mock_get_service, client):
+    @patch("src.api.wahoo.Client")
+    def test_get_authorization_url_logging(self, mock_client_class, client):
         """Test that authorization URL generation logs correctly."""
-        # Mock the WahooService instance
-        mock_wahoo_service = mock_get_service.return_value
+        # Mock the Client
+        mock_client = mock_client_class.return_value
         expected_auth_url = "https://api.wahooligan.com/oauth/authorize?test=123"
-        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+        mock_client.authorization_url.return_value = expected_auth_url
 
         with patch("src.api.wahoo.logger") as mock_logger:
             response = client.get("/api/wahoo/auth-url")
@@ -187,13 +182,13 @@ class TestWahooAuthorizationUrl:
         # Verify that info logging was called
         mock_logger.info.assert_called_once_with("Generated Wahoo authorization URL")
 
-    @patch("src.api.wahoo.get_wahoo_service")
-    def test_get_authorization_url_response_format(self, mock_get_service, client):
+    @patch("src.api.wahoo.Client")
+    def test_get_authorization_url_response_format(self, mock_client_class, client):
         """Test that authorization URL endpoint returns the expected response format."""
-        # Mock the WahooService instance
-        mock_wahoo_service = mock_get_service.return_value
+        # Mock the Client
+        mock_client = mock_client_class.return_value
         expected_auth_url = "https://api.wahooligan.com/oauth/authorize?test=123"
-        mock_wahoo_service.get_authorization_url.return_value = expected_auth_url
+        mock_client.authorization_url.return_value = expected_auth_url
 
         response = client.get("/api/wahoo/auth-url")
 

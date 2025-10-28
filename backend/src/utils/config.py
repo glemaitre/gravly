@@ -53,7 +53,6 @@ class WahooConfig(NamedTuple):
 
     client_id: str
     client_secret: str
-    tokens_file_path: str
     callback_url: str
     scopes: list[str]
 
@@ -303,7 +302,6 @@ def load_environment_config(
     required_wahoo_params = [
         "WAHOO_CLIENT_ID",
         "WAHOO_CLIENT_SECRET",
-        "WAHOO_TOKENS_FILE_PATH",
         "WAHOO_CALLBACK_URL",
         "WAHOO_SCOPES",
     ]
@@ -316,16 +314,11 @@ def load_environment_config(
             f"Missing required Wahoo configuration parameters: "
             f"{', '.join(missing_wahoo_params)}. "
             f"Please set these environment variables in your .env/wahoo file. "
-            f"WAHOO_TOKENS_FILE_PATH must be set to a secure location for "
-            f"storing tokens."
         )
-
-    wahoo_tokens_file_path = os.getenv("WAHOO_TOKENS_FILE_PATH")
 
     wahoo_config = WahooConfig(
         client_id=os.getenv("WAHOO_CLIENT_ID"),
         client_secret=os.getenv("WAHOO_CLIENT_SECRET"),
-        tokens_file_path=wahoo_tokens_file_path,
         callback_url=os.getenv("WAHOO_CALLBACK_URL"),
         scopes=os.getenv("WAHOO_SCOPES", "user_read routes_write").split(" "),
     )

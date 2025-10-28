@@ -8,6 +8,12 @@ from .strava_token import (
 )
 from .track import GPXDataResponse, Track, TrackResponse, TrackWithGPXDataResponse
 from .video import TrackVideo, TrackVideoCreateRequest, TrackVideoResponse
+from .wahoo_token import (
+    WahooToken,
+    WahooTokenCreate,
+    WahooTokenResponse,
+    WahooTokenUpdate,
+)
 
 __all__ = [
     "TrackImage",
@@ -27,4 +33,8 @@ __all__ = [
     "StravaTokenResponse",
     "StravaTokenCreate",
     "StravaTokenUpdate",
+    "WahooToken",
+    "WahooTokenResponse",
+    "WahooTokenCreate",
+    "WahooTokenUpdate",
 ]

@@ -32,7 +32,7 @@ import { useWahooApi } from '../composables/useWahooApi'
 
 const { t } = useI18n()
 const router = useRouter()
-const { exchangeCode, getUser, isLoading, error } = useWahooApi()
+const { exchangeCode, isLoading, error } = useWahooApi()
 
 const goToHome = () => {
   router.push('/')
@@ -54,15 +54,7 @@ onMounted(async () => {
 
     await exchangeCode(code)
     console.info('Wahoo authentication successful')
-
-    // Get user information
-    try {
-      await getUser()
-      console.info('User information loaded')
-    } catch (error) {
-      console.warn('Failed to get user info:', error)
-      // Continue with redirect even if user info fails
-    }
+    // User information is already included in the exchangeCode response
 
     // Check if we have a redirect URL in sessionStorage
     const redirectUrl = sessionStorage.getItem('wahoo_redirect_after_auth')

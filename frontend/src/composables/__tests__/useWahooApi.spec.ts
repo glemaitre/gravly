@@ -498,15 +498,24 @@ describe('useWahooApi', () => {
         json: async () => ({ success: true })
       })
 
-      const { uploadRoute, isLoading, error } = useWahooApi()
+      const { uploadRoute, authState, isLoading, error } = useWahooApi()
+
+      // Set auth state
+      authState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: 1234567890,
+        user: { id: '123' }
+      }
 
       await uploadRoute('route123')
 
       expect(isLoading.value).toBe(false)
       expect(error.value).toBeNull()
-      expect(mockFetch).toHaveBeenCalledWith('/api/wahoo/routes/route123/upload', {
-        method: 'POST'
-      })
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/wahoo/routes/route123/upload?wahoo_id=123',
+        { method: 'POST' }
+      )
     })
 
     it('should handle upload errors', async () => {
@@ -516,7 +525,15 @@ describe('useWahooApi', () => {
         text: async () => 'Error response'
       })
 
-      const { uploadRoute, error } = useWahooApi()
+      const { uploadRoute, authState, error } = useWahooApi()
+
+      // Set auth state
+      authState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: 1234567890,
+        user: { id: '123' }
+      }
 
       await expect(uploadRoute('route123')).rejects.toThrow(
         'Failed to upload route: Bad Request'
@@ -537,11 +554,36 @@ describe('useWahooApi', () => {
           json: async () => ({ auth_url: 'https://auth.wahooligan.com' })
         })
 
-      const { uploadRoute } = useWahooApi()
+      const { uploadRoute, authState } = useWahooApi()
+
+      // Set auth state
+      authState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: 1234567890,
+        user: { id: '123' }
+      }
 
       await expect(uploadRoute('route123')).rejects.toThrow(
         'Authentication failed - redirecting to login'
       )
+    })
+
+    it('should handle missing user ID', async () => {
+      const { uploadRoute, authState, error } = useWahooApi()
+
+      // Set auth state without user
+      authState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: 1234567890,
+        user: null
+      }
+
+      await expect(uploadRoute('route123')).rejects.toThrow(
+        'No Wahoo user ID found'
+      )
+      expect(error.value).toBe('No Wahoo user ID found')
     })
   })
 
@@ -572,21 +614,24 @@ describe('useWahooApi', () => {
       })
       expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('wahoo_auth')
       expect(mockFetch).toHaveBeenCalledWith('/api/wahoo/deauthorize', {
-        method: 'POST'
+        method: 'POST',
+        body: expect.any(FormData)
       })
     })
 
     it('should handle deauthorize errors', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: false,
-        statusText: 'Server Error',
-        text: async () => 'Error'
-      })
+      const { deauthorize, authState, error } = useWahooApi()
 
-      const { deauthorize, error } = useWahooApi()
+      // Set auth state without user
+      authState.value = {
+        isAuthenticated: true,
+        accessToken: 'test_token',
+        expiresAt: 1234567890,
+        user: null
+      }
 
-      await expect(deauthorize()).rejects.toThrow('Failed to deauthorize')
-      expect(error.value).toBe('Failed to deauthorize')
+      await expect(deauthorize()).rejects.toThrow('No Wahoo user ID found')
+      expect(error.value).toBe('No Wahoo user ID found')
     })
   })
 

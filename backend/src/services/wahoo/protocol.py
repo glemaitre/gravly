@@ -99,8 +99,8 @@ class ApiV1:
         self.access_token: str | None = access_token
         self.token_expires: int | None = token_expires
         self.refresh_token: str | None = refresh_token
-        self.client_id: str | None = None
-        self.client_secret: str | None = None
+        self.client_id: str | None = client_id
+        self.client_secret: str | None = client_secret
         if requests_session:
             self.rsession: requests.Session = requests_session
         else:
@@ -261,7 +261,6 @@ class ApiV1:
             resp = raw.json()
             if "created_at" in resp and "expires_in" in resp:
                 resp["expires_at"] = resp["created_at"] + resp["expires_in"]
-            print(resp)
 
         return resp
 

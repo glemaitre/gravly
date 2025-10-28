@@ -11,9 +11,9 @@ from fastapi import APIRouter, Form, HTTPException, Query
 from sqlalchemy import select
 from stravalib import Client
 
-from ..models.strava_token import StravaToken
-from ..services.strava import StravaService
-from ..utils.gpx import extract_from_gpx_file
+from src.models.strava_token import StravaToken
+from src.services.strava import StravaService
+from src.utils.gpx import extract_from_gpx_file
 
 logger = logging.getLogger(__name__)
 

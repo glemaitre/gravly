@@ -8,9 +8,12 @@ and accessing user information.
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from ...models.wahoo_token import WahooToken
 from ...utils.config import WahooConfig
 from .client import Client
 from .exceptions import WahooAccessUnauthorized
@@ -33,8 +36,6 @@ class WahooService:
         Wahoo application client secret.
     client : wahoo.Client
         The wahoo Client instance for API interactions.
-    tokens_file : Path
-        Path to the file where authentication tokens are stored.
 
     Notes
     -----
@@ -44,19 +45,27 @@ class WahooService:
     token refresh if needed.
     """
 
-    def __init__(self, wahoo_config: WahooConfig):
+    def __init__(
+        self,
+        wahoo_config: WahooConfig,
+        db_session: AsyncSession,
+        wahoo_id: int,
+    ):
         """Initialize the Wahoo service.
 
         Parameters
         ----------
         wahoo_config : WahooConfig
-            Wahoo configuration containing client credentials and token file
-            path.
+            Wahoo configuration containing client credentials.
+        db_session : AsyncSession
+            Database session for loading/saving tokens from database.
+        wahoo_id : int
+            Wahoo user ID for database-based token storage.
 
         Notes
         -----
-        This method initializes the Wahoo API client and sets up the token file
-        path for storing authentication tokens securely.
+        This method initializes the Wahoo API client and sets up database-backed
+        token storage. Database session and wahoo_id are required.
         """
         # Use client_id as string as required by wahoo client
         self.client_id = wahoo_config.client_id
@@ -65,75 +74,95 @@ class WahooService:
         self.scopes = wahoo_config.scopes
 
         self.client = Client()
-        self.tokens_file = Path(wahoo_config.tokens_file_path)
+        self.db_session = db_session
+        self.wahoo_id = wahoo_id
 
-    def _load_tokens(self) -> dict[str, Any] | None:
-        """Load Wahoo authentication tokens from the configured file.
+    async def _load_tokens(self) -> dict[str, Any] | None:
+        """Load Wahoo authentication tokens from database.
 
         Returns
         -------
         dict[str, Any] | None
             Dictionary containing access_token, refresh_token, and expires_at,
-            or None if the file doesn't exist or cannot be read.
-
-        Notes
-        -----
-        This method attempts to load tokens from the file specified in the
-        configuration. If the file doesn't exist or contains invalid JSON,
-        it returns None and logs the error.
+            or None if not available.
         """
-        if not self.tokens_file.exists():
-            return None
-
         try:
-            with open(self.tokens_file) as f:
-                tokens = json.load(f)
-            logger.info("Loaded Wahoo tokens from file")
-            return tokens
+            # Get the column name from the model mapping
+            wahoo_id_col = WahooToken.__table__.c.user_id
+            result = await self.db_session.execute(
+                select(WahooToken).where(wahoo_id_col == self.wahoo_id)
+            )
+            token_record = result.scalar_one_or_none()
+
+            if token_record:
+                # Convert datetime to int timestamp for consistency
+                expires_at_timestamp = int(token_record.expires_at.timestamp())
+                tokens = {
+                    "access_token": token_record.access_token,
+                    "refresh_token": token_record.refresh_token,
+                    "expires_at": expires_at_timestamp,
+                }
+                # user_data maps to user_info in the database
+                user_info_attr = getattr(token_record, "user_data", None)
+                if user_info_attr:
+                    tokens["user"] = json.loads(user_info_attr)
+                logger.info(
+                    f"Loaded Wahoo tokens from database for user {self.wahoo_id}"
+                )
+                return tokens
+            return None
         except Exception as e:
-            logger.error(f"Failed to load tokens: {e}")
+            logger.error(f"Failed to load tokens from database: {e}")
             return None
 
-    def _save_tokens(self, tokens: dict[str, Any]) -> None:
-        """Save Wahoo authentication tokens to the configured file.
+    async def _save_tokens(self, tokens: dict[str, Any]) -> None:
+        """Save Wahoo authentication tokens to database.
 
         Parameters
         ----------
         tokens : dict[str, Any]
             Dictionary containing access_token, refresh_token, expires_at,
             and any other token-related data.
-
-        Raises
-        ------
-        Exception
-            If the file cannot be written or the directory cannot be created.
-
-        Notes
-        -----
-        This method creates the parent directory if it doesn't exist and
-        converts any datetime objects to ISO format strings for JSON
-        serialization. The tokens are saved as JSON format.
         """
         try:
-            self.tokens_file.parent.mkdir(parents=True, exist_ok=True)
+            # Get the column name from the model mapping
+            wahoo_id_col = WahooToken.__table__.c.user_id
+            result = await self.db_session.execute(
+                select(WahooToken).where(wahoo_id_col == self.wahoo_id)
+            )
+            token_record = result.scalar_one_or_none()
 
-            # Convert any datetime objects to ISO format strings for JSON serialization
-            def convert_datetime(obj):
-                if hasattr(obj, "isoformat"):
-                    return obj.isoformat()
-                elif isinstance(obj, dict):
-                    return {k: convert_datetime(v) for k, v in obj.items()}
-                elif isinstance(obj, list):
-                    return [convert_datetime(item) for item in obj]
-                return obj
+            user_data = None
+            if "user" in tokens and tokens["user"]:
+                user_data = json.dumps(tokens["user"])
 
-            tokens_serializable = convert_datetime(tokens)
+            # Convert integer timestamp to datetime
+            expires_at_dt = datetime.fromtimestamp(tokens["expires_at"])
 
-            with open(self.tokens_file, "w") as f:
-                json.dump(tokens_serializable, f, indent=2)
-            logger.info("Saved Wahoo tokens to file")
+            if token_record:
+                # Update existing record
+                token_record.access_token = tokens["access_token"]
+                token_record.refresh_token = tokens["refresh_token"]
+                token_record.expires_at = expires_at_dt
+                token_record.user_data = user_data
+                token_record.updated_at = datetime.now()
+            else:
+                # Create new record - note: wahoo_id maps to user_id column in DB
+                token_record = WahooToken(
+                    wahoo_id=self.wahoo_id,
+                    access_token=tokens["access_token"],
+                    refresh_token=tokens["refresh_token"],
+                    expires_at=expires_at_dt,
+                    user_data=user_data,
+                )
+                self.db_session.add(token_record)
+
+            await self.db_session.commit()
+            logger.info(f"Saved Wahoo tokens to database for user {self.wahoo_id}")
         except Exception as e:
-            logger.error(f"Failed to save tokens: {e}")
+            logger.error(f"Failed to save tokens to database: {e}")
+            await self.db_session.rollback()
+            raise
 
     def get_authorization_url(self, state: str = "wahoo_auth") -> str:
         """Generate Wahoo OAuth authorization URL.
@@ -166,7 +195,7 @@ class WahooService:
         logger.info(f"Generated Wahoo authorization URL with state: {state}")
         return auth_url
 
-    def exchange_code_for_token(self, code: str) -> dict[str, Any]:
+    async def exchange_code_for_token(self, code: str) -> dict[str, Any]:
         """Exchange authorization code for access token.
 
         Parameters
@@ -207,7 +236,7 @@ class WahooService:
             }
 
             # Save tokens
-            self._save_tokens(token_dict)
+            await self._save_tokens(token_dict)
 
             logger.info("Successfully exchanged code for token")
             return token_dict
@@ -216,7 +245,7 @@ class WahooService:
             logger.error(f"Failed to exchange code for token: {e}")
             raise
 
-    def refresh_access_token(self) -> bool:
+    async def refresh_access_token(self) -> bool:
         """Refresh the access token using the stored refresh token.
 
         Returns
@@ -231,7 +260,7 @@ class WahooService:
         the new access token and refresh token. If the refresh fails,
         the user will need to re-authorize the application.
         """
-        tokens = self._load_tokens()
+        tokens = await self._load_tokens()
         if not tokens or "refresh_token" not in tokens:
             logger.error("No refresh token available")
             return False
@@ -244,7 +273,7 @@ class WahooService:
             )
 
             # Save new tokens
-            self._save_tokens(refresh_response)
+            await self._save_tokens(refresh_response)
 
             logger.info("Successfully refreshed access token")
             return True
@@ -253,7 +282,7 @@ class WahooService:
             logger.error(f"Failed to refresh access token: {e}")
             return False
 
-    def _ensure_authenticated(self) -> None:
+    async def _ensure_authenticated(self) -> None:
         """Ensure the client is authenticated with valid tokens.
 
         Raises
@@ -268,7 +297,7 @@ class WahooService:
         the refresh token. If authentication fails, it raises a
         WahooAccessUnauthorized exception.
         """
-        tokens = self._load_tokens()
+        tokens = await self._load_tokens()
         if not tokens:
             raise WahooAccessUnauthorized(
                 "No tokens available. Please authenticate first."
@@ -284,14 +313,14 @@ class WahooService:
             expires_at = datetime.fromtimestamp(tokens["expires_at"])
             if datetime.now() >= expires_at:
                 logger.info("Access token expired, attempting refresh")
-                if not self.refresh_access_token():
+                if not await self.refresh_access_token():
                     raise WahooAccessUnauthorized("Token expired and refresh failed")
-                tokens = self._load_tokens()
+                tokens = await self._load_tokens()
 
         # Set the access token on the client
         self.client.access_token = tokens["access_token"]
 
-    def deauthorize(self) -> None:
+    async def deauthorize(self) -> None:
         """Deauthorize the application.
 
         This causes the application to be removed from the user's
@@ -309,7 +338,7 @@ class WahooService:
         This method revokes the current access token and removes the
         application from the user's authorized applications list.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             self.client.deauthorize()
@@ -326,7 +355,7 @@ class WahooService:
             logger.error(f"Failed to deauthorize: {e}")
             raise
 
-    def get_user(self) -> dict[str, Any]:
+    async def get_user(self) -> dict[str, Any]:
         """Get authenticated user information.
 
         Returns
@@ -341,7 +370,7 @@ class WahooService:
         Exception
             If there's an error getting user information.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info("Getting user information from Wahoo")
@@ -360,7 +389,7 @@ class WahooService:
             logger.error(f"Failed to get user: {e}")
             raise
 
-    def get_route(self, route_id: int) -> dict[str, Any]:
+    async def get_route(self, route_id: int) -> dict[str, Any]:
         """Get a route by ID from Wahoo Cloud.
 
         Parameters
@@ -380,7 +409,7 @@ class WahooService:
         Exception
             If there's an error getting the route.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info(f"Getting route {route_id} from Wahoo Cloud")
@@ -399,7 +428,7 @@ class WahooService:
             logger.error(f"Failed to get route: {e}")
             raise
 
-    def get_routes(self) -> list[dict[str, Any]]:
+    async def get_routes(self) -> list[dict[str, Any]]:
         """Get all routes from Wahoo Cloud.
 
         Returns
@@ -414,7 +443,7 @@ class WahooService:
         Exception
             If there's an error getting the routes.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info("Getting all routes from Wahoo Cloud")
@@ -433,7 +462,7 @@ class WahooService:
             logger.error(f"Failed to get routes: {e}")
             raise
 
-    def create_route(
+    async def create_route(
         self,
         route_file: str,
         filename: str,
@@ -489,7 +518,7 @@ class WahooService:
         Exception
             If there's an error creating the route.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info(f"Creating route '{route_name}' in Wahoo Cloud")
@@ -521,7 +550,7 @@ class WahooService:
             logger.error(f"Failed to create route: {e}")
             raise
 
-    def update_route(
+    async def update_route(
         self,
         route_id: int,
         route_file: str,
@@ -577,7 +606,7 @@ class WahooService:
         Exception
             If there's an error updating the route.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info(f"Updating route {route_id} '{route_name}' in Wahoo Cloud")
@@ -609,7 +638,7 @@ class WahooService:
             logger.error(f"Failed to update route: {e}")
             raise
 
-    def delete_route(self, route_id: int) -> None:
+    async def delete_route(self, route_id: int) -> None:
         """Delete a route from Wahoo Cloud.
 
         Parameters
@@ -628,7 +657,7 @@ class WahooService:
         Exception
             If there's an error deleting the route.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info(f"Deleting route {route_id} from Wahoo Cloud")
@@ -646,7 +675,7 @@ class WahooService:
             logger.error(f"Failed to delete route: {e}")
             raise
 
-    def upload_route(
+    async def upload_route(
         self,
         route_file: str,
         filename: str,
@@ -700,12 +729,12 @@ class WahooService:
         Exception
             If there's an error uploading the route.
         """
-        self._ensure_authenticated()
+        await self._ensure_authenticated()
 
         try:
             logger.info(f"Uploading route '{route_name}' to Wahoo Cloud")
             # Try to create the route
-            result = self.create_route(
+            result = await self.create_route(
                 route_file=route_file,
                 filename=filename,
                 route_name=route_name,

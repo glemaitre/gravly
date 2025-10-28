@@ -342,7 +342,16 @@ export function useWahooApi() {
       isLoading.value = true
       error.value = null
 
-      const response = await fetch(`/api/wahoo/routes/${routeId}/upload`, {
+      // Get the wahoo_id from the auth state
+      const wahooId = authState.value.user?.id
+      if (!wahooId) {
+        throw new Error('No Wahoo user ID found')
+      }
+
+      const url = new URL(`/api/wahoo/routes/${routeId}/upload`, window.location.origin)
+      url.searchParams.set('wahoo_id', String(wahooId))
+
+      const response = await fetch(url.toString(), {
         method: 'POST'
       })
 
@@ -372,7 +381,16 @@ export function useWahooApi() {
       isLoading.value = true
       error.value = null
 
-      const response = await fetch(`/api/wahoo/routes/${routeId}`, {
+      // Get the wahoo_id from the auth state
+      const wahooId = authState.value.user?.id
+      if (!wahooId) {
+        throw new Error('No Wahoo user ID found')
+      }
+
+      const url = new URL(`/api/wahoo/routes/${routeId}`, window.location.origin)
+      url.searchParams.set('wahoo_id', wahooId.toString())
+
+      const response = await fetch(url.toString(), {
         method: 'DELETE'
       })
 
@@ -402,8 +420,18 @@ export function useWahooApi() {
       isLoading.value = true
       error.value = null
 
+      // Get the wahoo_id from the auth state
+      const wahooId = authState.value.user?.id
+      if (!wahooId) {
+        throw new Error('No Wahoo user ID found')
+      }
+
+      const formData = new FormData()
+      formData.append('wahoo_id', wahooId.toString())
+
       const response = await fetch('/api/wahoo/deauthorize', {
-        method: 'POST'
+        method: 'POST',
+        body: formData
       })
 
       if (!response.ok) {
