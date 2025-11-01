@@ -13,14 +13,17 @@ persistence.
 
 **Gravly** helps cyclists discover their next gravel adventure by providing:
 - 🗺️ **Interactive map discovery** with real-time segment streaming
-- ✏️ **Advanced GPX editor** with surface classification and difficulty ratings  
+- ✏️ **Advanced GPX editor** with surface classification and difficulty ratings
 - 🚴 **Strava integration** for seamless activity import
+- ⚙️ **Wahoo Cloud integration** for route upload and management
+- 📍 **Route planner** with interactive waypoint management
 - 📊 **Elevation profiles** and detailed route analytics
 - 🔐 **Secure authorization** system for editor access control
 
 ## Screenshots
 
-> 📸 *Screenshots coming soon - showing the interactive map, route editor, and segment details*
+> 📸 *Screenshots coming soon - showing the interactive map, route editor, and
+> segment details*
 
 ## Quick Start
 
@@ -57,7 +60,9 @@ pixi run python scripts/test_seeding.py
 - [Environment Configuration](#environment-configuration)
   - [Database Configuration](#database-configuration)
   - [Storage Configuration](#storage-configuration)
+  - [Map Configuration](#map-configuration)
   - [Strava Integration](#strava-integration)
+  - [Wahoo Integration](#wahoo-integration)
   - [Editor Authorization System](#editor-authorization-system)
 - [Database Seeding](#database-seeding)
 - [Project Structure](#project-structure)
@@ -98,6 +103,10 @@ pixi run python scripts/test_seeding.py
   testing
 - **Strava Integration**: Import GPX files directly from Strava activities with OAuth
   authentication
+- **Wahoo Cloud Integration**: Upload routes to Wahoo Cloud devices with OAuth
+  authentication and GPX to FIT conversion
+- **Route Planner**: Interactive route planning tool with waypoint management,
+  elevation profiles, and route generation
 
 ## Tech Stack
 
@@ -155,9 +164,9 @@ pixi run python scripts/test_seeding.py
 
 ## Environment Configuration
 
-This project uses separate `.env` files for database, storage, server, and API configuration. 
-The backend automatically loads environment variables from `.env/storage`, `.env/database`, 
-and `.env/server` files.
+This project uses separate `.env` files for database, storage, server, and API
+configuration. The backend automatically loads environment variables from
+`.env/storage`, `.env/database`, and `.env/server` files.
 
 ### Setup Environment Files
 
@@ -208,7 +217,22 @@ and `.env/server` files.
    AUTHORIZED_STRAVA_USERS=820773,123456,789012
    ```
 
-6. **Create the server configuration file** (`.env/server`):
+6. **Create the Wahoo configuration file** (`.env/wahoo`):
+   ```bash
+   # Wahoo API Configuration
+   WAHOO_CLIENT_ID=your_client_id_here
+   WAHOO_CLIENT_SECRET=your_client_secret_here
+   WAHOO_CALLBACK_URL=http://localhost:3000/wahoo/callback
+   WAHOO_SCOPES=user_read routes_write
+   ```
+
+7. **Create the Thunderforest map configuration file** (`.env/thunderforest`):
+   ```bash
+   # Thunderforest Map API Key
+   THUNDERFOREST_API_KEY=your_api_key_here
+   ```
+
+8. **Create the server configuration file** (`.env/server`):
    ```bash
    # Server Configuration
    BACKEND_PORT=8000
@@ -218,7 +242,7 @@ and `.env/server` files.
    BACKEND_URL=http://localhost:8000
    ```
 
-7. **Never commit actual `.env` files** - they contain sensitive information and are
+9. **Never commit actual `.env` files** - they contain sensitive information and are
    already in `.gitignore`.
 
 ### Storage Configuration
@@ -228,15 +252,32 @@ The storage backend is controlled by the `STORAGE_TYPE` variable in `.env/storag
 - `STORAGE_TYPE=local` - Use local filesystem storage
 - `STORAGE_TYPE=s3` - Use AWS S3 storage
 
+### Map Configuration
+
+The application uses Thunderforest for map tiles. Configuration is set in
+`.env/thunderforest`:
+
+- `THUNDERFOREST_API_KEY` - API key for Thunderforest map tiles (required)
+
+To get an API key:
+1. Visit [Thunderforest](https://www.thunderforest.com/)
+2. Sign up for an account
+3. Create a new API key
+4. Add the key to your `.env/thunderforest` file
+
+**Note**: The backend proxies map tile requests to hide the API key from the
+frontend for security.
+
 ### Server Configuration
 
-The application's server ports and URLs are configured through environment variables in 
+The application's server ports and URLs are configured through environment variables in
 `.env/server`:
 
 - `BACKEND_PORT` - Backend server port (default: 8000)
 - `BACKEND_HOST` - Backend server host (default: 0.0.0.0)
 - `FRONTEND_PORT` - Frontend development server port (default: 3000)
-- `FRONTEND_URL` - Frontend URL for CORS and OAuth redirects (default: http://localhost:3000)
+- `FRONTEND_URL` - Frontend URL for CORS and OAuth redirects (default:
+  http://localhost:3000)
 - `BACKEND_URL` - Backend URL for frontend API calls (default: http://localhost:8000)
 
 **Production Deployment**: When deploying to production, update these values:
@@ -303,6 +344,67 @@ When using S3 storage, configure these variables in `.env/storage`:
 - `AWS_ACCESS_KEY_ID` - AWS access key
 - `AWS_SECRET_ACCESS_KEY` - AWS secret key
 - `AWS_REGION` - AWS region (optional, defaults to `us-east-1`)
+
+## Wahoo Integration
+
+The application includes comprehensive Wahoo Cloud integration for uploading routes to
+Wahoo devices. The integration provides OAuth 2.0 authentication, route upload with GPX
+to FIT conversion, route management, and seamless integration with the route editor.
+
+### Setup Wahoo Integration
+
+1. **Create a Wahoo Application**:
+   - Go to [Wahoo Developer Portal](https://developers.wahooligan.com/)
+   - Register your application
+   - Get your client ID and client secret
+
+2. **Configure Environment Variables**:
+   Add your Wahoo credentials to the `.env/wahoo` file:
+   ```bash
+   WAHOO_CLIENT_ID=your_client_id_here
+   WAHOO_CLIENT_SECRET=your_client_secret_here
+   WAHOO_CALLBACK_URL=http://localhost:3000/wahoo/callback
+   WAHOO_SCOPES=user_read routes_write
+   ```
+
+### How Wahoo Integration Works
+
+1. **Authentication**: Users authenticate with Wahoo using OAuth 2.0
+2. **Route Upload**: Routes can be uploaded directly from the segment detail view
+3. **GPX to FIT Conversion**: GPX files are automatically converted to FIT
+   format for Wahoo devices
+4. **Route Management**: Routes are synced between Gravly and Wahoo Cloud
+5. **Automatic Updates**: If a route already exists in Wahoo, it's updated
+   instead of creating duplicates
+
+### Wahoo Integration Features
+
+- **OAuth 2.0 Authentication**: Secure login with Wahoo Cloud
+- **Database-backed Token Storage**: OAuth tokens stored securely in PostgreSQL
+- **Automatic Token Refresh**: Seamless token renewal when access tokens expire
+- **Route Upload**: Direct upload of routes to Wahoo Cloud from segment detail view
+- **GPX to FIT Conversion**: Automatic conversion of GPX files to FIT format
+- **Route Synchronization**: Routes are tracked with external IDs for update support
+- **Route Deletion**: Delete routes from Wahoo Cloud
+- **Activity Retrieval**: Access to Wahoo activities and route data
+
+### Wahoo API Endpoints
+
+- `GET /api/wahoo/auth-url` - Get OAuth authorization URL
+- `POST /api/wahoo/exchange-code` - Exchange authorization code for access token
+- `POST /api/wahoo/refresh-token` - Refresh expired access token
+- `POST /api/wahoo/deauthorize` - Deauthorize and delete tokens
+- `GET /api/wahoo/user` - Get authenticated user information
+- `GET /api/wahoo/callback` - Handle OAuth callback
+- `POST /api/wahoo/routes/{route_id}/upload` - Upload route to Wahoo Cloud
+- `DELETE /api/wahoo/routes/{route_id}` - Delete route from Wahoo Cloud
+
+### Security Notes
+
+- OAuth tokens are stored securely in PostgreSQL database
+- Client secret is handled securely on the backend only
+- All Wahoo API calls are proxied through the backend for security
+- Tokens are automatically refreshed before expiration
 
 ## Strava Integration
 
@@ -383,7 +485,8 @@ The Strava integration uses a sophisticated authentication system:
   charts, segment selection, and metadata editing
 - **Backend Processing**: GPX data is processed on the backend using the same pipeline
   as local file uploads
-- **Editor Authorization**: Restrictive access control for editor features based on authorized Strava user IDs
+- **Editor Authorization**: Restrictive access control for editor features
+  based on authorized Strava user IDs
 
 ### User Experience Improvements
 
@@ -527,14 +630,18 @@ await seed_database(
 
 ## Editor Authorization System
 
-The application includes a sophisticated authorization system that controls access to the route editor based on authorized Strava user IDs. This enables selective access to premium editing features while maintaining security.
+The application includes a sophisticated authorization system that controls access to
+the route editor based on authorized Strava user IDs. This enables selective access to
+premium editing features while maintaining security.
 
 ### Overview
 
-The authorization system provides fine-grained control over who can access the GPX route editor:
+The authorization system provides fine-grained control over who can access the GPX route
+editor:
 - **Strava Authentication**: Users must be authenticated with Strava
 - **Authorization Check**: Backend validates authorized user IDs against database
-- **Frontend UI Control**: Editor button only visible to authenticated and authorized users
+- **Frontend UI Control**: Editor button only visible to authenticated and authorized
+  users
 - **Environment Configuration**: Authorized users configured via `.env/auth_users` file
 
 ### Setup Editor Authorization
@@ -561,7 +668,8 @@ The authorization system provides fine-grained control over who can access the G
 ### Authorization Features
 
 - **Database-driven Control**: Authorized users stored in PostgreSQL `auth_users` table
-- **Automatic Checking**: Frontend automatically validates authorization on Strava authentication
+- **Automatic Checking**: Frontend automatically validates authorization on Strava
+  authentication
 - **UI Hiding**: Editor button hidden from unauthorized users (not shown at all)
 - **Error Prevention**: Unauthorized users cannot access editor routes
 - **Secure Backend**: All authorization checks validated server-side
@@ -570,7 +678,8 @@ The authorization system provides fine-grained control over who can access the G
 ### Authorization Flow
 
 1. **User Authentication**: User logs in with Strava OAuth
-2. **Authorization Request**: Frontend calls `/api/auth/check-authorization?strava_id=<ID>`
+2. **Authorization Request**: Frontend calls
+   `/api/auth/check-authorization?strava_id=<ID>`
 3. **Database Check**: Backend validates Strava ID against `auth_users` table
 4. **Response**: Returns authorization status and user information
 5. **UI Update**: Editor button appears/disappears based on authorization
@@ -606,7 +715,7 @@ GET /api/auth/users
   {
     "id": 1,
     "strava_id": 820773,
-    "firstname": "Test", 
+    "firstname": "Test",
     "lastname": "User",
     "created_at": "2024-01-01T00:00:00Z",
     "updated_at": "2024-01-01T00:00:00Z"
@@ -639,7 +748,7 @@ AUTHORIZED_STRAVA_USERS=820773
 #### Manual Database Management
 You can also manually add authorized users directly to the database:
 ```sql
-INSERT INTO auth_users (strava_id, firstname, lastname) 
+INSERT INTO auth_users (strava_id, firstname, lastname)
 VALUES (123456, 'Test', 'User');
 ```
 
@@ -648,7 +757,8 @@ VALUES (123456, 'Test', 'User');
 #### Common Issues
 - **Editor button not showing**: Verify user's Strava ID exists in `auth_users` table
 - **Database errors**: Ensure `auth_users` table has been created (run seeder)
-- **Environment not loaded**: Check `.env/auth_users` file exists and has valid Strava IDs
+- **Environment not loaded**: Check `.env/auth_users` file exists and has valid Strava
+  IDs
 - **No authorization response**: Check backend authorization endpoints are working
 - **Authentication failures**: Ensure Strava OAuth integration is properly configured
 
@@ -747,9 +857,15 @@ gravly/
 │   │   │   ├── image.py    # Track image model and schemas
 │   │   │   ├── video.py    # Track video model and schemas
 │   │   │   ├── auth_user.py # Authorized user model and schemas
+│   │   │   ├── wahoo_token.py # Wahoo OAuth token model and schemas
 │   │   │   └── base.py     # Base model configuration
 │   │   ├── services/       # Service modules
-│   │   │   └── strava.py   # Strava API integration service with OAuth and GPX processing
+│   │   │   ├── strava.py   # Strava API integration service with OAuth and GPX processing
+│   │   │   └── wahoo/      # Wahoo API integration service
+│   │   │       ├── client.py      # Wahoo API client
+│   │   │       ├── service.py     # Wahoo service with token management
+│   │   │       ├── protocol.py    # API protocol definitions
+│   │   │       └── exceptions.py  # Wahoo-specific exceptions
 │   │   └── utils/          # Utility modules
 │   │       ├── config.py   # Environment configuration
 │   │       ├── storage.py  # Storage managers (S3/Local)
@@ -764,14 +880,17 @@ gravly/
 │   │   │   ├── SegmentDetail.vue # Detailed segment view with map and charts
 │   │   │   ├── SegmentList.vue   # Filterable segment list component
 │   │   │   ├── Navbar.vue        # Navigation component with Strava authentication
-│   │   │   ├── RoutePlanner.vue  # Route planning component
+│   │   │   ├── RoutePlanner.vue  # Route planning component with waypoint management
+│   │   │   ├── RoutePlannerSidebar.vue # Route planner sidebar with filters and controls
 │   │   │   ├── StravaCallback.vue # Strava OAuth callback handler
 │   │   │   ├── StravaActivityList.vue # Strava activities list component
-│   │   │   └── StravaActivityDetailsModal.vue # Strava activity details modal
+│   │   │   ├── StravaActivityDetailsModal.vue # Strava activity details modal
+│   │   │   └── WahooCallback.vue # Wahoo OAuth callback handler
 │   │   ├── composables/    # Vue composables
 │   │   │   ├── useMapState.ts    # Map state persistence management
 │   │   │   ├── useStravaApi.ts   # Strava API integration and authentication composable
 │   │   │   ├── useStravaActivities.ts # Strava activities management composable
+│   │   │   ├── useWahooApi.ts    # Wahoo API integration and authentication composable
 │   │   │   └── useAuthorization.ts # Editor authorization management
 │   │   ├── utils/          # Frontend utilities
 │   │   │   ├── gpxParser.ts      # Client-side GPX parsing
@@ -784,8 +903,11 @@ gravly/
 ├── .env/                   # Environment configuration files
 │   ├── database            # Database configuration
 │   ├── storage             # Storage configuration
-│   ├── strava              # Strava API configuration  
+│   ├── strava              # Strava API configuration
+│   ├── wahoo               # Wahoo API configuration
+│   ├── thunderforest       # Thunderforest map API key
 │   ├── auth_users          # Editor authorization configuration
+│   ├── server              # Server port and URL configuration
 │   └── strava_tokens.json  # Strava OAuth tokens (auto-generated, git-ignored)
 ├── scripts/                # Database seeding and utility scripts
 │   ├── database_seeding.py # Generate 1,000 realistic cycling segments
@@ -819,8 +941,21 @@ gravly/
 - `GET /api/strava/activities/{activity_id}/gpx` - Get GPX data for a specific Strava
   activity
 
+### Wahoo Integration
+- `GET /api/wahoo/auth-url?state={state}` - Get Wahoo OAuth authorization URL
+- `POST /api/wahoo/exchange-code` - Exchange Wahoo authorization code for access token
+- `POST /api/wahoo/refresh-token` - Refresh expired Wahoo access token
+- `POST /api/wahoo/deauthorize` - Deauthorize and delete tokens
+- `GET /api/wahoo/user?wahoo_id={wahoo_id}` - Get authenticated Wahoo user information
+- `GET /api/wahoo/callback?code={code}` - Handle Wahoo OAuth callback
+- `POST /api/wahoo/routes/{route_id}/upload?wahoo_id={wahoo_id}` - Upload route to Wahoo
+  Cloud
+- `DELETE /api/wahoo/routes/{route_id}?wahoo_id={wahoo_id}` - Delete route from Wahoo
+  Cloud
+
 ### Editor Authorization
-- `GET /api/auth/check-authorization?strava_id={strava_id}` - Check if Strava user is authorized for editor access
+- `GET /api/auth/check-authorization?strava_id={strava_id}` - Check if Strava user is
+  authorized for editor access
 - `GET /api/auth/users` - List all authorized users (admin endpoint)
 
 ### Track Media Management
@@ -831,13 +966,19 @@ gravly/
 - `POST /api/tracks/{track_id}/videos` - Upload videos for a track
 - `DELETE /api/tracks/{track_id}/videos/{video_id}` - Delete a specific track video
 
+### Map Tiles
+- `GET /api/utils/map-tiles/{z}/{x}/{y}.png` - Proxy endpoint for Thunderforest map
+  tiles (hides API key from frontend)
+
 **Features**:
-- **OAuth 2.0 Authentication**: Complete OAuth flow with secure token management
+- **OAuth 2.0 Authentication**: Complete OAuth flow with secure token management (Strava
+  and Wahoo)
 - **Automatic Token Refresh**: Seamless token renewal when access tokens expire
 - **Activity Retrieval**: Paginated access to user's Strava activities
 - **GPX Data Processing**: Direct import and processing of Strava activity GPX files
+- **Wahoo Route Upload**: Upload routes to Wahoo Cloud with GPX to FIT conversion
 - **Comprehensive Error Handling**: Proper HTTP status codes and error messages
-- **Secure Token Storage**: OAuth tokens stored securely on the backend filesystem
+- **Secure Token Storage**: OAuth tokens stored securely in PostgreSQL database
 
 ### Segment Discovery (Streaming)
 - `GET /api/segments/search` - Stream segments within geographic bounds using
@@ -935,7 +1076,8 @@ pixi run python scripts/database_seeding.py
 pixi run python scripts/seed_auth_users.py
 ```
 
-**Note**: Task definitions use Pixi's `cwd` and `depends-on` fields for clarity. Use the `-e dev` flag to access development environment features (testing, linting).
+**Note**: Task definitions use Pixi's `cwd` and `depends-on` fields for clarity. Use the
+`-e dev` flag to access development environment features (testing, linting).
 
 ## Architecture & Performance
 
@@ -1048,7 +1190,9 @@ summaries and uploading coverage reports to Codecov.
 
 ### Codecov Integration
 
-Test coverage is automatically uploaded to [Codecov](https://codecov.io/gh/glemaitre/gravly) on each push/PR. The coverage badge in the README shows the current coverage percentage for the entire project.
+Test coverage is automatically uploaded to
+[Codecov](https://codecov.io/gh/glemaitre/gravly) on each push/PR. The coverage badge in
+the README shows the current coverage percentage for the entire project.
 
 **Setup for Repository Maintainers:**
 
@@ -1085,6 +1229,8 @@ The workflows will automatically upload coverage reports:
 - **File Upload**: Drag-and-drop GPX file upload with validation
 - **Strava Integration**: Import GPX files directly from Strava activities with OAuth
   authentication
+- **Wahoo Integration**: Upload routes to Wahoo Cloud devices with automatic GPX to FIT
+  conversion
 - **Route Protection**: Editor requires Strava authentication for access
 - **Visual Editing**: Interactive segment selection with map and elevation chart
 - **Surface Classification**: Trail condition metadata (surface type, difficulty, tire
@@ -1092,6 +1238,18 @@ The workflows will automatically upload coverage reports:
 - **Chart Visualization**: Real-time elevation profile with Chart.js
 - **Commentary Support**: Text, video links, and image attachments for segments
 - **Media Management**: Upload and manage images and videos for cycling segments
+
+### Route Planner
+- **Interactive Waypoint Management**: Add, move, and remove waypoints on the map
+- **Multiple Routing Modes**: Standard routing, start/end mode, and free mode
+- **Elevation Profiles**: Real-time elevation visualization with gain/loss statistics
+- **Route Generation**: Automatic route generation from selected waypoints
+- **Segment Integration**: Add segments from the explorer to your route
+- **Filterable Segment List**: Filter segments by difficulty, surface type, and tire
+  recommendations
+- **State Persistence**: Automatically saves route state to localStorage
+- **Undo/Redo Support**: History management for route editing
+- **Route Saving**: Save planned routes to the database with Strava authentication
 
 ### Authentication System
 - **Global Authentication**: Navbar-based login/logout with Strava OAuth 2.0
@@ -1102,12 +1260,23 @@ The workflows will automatically upload coverage reports:
 - **Mobile Responsive**: Adaptive authentication UI for all screen sizes
 
 ### Authorization System
-- **Editor Access Control**: Restrictive editor access based on authorized Strava user IDs
+- **Editor Access Control**: Restrictive editor access based on authorized Strava user
+  IDs
 - **Database-driven Control**: PostgreSQL-stored authorized user list
 - **Environment Configuration**: Easy management via `.env/auth_users` file
 - **Frontend UI Control**: Editor button shown/hidden based on authorization
 - **Backend Validation**: Server-side authorization checks for security
 - **Seamless Integration**: Works with existing Strava authentication system
+
+### Wahoo Cloud Integration
+- **OAuth 2.0 Authentication**: Secure login with Wahoo Cloud
+- **Database-backed Token Storage**: OAuth tokens stored securely in PostgreSQL
+- **Automatic Token Refresh**: Seamless token renewal when access tokens expire
+- **Route Upload**: Direct upload of routes to Wahoo Cloud from segment detail view
+- **GPX to FIT Conversion**: Automatic conversion of GPX files to FIT format for Wahoo
+  devices
+- **Route Synchronization**: Routes tracked with external IDs for update support
+- **Route Management**: Delete routes from Wahoo Cloud
 
 ### Storage & Database
 - **Dual Storage**: Support for both local filesystem and AWS S3
