@@ -1779,6 +1779,136 @@ describe('Editor Image Upload', () => {
     })
   })
 
+  describe('Auto zoom/pan toggle functionality', () => {
+    let wrapper: any
+    let vm: any
+
+    beforeEach(() => {
+      wrapper = mountEditor()
+      vm = wrapper.vm as any
+
+      // Set up loaded track with more points to allow index changes
+      vm.loaded = true
+      vm.points = [
+        { latitude: 45.0, longitude: 4.0, elevation: 100 },
+        { latitude: 45.1, longitude: 4.1, elevation: 110 },
+        { latitude: 45.2, longitude: 4.2, elevation: 120 }
+      ]
+      vm.startIndex = 0
+      vm.endIndex = 2
+    })
+
+    it('should have autoZoomEnabled enabled by default', () => {
+      expect(vm.autoZoomEnabled).toBe(true)
+    })
+
+    it('should toggle autoZoomEnabled when button is clicked', async () => {
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      expect(toggleButton.exists()).toBe(true)
+
+      await toggleButton.trigger('click')
+      expect(vm.autoZoomEnabled).toBe(false)
+
+      await toggleButton.trigger('click')
+      expect(vm.autoZoomEnabled).toBe(true)
+    })
+
+    it('should show correct icon when auto zoom is enabled', async () => {
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      const icon = toggleButton.find('i')
+
+      expect(icon.classes()).toContain('fa-unlock')
+    })
+
+    it('should show correct icon when auto zoom is disabled', async () => {
+      vm.autoZoomEnabled = false
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      const icon = toggleButton.find('i')
+
+      expect(icon.classes()).toContain('fa-lock')
+    })
+
+    it('should have active class when auto zoom is enabled', async () => {
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      expect(toggleButton.classes()).not.toContain('active')
+    })
+
+    it('should not have active class when auto zoom is disabled', async () => {
+      vm.autoZoomEnabled = false
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      expect(toggleButton.classes()).toContain('active')
+    })
+
+    it('should show correct tooltip when auto zoom is enabled', async () => {
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      expect(toggleButton.attributes('title')).toBe('Disable auto zoom/pan')
+    })
+
+    it('should show correct tooltip when auto zoom is disabled', async () => {
+      vm.autoZoomEnabled = false
+      await nextTick()
+
+      const toggleButton = wrapper.find('.control-btn')
+      expect(toggleButton.attributes('title')).toBe('Enable auto zoom/pan')
+    })
+
+    it('should not call fitBounds when autoZoomEnabled is false', async () => {
+      // Mock map.fitBounds
+      const mockFitBounds = vi.fn()
+
+      // Set up map mock
+      vm.map = {
+        fitBounds: mockFitBounds,
+        invalidateSize: vi.fn()
+      }
+
+      // Disable auto zoom
+      vm.autoZoomEnabled = false
+
+      // Trigger slider change with different values
+      vm.startIndex = 0
+      vm.endIndex = 1
+      await nextTick()
+
+      // fitBounds should not be called
+      expect(mockFitBounds).not.toHaveBeenCalled()
+    })
+
+    it('should call fitBounds when autoZoomEnabled is true', async () => {
+      // Mock map.fitBounds
+      const mockFitBounds = vi.fn()
+
+      // Set up map mock
+      vm.map = {
+        fitBounds: mockFitBounds,
+        invalidateSize: vi.fn()
+      }
+
+      // Enable auto zoom
+      vm.autoZoomEnabled = true
+
+      // Trigger slider change with different values
+      vm.startIndex = 0
+      vm.endIndex = 1
+      await nextTick()
+
+      // fitBounds should be called
+      expect(mockFitBounds).toHaveBeenCalled()
+    })
+  })
+
   describe('Delete from DB functionality', () => {
     let wrapper: any
     let vm: any

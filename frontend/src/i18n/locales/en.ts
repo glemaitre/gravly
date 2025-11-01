@@ -350,7 +350,9 @@ export default {
     loadingSegments: 'Loading segments...',
     searchCenter: 'Search center',
     maxResults: 'Max results',
-    importToEditor: 'Import to Editor'
+    importToEditor: 'Import to Editor',
+    enableAutoZoom: 'Enable auto zoom/pan',
+    disableAutoZoom: 'Disable auto zoom/pan'
   },
 
   // Route Planner

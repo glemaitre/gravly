@@ -269,6 +269,24 @@
           <div v-if="loaded">
             <div class="card card-map">
               <div id="map" class="map"></div>
+              <!-- Auto zoom/pan toggle control -->
+              <div class="map-controls">
+                <button
+                  class="control-btn"
+                  @click="toggleAutoZoom"
+                  :class="{ active: !autoZoomEnabled }"
+                  :title="
+                    autoZoomEnabled
+                      ? t('editor.disableAutoZoom')
+                      : t('editor.enableAutoZoom')
+                  "
+                >
+                  <i
+                    class="fa-solid"
+                    :class="autoZoomEnabled ? 'fa-unlock' : 'fa-lock'"
+                  ></i>
+                </button>
+              </div>
             </div>
             <ElevationCropper
               :points="points"
@@ -388,6 +406,9 @@ const currentErrorMessage = ref<string>('')
 // Update mode state
 const isUpdateMode = ref<boolean>(false)
 const updatingSegmentId = ref<number | null>(null)
+
+// Auto zoom/pan state (enabled by default)
+const autoZoomEnabled = ref<boolean>(true)
 
 const isSaveDisabled = computed(() => submitting.value || !name.value || !loaded.value)
 const isUpdateDisabled = computed(
@@ -744,7 +765,8 @@ watch([startIndex, endIndex], () => {
     endIndex.value = Math.min(points.value.length - 1, startIndex.value + 1)
   }
   updateSelectedPolyline()
-  if (map && points.value.length > 1) {
+  // Only auto zoom/pan if enabled
+  if (autoZoomEnabled.value && map && points.value.length > 1) {
     const segLatLngs = points.value
       .slice(startIndex.value, endIndex.value + 1)
       .map((p) => [p.latitude, p.longitude]) as [number, number][]
@@ -768,6 +790,11 @@ function checkSidebarMode() {
 // Function to toggle sidebar collapse
 function toggleSidebarCollapse() {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
+}
+
+// Function to toggle auto zoom/pan
+function toggleAutoZoom() {
+  autoZoomEnabled.value = !autoZoomEnabled.value
 }
 
 onMounted(() => {
@@ -1836,6 +1863,7 @@ ${points.value
 .card-map {
   padding: 0;
   overflow: hidden;
+  position: relative;
 }
 .card-elevation {
   padding: 0.75rem;
@@ -1846,6 +1874,51 @@ ${points.value
 .map {
   height: 480px;
   width: 100%;
+}
+
+/* Map Controls */
+.map-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+}
+
+.control-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+  border: 1px solid var(--card-border);
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.control-btn.active {
+  background: var(--brand-primary);
+  color: white;
+}
+
+.control-btn.active:hover:not(:disabled) {
+  background: #e55a0d; /* Darker orange */
+  color: white;
 }
 .empty {
   padding: 2rem;

@@ -290,7 +290,9 @@ export function useStravaApi() {
 
       const data = await response.json()
       const pointCount = data.points?.length || 0
-      console.info(`Retrieved GPX data for activity ${activityId}: ${pointCount} points`)
+      console.info(
+        `Retrieved GPX data for activity ${activityId}: ${pointCount} points`
+      )
       return data
     } catch (err: any) {
       error.value = err.message || 'Failed to get activity GPX'

@@ -64,7 +64,9 @@ export function useStravaActivities() {
 
       // Set hasMore based on whether we got a full page of results
       hasMore.value = fetchedActivities.length === perPage.value
-      console.info(`Loaded ${fetchedActivities.length} more activities (page ${nextPage})`)
+      console.info(
+        `Loaded ${fetchedActivities.length} more activities (page ${nextPage})`
+      )
     } catch (err: any) {
       console.error(`Failed to load more activities:`, err)
       error.value = err.message || 'Failed to load more activities'
