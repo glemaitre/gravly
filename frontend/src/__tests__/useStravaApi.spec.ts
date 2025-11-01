@@ -458,6 +458,13 @@ describe('useStravaApi', () => {
   describe('getActivities', () => {
     beforeEach(() => {
       composable = useStravaApi()
+      // Set up auth state with athlete ID
+      composable.authState.value = {
+        isAuthenticated: true,
+        accessToken: 'mock-token',
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+        athlete: { id: 12345 }
+      }
     })
 
     it('should successfully fetch activities', async () => {
@@ -517,7 +524,7 @@ describe('useStravaApi', () => {
       const result = await composable.getActivities(1, 30)
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/strava/activities?page=1&per_page=30'
+        '/api/strava/activities?strava_id=12345&page=1&per_page=30'
       )
       expect(result).toEqual(mockActivities)
       expect(composable.isLoading.value).toBe(false)
@@ -535,7 +542,7 @@ describe('useStravaApi', () => {
       await composable.getActivities()
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/strava/activities?page=1&per_page=30'
+        '/api/strava/activities?strava_id=12345&page=1&per_page=30'
       )
     })
 
@@ -585,6 +592,13 @@ describe('useStravaApi', () => {
   describe('getActivityGpx', () => {
     beforeEach(() => {
       composable = useStravaApi()
+      // Set up auth state with athlete ID
+      composable.authState.value = {
+        isAuthenticated: true,
+        accessToken: 'mock-token',
+        expiresAt: Math.floor(Date.now() / 1000) + 3600,
+        athlete: { id: 12345 }
+      }
     })
 
     it('should successfully fetch GPX data', async () => {
@@ -604,7 +618,9 @@ describe('useStravaApi', () => {
 
       const result = await composable.getActivityGpx('activity-123')
 
-      expect(mockFetch).toHaveBeenCalledWith('/api/strava/activities/activity-123/gpx')
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/strava/activities/activity-123/gpx?strava_id=12345'
+      )
       expect(result).toEqual(mockGpxData)
       expect(composable.isLoading.value).toBe(false)
       expect(composable.error.value).toBe(null)

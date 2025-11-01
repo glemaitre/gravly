@@ -513,7 +513,7 @@ describe('useWahooApi', () => {
       expect(isLoading.value).toBe(false)
       expect(error.value).toBeNull()
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/wahoo/routes/route123/upload?wahoo_id=123',
+        'http://localhost:3000/api/wahoo/routes/route123/upload?wahoo_id=123',
         { method: 'POST' }
       )
     })
