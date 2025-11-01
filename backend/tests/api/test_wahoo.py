@@ -1,6 +1,7 @@
 """Tests for Wahoo API endpoints."""
 
-from unittest.mock import AsyncMock, patch
+from datetime import datetime
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -321,21 +322,184 @@ class TestWahooExchangeCodeEndpoint:
 
         assert response.status_code == 422  # Validation error
 
-    @patch("src.api.wahoo.Client")
-    def test_exchange_wahoo_code_success(self, mock_client_class, client):
-        """Test successful Wahoo code exchange."""
-        # Note: This test would need a more complex setup with database mocking
-        # For now, skip actual implementation and test error handling
-        pass
+    @patch("src.dependencies.SessionLocal", None)
+    def test_exchange_wahoo_code_no_database(self, client):
+        """Test exchange code when database is not initialized."""
+        response = client.post("/api/wahoo/exchange-code", data={"code": "test_code"})
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()
 
     @patch("src.api.wahoo.Client")
-    def test_exchange_wahoo_code_service_error(self, mock_client_class, client):
-        """Test Wahoo code exchange with service error."""
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_exchange_wahoo_code_no_user_id(
+        self, mock_get_config, mock_client_class, client
+    ):
+        """Test exchange code when no user ID in response."""
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_config.return_value = mock_config
+
+        # Mock client
         mock_client = mock_client_class.return_value
-        mock_client.exchange_code_for_token.side_effect = Exception("Exchange failed")
+        mock_client.exchange_code_for_token.return_value = {
+            "access_token": "test_token",
+            "refresh_token": "refresh_token",
+            "expires_at": int(datetime.now().timestamp()),
+        }
+        mock_client.get_user.return_value = {"name": "Test User"}  # No ID
 
-        # Note: This test would need database mocking
-        pass
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.add = Mock()
+        mock_session.commit = AsyncMock()
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post(
+                "/api/wahoo/exchange-code", data={"code": "test_code"}
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "no user id" in data["detail"].lower()
+
+    @patch("src.api.wahoo.Client")
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_exchange_wahoo_code_success_new_token(
+        self, mock_get_config, mock_client_class, client
+    ):
+        """Test successful Wahoo code exchange creating new token."""
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_config.return_value = mock_config
+
+        # Mock client
+        mock_client = mock_client_class.return_value
+        mock_client.exchange_code_for_token.return_value = {
+            "access_token": "test_token",
+            "refresh_token": "refresh_token",
+            "expires_at": int(datetime.now().timestamp()),
+        }
+        mock_client.get_user.return_value = {"id": 12345, "name": "Test User"}
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.add = Mock()
+        mock_session.commit = AsyncMock()
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post(
+                "/api/wahoo/exchange-code", data={"code": "test_code"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+            assert "access_token" in data
+            assert "user" in data
+            assert data["user"]["id"] == 12345
+            mock_session.add.assert_called_once()
+
+    @patch("src.api.wahoo.Client")
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_exchange_wahoo_code_success_update_token(
+        self, mock_get_config, mock_client_class, client
+    ):
+        """Test successful Wahoo code exchange updating existing token."""
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_config.return_value = mock_config
+
+        # Mock client
+        mock_client = mock_client_class.return_value
+        mock_client.exchange_code_for_token.return_value = {
+            "access_token": "new_token",
+            "refresh_token": "new_refresh_token",
+            "expires_at": int(datetime.now().timestamp()),
+        }
+        mock_client.get_user.return_value = {"id": 12345, "name": "Test User"}
+
+        # Mock existing token record
+        mock_token_record = Mock()
+        mock_token_record.access_token = "old_token"
+        mock_token_record.refresh_token = "old_refresh_token"
+        mock_token_record.expires_at = datetime.now()
+        mock_token_record.user_data = None
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_token_record
+        mock_session.execute = AsyncMock(return_value=mock_result)
+        mock_session.commit = AsyncMock()
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post(
+                "/api/wahoo/exchange-code", data={"code": "test_code"}
+            )
+
+            assert response.status_code == 200
+            assert mock_token_record.access_token == "new_token"
+            assert mock_token_record.refresh_token == "new_refresh_token"
+
+    @patch("src.api.wahoo.Client")
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_exchange_wahoo_code_service_error(
+        self, mock_get_config, mock_client_class, client
+    ):
+        """Test Wahoo code exchange with service error."""
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_config.return_value = mock_config
+
+        # Mock client to raise exception
+        mock_client = mock_client_class.return_value
+        mock_client.exchange_code_for_token.side_effect = RuntimeError(
+            "Exchange failed"
+        )
+
+        # Mock database session
+        mock_session = AsyncMock()
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post(
+                "/api/wahoo/exchange-code", data={"code": "test_code"}
+            )
+
+            assert response.status_code == 400
+            data = response.json()
+            assert "failed to exchange code" in data["detail"].lower()
 
 
 class TestWahooRefreshTokenEndpoint:
@@ -406,6 +570,37 @@ class TestWahooRefreshTokenEndpoint:
         data = response.json()
         assert "Failed to refresh token" in data["detail"]
 
+    @patch("src.dependencies.SessionLocal", None)
+    def test_refresh_wahoo_token_no_database(self, client):
+        """Test refresh token when database is not initialized."""
+        response = client.post("/api/wahoo/refresh-token", data={"wahoo_id": 1})
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()
+
+    @patch("src.dependencies.SessionLocal")
+    @patch("src.api.wahoo.WahooService")
+    def test_refresh_wahoo_token_http_exception_passthrough(
+        self, mock_service_class, mock_session, client
+    ):
+        """Test that HTTPException is passed through."""
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_session.return_value.__aexit__.return_value = False
+
+        mock_service = AsyncMock()
+        mock_service.refresh_access_token.side_effect = HTTPException(
+            status_code=400, detail="Custom error"
+        )
+        mock_service_class.return_value = mock_service
+
+        response = client.post("/api/wahoo/refresh-token", data={"wahoo_id": 1})
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["detail"] == "Custom error"
+
 
 class TestWahooDeauthorizeEndpoint:
     """Test Wahoo deauthorize endpoint."""
@@ -448,6 +643,37 @@ class TestWahooDeauthorizeEndpoint:
         assert response.status_code == 401
         data = response.json()
         assert "failed to deauthorize" in data["detail"].lower()
+
+    @patch("src.dependencies.SessionLocal", None)
+    def test_deauthorize_no_database(self, client):
+        """Test deauthorize when database is not initialized."""
+        response = client.post("/api/wahoo/deauthorize", data={"wahoo_id": 1})
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()
+
+    @patch("src.dependencies.SessionLocal")
+    @patch("src.api.wahoo.WahooService")
+    def test_deauthorize_http_exception_passthrough(
+        self, mock_service_class, mock_session, client
+    ):
+        """Test that HTTPException is passed through."""
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_session.return_value.__aexit__.return_value = False
+
+        mock_service = AsyncMock()
+        mock_service.deauthorize.side_effect = HTTPException(
+            status_code=400, detail="Custom error"
+        )
+        mock_service_class.return_value = mock_service
+
+        response = client.post("/api/wahoo/deauthorize", data={"wahoo_id": 1})
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["detail"] == "Custom error"
 
 
 class TestWahooGetUserEndpoint:
@@ -495,6 +721,37 @@ class TestWahooGetUserEndpoint:
         assert response.status_code == 401
         data = response.json()
         assert "failed to get user" in data["detail"].lower()
+
+    @patch("src.dependencies.SessionLocal", None)
+    def test_get_user_no_database(self, client):
+        """Test get user when database is not initialized."""
+        response = client.get("/api/wahoo/user?wahoo_id=1")
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()
+
+    @patch("src.dependencies.SessionLocal")
+    @patch("src.api.wahoo.WahooService")
+    def test_get_user_http_exception_passthrough(
+        self, mock_service_class, mock_session, client
+    ):
+        """Test that HTTPException is passed through."""
+        mock_session_instance = AsyncMock()
+        mock_session.return_value.__aenter__.return_value = mock_session_instance
+        mock_session.return_value.__aexit__.return_value = False
+
+        mock_service = AsyncMock()
+        mock_service.get_user.side_effect = HTTPException(
+            status_code=400, detail="Custom error"
+        )
+        mock_service_class.return_value = mock_service
+
+        response = client.get("/api/wahoo/user?wahoo_id=1")
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["detail"] == "Custom error"
 
 
 class TestWahooDeleteRouteEndpoint:
@@ -563,3 +820,484 @@ class TestWahooDeleteRouteEndpoint:
         from src.services.wahoo.protocol import ApiV1
 
         assert hasattr(ApiV1, "delete_route")
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_delete_route_not_found_in_database(self, mock_get_wahoo_config, client):
+        """Test delete route when route not found in database."""
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.delete("/api/wahoo/routes/123?wahoo_id=1")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert "route not found" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_delete_route_not_found_in_wahoo(self, mock_get_wahoo_config, client):
+        """Test delete route when route not found in Wahoo."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock Wahoo service
+        mock_service = AsyncMock()
+        mock_service.get_routes.return_value = []  # No routes found
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.api.wahoo.WahooService", return_value=mock_service),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.delete("/api/wahoo/routes/123?wahoo_id=1")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert "route not found in wahoo cloud" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_delete_route_success(self, mock_get_wahoo_config, client):
+        """Test successful route deletion."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock Wahoo service
+        mock_service = AsyncMock()
+        mock_service.get_routes.return_value = [
+            {"id": 456, "external_id": "gravly_route_123", "name": "Test Route"}
+        ]
+        mock_service.delete_route.return_value = None
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.api.wahoo.WahooService", return_value=mock_service),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.delete("/api/wahoo/routes/123?wahoo_id=1")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "deleted" in data["message"].lower()
+            mock_service.delete_route.assert_called_once_with(456)
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_delete_route_service_error(self, mock_get_wahoo_config, client):
+        """Test delete route with service error."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock Wahoo service to raise exception
+        mock_service = AsyncMock()
+        mock_service.get_routes.side_effect = RuntimeError("Service error")
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.api.wahoo.WahooService", return_value=mock_service),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.delete("/api/wahoo/routes/123?wahoo_id=1")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "failed to delete route" in data["detail"].lower()
+
+
+class TestWahooUploadRouteEndpoint:
+    """Test Wahoo upload route endpoint."""
+
+    @patch("src.dependencies.SessionLocal", None)
+    def test_upload_route_no_database(self, client):
+        """Test upload route when database is not initialized."""
+        response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+        assert response.status_code == 503
+        data = response.json()
+        assert "database not initialized" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_upload_route_not_found_in_database(self, mock_get_wahoo_config, client):
+        """Test upload route when route not found in database."""
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        with patch("src.dependencies.SessionLocal") as mock_session_local:
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert "route not found" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_upload_route_no_storage_manager(self, mock_get_wahoo_config, client):
+        """Test upload route when storage manager not available."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.dependencies.storage_manager", None),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "storage manager not available" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_upload_route_gpx_not_found(self, mock_get_wahoo_config, client):
+        """Test upload route when GPX file not found."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+        mock_track.file_path = "test.gpx"
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock storage manager
+        mock_storage_manager = Mock()
+        mock_storage_manager.load_gpx_data.return_value = None
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.dependencies.storage_manager", mock_storage_manager),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 404
+            data = response.json()
+            assert "gpx file not found" in data["detail"].lower()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    @patch("src.api.wahoo.gpxpy")
+    @patch("src.api.wahoo.extract_from_gpx_file")
+    @patch("src.api.wahoo.convert_gpx_to_fit")
+    def test_upload_route_success_new(
+        self,
+        mock_convert_gpx,
+        mock_extract_gpx,
+        mock_gpxpy,
+        mock_get_wahoo_config,
+        client,
+    ):
+        """Test successful route upload creating new route."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+        mock_track.file_path = "test.gpx"
+        mock_track.comments = "Test description"
+
+        # Mock GPX data
+        mock_gpx = Mock()
+        mock_gpx.time = None
+        mock_gpxpy.parse.return_value = mock_gpx
+
+        mock_gpx_point = Mock()
+        mock_gpx_point.latitude = 45.0
+        mock_gpx_point.longitude = 5.0
+
+        mock_stats = Mock()
+        mock_stats.total_distance = 10.0
+        mock_stats.total_elevation_gain = 500.0
+        mock_stats.total_elevation_loss = 300.0
+
+        mock_gpx_data = Mock()
+        mock_gpx_data.points = [mock_gpx_point]
+        mock_gpx_data.total_stats = mock_stats
+        mock_extract_gpx.return_value = mock_gpx_data
+
+        mock_convert_gpx.return_value = b"fit_file_content"
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock storage manager
+        mock_storage_manager = Mock()
+        mock_storage_manager.load_gpx_data.return_value = b"<gpx>test</gpx>"
+
+        # Mock Wahoo service
+        mock_service = AsyncMock()
+        mock_service.get_routes.return_value = []  # No existing routes
+        mock_service.create_route.return_value = {"id": 456, "name": "Test Route"}
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.api.wahoo.WahooService", return_value=mock_service),
+            patch("src.dependencies.storage_manager", mock_storage_manager),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "uploaded" in data["message"].lower()
+            mock_service.create_route.assert_called_once()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    @patch("src.api.wahoo.gpxpy")
+    @patch("src.api.wahoo.extract_from_gpx_file")
+    @patch("src.api.wahoo.convert_gpx_to_fit")
+    def test_upload_route_success_update(
+        self,
+        mock_convert_gpx,
+        mock_extract_gpx,
+        mock_gpxpy,
+        mock_get_wahoo_config,
+        client,
+    ):
+        """Test successful route upload updating existing route."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+        mock_track.file_path = "test.gpx"
+        mock_track.comments = "Test description"
+
+        # Mock GPX data
+        mock_gpx = Mock()
+        mock_gpx.time = None
+        mock_gpxpy.parse.return_value = mock_gpx
+
+        mock_gpx_point = Mock()
+        mock_gpx_point.latitude = 45.0
+        mock_gpx_point.longitude = 5.0
+
+        mock_stats = Mock()
+        mock_stats.total_distance = 10.0
+        mock_stats.total_elevation_gain = 500.0
+        mock_stats.total_elevation_loss = 300.0
+
+        mock_gpx_data = Mock()
+        mock_gpx_data.points = [mock_gpx_point]
+        mock_gpx_data.total_stats = mock_stats
+        mock_extract_gpx.return_value = mock_gpx_data
+
+        mock_convert_gpx.return_value = b"fit_file_content"
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock storage manager
+        mock_storage_manager = Mock()
+        mock_storage_manager.load_gpx_data.return_value = b"<gpx>test</gpx>"
+
+        # Mock Wahoo service
+        mock_service = AsyncMock()
+        mock_service.get_routes.return_value = [
+            {"id": 456, "external_id": "gravly_route_123", "name": "Test Route"}
+        ]
+        mock_service.update_route.return_value = {"id": 456, "name": "Test Route"}
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.api.wahoo.WahooService", return_value=mock_service),
+            patch("src.dependencies.storage_manager", mock_storage_manager),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 200
+            data = response.json()
+            assert data["success"] is True
+            assert "updated" in data["message"].lower()
+            mock_service.update_route.assert_called_once()
+
+    @patch("src.api.wahoo.get_wahoo_config")
+    def test_upload_route_service_error(self, mock_get_wahoo_config, client):
+        """Test upload route with service error."""
+        from src.models.track import TrackType
+
+        # Mock config
+        mock_config = Mock()
+        mock_config.client_id = "test_client_id"
+        mock_config.client_secret = "test_secret"
+        mock_config.callback_url = "https://example.com/callback"
+        mock_get_wahoo_config.return_value = mock_config
+
+        # Mock track
+        mock_track = Mock()
+        mock_track.id = 123
+        mock_track.name = "Test Route"
+        mock_track.track_type = TrackType.ROUTE
+        mock_track.file_path = "test.gpx"
+
+        # Mock database session
+        mock_session = AsyncMock()
+        mock_result = Mock()
+        mock_result.scalar_one_or_none.return_value = mock_track
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
+        # Mock storage manager
+        mock_storage_manager = Mock()
+        mock_storage_manager.load_gpx_data.side_effect = RuntimeError("Storage error")
+
+        with (
+            patch("src.dependencies.SessionLocal") as mock_session_local,
+            patch("src.dependencies.storage_manager", mock_storage_manager),
+        ):
+            mock_session_local.return_value.__aenter__.return_value = mock_session
+            mock_session_local.return_value.__aexit__.return_value = False
+
+            response = client.post("/api/wahoo/routes/123/upload?wahoo_id=1")
+
+            assert response.status_code == 500
+            data = response.json()
+            assert "failed to upload route" in data["detail"].lower()
