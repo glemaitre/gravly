@@ -1,9 +1,7 @@
 """Unit tests for the Wahoo service."""
 
-import json
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -13,74 +11,106 @@ from backend.src.utils.config import WahooConfig
 
 
 @pytest.fixture
-def mock_wahoo_config(tmp_path):
+def mock_wahoo_config():
     """Create a mock Wahoo configuration for testing."""
-    tokens_file = tmp_path / "test_wahoo_tokens.json"
     return WahooConfig(
         client_id="test_wahoo_client_id",
         client_secret="test_wahoo_client_secret",
-        tokens_file_path=str(tokens_file),
         callback_url="https://test.example.com/wahoo-callback",
         scopes=["user_read", "routes_write"],
     )
 
 
 @pytest.fixture
-def wahoo_service(mock_wahoo_config):
+def mock_db_session():
+    """Create a mock database session for testing."""
+    return AsyncMock()
+
+
+@pytest.fixture
+def wahoo_service(mock_wahoo_config, mock_db_session):
     """Create a WahooService instance for testing."""
     with patch("backend.src.services.wahoo.service.Client"):
-        return WahooService(mock_wahoo_config)
+        return WahooService(
+            mock_wahoo_config,
+            db_session=mock_db_session,
+            wahoo_id=12345,
+        )
 
 
 class TestWahooServiceInitialization:
     """Test WahooService initialization."""
 
-    def test_init_with_valid_config(self, mock_wahoo_config):
+    def test_init_with_valid_config(self, mock_wahoo_config, mock_db_session):
         """Test WahooService initialization with valid configuration."""
         with patch("backend.src.services.wahoo.service.Client") as mock_client:
-            service = WahooService(mock_wahoo_config)
+            service = WahooService(
+                mock_wahoo_config,
+                db_session=mock_db_session,
+                wahoo_id=12345,
+            )
 
             assert service.client_id == "test_wahoo_client_id"
             assert service.client_secret == "test_wahoo_client_secret"
-            assert service.tokens_file == Path(mock_wahoo_config.tokens_file_path)
             mock_client.assert_called_once()
 
-    def test_init_creates_client(self, mock_wahoo_config):
+    def test_init_creates_client(self, mock_wahoo_config, mock_db_session):
         """Test that WahooService creates a Client instance."""
         with patch("backend.src.services.wahoo.service.Client") as mock_client:
-            WahooService(mock_wahoo_config)
+            WahooService(
+                mock_wahoo_config,
+                db_session=mock_db_session,
+                wahoo_id=12345,
+            )
             mock_client.assert_called_once()
 
 
 class TestWahooServiceTokenManagement:
     """Test token loading and saving functionality."""
 
-    def test_load_tokens_file_not_exists(self, wahoo_service):
-        """Test loading tokens when file doesn't exist."""
-        result = wahoo_service._load_tokens()
+    @pytest.mark.asyncio
+    async def test_load_tokens_file_not_exists(self, wahoo_service):
+        """Test loading tokens when no tokens exist in database."""
+        result = await wahoo_service._load_tokens()
         assert result is None
 
-    def test_load_tokens_file_exists(self, wahoo_service, tmp_path):
-        """Test loading tokens from existing file."""
-        tokens_data = {
-            "access_token": "test_access_token",
-            "refresh_token": "test_refresh_token",
-            "expires_at": 9999999999,
-        }
+    @pytest.mark.asyncio
+    async def test_load_tokens_file_exists(self, wahoo_service):
+        """Test loading tokens from database."""
+        from datetime import datetime as dt
 
-        wahoo_service.tokens_file.write_text(json.dumps(tokens_data))
+        from backend.src.models.wahoo_token import WahooToken
 
-        result = wahoo_service._load_tokens()
-        assert result == tokens_data
+        # Mock token data
+        mock_token = WahooToken(
+            user_id=12345,
+            access_token="test_access_token",
+            refresh_token="test_refresh_token",
+            expires_at=dt.fromtimestamp(9999999999),
+        )
 
-    def test_load_tokens_invalid_json(self, wahoo_service):
-        """Test loading tokens with invalid JSON."""
-        wahoo_service.tokens_file.write_text("invalid json")
+        # Mock the database query result
+        result_mock = AsyncMock()
+        result_mock.scalar_one_or_none.return_value = mock_token
+        wahoo_service.db_session.execute = AsyncMock(return_value=result_mock)
 
-        result = wahoo_service._load_tokens()
+        result = await wahoo_service._load_tokens()
+        assert result["access_token"] == "test_access_token"
+        assert result["refresh_token"] == "test_refresh_token"
+        assert result["expires_at"] == 9999999999
+
+    @pytest.mark.asyncio
+    async def test_load_tokens_invalid_json(self, wahoo_service):
+        """Test loading tokens when database query returns None."""
+        result_mock = AsyncMock()
+        result_mock.scalar_one_or_none.return_value = None
+        wahoo_service.db_session.execute = AsyncMock(return_value=result_mock)
+
+        result = await wahoo_service._load_tokens()
         assert result is None
 
-    def test_save_tokens_success(self, wahoo_service):
+    @pytest.mark.asyncio
+    async def test_save_tokens_success(self, wahoo_service):
         """Test saving tokens successfully."""
         tokens_data = {
             "access_token": "test_access_token",
@@ -88,13 +118,16 @@ class TestWahooServiceTokenManagement:
             "expires_at": 9999999999,
         }
 
-        wahoo_service._save_tokens(tokens_data)
+        result_mock = AsyncMock()
+        result_mock.scalar_one_or_none.return_value = None
+        wahoo_service.db_session.execute = AsyncMock(return_value=result_mock)
 
-        assert wahoo_service.tokens_file.exists()
-        loaded_tokens = json.loads(wahoo_service.tokens_file.read_text())
-        assert loaded_tokens == tokens_data
+        await wahoo_service._save_tokens(tokens_data)
+        wahoo_service.db_session.add.assert_called()
+        wahoo_service.db_session.commit.assert_called()
 
-    def test_save_tokens_with_datetime(self, wahoo_service):
+    @pytest.mark.asyncio
+    async def test_save_tokens_with_datetime(self, wahoo_service):
         """Test saving tokens with datetime objects."""
         tokens_data = {
             "access_token": "test_access_token",
@@ -102,25 +135,26 @@ class TestWahooServiceTokenManagement:
             "expires_at": datetime.now(),
         }
 
-        wahoo_service._save_tokens(tokens_data)
+        result_mock = AsyncMock()
+        result_mock.scalar_one_or_none.return_value = None
+        wahoo_service.db_session.execute = AsyncMock(return_value=result_mock)
 
-        assert wahoo_service.tokens_file.exists()
-        loaded_tokens = json.loads(wahoo_service.tokens_file.read_text())
-        assert "access_token" in loaded_tokens
-        assert "refresh_token" in loaded_tokens
-        assert "expires_at" in loaded_tokens
+        await wahoo_service._save_tokens(tokens_data)
+        wahoo_service.db_session.add.assert_called()
+        wahoo_service.db_session.commit.assert_called()
 
-    def test_save_tokens_creates_directory(self, wahoo_service, tmp_path):
-        """Test that save_tokens creates parent directory if needed."""
-        # Create a nested path that doesn't exist
-        nested_path = tmp_path / "nested" / "tokens.json"
-        wahoo_service.tokens_file = nested_path
-
+    @pytest.mark.asyncio
+    async def test_save_tokens_creates_directory(self, wahoo_service):
+        """Test that save_tokens works correctly."""
         tokens_data = {"access_token": "test_token"}
-        wahoo_service._save_tokens(tokens_data)
 
-        assert nested_path.exists()
-        assert nested_path.parent.exists()
+        result_mock = AsyncMock()
+        result_mock.scalar_one_or_none.return_value = None
+        wahoo_service.db_session.execute = AsyncMock(return_value=result_mock)
+
+        await wahoo_service._save_tokens(tokens_data)
+        wahoo_service.db_session.add.assert_called()
+        wahoo_service.db_session.commit.assert_called()
 
 
 class TestWahooServiceAuthorization:
@@ -455,21 +489,28 @@ class TestWahooServiceIntegration:
             assert loaded_tokens == new_tokens
 
 
+@pytest.fixture
+def mock_db_session_for_extended():
+    """Create a mock database session for extended tests."""
+    return AsyncMock()
+
+
 class TestWahooServiceExtended:
     """Extended tests for WahooService to cover missing lines."""
 
-    def test_save_tokens_convert_datetime_recursive_dict(self):
+    def test_save_tokens_convert_datetime_recursive_dict(
+        self, mock_db_session_for_extended
+    ):
         """Test _save_tokens with nested datetime objects in dict."""
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Create tokens with nested datetime objects
             from datetime import datetime
@@ -507,13 +548,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Create tokens with datetime objects in list
             from datetime import datetime
@@ -551,13 +591,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Create tokens with various types
             tokens = {
@@ -590,13 +629,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Setup valid tokens
             valid_tokens = {
@@ -622,13 +660,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Setup valid tokens
             valid_tokens = {
@@ -654,13 +691,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Setup valid tokens
             valid_tokens = {
@@ -686,13 +722,12 @@ class TestWahooServiceExtended:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Setup valid tokens
             valid_tokens = {
@@ -730,13 +765,12 @@ class TestWahooServiceMissing:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            return WahooService(config)
+            return WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
     def test_get_user_unauthorized_error(self, service):
         """Test get_user with unauthorized error."""
@@ -1134,13 +1168,12 @@ class TestWahooServiceCreateRouteErrorHandling:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            return WahooService(config)
+            return WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
     def test_create_route_with_401_unauthorized_in_lowercase(self, service):
         """Test create_route with unauthorized error (lowercase)."""
@@ -1194,13 +1227,12 @@ class TestWahooServiceUpdateRouteErrorHandling:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            return WahooService(config)
+            return WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
     def test_update_route_with_401_unauthorized_in_lowercase(self, service):
         """Test update_route with unauthorized error (lowercase)."""
@@ -1255,13 +1287,12 @@ class TestWahooServiceSaveError:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Mock open to raise an exception
             with patch("builtins.open", side_effect=OSError("Permission denied")):
@@ -1279,13 +1310,12 @@ class TestWahooServiceSaveError:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            service = WahooService(config)
+            service = WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
             # Mock json.dump to raise an exception
             with patch("builtins.open", _mock_open()):
@@ -1314,13 +1344,12 @@ class TestWahooServiceDeleteRoute:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/tmp/test_tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         with patch("backend.src.services.wahoo.service.Client"):
-            return WahooService(config)
+            return WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
     def test_delete_route_success(self, service):
         """Test delete_route successful execution."""

@@ -580,9 +580,7 @@ describe('useWahooApi', () => {
         user: null
       }
 
-      await expect(uploadRoute('route123')).rejects.toThrow(
-        'No Wahoo user ID found'
-      )
+      await expect(uploadRoute('route123')).rejects.toThrow('No Wahoo user ID found')
       expect(error.value).toBe('No Wahoo user ID found')
     })
   })

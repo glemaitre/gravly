@@ -16,21 +16,18 @@ class TestWahooConfig:
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/path/to/tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
 
         assert config.client_id == "test_client_id"
         assert config.client_secret == "test_client_secret"
-        assert config.tokens_file_path == "/path/to/tokens.json"
 
     def test_wahoo_config_immutable(self):
         """Test that WahooConfig is immutable (NamedTuple)."""
         config = WahooConfig(
             client_id="test_client_id",
             client_secret="test_client_secret",
-            tokens_file_path="/path/to/tokens.json",
             callback_url="https://test.example.com/wahoo-callback",
             scopes=["user_read", "routes_write"],
         )
@@ -69,8 +66,8 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         wahoo_file = env_folder / "wahoo"
         wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
 WAHOO_CLIENT_SECRET=test_wahoo_client_secret
-WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json
-WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback""")
+WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback
+WAHOO_SCOPES=user_read,routes_write""")
 
         thunderforest_file = env_folder / "thunderforest"
         thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -89,7 +86,6 @@ WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback""")
         assert isinstance(wahoo_config, WahooConfig)
         assert wahoo_config.client_id == "test_wahoo_client_id"
         assert wahoo_config.client_secret == "test_wahoo_client_secret"
-        assert wahoo_config.tokens_file_path == "/secure/path/to/wahoo_tokens.json"
         assert wahoo_config.callback_url == "https://test.example.com/wahoo-callback"
 
     def test_load_wahoo_config_missing_file(self, tmp_path):
@@ -230,8 +226,8 @@ WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
         with pytest.raises(ValueError, match="WAHOO_CLIENT_SECRET"):
             load_environment_config(project_root=tmp_path)
 
-    def test_load_wahoo_config_missing_tokens_file_path(self, tmp_path):
-        """Test error when WAHOO_TOKENS_FILE_PATH is missing."""
+    def test_load_wahoo_config_missing_scopes(self, tmp_path):
+        """Test error when WAHOO_SCOPES is missing."""
         env_folder = tmp_path / ".env"
         env_folder.mkdir()
 
@@ -253,16 +249,16 @@ DB_PASSWORD=password""")
 STRAVA_CLIENT_SECRET=test_client_secret
 STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
 
-        # Create wahoo file without tokens_file_path
+        # Create wahoo file without scopes
         wahoo_file = env_folder / "wahoo"
         wahoo_file.write_text("""WAHOO_CLIENT_ID=test_wahoo_client_id
 WAHOO_CLIENT_SECRET=test_wahoo_client_secret
-WAHOO_TOKENS_FILE_PATH=""")
+WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback""")
 
         thunderforest_file = env_folder / "thunderforest"
         thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
 
-        with pytest.raises(ValueError, match="WAHOO_TOKENS_FILE_PATH"):
+        with pytest.raises(ValueError, match="WAHOO_SCOPES"):
             load_environment_config(project_root=tmp_path)
 
     def test_load_wahoo_config_with_example_file(self, tmp_path):
@@ -369,7 +365,8 @@ STRAVA_TOKENS_FILE_PATH=/secure/path/to/tokens.json""")
         wahoo_file = env_folder / "wahoo"
         wahoo_file.write_text("""WAHOO_CLIENT_ID=file_client_id
 WAHOO_CLIENT_SECRET=file_client_secret
-WAHOO_TOKENS_FILE_PATH=/file/path/to/tokens.json""")
+WAHOO_CALLBACK_URL=https://test.example.com/wahoo-callback
+WAHOO_SCOPES=user_read,routes_write""")
 
         thunderforest_file = env_folder / "thunderforest"
         thunderforest_file.write_text("""THUNDERFOREST_API_KEY=test_api_key""")
@@ -380,7 +377,8 @@ WAHOO_TOKENS_FILE_PATH=/file/path/to/tokens.json""")
             {
                 "WAHOO_CLIENT_ID": "env_client_id",
                 "WAHOO_CLIENT_SECRET": "env_client_secret",
-                "WAHOO_TOKENS_FILE_PATH": "/env/path/to/tokens.json",
+                "WAHOO_CALLBACK_URL": "https://env.example.com/wahoo-callback",
+                "WAHOO_SCOPES": "user_read",
             },
         ):
             (
@@ -395,4 +393,3 @@ WAHOO_TOKENS_FILE_PATH=/file/path/to/tokens.json""")
             # File values should override environment variables
             assert wahoo_config.client_id == "file_client_id"
             assert wahoo_config.client_secret == "file_client_secret"
-            assert wahoo_config.tokens_file_path == "/file/path/to/tokens.json"

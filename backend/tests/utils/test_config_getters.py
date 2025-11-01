@@ -41,7 +41,6 @@ def test_get_database_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -89,7 +88,6 @@ def test_get_storage_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -135,7 +133,6 @@ def test_get_strava_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -180,7 +177,6 @@ def test_get_wahoo_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -226,7 +222,6 @@ def test_get_map_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -270,7 +265,6 @@ def test_get_server_config():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -318,7 +312,6 @@ def test_get_configs_caching():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),
@@ -390,7 +383,6 @@ def test_get_configs_when_none():
         WahooConfig(
             client_id="test_wahoo_client_id",
             client_secret="test_wahoo_client_secret",
-            tokens_file_path="/tmp/wahoo_tokens.json",
             callback_url="http://localhost:8000/callback",
             scopes=["user_read", "routes_write"],
         ),

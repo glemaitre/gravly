@@ -317,3 +317,62 @@ class TestWahooClient:
             client.delete_route(route_id=456)
 
             mock_delete.assert_called_once_with(route_id=456)
+
+    def test_upload_route_without_external_id(self):
+        """Test upload_route without external_id parameter."""
+        client = Client()
+
+        with patch.object(client, "create_route") as mock_create:
+            mock_create.return_value = {"id": 789, "name": "New Route"}
+
+            result = client.upload_route(
+                route_file="data:application/vnd.fit;base64,test",
+                filename="test.fit",
+                route_name="New Route",
+                start_lat=45.123,
+                start_lng=5.987,
+                distance=10000.0,
+                ascent=500.0,
+                descent=100.0,
+            )
+
+            assert result == {"id": 789, "name": "New Route"}
+
+    def test_upload_route_with_all_parameters(self):
+        """Test upload_route with all optional parameters."""
+        client = Client()
+
+        with patch.object(client, "create_route") as mock_create:
+            mock_create.return_value = {"id": 999, "name": "Complete Route"}
+
+            result = client.upload_route(
+                route_file="data:application/vnd.fit;base64,test",
+                filename="complete.fit",
+                route_name="Complete Route",
+                start_lat=45.123,
+                start_lng=5.987,
+                distance=10000.0,
+                ascent=500.0,
+                descent=100.0,
+                description="A complete test route",
+                external_id="complete_123",
+                provider_updated_at="2024-01-01T00:00:00",
+                workout_type_family_id=1,
+            )
+
+            assert result == {"id": 999, "name": "Complete Route"}
+            # Verify all parameters were passed
+            mock_create.assert_called_once_with(
+                route_file="data:application/vnd.fit;base64,test",
+                filename="complete.fit",
+                route_name="Complete Route",
+                start_lat=45.123,
+                start_lng=5.987,
+                distance=10000.0,
+                ascent=500.0,
+                descent=100.0,
+                description="A complete test route",
+                external_id="complete_123",
+                provider_updated_at="2024-01-01T00:00:00",
+                workout_type_family_id=1,
+            )
