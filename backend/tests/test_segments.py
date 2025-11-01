@@ -1202,10 +1202,6 @@ def test_create_segment_storage_upload_failure(
                 "/api/upload-gpx",
                 files={"file": ("test.gpx", f, "application/gpx+xml")},
             )
-        if upload_response.status_code != 200:
-            print(
-                f"Upload failed: {upload_response.status_code} - {upload_response.text}"
-            )
         assert upload_response.status_code == 200
         file_id = upload_response.json()["file_id"]
 
@@ -1234,8 +1230,6 @@ def test_create_segment_storage_upload_failure(
 
         response = client.post("/api/segments", data=segment_data)
 
-        if response.status_code != 500:
-            print(f"Create segment failed: {response.status_code} - {response.text}")
         assert response.status_code == 500
         assert "Failed to upload to storage" in response.json()["detail"]
         assert "Storage upload failed" in response.json()["detail"]

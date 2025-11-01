@@ -41,16 +41,12 @@ router.beforeEach(async (to, from, next) => {
     const { isAuthenticated, attemptTokenRefresh, getAuthUrl } = useStravaApi()
 
     if (!isAuthenticated()) {
-      console.info('Route requires authentication, attempting token refresh...')
-
       // Try to refresh the token first
       const refreshSuccess = await attemptTokenRefresh()
 
       if (refreshSuccess && isAuthenticated()) {
-        console.info('Token refresh successful, continuing to route')
         next() // Continue with navigation
       } else {
-        console.info('Token refresh failed, redirecting to Strava login')
         try {
           // Store the current path for redirect after auth
           sessionStorage.setItem('strava_redirect_after_auth', to.fullPath)

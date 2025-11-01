@@ -600,9 +600,6 @@ async function uploadImageToStorage(file: File, imageId: string) {
         return false
       }
     })()
-    if (!isTestEnv) {
-      console.info(`Successfully uploaded image to storage: ${result.storage_key}`)
-    }
   } catch (error) {
     console.error('Failed to upload image to storage:', error)
     // Keep the image with local preview even if upload failed
@@ -839,10 +836,6 @@ function closeSegmentImportModal() {
 
 async function handleStravaImport(gpxData: any) {
   try {
-    console.info(
-      `Importing Strava activity: ${gpxData.track_name} with ${gpxData.points?.length || 0} points`
-    )
-
     // Use the same logic as file upload but with GPX data from Strava
     const actualPoints: TrackPoint[] = gpxData.points.map((p: any) => ({
       latitude: p.latitude,
@@ -858,8 +851,6 @@ async function handleStravaImport(gpxData: any) {
     smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
     startIndex.value = 0
     endIndex.value = actualPoints.length - 1
-
-    console.info(`Data processing complete: ${actualPoints.length} points processed`)
 
     if (actualPoints.length < 2) {
       console.error(`❌ Insufficient points: ${actualPoints.length}`)
@@ -877,16 +868,12 @@ async function handleStravaImport(gpxData: any) {
     // CRITICAL: Set uploadedFileId for Strava imports using the real file ID from backend
     uploadedFileId.value = gpxData.file_id || `strava-activity-${Date.now()}`
 
-    console.info(`Editor state updated: ${points.value.length} points loaded`)
-
     // Clear any previous errors
     showError.value = false
     currentErrorMessage.value = ''
     message.value = ''
     showUploadSuccess.value = true
     showSegmentSuccess.value = false
-
-    console.info(`Strava import successful`)
 
     // Close the modal
     closeStravaModal()
@@ -903,7 +890,6 @@ async function handleStravaImport(gpxData: any) {
 
 async function handleSegmentImport(segment: any) {
   try {
-    console.info(`Importing segment: ${segment.name} (ID: ${segment.id})`)
 
     // Fetch GPX data for the segment
     const response = await fetch(`/api/segments/${segment.id}/gpx`)
@@ -935,8 +921,6 @@ async function handleSegmentImport(segment: any) {
     smoothedElevations.value = computeSmoothedElevations(actualPoints, 5)
     startIndex.value = 0
     endIndex.value = actualPoints.length - 1
-
-    console.info(`Data processing complete: ${actualPoints.length} points processed`)
 
     if (actualPoints.length < 2) {
       console.error(`❌ Insufficient points: ${actualPoints.length}`)
@@ -978,22 +962,12 @@ async function handleSegmentImport(segment: any) {
     isUpdateMode.value = true
     updatingSegmentId.value = segment.id
 
-    console.info(`Editor state updated: ${points.value.length} points loaded`)
-    console.info(`Form initialized with segment data:`, {
-      name: segment.name,
-      trackType: segment.track_type,
-      trailConditions: trailConditions.value,
-      commentary: commentary.value
-    })
-
     // Clear any previous errors
     showError.value = false
     currentErrorMessage.value = ''
     message.value = ''
     showUploadSuccess.value = true
     showSegmentSuccess.value = false
-
-    console.info(`Segment import successful`)
 
     // Close the modal
     closeSegmentImportModal()
@@ -1305,8 +1279,7 @@ async function onDeleteFromDb() {
       throw new Error(error || 'Failed to delete segment')
     }
 
-    const result = await response.json()
-    console.info('Segment deleted successfully:', result)
+    await response.json()
 
     // Reset the editor state
     loaded.value = false
@@ -1410,7 +1383,6 @@ ${points.value
     }
 
     const result = await response.json()
-    console.info(`Temporary GPX file created: ${result.file_id}`)
     // Return the actual file_id from the backend
     return result.file_id
   } catch (error) {

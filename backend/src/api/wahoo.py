@@ -226,8 +226,6 @@ def create_wahoo_router() -> APIRouter:
                     status_code=400, detail="Authorization code is required"
                 )
 
-            logger.info(f"Received Wahoo authorization code: {code}")
-
             return {
                 "message": "Wahoo authorization code received successfully",
                 "code": code,
@@ -246,7 +244,6 @@ def create_wahoo_router() -> APIRouter:
         route_id: int, wahoo_id: int = Query(..., description="Wahoo user ID")
     ):
         """Upload a route from the database to Wahoo"""
-        logger.info(f"Received upload request for route_id={route_id}")
         from src.dependencies import SessionLocal as global_session_local
 
         if global_session_local is None:
@@ -254,7 +251,6 @@ def create_wahoo_router() -> APIRouter:
             raise HTTPException(status_code=503, detail="Database not initialized")
 
         try:
-            logger.info(f"Querying database for route_id={route_id}")
             async with global_session_local() as session:
                 # Get the route from database
                 stmt = select(Track).where(
@@ -267,8 +263,6 @@ def create_wahoo_router() -> APIRouter:
                     logger.error(f"Route {route_id} not found in database")
                     raise HTTPException(status_code=404, detail="Route not found")
 
-                logger.info(f"Found route: {track.name}")
-
                 # Load GPX file using storage manager
                 from src.dependencies import storage_manager as global_storage_manager
 
@@ -277,7 +271,6 @@ def create_wahoo_router() -> APIRouter:
                         status_code=500, detail="Storage manager not available"
                     )
 
-                logger.info(f"Loading GPX from storage: {track.file_path}")
                 gpx_bytes = global_storage_manager.load_gpx_data(track.file_path)
 
                 if gpx_bytes is None:
@@ -285,16 +278,6 @@ def create_wahoo_router() -> APIRouter:
                     raise HTTPException(status_code=404, detail="GPX file not found")
 
                 gpx_content = gpx_bytes.decode("utf-8")
-
-                logger.info(f"Attempting to upload route {route_id} to Wahoo")
-                logger.info(f"Route name: {track.name}")
-                logger.info(f"GPX file size: {len(gpx_content)} bytes")
-                logger.info(f"GPX file preview (first 500 chars): {gpx_content[:500]}")
-
-                # Upload route to Wahoo
-                logger.info("=== WAHOO UPLOAD REQUEST ===")
-                logger.info("Endpoint: POST https://api.wahooligan.com/v1/routes")
-                logger.info(f"Uploading route: {track.name}")
 
                 wahoo_config = get_wahoo_config()
                 wahoo_service = WahooService(
@@ -305,27 +288,15 @@ def create_wahoo_router() -> APIRouter:
                 gpx = gpxpy.parse(gpx_content)
                 gpx_data = extract_from_gpx_file(gpx, str(route_id))
 
-                logger.info(
-                    f"Extracted GPX stats: "
-                    f"distance={gpx_data.total_stats.total_distance:.2f}km, "
-                    f"elevation_gain={gpx_data.total_stats.total_elevation_gain:.0f}m, "
-                    f"elevation_loss={gpx_data.total_stats.total_elevation_loss:.0f}m"
-                )
-
                 # Get start point
                 start_point = gpx_data.points[0] if gpx_data.points else None
 
                 # Convert GPX to FIT format
                 fit_bytes = convert_gpx_to_fit(gpx, track.name)
-                logger.info(f"Converted GPX to FIT, size: {len(fit_bytes)} bytes")
 
                 # Encode FIT content as base64 data URI for Wahoo API
                 fit_base64 = base64.b64encode(fit_bytes).decode("utf-8")
                 route_file_data_uri = f"data:application/vnd.fit;base64,{fit_base64}"
-
-                logger.info(
-                    f"FIT encoded to base64, size: {len(route_file_data_uri)} chars"
-                )
 
                 # Call Wahoo service to upload route
                 external_id = f"gravly_route_{route_id}"
@@ -348,7 +319,6 @@ def create_wahoo_router() -> APIRouter:
                 }
 
                 # Get all routes from Wahoo to check if route exists
-                logger.info("Fetching all routes from Wahoo Cloud")
                 all_routes = await wahoo_service.get_routes()
 
                 # Look for existing route with matching external_id
@@ -356,35 +326,20 @@ def create_wahoo_router() -> APIRouter:
                 for route in all_routes:
                     if route.get("external_id") == external_id:
                         wahoo_route_id = route["id"]
-                        logger.info(
-                            f"Found existing route in Wahoo with ID: {wahoo_route_id}"
-                        )
                         break
 
                 # Upload or update the route
                 if wahoo_route_id:
                     # Update existing route (external_id is not passed for updates)
-                    logger.info(f"Updating existing route {wahoo_route_id} in Wahoo")
                     result = await wahoo_service.update_route(
                         route_id=wahoo_route_id, **common_params
                     )
-                    logger.info("=== WAHOO UPLOAD RESPONSE ===")
-                    logger.info("Status: Success (Updated)")
-                    logger.info(f"Response: {result}")
-                    logger.info("========================================")
                 else:
                     # Create new route (include external_id for new routes)
-                    logger.info(f"Creating new route with external_id: {external_id}")
                     create_params = {**common_params, "external_id": external_id}
                     result = await wahoo_service.create_route(**create_params)
-                    logger.info("=== WAHOO UPLOAD RESPONSE ===")
-                    logger.info("Status: Success (Created)")
-                    logger.info(f"Response: {result}")
-                    logger.info("========================================")
 
                 result_message = "updated" if wahoo_route_id else "uploaded"
-
-                logger.info(f"{result_message.capitalize()} route {route_id} to Wahoo")
                 return {
                     "success": True,
                     "message": (
@@ -405,7 +360,6 @@ def create_wahoo_router() -> APIRouter:
         route_id: int, wahoo_id: int = Query(..., description="Wahoo user ID")
     ):
         """Delete a route from Wahoo Cloud"""
-        logger.info(f"Received delete request for route_id={route_id}")
         from src.dependencies import SessionLocal as global_session_local
 
         if global_session_local is None:
@@ -413,7 +367,6 @@ def create_wahoo_router() -> APIRouter:
             raise HTTPException(status_code=503, detail="Database not initialized")
 
         try:
-            logger.info(f"Querying database for route_id={route_id}")
             async with global_session_local() as session:
                 # Get the route from database
                 stmt = select(Track).where(
@@ -426,8 +379,6 @@ def create_wahoo_router() -> APIRouter:
                     logger.error(f"Route {route_id} not found in database")
                     raise HTTPException(status_code=404, detail="Route not found")
 
-                logger.info(f"Found route: {track.name}")
-
                 # Get Wahoo service
                 wahoo_config = get_wahoo_config()
                 wahoo_service = WahooService(
@@ -435,7 +386,6 @@ def create_wahoo_router() -> APIRouter:
                 )
 
                 # Get all routes from Wahoo to check if route exists
-                logger.info("Fetching all routes from Wahoo Cloud")
                 all_routes = await wahoo_service.get_routes()
 
                 # Look for existing route with matching external_id
@@ -444,16 +394,11 @@ def create_wahoo_router() -> APIRouter:
                 for route in all_routes:
                     if route.get("external_id") == external_id:
                         wahoo_route_id = route["id"]
-                        logger.info(
-                            f"Found existing route in Wahoo with ID: {wahoo_route_id}"
-                        )
                         break
 
                 # Delete the route if it exists
                 if wahoo_route_id:
-                    logger.info(f"Deleting route {wahoo_route_id} from Wahoo")
                     await wahoo_service.delete_route(wahoo_route_id)
-                    logger.info("Successfully deleted route from Wahoo")
                     return {
                         "success": True,
                         "message": (

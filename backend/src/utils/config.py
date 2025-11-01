@@ -104,7 +104,6 @@ def load_environment_config(
         # config.py -> utils -> src -> backend -> project_root)
         project_root = Path(__file__).parent.parent.parent.parent
 
-    logger.debug(f"Loading configuration from project root: {project_root}")
     env_folder = project_root / ".env"
 
     # Load storage configuration

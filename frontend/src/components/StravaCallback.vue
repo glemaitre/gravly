@@ -53,20 +53,17 @@ onMounted(async () => {
     }
 
     await exchangeCode(code)
-    console.info('Strava authentication successful')
 
     // Check if we have a redirect URL in sessionStorage
     const redirectUrl = sessionStorage.getItem('strava_redirect_after_auth')
 
     if (redirectUrl) {
       sessionStorage.removeItem('strava_redirect_after_auth')
-      console.info(`Redirecting to ${redirectUrl}`)
       setTimeout(() => {
         window.location.href = redirectUrl // Redirect to original page
       }, 2000)
     } else {
       // Default to home page to reload navbar
-      console.info('Redirecting to home page to reload navbar')
       setTimeout(() => {
         window.location.href = '/' // Full page reload to refresh navbar
       }, 2000)

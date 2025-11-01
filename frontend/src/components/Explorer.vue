@@ -875,7 +875,6 @@ onMounted(() => {
   // Check if we need to redirect after Strava authentication
   const redirectDestination = localStorage.getItem('strava_redirect_after_auth')
   if (redirectDestination) {
-    console.info(`Redirecting to stored destination: ${redirectDestination}`)
     localStorage.removeItem('strava_redirect_after_auth')
     // Small delay to ensure navbar is loaded
     redirectTimeout = setTimeout(() => {

@@ -134,13 +134,11 @@ export function useWahooApi() {
 
         // Check if token is expired
         if (parsed.expiresAt && Date.now() > parsed.expiresAt * 1000) {
-          console.log('Wahoo token expired, clearing auth state')
           localStorage.removeItem('wahoo_auth')
           return
         }
 
         authState.value = parsed
-        console.log('Loaded Wahoo auth state from localStorage')
       }
     } catch (err) {
       console.error('Failed to load Wahoo auth state:', err)
@@ -165,21 +163,18 @@ export function useWahooApi() {
    * Attempt to refresh token only (no redirect)
    */
   async function attemptTokenRefresh(): Promise<boolean> {
-    console.info('Attempting Wahoo token refresh...')
-
     try {
       const response = await fetch('/api/wahoo/refresh-token', {
         method: 'POST'
       })
 
       if (response.ok) {
-        console.info('Wahoo token refreshed successfully')
         // Reload auth state from localStorage (backend updated it)
         loadAuthState()
         return true
       }
     } catch (error) {
-      console.warn('Wahoo token refresh failed:', error)
+      // Token refresh failed silently
     }
 
     return false
@@ -189,13 +184,10 @@ export function useWahooApi() {
    * Attempt to refresh token and redirect to login if failed
    */
   async function handleAuthenticationError(): Promise<void> {
-    console.info('Wahoo authentication error detected, attempting token refresh...')
-
     const refreshSuccess = await attemptTokenRefresh()
 
     if (!refreshSuccess) {
       // If refresh failed, clear auth and redirect to login
-      console.info('Wahoo token refresh failed, redirecting to Wahoo login...')
       clearAuth()
 
       try {
@@ -235,7 +227,6 @@ export function useWahooApi() {
       }
 
       const data = await response.json()
-      console.info(`Retrieved ${data.activities?.length || 0} Wahoo activities`)
       return data.activities
     } catch (err: any) {
       error.value = err.message || 'Failed to get activities'
@@ -268,9 +259,6 @@ export function useWahooApi() {
       }
 
       const data = await response.json()
-      console.info(
-        `Retrieved route data for activity ${activityId}: ${data.points?.length || 0} points`
-      )
       return data
     } catch (err: any) {
       error.value = err.message || 'Failed to get activity route'
@@ -292,11 +280,10 @@ export function useWahooApi() {
       const fiveMinutes = 5 * 60 * 1000 // 5 minutes in milliseconds
 
       if (timeUntilExpiry < fiveMinutes && timeUntilExpiry > 0) {
-        console.info('Wahoo token expires soon, attempting proactive refresh...')
         try {
           await handleAuthenticationError()
         } catch (error) {
-          console.warn('Proactive Wahoo token refresh failed:', error)
+          // Proactive token refresh failed silently
         }
       }
     }

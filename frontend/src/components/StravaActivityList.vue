@@ -154,15 +154,8 @@ const selectActivity = (activity: StravaActivity) => {
 
 const importActivity = async (activity: StravaActivity) => {
   try {
-    console.log(
-      `🚀 StravaActivityList: Starting import for activity ${activity.id} (${activity.name})`
-    )
     isImporting.value = true
     const gpxData = await getActivityGpx(activity.id)
-    console.log(
-      `✅ StravaActivityList: GPX data received:`,
-      gpxData ? 'Success' : 'Failed'
-    )
 
     if (gpxData) {
       emit('import', gpxData)

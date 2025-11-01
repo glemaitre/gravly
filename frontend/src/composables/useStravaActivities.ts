@@ -39,8 +39,6 @@ export function useStravaActivities() {
 
       // Set hasMore based on whether we got a full page of results
       hasMore.value = fetchedActivities.length === pageSize
-
-      console.info(`Loaded ${fetchedActivities.length} activities from Strava`)
     } catch (err: any) {
       console.error(`Failed to load activities:`, err)
       error.value = err.message || 'Failed to load activities'
@@ -65,10 +63,6 @@ export function useStravaActivities() {
 
       // Set hasMore based on whether we got a full page of results
       hasMore.value = fetchedActivities.length === perPage.value
-
-      console.info(
-        `Loaded ${fetchedActivities.length} more activities (page ${nextPage})`
-      )
     } catch (err: any) {
       console.error(`Failed to load more activities:`, err)
       error.value = err.message || 'Failed to load more activities'
@@ -101,7 +95,6 @@ export function useStravaActivities() {
       error.value = null
 
       const gpxData = await stravaApi.getActivityGpx(activityId)
-      console.info(`GPX data retrieved for activity ${activityId}`)
 
       return gpxData
     } catch (err: any) {

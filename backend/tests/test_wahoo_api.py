@@ -29,11 +29,6 @@ class TestWahooCallback:
         assert data["code"] == test_code
         assert data["status"] == "success"
 
-        # Verify that the code was logged
-        mock_logger.info.assert_called_once_with(
-            f"Received Wahoo authorization code: {test_code}"
-        )
-
     def test_wahoo_callback_missing_code(self, client):
         """Test Wahoo callback without authorization code."""
         response = client.get("/api/wahoo/callback")
@@ -62,12 +57,6 @@ class TestWahooCallback:
         # The test client may URL decode the code, so we check that it contains
         # the expected parts
         assert "test_code_with_special_chars" in data["code"]
-        # Verify that the code was logged (check that logging was called with the actual
-        # received code)
-        mock_logger.info.assert_called_once()
-        logged_message = mock_logger.info.call_args[0][0]
-        assert "Received Wahoo authorization code:" in logged_message
-        assert data["code"] in logged_message
 
     def test_wahoo_callback_long_code(self, client):
         """Test Wahoo callback with a very long authorization code."""
@@ -79,9 +68,6 @@ class TestWahooCallback:
         assert response.status_code == 200
         data = response.json()
         assert data["code"] == test_code
-        mock_logger.info.assert_called_once_with(
-            f"Received Wahoo authorization code: {test_code}"
-        )
 
     def test_wahoo_callback_logging(self, client):
         """Test that Wahoo callback logs the received code."""
@@ -91,10 +77,6 @@ class TestWahooCallback:
             response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
-        # Verify that info logging was called
-        mock_logger.info.assert_called_once_with(
-            f"Received Wahoo authorization code: {test_code}"
-        )
 
     def test_wahoo_callback_response_format(self, client):
         """Test that Wahoo callback returns the expected response format."""
