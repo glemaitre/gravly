@@ -128,10 +128,11 @@
 
             <h4>Disconnecting Strava</h4>
             <p>
-              To disconnect from Strava, click the disconnect button
-              (<i class="fas fa-sign-out-alt"></i>) next to the Strava service in the
-              menu. Note that disconnecting may limit access to features that require
-              authentication.
+              To disconnect from Strava, click the disconnect button (<i
+                class="fas fa-sign-out-alt"
+              ></i
+              >) next to the Strava service in the menu. Note that disconnecting may
+              limit access to features that require authentication.
             </p>
 
             <h3>Wahoo Connection</h3>
@@ -219,10 +220,11 @@
 
             <h4>Disconnecting Wahoo</h4>
             <p>
-              To disconnect from Wahoo, click the disconnect button
-              (<i class="fas fa-sign-out-alt"></i>) next to the Wahoo service in the
-              menu. This will prevent future uploads but won't delete routes already
-              uploaded to Wahoo Cloud.
+              To disconnect from Wahoo, click the disconnect button (<i
+                class="fas fa-sign-out-alt"
+              ></i
+              >) next to the Wahoo service in the menu. This will prevent future uploads
+              but won't delete routes already uploaded to Wahoo Cloud.
             </p>
 
             <h3>Tips</h3>
@@ -416,18 +418,16 @@
               <li>Right-click a waypoint to remove it</li>
             </ul>
 
-            <!-- Screenshot/GIF Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-video"></i>
-                <p><strong>Video: Free Mode Route Creation</strong></p>
-                <p>
-                  Show a demonstration of creating a route in Free Mode: 1) Clicking to
-                  add waypoints, 2) Dragging waypoints to move them, 3) Dragging the
-                  route line to insert a new waypoint, 4) Right-clicking to remove a
-                  waypoint. Show how the route updates in real-time.
-                </p>
-              </div>
+            <!-- Video -->
+            <div class="media-content">
+              <video
+                :src="plannerFreeModeVideo"
+                controls
+                class="documentation-video"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
 
             <h4>Guided Mode</h4>
@@ -442,18 +442,16 @@
               <li>Click "Generate Route" to create the complete route</li>
             </ul>
 
-            <!-- Screenshot/GIF Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-video"></i>
-                <p><strong>Video: Guided Mode Route Creation</strong></p>
-                <p>
-                  Demonstrate Guided Mode: 1) Setting start and end points, 2) Selecting
-                  segments from the list, 3) Clicking "Generate Route" button, 4)
-                  Showing the generated route with segments highlighted. Show the
-                  progress indicator during route generation.
-                </p>
-              </div>
+            <!-- Video -->
+            <div class="media-content">
+              <video
+                :src="plannerGuidedModeVideo"
+                controls
+                class="documentation-video"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
 
             <h3>Adding Segments to Your Route</h3>
@@ -473,17 +471,16 @@
               </li>
             </ul>
 
-            <!-- Screenshot Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-image"></i>
-                <p><strong>Screenshot: Adding Segments</strong></p>
-                <p>
-                  Show the segment popup on the map with the "Add to Route" button
-                  visible. Show the sidebar with selected segments listed, including
-                  options to remove or reverse them.
-                </p>
-              </div>
+            <!-- Video -->
+            <div class="media-content">
+              <video
+                :src="plannerFiltersVideo"
+                controls
+                class="documentation-video"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
 
             <h3>Elevation Profile</h3>
@@ -500,19 +497,6 @@
               Drag the resize handle to adjust the height of the elevation profile
               section. The profile updates automatically as you modify your route.
             </p>
-
-            <!-- Screenshot Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-image"></i>
-                <p><strong>Screenshot: Elevation Profile</strong></p>
-                <p>
-                  Show the elevation profile chart below the map with route statistics
-                  displayed. Highlight the resize handle and show an example with a
-                  route that has noticeable elevation changes.
-                </p>
-              </div>
-            </div>
 
             <h3>Map Controls</h3>
             <p>The top-right corner provides several controls:</p>
@@ -533,17 +517,13 @@
               <li><strong>Redo (↷):</strong> Redo an action that was undone</li>
             </ul>
 
-            <!-- Screenshot Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-image"></i>
-                <p><strong>Screenshot: Map Controls</strong></p>
-                <p>
-                  Show the top-right corner controls clearly labeled. Show the buttons
-                  in their enabled/disabled states (e.g., undo disabled when there's
-                  nothing to undo).
-                </p>
-              </div>
+            <!-- Screenshot -->
+            <div class="media-content">
+              <img
+                :src="plannerControlsImage"
+                alt="Route Planner map controls"
+                class="documentation-image documentation-image-planner-controls"
+              />
             </div>
 
             <h3>Saving Routes</h3>
@@ -561,17 +541,16 @@
               when you're logged in.
             </p>
 
-            <!-- Screenshot Placeholder -->
-            <div class="media-placeholder">
-              <div class="placeholder-content">
-                <i class="fa-solid fa-image"></i>
-                <p><strong>Screenshot: Save Route Modal</strong></p>
-                <p>
-                  Show the route save modal with a route name entered, comments section,
-                  and route statistics displayed. Show the save button and indicate
-                  where users can enter their route information.
-                </p>
-              </div>
+            <!-- Video -->
+            <div class="media-content">
+              <video
+                :src="plannerSaveRouteVideo"
+                controls
+                class="documentation-video"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
             </div>
 
             <h3>Tips</h3>
@@ -905,6 +884,11 @@ import uploadRouteWahoo from '../assets/doc/upload_route_wahoo.mp4'
 import explorerOverviewVideo from '../assets/doc/explorer_overview.mp4'
 import explorerFiltersVideo from '../assets/doc/explorer_filters.mp4'
 import segmentDetailsVideo from '../assets/doc/segment_details.mp4'
+import plannerFreeModeVideo from '../assets/doc/planner_free_mode.mp4'
+import plannerGuidedModeVideo from '../assets/doc/planner_guided_mode.mp4'
+import plannerFiltersVideo from '../assets/doc/planner_filters.mp4'
+import plannerControlsImage from '../assets/doc/planner_controls.png'
+import plannerSaveRouteVideo from '../assets/doc/planner_save_route.mp4'
 
 const route = useRoute()
 
@@ -1177,6 +1161,11 @@ watch(
 .documentation-image-connected-services {
   width: 250px;
   max-width: 250px;
+}
+
+.documentation-image-planner-controls {
+  width: 50px;
+  max-width: 50px;
 }
 
 .documentation-video {
