@@ -148,10 +148,12 @@ export function useStravaApi() {
         // Check if token is expired
         if (parsed.expiresAt && Date.now() > parsed.expiresAt * 1000) {
           localStorage.removeItem('strava_auth')
+          console.log('Strava token expired, clearing auth state')
           return
         }
 
         authState.value = parsed
+        console.log('Loaded Strava auth state from localStorage')
       }
     } catch (err) {
       console.error('Failed to load Strava auth state:', err)
@@ -184,10 +186,11 @@ export function useStravaApi() {
       if (response.ok) {
         // Reload auth state from localStorage (backend updated it)
         loadAuthState()
+        console.info('Token refreshed successfully')
         return true
       }
-    } catch {
-      // Token refresh failed silently
+    } catch (err) {
+      console.warn('Token refresh failed:', err)
     }
 
     return false
@@ -246,7 +249,9 @@ export function useStravaApi() {
       }
 
       const data = await response.json()
-      return data.activities
+      const activities = data.activities
+      console.info(`Retrieved ${activities.length} Strava activities`)
+      return activities
     } catch (err: any) {
       error.value = err.message || 'Failed to get activities'
       throw err
@@ -284,6 +289,8 @@ export function useStravaApi() {
       }
 
       const data = await response.json()
+      const pointCount = data.points?.length || 0
+      console.info(`Retrieved GPX data for activity ${activityId}: ${pointCount} points`)
       return data
     } catch (err: any) {
       error.value = err.message || 'Failed to get activity GPX'
