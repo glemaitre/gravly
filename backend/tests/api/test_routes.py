@@ -1399,15 +1399,16 @@ class TestWahooServiceRoutes:
         with patch("backend.src.services.wahoo.service.Client"):
             return WahooService(config, db_session=AsyncMock(), wahoo_id=12345)
 
-    def test_create_route_success(self, service):
+    @pytest.mark.asyncio
+    async def test_create_route_success(self, service):
         """Test successful route creation."""
         with (
-            patch.object(service, "_ensure_authenticated"),
+            patch.object(service, "_ensure_authenticated", new_callable=AsyncMock),
             patch.object(service.client, "create_route") as mock_create,
         ):
             mock_create.return_value = {"id": 123, "name": "Test Route"}
 
-            result = service.create_route(
+            result = await service.create_route(
                 route_file="data:application/vnd.fit;base64,test",
                 filename="test.fit",
                 route_name="Test Route",
@@ -1421,10 +1422,11 @@ class TestWahooServiceRoutes:
             assert result == {"id": 123, "name": "Test Route"}
             mock_create.assert_called_once()
 
-    def test_create_route_unauthorized(self, service):
+    @pytest.mark.asyncio
+    async def test_create_route_unauthorized(self, service):
         """Test route creation with unauthorized error."""
         with (
-            patch.object(service, "_ensure_authenticated"),
+            patch.object(service, "_ensure_authenticated", new_callable=AsyncMock),
             patch.object(service.client, "create_route") as mock_create,
             patch("backend.src.services.wahoo.service.logger"),
         ):
@@ -1433,7 +1435,7 @@ class TestWahooServiceRoutes:
             mock_create.side_effect = ValueError("401 Unauthorized")
 
             with pytest.raises(WahooAccessUnauthorized):
-                service.create_route(
+                await service.create_route(
                     route_file="data:application/vnd.fit;base64,test",
                     filename="test.fit",
                     route_name="Test Route",
@@ -1444,15 +1446,16 @@ class TestWahooServiceRoutes:
                     descent=100.0,
                 )
 
-    def test_update_route_success(self, service):
+    @pytest.mark.asyncio
+    async def test_update_route_success(self, service):
         """Test successful route update."""
         with (
-            patch.object(service, "_ensure_authenticated"),
+            patch.object(service, "_ensure_authenticated", new_callable=AsyncMock),
             patch.object(service.client, "update_route") as mock_update,
         ):
             mock_update.return_value = {"id": 456, "name": "Updated Route"}
 
-            result = service.update_route(
+            result = await service.update_route(
                 route_id=456,
                 route_file="data:application/vnd.fit;base64,test",
                 filename="test.fit",
@@ -1467,10 +1470,11 @@ class TestWahooServiceRoutes:
             assert result == {"id": 456, "name": "Updated Route"}
             mock_update.assert_called_once()
 
-    def test_update_route_unauthorized(self, service):
+    @pytest.mark.asyncio
+    async def test_update_route_unauthorized(self, service):
         """Test route update with unauthorized error."""
         with (
-            patch.object(service, "_ensure_authenticated"),
+            patch.object(service, "_ensure_authenticated", new_callable=AsyncMock),
             patch.object(service.client, "update_route") as mock_update,
             patch("backend.src.services.wahoo.service.logger"),
         ):
@@ -1479,7 +1483,7 @@ class TestWahooServiceRoutes:
             mock_update.side_effect = ValueError("401 Unauthorized")
 
             with pytest.raises(WahooAccessUnauthorized):
-                service.update_route(
+                await service.update_route(
                     route_id=456,
                     route_file="data:application/vnd.fit;base64,test",
                     filename="test.fit",

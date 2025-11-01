@@ -228,6 +228,12 @@ WAHOO_TOKENS_FILE_PATH=/secure/path/to/wahoo_tokens.json""")
 
     def test_load_wahoo_config_missing_scopes(self, tmp_path):
         """Test error when WAHOO_SCOPES is missing."""
+        import os
+
+        # Clear any existing WAHOO_SCOPES environment variable to avoid interference
+        if "WAHOO_SCOPES" in os.environ:
+            del os.environ["WAHOO_SCOPES"]
+
         env_folder = tmp_path / ".env"
         env_folder.mkdir()
 
