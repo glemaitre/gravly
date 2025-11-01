@@ -459,22 +459,30 @@ defineExpose({
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   padding: 20px;
+  transition: background-color 0.3s ease;
+}
+
+[data-theme='dark'] .modal-overlay {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .modal-content {
-  background: white;
+  background: var(--card-bg);
   border-radius: 12px;
   width: 100%;
   max-width: 800px;
   height: 80vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-xl);
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .modal-body {
@@ -497,13 +505,15 @@ defineExpose({
   margin: 0 0 4px 0;
   font-size: 1.4rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text-primary);
+  transition: color 0.3s ease;
 }
 
 .activity-start-time {
   font-size: 0.9rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .stats-section {
@@ -514,14 +524,15 @@ defineExpose({
   margin: 0 0 16px 0;
   font-size: 1rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: color 0.3s ease;
 }
 
 .section-title i {
-  color: #f97316;
+  color: var(--brand-500);
   font-size: 1rem;
 }
 
@@ -536,15 +547,18 @@ defineExpose({
   align-items: center;
   gap: 10px;
   padding: 12px;
-  background: #f8fafc;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-primary);
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 .stat-icon {
   width: 36px;
   height: 36px;
-  background: #f97316;
+  background: var(--brand-500);
   color: white;
   border-radius: 8px;
   display: flex;
@@ -560,14 +574,16 @@ defineExpose({
 .stat-value {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--text-primary);
   margin-bottom: 2px;
+  transition: color 0.3s ease;
 }
 
 .stat-label {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--text-tertiary);
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .map-section {
@@ -577,8 +593,9 @@ defineExpose({
 .activity-map {
   height: 300px;
   border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border-primary);
   overflow: hidden;
+  transition: border-color 0.3s ease;
 }
 
 .modal-actions {
@@ -602,26 +619,27 @@ defineExpose({
 }
 
 .btn-primary {
-  background: #f97316;
-  color: white;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #ea580c;
+  background: var(--button-primary-hover);
 }
 
 .btn-primary:disabled {
-  background: #9ca3af;
+  background: var(--text-muted);
   cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .btn-secondary {
-  background: #6b7280;
-  color: white;
+  background: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
 }
 
 .btn-secondary:hover {
-  background: #4b5563;
+  background: var(--button-secondary-hover);
 }
 
 .gps-warning {
@@ -633,6 +651,16 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 12px;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+
+[data-theme='dark'] .gps-warning {
+  background: rgba(217, 119, 6, 0.2);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  color: #fbbf24;
 }
 
 .gps-warning i {
