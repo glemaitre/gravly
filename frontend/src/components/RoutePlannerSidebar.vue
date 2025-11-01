@@ -810,11 +810,6 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   transition: all 0.2s ease;
 }
 
-.mode-toggle-container:hover {
-  background: var(--bg-hover);
-  border-color: var(--brand-primary);
-}
-
 .mode-toggle {
   display: flex;
   align-items: center;
@@ -872,6 +867,11 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   border-radius: 24px;
 }
 
+.toggle-slider:hover {
+  background-color: var(--border-primary);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.1);
+}
+
 .toggle-slider:before {
   position: absolute;
   content: '';
@@ -885,12 +885,26 @@ function updateDifficultyTooltipPosition(event: MouseEvent) {
   box-shadow: var(--shadow-sm);
 }
 
+.toggle-slider:hover:before {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
+}
+
 .toggle-switch input:checked + .toggle-slider {
   background-color: var(--brand-primary);
 }
 
+.toggle-switch input:checked + .toggle-slider:hover {
+  background-color: var(--brand-primary-hover);
+  box-shadow: 0 0 0 3px rgba(var(--brand-primary-rgb), 0.2);
+}
+
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(24px);
+}
+
+.toggle-switch input:checked + .toggle-slider:hover:before {
+  transform: translateX(24px) scale(1.1);
 }
 
 .guided-todo-list {
