@@ -186,7 +186,7 @@ export function useStravaApi() {
         loadAuthState()
         return true
       }
-    } catch (error) {
+    } catch {
       // Token refresh failed silently
     }
 
@@ -307,7 +307,7 @@ export function useStravaApi() {
       if (timeUntilExpiry < fiveMinutes && timeUntilExpiry > 0) {
         try {
           await handleAuthenticationError()
-        } catch (error) {
+        } catch {
           // Proactive token refresh failed silently
         }
       }

@@ -22,8 +22,7 @@ class TestWahooCallbackEndpoint:
         """Test successful Wahoo callback with authorization code."""
         test_code = "test_authorization_code_123"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -51,8 +50,7 @@ class TestWahooCallbackEndpoint:
         """Test Wahoo callback with special characters in code."""
         test_code = "test_code_with_special_chars_!@#$%^&*()"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -64,8 +62,7 @@ class TestWahooCallbackEndpoint:
         """Test Wahoo callback with a very long authorization code."""
         test_code = "a" * 1000  # Very long code
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -75,8 +72,7 @@ class TestWahooCallbackEndpoint:
         """Test that Wahoo callback logs the received code."""
         test_code = "logging_test_code"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
 
@@ -108,8 +104,7 @@ class TestWahooCallbackEndpoint:
         """Test Wahoo callback with unicode characters in code."""
         test_code = "test_code_with_unicode_🚴‍♂️_🏔️"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -119,8 +114,7 @@ class TestWahooCallbackEndpoint:
         """Test Wahoo callback with numeric authorization code."""
         test_code = "123456789"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -130,8 +124,7 @@ class TestWahooCallbackEndpoint:
         """Test Wahoo callback with whitespace in authorization code."""
         test_code = "  test_code_with_spaces  "
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}")
 
         assert response.status_code == 200
         data = response.json()
@@ -142,8 +135,7 @@ class TestWahooCallbackEndpoint:
         test_code = "test_code_123"
         state = "test_state"
 
-        with patch("src.api.wahoo.logger") as mock_logger:
-            response = client.get(f"/api/wahoo/callback?code={test_code}&state={state}")
+        response = client.get(f"/api/wahoo/callback?code={test_code}&state={state}")
 
         assert response.status_code == 200
         data = response.json()

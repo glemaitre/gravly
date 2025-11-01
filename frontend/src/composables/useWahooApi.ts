@@ -173,7 +173,7 @@ export function useWahooApi() {
         loadAuthState()
         return true
       }
-    } catch (error) {
+    } catch {
       // Token refresh failed silently
     }
 
@@ -282,7 +282,7 @@ export function useWahooApi() {
       if (timeUntilExpiry < fiveMinutes && timeUntilExpiry > 0) {
         try {
           await handleAuthenticationError()
-        } catch (error) {
+        } catch {
           // Proactive token refresh failed silently
         }
       }
