@@ -528,5 +528,15 @@ export default {
     documentation: 'Documentation',
     license: 'Licence MIT',
     version: 'Version 1.0.0'
+  },
+
+  // Documentation
+  documentation: {
+    title: 'Documentation',
+    help: 'Aide',
+    explorer: 'Explorateur',
+    planner: 'Planificateur',
+    connections: 'Connexions',
+    editor: 'Éditeur'
   }
 }

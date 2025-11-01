@@ -527,7 +527,7 @@ describe('Menu', () => {
 
     it('should render all support links', () => {
       const supportLinks = wrapper.findAll('.support-link')
-      expect(supportLinks).toHaveLength(3)
+      expect(supportLinks).toHaveLength(2)
     })
 
     it('should have report issue link', () => {
@@ -547,16 +547,6 @@ describe('Menu', () => {
       expect(githubLink.attributes('href')).toBe('https://github.com/glemaitre/gravly')
       expect(githubLink.attributes('target')).toBe('_blank')
       expect(githubLink.find('.fa-github').exists()).toBe(true)
-    })
-
-    it('should have documentation link', () => {
-      const docsLink = wrapper.findAll('.support-link')[2]
-      expect(docsLink.text()).toContain('Documentation')
-      expect(docsLink.attributes('href')).toBe(
-        'https://github.com/glemaitre/gravly/blob/main/README.md'
-      )
-      expect(docsLink.attributes('target')).toBe('_blank')
-      expect(docsLink.find('.fa-book').exists()).toBe(true)
     })
   })
 
@@ -606,7 +596,6 @@ describe('Menu', () => {
 
       expect(supportLinks[0].attributes('title')).toBe('Report Issue')
       expect(supportLinks[1].attributes('title')).toBe('GitHub Repository')
-      expect(supportLinks[2].attributes('title')).toBe('Documentation')
     })
   })
 })

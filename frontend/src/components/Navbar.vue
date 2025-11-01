@@ -31,6 +31,14 @@
 
       <!-- Right Section -->
       <nav class="navbar-nav">
+        <!-- Help/Documentation Button -->
+        <button
+          class="help-button navbar-btn"
+          @click="openDocumentation"
+          :title="$t('documentation.help')"
+        >
+          <i class="fa-solid fa-circle-question"></i>
+        </button>
         <!-- Menu with Strava Authentication, Language, and Support -->
         <Menu />
       </nav>
@@ -40,10 +48,14 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useStravaApi } from '../composables/useStravaApi'
 import { useAuthorization } from '../composables/useAuthorization'
 import Menu from './Menu.vue'
 import logoUrl from '../assets/images/logo.svg'
+
+const router = useRouter()
+const route = useRoute()
 
 // Strava authentication (needed for editor authorization)
 const { isAuthenticated: isAuthenticatedFn } = useStravaApi()
@@ -54,6 +66,21 @@ const { isAuthorized } = useAuthorization()
 // Computed properties for authentication
 const isAuthenticated = computed(() => isAuthenticatedFn())
 const isEditorAuthorized = computed(() => isAuthenticated.value && isAuthorized.value)
+
+// Determine section based on current route
+function openDocumentation() {
+  let section = 'explorer' // default section
+
+  if (route.path === '/route-planner') {
+    section = 'planner'
+  } else if (route.path === '/editor') {
+    section = 'editor'
+  } else if (route.path === '/explorer') {
+    section = 'explorer'
+  }
+
+  router.push(`/documentation#${section}`)
+}
 </script>
 
 <style scoped>
@@ -117,6 +144,28 @@ const isEditorAuthorized = computed(() => isAuthenticated.value && isAuthorized.
   align-items: center;
   margin-left: auto;
   gap: 0.75rem;
+}
+
+.help-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  transition: all 0.2s ease;
+}
+
+.help-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-secondary);
+  color: var(--brand-primary);
 }
 
 /* Navigation Menu Styles - keeping only the nav menu styles */

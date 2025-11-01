@@ -197,16 +197,6 @@
           <i class="fa-brands fa-github"></i>
           <span>{{ $t('footer.githubRepo') }}</span>
         </a>
-        <a
-          href="https://github.com/glemaitre/gravly/blob/main/README.md"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="menu-item support-link"
-          :title="$t('footer.documentation')"
-        >
-          <i class="fa-solid fa-book"></i>
-          <span>{{ $t('footer.documentation') }}</span>
-        </a>
       </div>
     </div>
   </div>

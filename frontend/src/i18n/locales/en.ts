@@ -520,5 +520,15 @@ export default {
     documentation: 'Documentation',
     license: 'MIT License',
     version: 'Version 1.0.0'
+  },
+
+  // Documentation
+  documentation: {
+    title: 'Documentation',
+    help: 'Help',
+    explorer: 'Explorer',
+    planner: 'Planner',
+    connections: 'Connections',
+    editor: 'Editor'
   }
 }
